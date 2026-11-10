@@ -3,12 +3,11 @@
 - **Última atualização:** 10/11/2026
 - **Repositório:** anfalcir/legendar
 - **Branch atual de implementação:** `phase-2/professional-ui`
-- **Branch padrão:** `main`
 - **Branch de implementação da Fase 1:** `phase-1/architecture` (integrada)
 - **Branch padrão:** `main`
 - **Fases concluídas:** Fase 0 — Definições e prova técnica; Fase 1 — Reestruturação arquitetural
 - **Fase em fechamento:** Fase 2 — Interface profissional (implementação e CI concluídas; integração pendente)
-- **Fase concluída mais recente:** Fase 1 — Reestruturação arquitetural, integrada à `main`; Fase 2 validada tecnicamente na branch dedicada
+- **Fase de implementação mais recente:** Fase 2 — Interface profissional, implementada e validada na branch dedicada; integração pendente
 - **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), integrada por squash
 - **PR da Fase 1:** [#2](https://github.com/anfalcir/legendar/pull/2), merged por squash em 10/11/2026
 - **Commit de integração da Fase 0:** `992cb874274e73d0264994e39926113f1461236f`
@@ -21,7 +20,7 @@
 
 ## 1. Resumo executivo
 
-A aplicação nova já tem camadas `domain`, `application`, `infrastructure`, `presentation` e `bootstrap`; inclui entidades e invariantes, máquina de estados, pipeline serial com portas/fakes, cancelamento/progresso, workspaces isolados, publicação SRT atômica, configuração, preflight e uma janela Qt mínima. A integração real de mídia/modelos/tradução e o refinamento visual não foram feitos. O legado `main.py`/`core/`/`gui/` continua preservado.
+A aplicação nova já tem camadas `domain`, `application`, `infrastructure`, `presentation` e `bootstrap`; inclui entidades e invariantes, máquina de estados, pipeline serial com portas/fakes, cancelamento/progresso, workspaces isolados, publicação SRT atômica e configuração. A Fase 2 acrescentou interface Qt profissional com temas claro/escuro/sistema, diálogos de confirmação, preferências persistidas, progresso honesto, log expansível, acessibilidade e proteção contra ações acidentais. O processamento real de mídia/modelos/tradução ainda pertence às fases seguintes. O legado `main.py`/`core/`/`gui/` continua preservado.
 
 A Fase 0 estabeleceu e documentou a direção técnica: governança de dependências, perfis de runtime, coletor de ambiente, prova sintética de mídia/offset, script de POC PT-BR/EN e contrato arquitetural. O plano operacional e o handoff da Fase 1 foram atualizados para registrar o checkpoint, as evidências e as pendências.
 
@@ -53,7 +52,9 @@ Implementação existente em `src/legendar/`: domínio independente de Qt/infrae
 orquestração serial por portas injetadas; eventos e estado do job; cancelamento cooperativo;
 segmentação pura; configuração/logging; parsing de metadados de ffprobe e detecção de
 ferramentas externas; cache de modelos somente observável; publicação SRT validada e atômica;
-bootstrap, entrypoint e apresentação Qt mínima com view model, worker e testes offscreen.
+bootstrap e entrypoint. A camada Qt evoluiu na Fase 2 para uma janela profissional com temas,
+diálogos, preferências QSettings, proteções de início/cancelamento, progresso, log, acessibilidade
+e testes offscreen; ver `docs/FASE_2_PLANO.md` e `docs/HANDOFF_FASE_2.md`.
 
 Não há download/processamento real de mídia, integração Whisper/WhisperX, tradução concreta ou
 refinamento visual profissional. O pipeline composto pelo bootstrap falha de forma explícita
@@ -169,7 +170,7 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 |---|---|---|
 | 0 — Definições e prova técnica | **Concluída e integrada** | PR #1 merged por squash; CI final verde |
 | 1 — Reestruturação arquitetural | **Concluída e integrada** | PR #2 merged por squash no commit `de31ddd`; 196 testes por ambiente Python 3.10–3.13, cobertura 88%, Ruff/format aprovados |
-| 2 — Interface profissional | **Implementada e validada; integração pendente na PR #3** | 218 testes por ambiente, 88% de cobertura, Ruff/format verdes; temas, diálogos, preferências, bloqueios, progresso e acessibilidade |
+| 2 — Interface profissional | **Implementada e validada; integração pendente na PR #3** | 218 testes por ambiente, 88% de cobertura, Ruff/format verdes; temas, diálogos, preferências, bloqueios, progresso, logs e acessibilidade |
 | 3 — Entrada e preparação de mídia | Não iniciada | Homologar formatos, streams, offsets e temporários; não começar sem aprovação explícita |
 | 4 — Reconhecimento Whisper | Não iniciada | Comparação PT-BR/EN e desempenho no computador-alvo |
 | 5 — Alinhamento temporal | Não iniciada | Referência humana, mediana/P95, cobertura e anomalias |
