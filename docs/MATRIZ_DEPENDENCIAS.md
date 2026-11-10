@@ -31,18 +31,23 @@ O inventário de uma máquina identifica o perfil daquele ambiente. Não deve, i
 | `requirements.txt` | Snapshot de instalação da baseline anterior | Legado transitório; não editar manualmente nem tratar como autoridade; remover ou substituir por exportação gerada quando a migração for concluída |
 | `docs/MATRIZ_DEPENDENCIAS.md` | Justificativas, categorias, compatibilidade, políticas e estado da homologação | Documenta decisões; não substitui os manifestos executáveis |
 
-O arquivo `pyproject.toml` foi introduzido nesta branch com as dependências diretas identificadas na baseline e o candidato de alinhamento isolado como extra. Nenhum pacote foi instalado por essa alteração. O lockfile ainda não foi criado: a seleção de fontes/wheels do PyTorch, dos perfis CPU/CUDA/ROCm e da abrangência multiplataforma deve ser validada antes de congelar uma resolução.
+O `pyproject.toml` registra PySide6 como dependência-base e oferece perfis completos de runtime (`runtime-cpu`, `runtime-cu128` e `runtime-rocm72`). Cada perfil reúne Whisper, yt-dlp e o conjunto de pacotes PyTorch correspondente; deve-se instalar exatamente um perfil. O extra `alignment-whisperx` acrescenta o alinhador candidato e pode ser combinado com qualquer perfil cuja plataforma/versão seja compatível.
 
-A escolha de `uv` é uma decisão de gerenciamento de projeto, não uma dependência de runtime do aplicativo. Seu lockfile suporta resolução universal com marcadores de plataforma e versões de Python; isso será usado somente depois de definirmos a matriz que o Legendar realmente se compromete a suportar.
+A primeira resolução experimental feita apenas contra PyPI foi **rejeitada e não foi commitada**: o pacote `torch` selecionado puxava bibliotecas CUDA/NVIDIA mesmo sem o projeto ter escolhido um perfil CUDA. Isso demonstrou que um lock universal sem seleção explícita da origem PyTorch não é suficiente. O manifesto agora direciona os pacotes PyTorch para índices explícitos por perfil, usando CPU, CUDA 12.8 ou ROCm 7.2. No macOS, o perfil CPU utiliza os wheels PyPI do PyTorch, nos quais a aceleração MPS pode estar disponível conforme o hardware/sistema. A nova resolução universal será validada antes de versionar `uv.lock`.
+
+A escolha de `uv` é uma decisão de gerenciamento de projeto, não uma dependência de runtime do aplicativo. Seu lockfile suporta resolução universal com marcadores de plataforma, versões Python e variantes por extra; isso permite registrar diferentes perfis sem fazer do computador local a referência do projeto.
 
 ## 3. Requisitos iniciais registrados em pyproject.toml
 
 | Componente | Categoria | Requisito atual | Motivo / situação |
 |---|---|---|---|
-| PySide6 | Runtime obrigatório | `>=6.9,<7` | Framework GUI mantido; 6.9.0 é a baseline declarada no snapshot existente. A faixa 6.x evita fixação de patch e protege contra mudança major sem revisão |
-| openai-whisper | Runtime obrigatório | `>=20250625` | Motor de reconhecimento central; versão estável disponível no PyPI em 26/06/2025. O uso da versão PyPI substitui o pin Git legado após homologação |
-| yt-dlp | Runtime obrigatório | `>=2025.4.30` | Integração YouTube; mínimo derivado do snapshot declarado pelo projeto, não da instalação ocasional encontrada no computador |
-| WhisperX | Extra experimental `alignment-whisperx` | `>=3.8.6,<4` | Candidato principal para forced alignment. A versão estável 3.8.6 declara Python `>=3.10,<3.14`; somente será promovida a runtime obrigatório após a POC |
+| PySide6 | Runtime-base | `>=6.9,<7` | Framework GUI; faixa minor ampla, com limite major para exigir revisão de compatibilidade |
+| openai-whisper | Runtime nos perfis `runtime-*` | `>=20250625` | Motor de reconhecimento central; declarado como requisito em todos os perfis completos |
+| yt-dlp | Runtime nos perfis `runtime-*` | `>=2025.4.30` | Entrada YouTube; declarado como requisito em todos os perfis completos |
+| PyTorch / torchvision / torchaudio (CPU) | Perfil completo `runtime-cpu` | `torch>=2.8,<3`; `torchvision>=0.23,<1`; `torchaudio>=2.8,<3` | Rota sem GPU dedicada; usa índice CPU explícito em Linux/Windows e wheels PyPI em macOS |
+| PyTorch / torchvision / torchaudio (CUDA 12.8) | Perfil completo `runtime-cu128` | Mesmas faixas PyTorch do perfil CPU | Perfil opcional para Linux/Windows com CUDA 12.8 compatível; utiliza índice oficial cu128 |
+| PyTorch / torchvision / torchaudio + Triton ROCm | Perfil experimental `runtime-rocm72` | Faixas e pacotes declarados no manifesto | Perfil opcional Linux/ROCm 7.2; exige GPU/driver suportados e homologação própria |
+| WhisperX | Extra `alignment-whisperx` | `>=3.8.6,<4` | Candidato de alinhamento; deve ser combinado com exatamente um perfil `runtime-*`; só será promovido após POC PT-BR/EN |
 | pytest / pytest-qt / pytest-cov | Desenvolvimento e testes | Declarados no grupo `test` | Testes unitários, integração e GUI; não são dependências do usuário final |
 | Ruff | Desenvolvimento | Declarado no grupo `lint` | Lint e formatação; não é dependência do usuário final |
 | PyInstaller | Empacotamento | Declarado no grupo `build` | Ferramenta de build; não é dependência de runtime |
@@ -53,13 +58,35 @@ O requisito inicial do projeto é `>=3.10,<3.14`. O limite superior atual decorr
 
 Esse intervalo é provisório e deverá ser expandido assim que a interseção das dependências críticas, os wheels e a CI demonstrarem compatibilidade com versões adicionais. A CI de compatibilidade deve testar as versões mínimas e máximas admitidas pelo projeto, não apenas a versão instalada na máquina de desenvolvimento.
 
+### Instalação por perfil
+
+O aplicativo completo exige um dos perfis abaixo. O manifesto não pressupõe o computador do mantenedor:
+
+```bash
+# CPU (Linux/Windows usa o índice CPU do PyTorch; macOS usa o wheel PyPI)
+uv sync --no-dev --extra runtime-cpu
+
+# CUDA 12.8 em Linux/Windows compatíveis
+uv sync --no-dev --extra runtime-cu128
+
+# AMD ROCm 7.2 em Linux compatível (experimental)
+uv sync --no-dev --extra runtime-rocm72
+
+# Acrescentar forced alignment depois/para a POC
+uv sync --no-dev --extra runtime-cpu --extra alignment-whisperx
+```
+
+Não combinar mais de um extra `runtime-*`. O próprio `uv` declara esses perfis como conflitantes para impedir a resolução acidental de variantes PyTorch incompatíveis. No macOS, a rota é o wheel PyPI do PyTorch; MPS é capacidade do runtime/macOS quando hardware e versão suportarem, não um pacote separado neste manifesto.
+
+A faixa Python `>=3.10,<3.14` é atualmente limitada pelo candidato WhisperX estável 3.8.6, não pelo computador do usuário. Aumentar a faixa exige revalidar a interseção de dependências do perfil completo, inclusive o alinhador.
+
 ## 4. Dependências transitivas e componentes externos
 
 ### Dependências Python transitivas
 
 Pacotes como PyTorch, torchaudio, torchvision, NumPy, tiktoken, CTranslate2, faster-whisper, pyannote-audio, torchcodec, transformers e NLTK podem ser instalados por dependências diretas. Não devem ser repetidos como dependências diretas do Legendar apenas porque aparecem em um snapshot de `pip freeze`.
 
-Uma biblioteca será declarada diretamente quando o código do Legendar a importar/utilizar como contrato próprio ou quando houver uma decisão explícita de controlar sua compatibilidade. A versão exata de dependências transitivas será registrada no lockfile.
+Uma biblioteca será declarada diretamente quando o código do Legendar a importar/utilizar como contrato próprio ou quando houver uma decisão explícita de controlar sua compatibilidade. A versão exata de dependências transitivas e os wheels/índices correspondentes a cada perfil serão registrados no lockfile universal; o lockfile não deverá transformar uma instalação CPU em uma instalação CUDA por resolução implícita contra PyPI.
 
 O stack de WhisperX requer atenção especial: o metadata e a configuração upstream em evolução podem alterar os requisitos de PyTorch/torchvision/torchcodec. Não se deve acrescentar `torch==...` ao manifesto do Legendar sem validar o alinhador, o backend e as fontes de wheels em todos os perfis pretendidos.
 
@@ -80,10 +107,10 @@ Os perfis de hardware não definem a lista global de dependências do produto. E
 
 | Perfil | Política |
 |---|---|
-| CPU | Caminho de compatibilidade obrigatório para processamento sem acelerador; não implica que a aplicação será otimizada exclusivamente para CPU |
-| NVIDIA CUDA | Aceleração opcional, instalada conforme a matriz oficial PyTorch/driver/CUDA e a versão do alinhador |
-| AMD ROCm | Aceleração opcional somente nos sistemas, GPUs/APUs, drivers e versões oficialmente suportados e testados |
-| Apple Silicon / MPS | Perfil opcional se a combinação PyTorch, Whisper/alinhador e funcionalidades necessárias for homologada |
+| CPU | Perfil completo `runtime-cpu`; índice oficial CPU do PyTorch em Linux/Windows e wheel PyPI no macOS |
+| NVIDIA CUDA 12.8 | Perfil completo `runtime-cu128`; índice oficial cu128 em Linux/Windows compatíveis |
+| AMD ROCm 7.2 | Perfil completo experimental `runtime-rocm72`; índice oficial rocm7.2 em Linux, sujeito à matriz de GPU/driver |
+| Apple Silicon / MPS | Usa wheel PyPI do PyTorch em macOS; MPS é detectado/selecionado no runtime quando disponível, sem índice separado |
 | Outros aceleradores | Não presumir compatibilidade; exigir adapter, wheels disponíveis, preflight e teste antes de declarar suporte |
 
 A aplicação deverá detectar capacidades disponíveis em runtime e selecionar um backend validado. A presença de uma GPU não garante que cada etapa do pipeline possa utilizá-la. O produto deverá manter um fallback CPU quando a funcionalidade e as dependências escolhidas o permitirem, e deverá explicar quando determinado backend não estiver disponível.
