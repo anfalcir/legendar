@@ -1,25 +1,26 @@
 #!/usr/bin/env python3
-"""Small reproducible WhisperX smoke benchmark on public FLEURS samples.
+"""Small reproducible WhisperX smoke benchmark on public FLEURS audio.
 
 This is a pipeline/compatibility probe, not a statistically valid product
-acceptance benchmark. It records WER against dataset references, alignment
-coverage, runtime, and process peak RSS. No media or transcript is uploaded
-except the JSON report produced locally by the caller.
+acceptance benchmark. It records WER against public references, alignment
+coverage, runtime, and process peak RSS. Audio is downloaded from a pinned
+public dataset revision and is not uploaded with the JSON report.
 """
 from __future__ import annotations
 
 import argparse
+import csv
 import gc
 import io
-from importlib.metadata import version as package_version
-import json
 import math
 import os
 import platform
 import re
 import resource
 import sys
+import tarfile
 import time
+from importlib.metadata import version as package_version
 from pathlib import Path
 from typing import Any
 
@@ -27,11 +28,12 @@ import numpy as np
 import soundfile as sf
 import torch
 import whisperx
-from datasets import Audio, load_dataset
+from huggingface_hub import hf_hub_download
 from jiwer import wer
 
 
 DATASET = "google/fleurs"
+DATASET_REVISION = "c176a772dc5e1ced954fdd22af1a3bf5be2cbe6e"
 LANGUAGES = {
     "pt_br": {"whisper": "pt", "label": "Portuguese (Brazil)"},
     "en_us": {"whisper": "en", "label": "English (United States)"},
@@ -44,24 +46,90 @@ def _normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
 
 
-def _read_audio(audio_record: dict[str, Any]) -> tuple[np.ndarray, int]:
-    raw = audio_record.get("bytes")
-    path = audio_record.get("path")
-    if raw:
-        waveform, sample_rate = sf.read(io.BytesIO(raw), dtype="float32")
-    elif path:
-        waveform, sample_rate = sf.read(path, dtype="float32")
-    else:
-        raise RuntimeError("FLEURS example contains neither audio bytes nor a path")
+def _load_reference_rows(
+    config: str,
+    cache_dir: Path,
+    samples_per_language: int,
+) -> list[dict[str, str]]:
+    tsv_path = hf_hub_download(
+        repo_id=DATASET,
+        repo_type="dataset",
+        filename=f"data/{config}/test.tsv",
+        revision=DATASET_REVISION,
+        cache_dir=str(cache_dir),
+    )
+    rows: list[dict[str, str]] = []
+    seen_utterances: set[str] = set()
+    with Path(tsv_path).open("r", encoding="utf-8", newline="") as handle:
+        for values in csv.reader(handle, delimiter="\t"):
+            if len(values) < 3:
+                continue
+            utterance_id, filename, raw_transcription = values[:3]
+            if utterance_id in seen_utterances:
+                continue
+            seen_utterances.add(utterance_id)
+            rows.append(
+                {
+                    "id": utterance_id,
+                    "filename": Path(filename).name,
+                    "reference": raw_transcription,
+                }
+            )
+            if len(rows) >= samples_per_language:
+                break
 
+    if len(rows) < samples_per_language:
+        raise RuntimeError(
+            f"FLEURS {config} provided only {len(rows)} unique rows; "
+            f"{samples_per_language} requested"
+        )
+    return rows
+
+
+def _read_audio(audio_bytes: bytes) -> tuple[np.ndarray, int]:
+    waveform, sample_rate = sf.read(io.BytesIO(audio_bytes), dtype="float32")
     waveform = np.asarray(waveform, dtype=np.float32)
     if waveform.ndim == 2:
         waveform = waveform.mean(axis=1, dtype=np.float32)
     if waveform.ndim != 1 or waveform.size == 0:
-        raise RuntimeError("Audio must be a non-empty mono waveform")
+        raise RuntimeError("FLEURS audio must be a non-empty mono waveform")
     if int(sample_rate) != 16000:
         raise RuntimeError(f"Expected 16 kHz FLEURS audio, received {sample_rate} Hz")
     return waveform, int(sample_rate)
+
+
+def _read_selected_audio(
+    config: str,
+    cache_dir: Path,
+    rows: list[dict[str, str]],
+) -> dict[str, bytes]:
+    archive_path = hf_hub_download(
+        repo_id=DATASET,
+        repo_type="dataset",
+        filename=f"data/{config}/audio/test.tar.gz",
+        revision=DATASET_REVISION,
+        cache_dir=str(cache_dir),
+    )
+    wanted = {row["filename"] for row in rows}
+    found: dict[str, bytes] = {}
+    with tarfile.open(archive_path, mode="r:gz") as archive:
+        for member in archive:
+            if not member.isfile() or Path(member.name).name not in wanted:
+                continue
+            filename = Path(member.name).name
+            source = archive.extractfile(member)
+            if source is None:
+                continue
+            found[filename] = source.read()
+            if wanted.issubset(found):
+                break
+
+    missing = wanted.difference(found)
+    if missing:
+        raise RuntimeError(
+            f"FLEURS archive {config} is missing expected audio files: {sorted(missing)}"
+        )
+    return found
 
 
 def _peak_rss_bytes() -> int | None:
@@ -81,14 +149,19 @@ def run_benchmark(
     if samples_per_language < 1 or samples_per_language > 10:
         raise ValueError("samples_per_language must be between 1 and 10")
 
-    if cache_dir:
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        os.environ["HF_HOME"] = str(cache_dir.resolve())
-        os.environ["HF_HUB_CACHE"] = str((cache_dir / "hub").resolve())
-        os.environ["HF_DATASETS_CACHE"] = str((cache_dir / "datasets").resolve())
+    cache_dir = cache_dir or Path(".cache/phase0")
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_dir = cache_dir.resolve()
+    os.environ["HF_HOME"] = str(cache_dir)
+    os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
 
     started = time.perf_counter()
-    records: list[dict[str, Any]] = []
+    corpus: dict[str, tuple[list[dict[str, str]], dict[str, bytes]]] = {}
+    for config in LANGUAGES:
+        rows = _load_reference_rows(config, cache_dir, samples_per_language)
+        audio = _read_selected_audio(config, cache_dir, rows)
+        corpus[config] = (rows, audio)
+
     model = whisperx.load_model(
         model_name,
         device="cpu",
@@ -96,23 +169,17 @@ def run_benchmark(
         language=None,
     )
 
+    records: list[dict[str, Any]] = []
     for config, language_info in LANGUAGES.items():
-        dataset = load_dataset(
-            DATASET,
-            config,
-            split=f"test[:{samples_per_language}]",
-        )
-        dataset = dataset.cast_column("audio", Audio(decode=False))
-
+        rows, audio_files = corpus[config]
         align_model, align_metadata = whisperx.load_align_model(
             language_code=language_info["whisper"],
             device="cpu",
         )
 
-        for index, example in enumerate(dataset):
-            waveform, sample_rate = _read_audio(example["audio"])
+        for row in rows:
+            waveform, sample_rate = _read_audio(audio_files[row["filename"]])
             duration = float(waveform.size / sample_rate)
-            reference = str(example.get("raw_transcription") or example["transcription"])
 
             transcribe_started = time.perf_counter()
             recognized = model.transcribe(
@@ -126,7 +193,7 @@ def run_benchmark(
                 segment.get("text", "").strip()
                 for segment in recognized.get("segments", [])
             ).strip()
-            normalized_reference = _normalize_text(reference)
+            normalized_reference = _normalize_text(row["reference"])
             normalized_hypothesis = _normalize_text(recognized_text)
             error_rate = float(wer(normalized_reference, normalized_hypothesis))
 
@@ -158,9 +225,10 @@ def run_benchmark(
             records.append(
                 {
                     "dataset": DATASET,
+                    "dataset_revision": DATASET_REVISION,
                     "config": config,
                     "language": language_info["whisper"],
-                    "sample_id": int(example.get("id", index)),
+                    "sample_id": row["id"],
                     "audio_duration_seconds": round(duration, 3),
                     "reference_word_count": len(normalized_reference.split()),
                     "hypothesis_word_count": len(normalized_hypothesis.split()),
@@ -175,7 +243,7 @@ def run_benchmark(
                 }
             )
 
-        del align_model, align_metadata, dataset
+        del align_model, align_metadata
         gc.collect()
 
     del model
@@ -187,7 +255,6 @@ def run_benchmark(
 
     summary = {}
     for config, items in grouped.items():
-        total_reference_words = sum(item["reference_word_count"] for item in items)
         summary[config] = {
             "samples": len(items),
             "mean_wer": round(sum(item["wer"] for item in items) / len(items), 6),
@@ -198,7 +265,7 @@ def run_benchmark(
             "unaligned_or_invalid_word_count": sum(
                 item["unaligned_or_invalid_word_count"] for item in items
             ),
-            "reference_word_count": total_reference_words,
+            "reference_word_count": sum(item["reference_word_count"] for item in items),
         }
 
     return {
@@ -207,6 +274,7 @@ def run_benchmark(
         "classification": "smoke_benchmark_not_product_acceptance",
         "dataset": {
             "id": DATASET,
+            "revision": DATASET_REVISION,
             "license": "CC-BY-4.0",
             "split": "test",
             "configurations": list(LANGUAGES),
