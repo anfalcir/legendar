@@ -10,6 +10,7 @@ from PySide6.QtCore import QSettings, Qt
 
 from legendar.application.pipeline.serial_pipeline import PipelinePorts, SerialPipeline
 from legendar.domain.errors.catalog import MediaToolError
+from legendar.domain.events.job_events import ProgressReported, StateChanged
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
@@ -93,6 +94,157 @@ def test_generate_runs_off_the_ui_thread_and_completes(qtbot, tmp_path, media) -
     assert window.generate_button.isEnabled()
     assert not window.cancel_button.isEnabled()
 
+
+
+def test_start_declined_does_not_create_workspace(qtbot, tmp_path, media) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+    window._confirm_start = lambda *_args: False
+
+    window._start_job()
+
+    assert not window.is_running
+    assert list((tmp_path / "jobs").iterdir()) == []
+    assert window.generate_button.isEnabled()
+
+
+def test_reentrant_start_confirmation_cannot_create_duplicate_jobs(
+    qtbot, tmp_path, media
+) -> None:
+    calls = 0
+
+    def pipeline_factory():
+        nonlocal calls
+        calls += 1
+        return SerialPipeline(_ports())
+
+    dependencies = _dependencies(tmp_path)
+    dependencies = __import__("dataclasses").replace(
+        dependencies, pipeline_factory=pipeline_factory
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+
+    def reentrant_confirmation(*_args):
+        window._start_job()
+        return True
+
+    window._confirm_start = reentrant_confirmation
+    window._start_job()
+
+    assert window.is_running
+    assert calls == 1
+    assert not window.generate_button.isEnabled()
+    qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
+    assert calls == 1
+
+
+def test_existing_output_requires_a_second_explicit_confirmation(
+    qtbot, tmp_path, media
+) -> None:
+    destination = tmp_path / "saida.srt"
+    destination.write_text("legenda anterior", encoding="utf-8")
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(destination))
+    window._confirm_overwrite = lambda _path: False
+
+    window._start_job()
+
+    assert not window.is_running
+    assert destination.read_text(encoding="utf-8") == "legenda anterior"
+    assert list((tmp_path / "jobs").iterdir()) == []
+
+
+def test_cancel_declined_keeps_the_job_running(qtbot, tmp_path, media) -> None:
+    class SlowTranscriber:
+        def __init__(self) -> None:
+            self.started = threading.Event()
+            self.release = threading.Event()
+
+        def transcribe(self, audio, *, language=None, progress=None, token=None):
+            self.started.set()
+            self.release.wait(timeout=5)
+            return make_transcript(language=Language.PORTUGUESE)
+
+    slow = SlowTranscriber()
+    window = _window(
+        qtbot, _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow))),
+        tmp_path,
+    )
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+    window._confirm_cancel = lambda **_kwargs: False
+    qtbot.mouseClick(window.generate_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(slow.started.is_set, timeout=5000)
+
+    window._cancel_job()
+
+    assert window.is_running
+    assert window.cancel_button.isEnabled()
+    slow.release.set()
+    qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
+    assert window.view_model.snapshot.state is JobState.COMPLETED
+
+
+def test_repeated_cancel_requests_are_ignored_after_first_acceptance(
+    qtbot, tmp_path, media
+) -> None:
+    class SlowTranscriber:
+        def __init__(self) -> None:
+            self.started = threading.Event()
+            self.release = threading.Event()
+
+        def transcribe(self, audio, *, language=None, progress=None, token=None):
+            self.started.set()
+            self.release.wait(timeout=5)
+            return make_transcript(language=Language.PORTUGUESE)
+
+    slow = SlowTranscriber()
+    window = _window(
+        qtbot, _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow))),
+        tmp_path,
+    )
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+    confirmations = []
+    window._confirm_cancel = lambda **_kwargs: confirmations.append(True) or True
+
+    qtbot.mouseClick(window.generate_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(slow.started.is_set, timeout=5000)
+    window._cancel_job()
+    window._cancel_job()
+
+    assert len(confirmations) == 1
+    assert not window.cancel_button.isEnabled()
+    slow.release.set()
+    qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
+    assert window.view_model.snapshot.state is JobState.CANCELLED
+
+
+def test_progress_is_indeterminate_until_pipeline_reports_a_measurement(
+    qtbot, tmp_path
+) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    window._thread = object()
+    snapshot = window.view_model.apply(
+        StateChanged("job-1", 1, previous=JobState.IDLE, current=JobState.VALIDATING_INPUT)
+    )
+    window._render(snapshot)
+
+    assert window.progress_bar.minimum() == 0
+    assert window.progress_bar.maximum() == 0
+
+    snapshot = window.view_model.apply(
+        ProgressReported("job-1", 2, fraction=0.4, message="Preparando áudio")
+    )
+    window._render(snapshot)
+
+    assert window.progress_bar.maximum() == 100
+    assert window.progress_bar.value() == 40
+    assert window.progress_meta.text() == "40% concluído"
 
 def test_missing_file_is_reported_without_starting(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
