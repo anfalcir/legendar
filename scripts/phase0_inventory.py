@@ -13,6 +13,7 @@ import json
 import os
 import platform
 import shutil
+import shlex
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -54,6 +55,80 @@ def _parse_linux_meminfo(content: str) -> dict[str, int | None]:
         "total_bytes": values.get("MemTotal"),
         "available_bytes": values.get("MemAvailable", values.get("MemFree")),
     }
+
+
+def _parse_os_release(content: str) -> dict[str, str | None]:
+    """Parse non-sensitive identity fields from the Linux os-release format."""
+    allowed = {"ID", "NAME", "VERSION_ID", "PRETTY_NAME"}
+    result: dict[str, str | None] = {key.lower(): None for key in allowed}
+    for line in content.splitlines():
+        key, separator, raw_value = line.partition("=")
+        if not separator or key not in allowed:
+            continue
+        try:
+            parts = shlex.split(raw_value, comments=False, posix=True)
+        except ValueError:
+            continue
+        if parts:
+            result[key.lower()] = parts[0]
+    return result
+
+
+def _collect_linux_distribution(
+    os_release_path: Path = Path("/etc/os-release"),
+) -> dict[str, str | None] | None:
+    """Return distribution identity without collecting machine-specific IDs."""
+    if not os_release_path.is_file():
+        return None
+    try:
+        return _parse_os_release(os_release_path.read_text(encoding="utf-8"))
+    except OSError:
+        return None
+
+
+def _collect_linux_graphics_adapters(
+    pci_devices_root: Path = Path("/sys/bus/pci/devices"),
+) -> list[dict[str, str | None]]:
+    """Enumerate PCI display controllers using Linux sysfs; no lspci required."""
+    if not pci_devices_root.is_dir():
+        return []
+
+    vendor_names = {
+        "0x1002": "AMD",
+        "0x10de": "NVIDIA",
+        "0x8086": "Intel",
+    }
+    adapters: list[dict[str, str | None]] = []
+    for device_path in sorted(pci_devices_root.iterdir()):
+        try:
+            class_id = (device_path / "class").read_text(encoding="ascii").strip()
+            if not class_id.lower().startswith("0x03"):
+                continue
+            vendor_id = (device_path / "vendor").read_text(
+                encoding="ascii"
+            ).strip().lower()
+            device_id = (device_path / "device").read_text(
+                encoding="ascii"
+            ).strip().lower()
+            driver_path = device_path / "driver"
+            driver = (
+                driver_path.resolve(strict=True).name
+                if driver_path.is_symlink()
+                else None
+            )
+        except (OSError, RuntimeError):
+            continue
+
+        adapters.append(
+            {
+                "vendor": vendor_names.get(vendor_id, "Unknown"),
+                "vendor_id": vendor_id,
+                "device_id": device_id,
+                "class_id": class_id.lower(),
+                "driver": driver,
+            }
+        )
+    return adapters
 
 
 def _collect_memory() -> dict[str, int | None]:
@@ -244,9 +319,17 @@ def collect_inventory(project_root: Path, probe_torch: bool = False) -> dict[str
         "system": {
             "os": platform.system(),
             "release": platform.release(),
+            "distribution": (
+                _collect_linux_distribution() if sys.platform.startswith("linux") else None
+            ),
             "architecture": platform.machine(),
             "cpu_model": _cpu_model(),
             "logical_cpu_count": os.cpu_count(),
+            "graphics_adapters": (
+                _collect_linux_graphics_adapters()
+                if sys.platform.startswith("linux")
+                else []
+            ),
             "memory_total_bytes": memory["total_bytes"],
             "memory_available_bytes": memory["available_bytes"],
             "disk_total_bytes": disk.total,
