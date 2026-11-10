@@ -34,7 +34,6 @@ Foi adicionado `scripts/phase0_inventory.py`, ferramenta independente que usa so
 - Quantidade de CPUs lógicas, memória física total/disponível e capacidade livre/total do disco.
 - Controladores gráficos PCI detectáveis em Linux (fabricante, IDs PCI, classe e driver, sem identificadores únicos do equipamento).
 - Disponibilidade e versão de FFmpeg e ffprobe, incluindo a pasta local `ffmpeg/bin` quando existir.
-- Controladores gráficos PCI detectáveis em Linux (fabricante, IDs PCI, classe e driver, sem identificadores únicos do equipamento).
 - Presença de `nvidia-smi` e identificação das GPUs NVIDIA consultáveis. A ausência desta ferramenta não significa ausência de GPU AMD/Intel.
 - Versões instaladas de Whisper, WhisperX, stable-ts, PyTorch, torchaudio, torchvision, NumPy, PySide6 e yt-dlp.
 - Opcionalmente, resultado da importação do PyTorch, disponibilidade CUDA/ROCm exposta pela API CUDA do PyTorch e dispositivos reconhecidos.
@@ -146,9 +145,32 @@ Fontes oficiais consultadas em 10/11/2026:
 - [Modelos e requisitos aproximados do Whisper](https://github.com/openai/whisper/blob/main/README.md)
 - [Pacote FFmpeg no Ubuntu](https://packages.ubuntu.com/ffmpeg)
 
-**Decisão técnica provisória:** homologar CPU primeiro; não instalar ROCm; não alterar ainda as dependências do produto. Reexecutar o coletor atualizado para identificar distribuição/driver PCI; depois preparar ambiente de prova isolado.
+**Interpretação restrita ao ambiente inventariado:** este computador será um perfil concreto de teste em CPU; não há evidência para instalar/usar ROCm nele. Isso não restringe o conjunto de dependências do Legendar nem impede que perfis NVIDIA CUDA, AMD ROCm ou Apple MPS sejam suportados em outros ambientes após homologação. Não alterar o stack do sistema global; preparar ambientes virtuais isolados.
 
 O coletor foi ampliado após o primeiro relatório para identificar distribuição (`/etc/os-release`) e controladores gráficos PCI AMD/Intel/NVIDIA por sysfs. A CI valida essas novas rotinas. Repetir a coleta no computador-alvo com a versão atual da branch para completar a evidência de distribuição e driver gráfico.
+
+## 4B. Requisito de governança das dependências do produto
+
+A diretriz do projeto é que o **repositório seja a fonte de verdade das dependências**. O inventário do computador-alvo serve para identificar um perfil de implantação e medir desempenho; não define sozinho as bibliotecas, as versões ou as tecnologias permitidas.
+
+Foi criado nesta branch:
+
+- `pyproject.toml`: manifesto canônico de dependências diretas, faixas de versão, extra experimental de alinhamento e grupos de desenvolvimento.
+- `docs/MATRIZ_DEPENDENCIAS.md`: justificativas, requisitos externos, política de versão, perfis de hardware e critérios de compatibilidade.
+
+Requisitos diretos iniciais registrados:
+
+| Componente | Requisito |
+|---|---|
+| PySide6 | `>=6.9,<7` |
+| openai-whisper | `>=20250625` |
+| yt-dlp | `>=2025.4.30` |
+| WhisperX | Extra experimental `alignment-whisperx`, `>=3.8.6,<4` |
+| Python | `>=3.10,<3.14`, faixa inicial orientada pelo candidato WhisperX, não pelo Python instalado no equipamento |
+
+O arquivo `requirements.txt` permanece preservado como snapshot legado e não é a fonte canônica. O `uv.lock` ainda não foi criado: primeiro será necessário validar a resolução PyTorch/WhisperX, os wheels e as fontes de distribuição para os sistemas e perfis pretendidos; depois o lockfile será versionado para reprodutibilidade. Não foram instaladas nem promovidas dependências por esta alteração documental/manifesto.
+
+CPU é um caminho de compatibilidade quando suportado pelos componentes. CUDA, ROCm e MPS são perfis opcionais. A ausência de suporte ROCm no equipamento atual não limita a arquitetura ou a compatibilidade que o projeto poderá oferecer em outros equipamentos.
 
 ## 5. Plano experimental
 
