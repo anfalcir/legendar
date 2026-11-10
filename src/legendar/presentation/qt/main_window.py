@@ -628,22 +628,23 @@ class MainWindow(QMainWindow):
 
         self._inspection_cancel_pending = False
         self._invalidate_media_inspection()
-        thread = QThread(self)
-        worker = MediaInspectionWorker(self._deps.media_inspector, source)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.completed.connect(
+        thread = MediaInspectionWorker(self._deps.media_inspector, source, self)
+        thread.completed.connect(
             self._on_media_inspected, Qt.ConnectionType.QueuedConnection
         )
-        worker.failed.connect(
+        thread.failed.connect(
             self._on_media_inspection_failed, Qt.ConnectionType.QueuedConnection
         )
-        worker.finished.connect(worker.deleteLater)
-        worker.finished.connect(thread.quit, Qt.ConnectionType.DirectConnection)
-        thread.finished.connect(self._on_media_inspection_thread_finished)
+        thread.finished.connect(
+            self._on_media_inspection_thread_finished,
+            Qt.ConnectionType.QueuedConnection,
+        )
         thread.finished.connect(thread.deleteLater)
 
-        self._inspection_worker = worker
+        # A inspeção é uma QThread dedicada: o objeto da thread pertence à GUI,
+        # mas run() e o subprocesso executam fora dela. A finalização volta por
+        # conexão enfileirada, sem destruir QObject worker em thread diferente.
+        self._inspection_worker = thread
         self._inspection_thread = thread
         self._sync_source_controls()
         self._render(self._view_model.snapshot)
@@ -652,6 +653,7 @@ class MainWindow(QMainWindow):
         except RuntimeError as exc:
             self._inspection_worker = None
             self._inspection_thread = None
+            thread.deleteLater()
             self._sync_source_controls()
             self._render(self._view_model.report_error(str(exc)))
 
