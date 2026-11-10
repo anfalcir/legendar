@@ -111,6 +111,36 @@ def test_output_without_srt_suffix_is_normalized(qtbot, tmp_path, media) -> None
     assert window.view_model.snapshot.output_path == str(tmp_path / "legenda-final.srt")
 
 
+
+def test_output_cannot_overwrite_the_selected_media_file(qtbot, tmp_path) -> None:
+    source = tmp_path / "origem.srt"
+    source.write_text("conteúdo original", encoding="utf-8")
+    window = _window(qtbot, _dependencies(tmp_path))
+    window.file_edit.setText(str(source))
+    window.output_edit.setText(str(source))
+
+    qtbot.mouseClick(window.generate_button, Qt.MouseButton.LeftButton)
+
+    assert not window.is_running
+    assert source.read_text(encoding="utf-8") == "conteúdo original"
+    assert "não pode sobrescrever" in window.view_model.snapshot.error_message
+
+
+def test_output_cannot_be_placed_inside_model_cache(qtbot, tmp_path, media) -> None:
+    dependencies = _dependencies(tmp_path)
+    dependencies.cache_dir.mkdir()
+    window = _window(qtbot, dependencies)
+    window.file_edit.setText(str(media))
+    destination = dependencies.cache_dir / "saida.srt"
+    window.output_edit.setText(str(destination))
+
+    qtbot.mouseClick(window.generate_button, Qt.MouseButton.LeftButton)
+
+    assert not window.is_running
+    assert not destination.exists()
+    assert "cache de modelos" in window.view_model.snapshot.error_message
+
+
 def test_source_language_syncs_target_when_not_translating(
     qtbot, tmp_path, media
 ) -> None:
