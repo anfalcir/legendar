@@ -144,7 +144,6 @@ O primeiro relatório antecede a ampliação do coletor que agora identifica dis
 | Benchmark FLEURS EN | 2 amostras; WER médio 0,209559; RTF médio 0,163; 30 palavras com timestamps válidos; 0 inválidas | Amostra pequena de fala lida, somente referência lexical/técnica |
 | Suíte completa da Fase 1 | CI [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857): 196 passed em cada ambiente Python 3.10–3.13; cobertura total de 88% | 4/4 jobs aprovados; inclui domínio, aplicação, infraestrutura, integração, GUI e caracterização legada |
 | Ruff da Fase 1 | `ruff check` e `ruff format --check` aprovados na CI #116 em Python 3.10–3.13 | Todo o escopo mantido da arquitetura e dos testes está lintado e formatado |
-| Ruff da arquitetura Fase 1 | Escopo mantido definido em `docs/LEGACY_BASELINE.md`; novo workflow executa `ruff check` e `ruff format --check` | Legado e scripts históricos permanecem fora do lint retroativo; novos módulos e testes entram no escopo mantido |
 | Inicialização da GUI nova | `PYTHONPATH=src QT_QPA_PLATFORM=offscreen timeout 5s uv run --locked python -m legendar`: abriu e permaneceu no event loop até timeout | Smoke test local, sem processamento real |
 | CI da Fase 1 | **Concluída e aprovada** | Workflow [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857), 4/4 jobs verdes em Python 3.10–3.13 |
 | Caracterização e destino do legado | Concluída | Nove testes com doubles; política de preservação, congelamento e gate de aposentadoria em `LEGACY_BASELINE.md` |
