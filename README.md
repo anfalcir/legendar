@@ -1,120 +1,29 @@
 # Legendar
 
-Aplicação desktop para transcrever o áudio de vídeos em texto, utilizando o modelo Whisper.
+Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-## Funcionalidades
+O projeto está em fase de planejamento e remodelagem. O comportamento da versão atual ainda não representa todo o escopo futuro descrito nos documentos.
 
-- Transcrição de arquivos MP4 locais.
-- Download de áudio a partir de links do YouTube.
-- Transcrição automática com Whisper.
-- Salvamento das transcrições em arquivos de texto (.txt).
-- Interface gráfica desenvolvida com PySide6.
+## Documentação do projeto
 
-## Tecnologias
+- [Plano mestre de remodelagem](docs/PLANO_REMODELAGEM.md) — visão do produto, requisitos, arquitetura, pipeline de sincronização, fases e critérios de aceite.
+- [Estado atual](docs/ESTADO_ATUAL.md) — documento vivo com o que existe, o que está em andamento, decisões, testes, riscos e próximos passos.
 
-- [Whisper](https://github.com/openai/whisper) — reconhecimento de fala.
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — obtenção de áudio a partir de vídeos.
-- [PySide6](https://doc.qt.io/qtforpython/) — interface gráfica.
-- [FFmpeg](https://ffmpeg.org/) — processamento de áudio e vídeo.
-- Python — lógica e integração da aplicação.
+## Direção do produto
 
-## Requisitos
+- Entrada por URL do YouTube ou arquivos locais de áudio e vídeo.
+- Whisper como motor central de reconhecimento de fala.
+- Alinhamento temporal refinado por palavra.
+- Segmentação e tradução contextual para inglês ou português brasileiro.
+- Exportação de legendas SRT.
+- Interface desktop em PySide6, com processamento em segundo plano, progresso, logs e cancelamento controlado.
 
-- Python compatível com as dependências listadas em `requirements.txt`.
-- FFmpeg disponível em `ffmpeg/bin` ou no `PATH` do sistema.
-- Conexão com a internet para baixar áudio de vídeos do YouTube e obter o modelo Whisper na primeira execução.
+Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir funcionalidades planejadas das que já foram implementadas.
 
-## Instalação
+## Estado da implementação atual
 
-1. Obtenha uma cópia do repositório privado e entre na pasta do projeto.
-2. Crie um ambiente virtual:
-
-   ```bash
-   python -m venv .venv
-   ```
-
-3. Ative o ambiente virtual.
-
-   Linux/macOS:
-
-   ```bash
-   source .venv/bin/activate
-   ```
-
-   Windows:
-
-   ```powershell
-   .venv\Scripts\Activate.ps1
-   ```
-
-4. Instale as dependências:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Execução
-
-Com o ambiente virtual ativado, execute:
-
-```bash
-python main.py
-```
-
-## Transcrever um arquivo MP4
-
-1. Abra a aba **Arquivo MP4**.
-2. Selecione o vídeo.
-3. Escolha a pasta de destino.
-4. Informe o nome desejado para o arquivo de texto.
-5. Clique em **Transcrever arquivo**.
-
-A transcrição será salva com a extensão `.txt`. Caso já exista um arquivo com o mesmo nome, a aplicação acrescentará um sufixo numérico para evitar sobrescrevê-lo.
-
-## Transcrever áudio de um vídeo do YouTube
-
-1. Abra a aba **YouTube**.
-2. Informe o endereço do vídeo.
-3. Escolha a pasta de destino e o nome do arquivo.
-4. Clique em **Converter áudio em texto**.
-
-O áudio será obtido com `yt-dlp` e processado pelo Whisper.
-
-## Solução de problemas no Linux
-
-Se a aplicação não iniciar e o Qt informar que falta `xcb-cursor0` ou `libxcb-cursor0`, instale a biblioteca no Ubuntu/Debian:
-
-```bash
-sudo apt update
-sudo apt install libxcb-cursor0
-```
-
-Depois, execute novamente:
-
-```bash
-./.venv/bin/python main.py
-```
-
-## Estrutura do projeto
-
-```text
-legendar/
-├── core/
-│   ├── __init__.py
-│   ├── instagram.py
-│   ├── transcription.py
-│   └── youtube.py
-├── gui/
-│   ├── __init__.py
-│   ├── styles.py
-│   ├── ui_main.py
-│   └── worker.py
-├── .gitignore
-├── main.py
-├── README.md
-└── requirements.txt
-```
+A baseline ainda contém uma aplicação PySide6 com fluxos de transcrição para YouTube e MP4 local, utilizando Whisper e yt-dlp. A saída atual é texto; alinhamento forçado, tradução e geração SRT ainda precisam ser implementados. O andamento real está registrado em [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md).
 
 ## Licença
 
-O projeto utiliza a licença MIT.
+O projeto é tratado como MIT. Consulte o arquivo LICENSE e preserve os avisos de copyright e licença aplicáveis.
