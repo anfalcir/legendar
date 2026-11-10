@@ -440,8 +440,10 @@ class MainWindow(QMainWindow):
         try:
             self._deps.workspace_factory.cleanup(context)
         except Exception as exc:  # noqa: BLE001 - limpeza não pode derrubar a UI
-            self.log_view.appendPlainText(
-                f"Aviso: não foi possível limpar o diretório temporário: {exc}"
+            self._render(
+                self._view_model.report_warning(
+                    f"não foi possível limpar o diretório temporário: {exc}"
+                )
             )
 
     # -- desenho ----------------------------------------------------------
