@@ -25,8 +25,8 @@ _BLOCK = re.compile(
 def format_timestamp(seconds: float) -> str:
     """Formata segundos como ``HH:MM:SS,mmm``.
 
-    O arredondamento é para baixo (truncamento) para nunca empurrar o início
-    de uma cue sobre o fim da anterior.
+    O timestamp é arredondado ao milissegundo mais próximo; a validação do trilho
+    garante que os intervalos quantizados continuem positivos e ordenados.
     """
     if seconds < 0:
         raise SrtValidationError("Timestamp negativo não é válido em SRT.")
