@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import argparse
 import sys
-import tomllib
 from pathlib import Path
 from typing import Any
 
 
 def validate(project_path: Path, lock_path: Path) -> list[str]:
+    import tomllib
+
     with project_path.open("rb") as handle:
         project = tomllib.load(handle)
     with lock_path.open("rb") as handle:
