@@ -40,7 +40,9 @@ def _request() -> JobRequest:
     )
 
 
-def _build(events: list[JobEvent], **overrides) -> JobController:
+def _build(
+    events: list[JobEvent], *, context=None, **overrides
+) -> JobController:
     ports = {
         "inspector": FakeInspector(),
         "audio_preparer": FakeAudioPreparer(),
@@ -49,7 +51,9 @@ def _build(events: list[JobEvent], **overrides) -> JobController:
         "publisher": FakePublisher(),
     }
     ports.update(overrides)
-    return JobController(SerialPipeline(PipelinePorts(**ports)), events.append)
+    return JobController(
+        SerialPipeline(PipelinePorts(**ports)), events.append, context=context
+    )
 
 
 def test_happy_path_emits_started_states_and_completed(job_context):
@@ -201,6 +205,40 @@ def test_cancel_is_rejected_once_non_cancellable_publication_begins(job_context)
     assert len(outcomes) == 1
     assert outcomes[0] is not None
     assert controller.state is JobState.COMPLETED
+
+
+
+def test_controller_accepts_cancel_before_worker_thread_starts(job_context):
+    events: list[JobEvent] = []
+    controller = _build(events, context=job_context)
+
+    assert controller.state is JobState.IDLE
+    assert controller.cancel() is True
+    assert controller.is_cancelled
+
+    assert controller.run(_request(), job_context) is None
+    assert controller.state is JobState.CANCELLED
+    assert isinstance(events[-1], JobCancelled)
+
+
+def test_controller_rejects_context_replacement_before_start(job_context):
+    from legendar.application.job.context import JobContext, CancellationTokenImpl
+
+    events: list[JobEvent] = []
+    controller = _build(events, context=job_context)
+    other_context = JobContext(
+        job_id="other-job",
+        source_label="outro.mp4",
+        output_path=job_context.output_path,
+        workspace_dir=job_context.workspace_dir,
+        cache_dir=job_context.cache_dir,
+        token=CancellationTokenImpl(),
+    )
+
+    with pytest.raises(ValueError, match="contexto vinculado"):
+        controller.run(_request(), other_context)
+
+    assert controller.state is JobState.IDLE
 
 
 def test_cancel_without_active_job_returns_false():
