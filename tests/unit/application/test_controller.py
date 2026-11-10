@@ -40,9 +40,7 @@ def _request() -> JobRequest:
     )
 
 
-def _build(
-    events: list[JobEvent], *, context=None, **overrides
-) -> JobController:
+def _build(events: list[JobEvent], *, context=None, **overrides) -> JobController:
     ports = {
         "inspector": FakeInspector(),
         "audio_preparer": FakeAudioPreparer(),
@@ -173,7 +171,6 @@ def test_progress_is_monotonic_and_deduplicated(job_context):
     assert fractions == sorted(fractions)
     assert all(0.0 <= fraction <= 1.0 for fraction in fractions)
     assert len(fractions) > 0
-
 
 
 def test_cancel_is_rejected_once_non_cancellable_publication_begins(job_context):
