@@ -53,7 +53,6 @@ def test_parses_video_with_audio_and_ignores_subtitles() -> None:
     assert stream.title == "Principal"
 
 
-
 def test_default_stream_is_preferred_and_pts_offset_is_derived() -> None:
     payload = {
         "streams": [
