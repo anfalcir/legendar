@@ -2,10 +2,11 @@
 
 - **Projeto:** Legendar
 - **Atualização:** 10/11/2026
-- **Fase 0:** tecnicamente concluída; workflow final #109 aprovado (16/16 jobs), com limitações explicitadas
-- **Próxima fase:** Fase 1 — Reestruturação arquitetural, após revisão e integração da PR #1
+- **Fase 0:** concluída, validada e integrada; workflow final #113 aprovado (16/16 jobs), com limitações explicitadas
+- **Fase 1:** pronta para começar; branch `phase-1/architecture` já criada a partir da main pós-merge, sem implementação iniciada
 - **Branch de conclusão da Fase 0:** `phase-0/technical-inventory`
-- **PR de integração:** [#1 — Fase 0: inventário, governança de dependências e prova técnica](https://github.com/anfalcir/legendar/pull/1)
+- **PR de integração:** [#1 — Fase 0: inventário, governança de dependências e prova técnica](https://github.com/anfalcir/legendar/pull/1), merged por squash
+- **Commit na main:** `992cb874274e73d0264994e39926113f1461236f`
 - **Regra de governança:** o repositório é a fonte de verdade das dependências e decisões; o computador de homologação não define sozinho os requisitos do produto.
 
 Este documento é a passagem de contexto para a IA que executará a Fase 1 na IDE. Leia-o em conjunto com o [plano mestre](PLANO_REMODELAGEM.md), o [estado atual](ESTADO_ATUAL.md), a [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e o [protocolo da Fase 0](FASE_0_PROTOCOLO.md).
@@ -25,7 +26,7 @@ A Fase 0 concluiu as definições que permitem estruturar a aplicação sem mant
 7. Decisões de arquitetura de pipeline, timestamp, tradução, cancelamento, temporários e limites de homologação registradas para a Fase 1.
 8. Evidências finais da CI registradas: workflow #109 com 16/16 jobs aprovados, lock validado, 12 combinações Python/SO aprovadas, instalação CPU/CUDA 12.8, POC FFmpeg/offset e smoke benchmark FLEURS PT-BR/EN publicado.
 
-**Importante:** a conclusão técnica da Fase 0 significa que a direção técnica e os contratos arquiteturais iniciais estão suficientemente definidos e que as provas automatizadas de viabilidade planejadas passaram. Não significa que toda a qualidade de reconhecimento/alinhamento já foi homologada para produção, nem que todos os sistemas operacionais e backends foram validados como suportados. A PR #1 ainda precisa ser revisada e integrada antes da criação da branch da Fase 1. Os itens que dependem de anotação humana e do hardware-alvo permanecem como gates das fases de integração, alinhamento e homologação, conforme a seção 7.
+**Importante:** a conclusão da Fase 0 significa que a direção técnica e os contratos arquiteturais iniciais estão suficientemente definidos e que as provas automatizadas de viabilidade planejadas passaram. Não significa que toda a qualidade de reconhecimento/alinhamento já foi homologada para produção, nem que todos os sistemas operacionais e backends foram validados como suportados. A PR #1 foi integrada e a branch `phase-1/architecture` está pronta; os itens que dependem de anotação humana e do hardware-alvo permanecem como gates das fases de integração, alinhamento e homologação, conforme a seção 7.
 
 ## 2. Decisões técnicas consolidadas
 
@@ -271,9 +272,9 @@ A Fase 1 estará concluída somente quando:
 Antes de editar:
 
 1. Ler `README.md`, `docs/PLANO_REMODELAGEM.md`, `docs/ESTADO_ATUAL.md`, `docs/MATRIZ_DEPENDENCIAS.md`, `docs/FASE_0_PROTOCOLO.md` e este handoff.
-2. Confirmar que o PR #1 foi revisado e integrado à `main`. Se ainda estiver aberto, não presumir que a documentação da branch já está na branch padrão.
-3. Inspecionar a árvore e os módulos reais da baseline; não presumir que o texto documental substitua a leitura do código.
-4. Criar branch própria `phase-1/architecture` a partir da `main` atualizada depois da integração da Fase 0.
+2. Confirmar que a PR #1 está merged na `main` (merge por squash no commit `992cb874274e73d0264994e39926113f1461236f`).
+3. Confirmar que a branch de trabalho é `phase-1/architecture` e que sua base é o commit de integração da Fase 0.
+4. Inspecionar a árvore e os módulos reais da baseline; não presumir que o texto documental substitua a leitura do código.
 5. Registrar o plano de execução da Fase 1 antes de grandes refatorações e usar commits pequenos, testáveis e reversíveis.
 6. Ao concluir cada etapa, executar CI, revisar diffs e atualizar `ESTADO_ATUAL.md` e o handoff.
 7. Não iniciar a Fase 2 sem aprovação explícita do responsável.

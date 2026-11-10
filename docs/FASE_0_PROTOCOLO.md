@@ -2,7 +2,7 @@
 
 - **Projeto:** Legendar
 - **Fase:** 0 — Definições e prova técnica
-- **Status:** tecnicamente concluída; workflow final #109 aprovado (16/16 jobs), PR #1 aguardando revisão/integração
+- **Status:** concluída, validada e integrada; workflow push #113 aprovado (16/16 jobs), PR #1 merged por squash
 - **Data:** 10/11/2026
 - **Branch:** `phase-0/technical-inventory`
 - **Plano mestre:** [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md)
@@ -27,7 +27,7 @@ A fase é considerada tecnicamente concluída quando:
 
 **A conclusão da Fase 0 não equivale à homologação de precisão temporal do produto.** As provas de timestamp com referências humanas permanecem no gate da Fase 5; a validação de qualidade/performance no computador-alvo permanece nas Fases 4, 5 e 8; a seleção de fornecedor de tradução permanece antes da Fase 6. Isso evita tanto iniciar a arquitetura sem contratos quanto afirmar uma qualidade que ainda não foi medida.
 
-A validação final do código foi concluída no workflow push [#109](https://github.com/anfalcir/legendar/actions/runs/42858694179), commit `febc0b30b5fbea382d2670291059c69bb084b850`: 16/16 jobs aprovados. O lock foi regenerado e validado; a matriz Python/SO, as instalações CPU e CUDA 12.8, a POC FFmpeg/offset e o benchmark WhisperX PT-BR/EN passaram. A branch permanece isolada e a PR #1 aguarda revisão/integração. Os resultados e limitações estão discriminados na seção 9.
+A validação final do código foi concluída no workflow push [#113](https://github.com/anfalcir/legendar/actions/runs/42867776364), HEAD `2726a19916f4397bbb233eb6658bee588ee15968`: 16/16 jobs aprovados. O PR workflow [#114](https://github.com/anfalcir/legendar/actions/runs/42867789927) também concluiu com sucesso (14 jobs executados e aprovados; dois jobs exclusivos de push foram pulados intencionalmente). O lock, a matriz Python/SO, as instalações CPU e CUDA 12.8, a POC FFmpeg/offset e o benchmark WhisperX PT-BR/EN passaram. A PR #1 foi integrada por squash à `main` no commit `992cb874274e73d0264994e39926113f1461236f`. A branch `phase-1/architecture` já foi criada a partir desse commit. Os resultados e limitações estão discriminados na seção 9.
 
 ## 2. Inventário de ambiente
 
@@ -261,13 +261,15 @@ Metas temporais de 150 ms mediana e 350 ms P95 permanecem alvos provisórios do 
 | 10/11/2026 — workflow #69 | Primeiro benchmark com `datasets` | Falhou por incompatibilidade de dependências `datasets` 5.2 / Hugging Face Hub / WhisperX 3.8.6; dependência removida |
 | 10/11/2026 — lock estável | Restrições e validador de lock | WhisperX restringido para versão estável 3.8.6; grupo `datasets` removido por conflito; lock final regenerado e validado no workflow #109 |
 | 10/11/2026 — workflow [#109](https://github.com/anfalcir/legendar/actions/runs/42858694179) | Lock/perfis, matriz Python/SO, FFmpeg/offset, WhisperX e CUDA 12.8 | 16/16 jobs aprovados; execução CPU e benchmark PT-BR/EN concluídos; artefato `legendar-phase0-model-poc` publicado |
+| 10/11/2026 — workflow [#113](https://github.com/anfalcir/legendar/actions/runs/42867776364) | Validação final do HEAD documental e de todas as provas de push | 16/16 jobs aprovados; última combinação macOS incluída |
+| 10/11/2026 — workflow PR [#114](https://github.com/anfalcir/legendar/actions/runs/42867789927) | Validação da PR antes da integração | 14 jobs executados e aprovados; dois jobs exclusivos de push foram pulados conforme condição do workflow |
+| 10/11/2026 — integração | PR #1 | Merge por squash no commit `992cb874274e73d0264994e39926113f1461236f`; branch `phase-1/architecture` criada a partir dele |
 
 ## 10. Critério de passagem à Fase 1
 
 A Fase 1 poderá começar depois de:
-- [ ] PR #1 ser revisada e integrada à `main`;
-- [ ] PR #1 ser revisada e integrada à `main`;
-- [x] workflow da branch da Fase 0 estar verde (workflow #109, 16/16 jobs); executar novamente no HEAD integrado se a integração alterar a árvore;
+- [x] PR #1 ser revisada e integrada à `main` (merge por squash no commit `992cb874274e73d0264994e39926113f1461236f`);
+- [x] workflow da branch da Fase 0 estar verde (workflow #113, 16/16 jobs);
 - [x] `uv.lock` corresponder ao manifesto e passar pelo validador, incluindo exports CPU/CUDA;
 - [x] perfis CPU e CUDA 12.8 passarem instalação/importação CI;
 - [x] POC smoke PT-BR/EN ter resultado publicado com métricas e limitações;

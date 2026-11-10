@@ -2,14 +2,15 @@
 
 - **Última atualização:** 10/11/2026
 - **Repositório:** anfalcir/legendar
-- **Branch de referência de implementação:** `phase-0/technical-inventory`
+- **Branch de trabalho atual:** `phase-1/architecture`
 - **Branch padrão:** `main`
-- **Fase:** Fase 0 — Definições e prova técnica, concluída tecnicamente
-- **Próxima fase:** Fase 1 — Reestruturação arquitetural, após revisão e integração da PR #1
-- **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), aberta e pronta para revisão
+- **Fase concluída:** Fase 0 — Definições e prova técnica
+- **Fase atual:** Fase 1 — Reestruturação arquitetural, pronta para início (ainda não iniciada)
+- **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), integrada por squash
+- **Commit de integração na main:** `992cb874274e73d0264994e39926113f1461236f`
 - **Documento de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
 
-> A Fase 0 está tecnicamente concluída e validada no workflow [#109](https://github.com/anfalcir/legendar/actions/runs/42858694179), com 16/16 jobs aprovados. A branch continua isolada: a PR #1 ainda precisa de revisão e integração antes da criação da branch da Fase 1. A `main` não foi alterada por esta execução.
+> A Fase 0 está concluída e integrada. O workflow final da branch [#113](https://github.com/anfalcir/legendar/actions/runs/42867776364) terminou com 16/16 jobs aprovados; a validação da PR [#114](https://github.com/anfalcir/legendar/actions/runs/42867789927) também concluiu com sucesso. A branch `phase-1/architecture` foi criada diretamente do commit de integração da `main`. Nenhuma implementação da Fase 1 foi iniciada neste checkpoint.
 
 ---
 
@@ -19,18 +20,19 @@ A remodelagem funcional do Legendar ainda não começou. A baseline continua sen
 
 A Fase 0 estabeleceu e documentou a direção técnica: governança de dependências, perfis de runtime, coletor de ambiente, prova sintética de mídia/offset, script de POC PT-BR/EN e contrato arquitetural para a próxima fase. A documentação de passagem para a IA da IDE está em `docs/HANDOFF_FASE_1.md`.
 
-**Estado de fechamento:** Fase 0 tecnicamente concluída. O workflow push #109, no commit `febc0b30b5fbea382d2670291059c69bb084b850`, terminou com sucesso: 16/16 jobs (matriz de 12 combinações Python/SO, lock e perfis CPU/CUDA, POC FFmpeg/offset e benchmark WhisperX PT-BR/EN). O lock foi regenerado pela CI, versionado e aprovado pelo validador, incluindo exports CPU/CUDA. A pendência restante é de governança: revisão e integração da PR #1 pelo responsável. A Fase 1 deve partir da `main` atualizada após essa integração.
+**Estado de fechamento:** Fase 0 concluída, validada e integrada. O workflow push final #113, no HEAD documental `2726a19916f4397bbb233eb6658bee588ee15968`, terminou com 16/16 jobs aprovados. A revisão da PR #114 também concluiu com sucesso; nela, os jobs exclusivos de push (benchmark completo e instalação CUDA) foram pulados intencionalmente, pois já são executados no workflow push. A PR #1 foi integrada por squash no commit `992cb874274e73d0264994e39926113f1461236f`. A branch `phase-1/architecture` já foi criada a partir desse commit e está pronta para o planejamento/execução da Fase 1; nenhuma implementação da Fase 1 foi iniciada.
 
 ## 2. Situação do repositório
 
 | Item | Estado |
 |---|---|
 | Repositório | `anfalcir/legendar` |
-| PR de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1) |
-| Branch de execução | `phase-0/technical-inventory` |
-| `main` | Mantida sem as alterações desta branch; ainda não integrada |
+| PR de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1), merged por squash |
+| Branch de conclusão da Fase 0 | `phase-0/technical-inventory` |
+| Branch de trabalho da Fase 1 | `phase-1/architecture`, criada do commit de integração |
+| `main` | Atualizada e contém a entrega integral da Fase 0 |
 | Fonte de dependências | `pyproject.toml` |
-| Lock | `uv.lock` regenerado pela CI e versionado na branch; invariantes, fontes e exports CPU/CUDA aprovados no workflow #109 |
+| Lock | `uv.lock` regenerado pela CI e integrado à `main`; invariantes, fontes e exports CPU/CUDA aprovados no workflow #113 |
 | Coletor | `scripts/phase0_inventory.py` |
 | POC de mídia | `scripts/phase0_media_poc.py` |
 | POC de modelos | `scripts/phase0_model_poc.py` |
@@ -38,7 +40,7 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | Documentação técnica | plano mestre, estado vivo, protocolo, matriz de dependências e handoff Fase 1 |
 | CI | workflow `.github/workflows/phase0-quality.yml`; matriz determinística, validação do lock, instalação CPU/CUDA, prova de mídia e benchmark PT-BR/EN |
 
-O PR #1 deve ser revisado e integrado antes de criar `phase-1/architecture` a partir da `main` atualizada. Não mesclar automaticamente.
+A PR #1 foi revisada e integrada. A branch `phase-1/architecture` já existe e deriva diretamente do commit de squash da `main`; continuar nela ao iniciar a Fase 1.
 
 ## 3. Baseline da aplicação antes da Fase 1
 
@@ -140,8 +142,8 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 
 | Fase | Status | Observação |
 |---|---|---|
-| 0 — Definições e prova técnica | **Concluída tecnicamente** | Artefatos, documentação e evidências automatizadas concluídos; PR #1 aguarda revisão/integração |
-| 1 — Reestruturação arquitetural | Aguardando início | Começar em `phase-1/architecture`, criada a partir da `main` após integrar a PR #1 |
+| 0 — Definições e prova técnica | **Concluída e integrada** | PR #1 merged por squash; CI final verde |
+| 1 — Reestruturação arquitetural | **Pronta para iniciar** | Branch `phase-1/architecture` criada a partir do commit de integração; implementação ainda não iniciada |
 | 2 — Interface profissional | Não iniciada | Workers simulados e máquina de estados da GUI |
 | 3 — Entrada e preparação de mídia | Não iniciada | Homologar formatos, streams, offsets e temporários |
 | 4 — Reconhecimento Whisper | Não iniciada | Comparação PT-BR/EN e desempenho no computador-alvo |
@@ -153,18 +155,18 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 
 ## 8. Pendências encaminhadas às fases corretas
 
-1. **Governança / integração:** revisar a PR #1 e integrá-la à `main`. Não iniciar a Fase 1 antes dessa integração.
+1. **Fase 1 — pronta para execução:** ler integralmente o handoff, inspecionar a baseline e elaborar o plano de implementação antes de refatorar. A branch `phase-1/architecture` já está criada; nenhuma alteração funcional foi iniciada.
 2. **Antes da Fase 3:** repetir o inventário atualizado no computador-alvo e instalar/verificar FFmpeg/ffprobe.
 3. **Fase 4:** comparar modelos Whisper com corpus PT-BR/EN representativo; registrar WER/CER, duração, memória e RTF no hardware-alvo.
 4. **Fase 5:** anotar manualmente início/fim de palavras e medir erro mediano/P95, cobertura e falhas; não homologar sincronização só por WER.
 5. **Antes da Fase 6:** escolher provedor e aprovar custo, privacidade, retenção, limites e comportamento de falha.
 6. **Fase 8:** testar aplicação e fluxos completos nos sistemas/backends declarados como suportados.
 
-Essas pendências não reabrem a Fase 0: são gates de produto alocados às fases responsáveis ou o passo de governança necessário para começar a próxima fase.
+As pendências acima são gates de produto alocados às fases responsáveis; elas não reabrem a Fase 0.
 
 ## 9. Próxima ação objetiva
 
-Revisar e integrar a PR #1, cuja CI técnica está verde. Depois, criar `phase-1/architecture` a partir da `main` atualizada e seguir [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md).
+Iniciar a Fase 1 na branch já preparada `phase-1/architecture`: ler o [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), inspecionar o código legado, registrar o plano detalhado de implementação e os primeiros critérios de aceite antes de alterar a arquitetura.
 
 ---
 
@@ -178,4 +180,6 @@ Revisar e integrar a PR #1, cuja CI técnica está verde. Depois, criar `phase-1
 | 10/11/2026 | Identificada e corrigida seleção indevida de WhisperX 3.8.7rc1; intervalo restrito ao estável 3.8.6 |
 | 10/11/2026 | Identificado conflito de datasets 5.2.0 com huggingface-hub<1.0 do WhisperX 3.8.6; dependência removida e avaliação migrou para TSV/arquivos FLEURS |
 | 10/11/2026 | Handoff da Fase 1 criado com decisões, arquitetura, contratos, testes, limites e instruções de execução |
-| 10/11/2026 | Workflow #109 concluído com 16/16 jobs aprovados; lock e perfis CPU/CUDA validados, matriz de 12 ambientes verde, POC FFmpeg/offset verde e benchmark WhisperX PT-BR/EN concluído; Fase 0 tecnicamente encerrada |
+| 10/11/2026 | Workflow #109 concluído com 16/16 jobs aprovados; lock e perfis CPU/CUDA validados, matriz de 12 ambientes verde, POC FFmpeg/offset verde e benchmark WhisperX PT-BR/EN concluído |
+| 10/11/2026 | Workflow final push #113 aprovado com 16/16 jobs e PR workflow #114 concluído com sucesso; PR #1 integrada por squash na `main` (commit `992cb874274e73d0264994e39926113f1461236f`) |
+| 10/11/2026 | Branch `phase-1/architecture` criada a partir da `main` atualizada; Fase 1 pronta para iniciar, sem implementação antecipada |
