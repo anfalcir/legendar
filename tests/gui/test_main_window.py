@@ -279,9 +279,7 @@ def test_progress_is_indeterminate_until_pipeline_reports_a_measurement(
 
 
 
-def test_keyboard_tab_order_and_accessible_names_are_explicit(
-    qtbot, tmp_path
-) -> None:
+def test_keyboard_tab_order_and_accessible_names_are_explicit(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
     assert window.file_edit.accessibleName() == "Arquivo de mídia"
