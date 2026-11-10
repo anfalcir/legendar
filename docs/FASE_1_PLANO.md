@@ -1,7 +1,7 @@
 # Plano de execução — Fase 1: Reestruturação arquitetural
 
 - **Documento:** plano operacional da Fase 1 (escopo, sequência, critérios de aceite)
-- **Status:** em execução
+- **Status:** em execução — implementação fechada; CI e revisão final em validação
 - **Branch de trabalho:** `phase-1/architecture`
 - **Base:** `main` pós-integração da Fase 0 (commit de squash `992cb87`)
 - **Fontes de referência:** [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md), [ESTADO_ATUAL.md](ESTADO_ATUAL.md), [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
@@ -37,15 +37,15 @@ funcionalidades isoladas, testáveis e substituíveis — não a implementação
 | Etapa | Entrega | Evidência | Situação no checkpoint |
 |---|---|---|---|
 | 1 | Plano de execução e política de lint/testes (`pyproject` apenas grupos/tools; sem novas deps de runtime) | plano e grupos `test`/`lint` configurados | Concluída |
-| 2 | Testes de caracterização da baseline (`core/`, `gui/`) e helpers puros extraídos | testes verdes reproduzindo comportamento atual | Pendente; legado ainda sem caracterização |
+| 2 | Testes de caracterização da baseline (`core/`, `gui/`) e helpers puros extraídos | contratos legados executados com doubles, sem rede ou modelos | Concluída; nove casos de caracterização e compatibilidade adicionados |
 | 3 | Camada `domain`: objetos de valor temporais, entidades, erros tipados, eventos | testes de invariantes | Concluída |
 | 4 | Máquina de estados (`JobState` + `StateMachine`) com tabela de transições | testes de transições válidas/inválidas | Concluída |
 | 5 | `application`: portas (protocolos), `JobContext`, progresso e pipeline serial fake | testes com fakes de transcriber/aligner/translator | Concluída |
-| 6 | `infrastructure`: metadados/ferramentas de mídia, cache de modelos, workdir/factory, publisher atômico | testes unitários; sem inferência/modelos reais | Parcial; adapters concretos ficam nas fases seguintes |
-| 7 | `presentation`: view model sem Qt + janela Qt mínima + worker que traduz eventos em sinais | testes pytest-qt de estados/fakes | Parcial; refinamento visual e preferências são da Fase 2 |
+| 6 | `infrastructure`: metadados/ferramentas de mídia, cache de modelos, workdir/factory, publisher atômico | testes unitários; sem inferência/modelos reais | Concluída no escopo da Fase 1; adapters reais permanecem nas fases 3–6 |
+| 7 | `presentation`: view model sem Qt + janela Qt mínima + worker que traduz eventos em sinais | testes pytest-qt de estados/fakes | Concluída no escopo da Fase 1; polimento visual/preferências pertencem à Fase 2 |
 | 8 | `bootstrap`: composição explícita, entrypoint `python -m legendar`, preflight de ferramentas externas | smoke test offscreen | Concluída |
-| 9 | Migração/estratégia do legado (`main.py`, `core/`, `gui/`) documentada e executada | app antigo removido/aposentado com justificativa | Pendente; legado foi preservado e continua sem caracterização |
-| 10 | CI da Fase 1 (ruff + pytest + import-check de fronteiras + pytest-qt offscreen) + documentação | workflow verde | Pendente; existe somente o workflow da Fase 0 |
+| 9 | Migração/estratégia do legado (`main.py`, `core/`, `gui/`) documentada e executada | baseline caracterizada, congelada fora da arquitetura nova e com gate de aposentadoria | Concluída; arquivos preservados temporariamente até paridade e homologação end-to-end |
+| 10 | CI da Fase 1 (ruff + pytest + import-check de fronteiras + pytest-qt offscreen) + documentação | workflow dedicado verde em Python 3.10–3.13 | Em validação; workflow `phase1-quality.yml` criado e conectado à branch/PR |
 
 ## 4. Layout-alvo (ajustado do handoff à realidade do repositório)
 
@@ -78,7 +78,7 @@ tests/               (unit/, gui/, integration/; fakes compartilhados)
 - [x] temporários e cache com políticas testadas separadamente;
 - [x] configuração e inicialização centralizadas e reproduzíveis;
 - [x] aplicação inicia em modo de desenvolvimento (smoke test offscreen local);
-- [ ] CI da Fase 1 e árvore consistentes com a entrega (documentação atualizada neste checkpoint; workflow dedicado e revisão global pendentes);
+- [ ] CI da Fase 1 verde na matriz Python 3.10–3.13 e revisão global final concluída;
 - [x] decisões abertas e riscos no estado atual;
 - [ ] revisão final antes da Fase 2.
 
@@ -92,9 +92,9 @@ tradução de fornecedor (Fase 6); edição de vídeo, histórico, nuvem, diariz
 - **PySide6/Deps pesadas:** o perfil `runtime-*` instala Whisper/WhisperX/Torch; a suíte
   rápida e a CI usam apenas dependências-base + grupo `dev`, com fakes. Testes que dependem de
   FFmpeg são marcados e pulados quando ausente.
-- **Legado acoplado:** `gui.worker` importa `yt_dlp` no topo. A suíte atual ainda não contém
-  testes de caracterização de `core/` e `gui/`; manter esses módulos intactos até definir e
-  testar a estratégia de migração.
+- **Legado acoplado:** `gui.worker` importa dependências opcionais no topo. A baseline agora
+  tem testes com doubles e política de congelamento/aposentadoria documentada em
+  [LEGACY_BASELINE.md](LEGACY_BASELINE.md); não criar novas dependências com `src/legendar/`.
 - **Layout flat → `src/`:** a mudança de import exige ajuste de entrypoint e CI; mitigada por
   `__main__.py`, `PYTHONPATH=src` explícito e teste de import.
 
@@ -108,9 +108,11 @@ Validações locais executadas:
 - `uv run --locked ruff format --check` sobre os mesmos arquivos de arquitetura/teste: aprovado;
 - `PYTHONPATH=src QT_QPA_PLATFORM=offscreen timeout 5s uv run --locked python -m legendar`: a janela abriu e permaneceu no event loop até o timeout esperado.
 
-O workflow atual `.github/workflows/phase0-quality.yml` não executa esta suíte pytest/Ruff
-como workflow de qualidade da Fase 1. `ruff check .` também encontra problemas preexistentes
-no legado; não foram corrigidos neste checkpoint. A etapa de CI da Fase 1 permanece pendente.
+O workflow dedicado `.github/workflows/phase1-quality.yml` foi criado para executar a suíte
+pytest completa (incluindo Qt offscreen), Ruff e a verificação de lock em Python 3.10–3.13.
+A execução verde desse workflow ainda é gate obrigatório antes de encerrar a fase. `ruff check .`
+continua fora da política deliberada: os arquivos legados são cobertos por caracterização e
+compilação, sem reformatação incidental; o código novo é integralmente lintado.
 
 - **Fronteiras de camada** (`tests/test_architecture.py`): `domain` não importa Qt,
   `application`/`presentation`/`infrastructure`, nem `whisperx`/`torch`/`ffmpeg`/`yt_dlp`;
@@ -159,7 +161,6 @@ Desvios conscientes em relação ao plano original:
    checkpoint foi restrita à arquitetura e aos testes da Fase 1; a suíte global ainda requer
    uma política explícita para o legado e os arquivos históricos.
 
-Próximas ações dentro da Fase 1: criar caracterização do legado antes de decidir sua
-aposentadoria; definir uma política global de lint sem reformatação incidental; adicionar
-workflow de CI que execute pytest, Ruff e a janela Qt offscreen; revisar o diff completo e
-fechar os critérios pendentes. Não iniciar a Fase 2 sem revisão e aprovação explícitas.
+Próximas ações para fechar a Fase 1: aguardar/inspecionar a execução integral do workflow
+`phase1-quality.yml`, corrigir qualquer falha encontrada, revisar o diff e confirmar a coerência
+final dos documentos. Não iniciar a Fase 2 sem revisão e aprovação explícitas.
