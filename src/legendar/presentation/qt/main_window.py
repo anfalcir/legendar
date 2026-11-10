@@ -329,6 +329,16 @@ class MainWindow(QMainWindow):
         output_path = Path(output_text).expanduser()
         if output_path.suffix.lower() != ".srt":
             output_path = output_path.with_suffix(".srt")
+        resolved_output = output_path.resolve()
+        if resolved_output == media_path.resolve():
+            raise InvalidInputError(
+                "O destino da legenda não pode sobrescrever o arquivo de mídia."
+            )
+        models_root = self._deps.cache_dir.resolve()
+        if resolved_output == models_root or models_root in resolved_output.parents:
+            raise InvalidInputError(
+                "O destino da legenda não pode ficar dentro do cache de modelos."
+            )
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
