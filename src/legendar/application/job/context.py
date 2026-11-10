@@ -16,11 +16,12 @@ class CancellationTokenImpl:
     feito por ``raise_if_cancelled`` nos pontos seguros do pipeline.
     """
 
-    __slots__ = ("_event", "_reason")
+    __slots__ = ("_event", "_reason", "_lock")
 
     def __init__(self) -> None:
         self._event = threading.Event()
         self._reason: str | None = None
+        self._lock = threading.Lock()
 
     @property
     def is_cancelled(self) -> bool:
@@ -28,15 +29,17 @@ class CancellationTokenImpl:
 
     @property
     def reason(self) -> str | None:
-        return self._reason
+        with self._lock:
+            return self._reason
 
     def cancel(self, reason: str | None = None) -> bool:
-        """Solicita cancelamento; retorna ``False`` se já havia sido solicitado."""
-        if self._event.is_set():
-            return False
-        self._reason = reason
-        self._event.set()
-        return True
+        """Solicita cancelamento atomicamente; somente o primeiro pedido vence."""
+        with self._lock:
+            if self._event.is_set():
+                return False
+            self._reason = reason
+            self._event.set()
+            return True
 
     def raise_if_cancelled(self) -> None:
         if self._event.is_set():
