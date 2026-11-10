@@ -158,7 +158,6 @@ def test_cancellation_exposes_message() -> None:
     assert snapshot.can_start
 
 
-
 def test_operational_warning_survives_rerender_after_terminal_event() -> None:
     vm = JobViewModel()
     vm.apply(_state(1, JobState.IDLE, JobState.VALIDATING_INPUT))
