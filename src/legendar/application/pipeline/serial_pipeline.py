@@ -157,6 +157,7 @@ class SerialPipeline:
             stream=stream,
             destination_path=str(context.audio_cache_path),
             token=token,
+            progress=stage,
         )
         token.raise_if_cancelled()
         stage.report(1.0, "Áudio preparado")
@@ -234,7 +235,12 @@ class SerialPipeline:
         downloader = self._ports.downloader
         if downloader is None:
             raise InvalidInputError("Download do YouTube não está disponível.")
-        path = downloader.fetch(request.source, str(context.work_dir), token=token)
+        path = downloader.fetch(
+            request.source,
+            str(context.work_dir),
+            token=token,
+            progress=stage,
+        )
         token.raise_if_cancelled()
         stage.report(1.0, "Mídia baixada")
         return path
