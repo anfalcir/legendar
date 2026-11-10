@@ -3,7 +3,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scripts.phase0_inventory import (
+    _collect_linux_graphics_adapters,
     _parse_linux_meminfo,
+    _parse_os_release,
     _probe_executable,
     collect_inventory,
 )
@@ -29,6 +31,47 @@ class ParseLinuxMeminfoTests(unittest.TestCase):
             _parse_linux_meminfo("MemTotal: invalid kB\n"),
             {"total_bytes": None, "available_bytes": None},
         )
+
+
+
+class LinuxHostMetadataTests(unittest.TestCase):
+    def test_parses_os_release_fields_without_evaluating_shell_content(self):
+        result = _parse_os_release(
+            'ID=linuxmint\\n'
+            'NAME="Linux Mint"\\n'
+            'VERSION_ID="22.1"\\n'
+            'PRETTY_NAME="Linux Mint 22.1"\\n'
+            'HOME_URL="$(touch /tmp/should-not-run)"\\n'
+        )
+        self.assertEqual(result["id"], "linuxmint")
+        self.assertEqual(result["name"], "Linux Mint")
+        self.assertEqual(result["version_id"], "22.1")
+        self.assertEqual(result["pretty_name"], "Linux Mint 22.1")
+        self.assertEqual(set(result), {"id", "name", "version_id", "pretty_name"})
+
+    def test_detects_amd_display_controller_from_sysfs(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            device = root / "0000:00:01.0"
+            device.mkdir()
+            (device / "class").write_text("0x030000", encoding="ascii")
+            (device / "vendor").write_text("0x1002", encoding="ascii")
+            (device / "device").write_text("0x9999", encoding="ascii")
+
+            network = root / "0000:00:02.0"
+            network.mkdir()
+            (network / "class").write_text("0x020000", encoding="ascii")
+            (network / "vendor").write_text("0x1002", encoding="ascii")
+            (network / "device").write_text("0x8888", encoding="ascii")
+
+            result = _collect_linux_graphics_adapters(root)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["vendor"], "AMD")
+        self.assertEqual(result[0]["vendor_id"], "0x1002")
+        self.assertEqual(result[0]["device_id"], "0x9999")
 
 
 class ExecutableProbeTests(unittest.TestCase):
