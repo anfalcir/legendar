@@ -135,10 +135,11 @@ class SerialPipeline:
 
         # 1. Aquisição (download quando necessário) + inspeção
         stage = enter(JobState.INSPECTING_MEDIA)
-        media_path = self._acquire(request, context, stage)
+        media_path = self._acquire(request, context, stage, token)
         media_info = self._ports.inspector.inspect(
-            _as_local_source(request.source, media_path)
+            _as_local_source(request.source, media_path), token=token
         )
+        token.raise_if_cancelled()
         if not media_info.has_audio:
             raise InvalidInputError("A mídia selecionada não possui áudio.")
         stream = (
@@ -151,15 +152,20 @@ class SerialPipeline:
         # 2. Preparação do áudio normalizado
         stage = enter(JobState.PREPARING_AUDIO)
         audio = self._ports.audio_preparer.prepare(
-            media_path, stream=stream, destination_path=str(context.audio_cache_path)
+            media_path,
+            stream=stream,
+            destination_path=str(context.audio_cache_path),
+            token=token,
         )
+        token.raise_if_cancelled()
         stage.report(1.0, "Áudio preparado")
 
         # 3. Transcrição no idioma de origem
         stage = enter(JobState.TRANSCRIBING)
         transcript = self._ports.transcriber.transcribe(
-            audio, language=request.source_language, progress=stage
+            audio, language=request.source_language, progress=stage, token=token
         )
+        token.raise_if_cancelled()
         if transcript.is_empty:
             raise ModelError("A transcrição não produziu texto.")
         if (
@@ -175,7 +181,10 @@ class SerialPipeline:
 
         # 4. Alinhamento por palavra
         stage = enter(JobState.ALIGNING)
-        alignment = self._ports.aligner.align(audio, transcript, progress=stage)
+        alignment = self._ports.aligner.align(
+            audio, transcript, progress=stage, token=token
+        )
+        token.raise_if_cancelled()
         if not alignment.diagnostics.aligned_words:
             raise AlignmentInsufficientError(
                 "Nenhuma palavra pôde ser alinhada ao áudio."
@@ -187,8 +196,10 @@ class SerialPipeline:
         stage.report(1.0, "Alinhamento concluído")
 
         # 5. Segmentação visual (regra pura, sem porta)
-        enter(JobState.SEGMENTING)
+        stage = enter(JobState.SEGMENTING)
         segmentation = segment_alignment(alignment, policy=SegmentationPolicy())
+        token.raise_if_cancelled()
+        stage.report(1.0, "Legendas segmentadas")
         if segmentation.track.is_empty:
             raise AlignmentInsufficientError("Não foi possível gerar legendas.")
         if segmentation.has_dropped_segments:
@@ -199,7 +210,9 @@ class SerialPipeline:
         # 6. Tradução opcional (preserva tempos)
         track = segmentation.track
         if request.translate:
-            track = self._translate(request, alignment, track, enter, warnings)
+            track = self._translate(
+                request, alignment, track, enter, warnings, token
+            )
 
         # 7. Validação estrutural do trilho final
         self._validate(track, enter)
@@ -210,7 +223,11 @@ class SerialPipeline:
     # -- etapas auxiliares -------------------------------------------------
 
     def _acquire(
-        self, request: JobRequest, context: JobContext, stage: ScaledProgress
+        self,
+        request: JobRequest,
+        context: JobContext,
+        stage: ScaledProgress,
+        token,
     ) -> str:
         if request.source.kind is MediaKind.LOCAL_FILE:
             stage.report(1.0, "Arquivo local selecionado")
@@ -218,7 +235,8 @@ class SerialPipeline:
         downloader = self._ports.downloader
         if downloader is None:
             raise InvalidInputError("Download do YouTube não está disponível.")
-        path = downloader.fetch(request.source, str(context.work_dir))
+        path = downloader.fetch(request.source, str(context.work_dir), token=token)
+        token.raise_if_cancelled()
         stage.report(1.0, "Mídia baixada")
         return path
 
@@ -229,6 +247,7 @@ class SerialPipeline:
         track: SubtitleTrack,
         enter: Callable[[JobState], ScaledProgress],
         warnings: list[str],
+        token,
     ) -> SubtitleTrack:
         if self._ports.translator is None:
             raise UnsupportedLanguageError(
@@ -239,7 +258,9 @@ class SerialPipeline:
             alignment.transcript,
             target_language=request.output_language,
             progress=stage,
+            token=token,
         )
+        token.raise_if_cancelled()
         stage.report(1.0, "Tradução concluída")
         if translated.is_empty:
             raise TranslationError("A tradução retornou texto vazio.")
