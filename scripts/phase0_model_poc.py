@@ -31,7 +31,7 @@ import whisperx
 from huggingface_hub import hf_hub_download
 from jiwer import wer
 
-from scripts.phase0_fleurs import parse_reference_rows
+from phase0_fleurs import parse_reference_rows
 
 
 DATASET = "google/fleurs"
