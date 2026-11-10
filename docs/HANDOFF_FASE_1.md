@@ -1,15 +1,15 @@
-# Handoff técnico — checkpoint em andamento da Fase 1
+# Handoff técnico — validação final da Fase 1
 
 - **Projeto:** Legendar
 - **Atualização:** 10/11/2026
 - **Fase 0:** concluída, validada e integrada; workflow final #113 aprovado (16/16 jobs), com limitações explicitadas
-- **Fase 1:** em execução; arquitetura inicial implementada e validada localmente, mas fase ainda não concluída
+- **Fase 1:** implementação e caracterização concluídas; workflow dedicado criado; validação CI/revisão final pendentes
 - **Branch de conclusão da Fase 0:** `phase-0/technical-inventory`
 - **PR de integração:** [#1 — Fase 0: inventário, governança de dependências e prova técnica](https://github.com/anfalcir/legendar/pull/1), merged por squash
 - **Commit na main:** `992cb874274e73d0264994e39926113f1461236f`
 - **Regra de governança:** o repositório é a fonte de verdade das dependências e decisões; o computador de homologação não define sozinho os requisitos do produto.
 
-Este documento é a passagem de contexto para a próxima IA continuar a Fase 1, não para reiniciá-la nem avançar à Fase 2. Leia-o em conjunto com o [plano mestre](PLANO_REMODELAGEM.md), o [estado atual](ESTADO_ATUAL.md), o [plano operacional da Fase 1](FASE_1_PLANO.md), a [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e o [protocolo da Fase 0](FASE_0_PROTOCOLO.md).
+Este documento registra o estado de fechamento da Fase 1. Não reiniciar a arquitetura nem avançar à Fase 2 sem confirmar o resultado verde da CI e a revisão final. Leia-o em conjunto com o [plano mestre](PLANO_REMODELAGEM.md), o [estado atual](ESTADO_ATUAL.md), o [plano operacional da Fase 1](FASE_1_PLANO.md), a [baseline legada](LEGACY_BASELINE.md), a [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e o [protocolo da Fase 0](FASE_0_PROTOCOLO.md).
 
 ## Checkpoint atual da Fase 1
 
@@ -23,16 +23,9 @@ da Fase 0 (`992cb874274e73d0264994e39926113f1461236f`). O trabalho deste checkpo
 - `presentation/qt`: view model, janela mínima e worker com eventos por sinais Qt;
 - `bootstrap` e `python -m legendar`, além de testes unitários, de integração e GUI com fakes.
 
-**Evidência local:** `uv run --locked pytest -q` passou com 175 testes. Ruff check e format
-passaram nos arquivos novos da arquitetura/testes. A janela foi iniciada com
-`PYTHONPATH=src QT_QPA_PLATFORM=offscreen uv run --locked python -m legendar` e permaneceu
-aberta até ser encerrada pelo timeout de smoke test.
+**Evidências e alterações do fechamento:** o checkpoint anterior tinha 175 testes aprovados e smoke test offscreen da janela nova. Nesta etapa foram adicionados nove testes da baseline legada, dois testes de idempotência concorrente do token e um teste adicional de fronteira entre camadas. Foi corrigida a sintaxe do worker antigo para Python 3.10/3.11 e o caminho de MP3 após colisão. O cancelamento agora sincroniza o primeiro pedido, e o controlador protege estado/terminal/cancelamento com `RLock`. A política de legado/lint está em `docs/LEGACY_BASELINE.md`. O workflow `.github/workflows/phase1-quality.yml` executa pytest completo, Qt offscreen, Ruff e verificação do lock em Python 3.10–3.13.
 
-**Não está feito:** caracterização automatizada de `core/` e `gui/`; CI da Fase 1 (o workflow
-existente é de qualidade da Fase 0); revisão final e fechamento dos critérios. O pipeline do
-bootstrap é deliberadamente pendente até a Fase 3: não há processamento real de mídia,
-Whisper/WhisperX ou tradução. O legado `main.py`, `core/` e `gui/` segue preservado. Não
-declarar a Fase 1 concluída nem iniciar a Fase 2 com base apenas nos testes locais.
+**Gate ainda pendente:** confirmar todos os jobs verdes do workflow no [PR #2](https://github.com/anfalcir/legendar/pull/2) e concluir a revisão do diff. O pipeline do bootstrap continua deliberadamente pendente até a Fase 3: não há processamento real de mídia, Whisper/WhisperX ou tradução. O legado `main.py`, `core/` e `gui/` foi caracterizado e permanece preservado conforme o gate de aposentadoria. Não iniciar a Fase 2 antes da aprovação explícita.
 
 ---
 
@@ -294,7 +287,7 @@ final aprovada. A janela atual é mínima, não a interface profissional da Fase
    enfraqueça os gates da Fase 0.
 6. Revise falhas/decisões abertas e atualize `ESTADO_ATUAL.md`, este handoff e o plano
    operacional junto com a implementação.
-7. Só propor a conclusão da Fase 1 depois de todos os critérios de aceite e da revisão final.
+7. Só propor a conclusão formal da Fase 1 depois de CI verde em Python 3.10–3.13 e revisão final.
    A Fase 2 depende de aprovação explícita do responsável.
 
 **Mensagem de orientação:** a Fase 0 não autorizou a implementação de todas as funcionalidades. Ela autorizou construir a estrutura arquitetural que mantém essas funcionalidades isoladas, testáveis e substituíveis. Preserve decisões e gates acima; quando houver evidência nova que contradiga uma decisão, documente a evidência e proponha alteração, não faça mudança silenciosa.
