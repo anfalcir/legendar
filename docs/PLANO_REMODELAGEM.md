@@ -591,7 +591,7 @@ FFmpeg e ffprobe são dependências externas obrigatórias do pipeline de mídia
 
 ### 11.4. Perfis de hardware e plataforma
 
-CPU deverá ser uma via de compatibilidade quando suportada pelos componentes. CUDA, ROCm e MPS são perfis independentes selecionados segundo a compatibilidade oficial do PyTorch, do alinhador, dos drivers e do sistema operacional. O manifesto disponibiliza perfis CPU, CUDA 12.8 e ROCm 7.2; macOS usa os wheels PyPI do PyTorch e verifica MPS no runtime. Perfis indisponíveis em determinado sistema não serão apresentados como suportados. O projeto não instalará todos os backends indiscriminadamente nem inferirá suporte apenas pela presença de uma GPU.
+CPU deverá ser uma via de compatibilidade quando suportada pelos componentes. CUDA e MPS são perfis independentes selecionados segundo a compatibilidade oficial do PyTorch, do alinhador, dos drivers e do sistema operacional. O manifesto disponibiliza atualmente perfis CPU e CUDA 12.8; macOS usa os wheels PyPI do PyTorch e verifica MPS no runtime. ROCm permanece como possibilidade arquitetural, mas o perfil ROCm 7.2 não é declarado instalável enquanto o PyTorch disponível nesse índice (>=2.11) for incompatível com a faixa exigida pelo WhisperX estável 3.8.6 (>=2.8,<2.9). Perfis indisponíveis ou incompatíveis não serão apresentados como suportados. O projeto não instalará todos os backends indiscriminadamente nem inferirá suporte apenas pela presença de uma GPU.
 
 O inventário do computador-alvo será usado para medir desempenho e validar um perfil concreto. Não poderá reduzir a matriz global do produto. Os sistemas operacionais e arquiteturas oficialmente suportados serão declarados somente depois de integração e CI comprovarem os fluxos GUI, mídia, Whisper e alinhamento.
 
