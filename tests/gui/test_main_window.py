@@ -203,7 +203,8 @@ def test_repeated_cancel_requests_are_ignored_after_first_acceptance(
 
     slow = SlowTranscriber()
     window = _window(
-        qtbot, _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow))),
+        qtbot,
+        _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow))),
         tmp_path,
     )
     window.file_edit.setText(str(media))
@@ -246,6 +247,8 @@ def test_progress_is_indeterminate_until_pipeline_reports_a_measurement(
     assert window.progress_bar.maximum() == 100
     assert window.progress_bar.value() == 40
     assert window.progress_meta.text() == "40% concluído"
+    window._thread = None
+
 
 def test_missing_file_is_reported_without_starting(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
@@ -297,14 +300,15 @@ def test_output_cannot_be_placed_inside_model_cache(qtbot, tmp_path, media) -> N
     assert "cache de modelos" in window.view_model.snapshot.error_message
 
 
-
 def test_progress_indicator_stops_animating_after_terminal_failure(
     qtbot, tmp_path
 ) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window._thread = object()
     snapshot = window.view_model.apply(
-        StateChanged("job-1", 1, previous=JobState.IDLE, current=JobState.VALIDATING_INPUT)
+        StateChanged(
+            "job-1", 1, previous=JobState.IDLE, current=JobState.VALIDATING_INPUT
+        )
     )
     window._render(snapshot)
     assert window.progress_bar.maximum() == 0
@@ -410,7 +414,9 @@ def test_cancel_stops_a_cooperative_pipeline(qtbot, tmp_path, media) -> None:
 
     slow = SlowTranscriber()
     window = _window(
-        qtbot, _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow))), tmp_path
+        qtbot,
+        _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow))),
+        tmp_path,
     )
     window.file_edit.setText(str(media))
     window.output_edit.setText(str(tmp_path / "saida.srt"))
