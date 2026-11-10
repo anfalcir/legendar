@@ -105,7 +105,9 @@ class JobController:
             if self._started:
                 raise RuntimeError("Este JobController já foi iniciado.")
             if self._context is not None and self._context is not context:
-                raise ValueError("JobContext difere do contexto vinculado ao controller.")
+                raise ValueError(
+                    "JobContext difere do contexto vinculado ao controller."
+                )
             self._context = context
             self._started = True
             self._emit_event(
