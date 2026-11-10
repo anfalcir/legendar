@@ -7,10 +7,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt, Slot, QUrl
-from PySide6.QtGui import QCloseEvent, QDesktopServices
+from PySide6.QtCore import QSettings, Qt, Slot
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
-    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -26,7 +25,6 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QToolButton,
     QVBoxLayout,
     QWidget,
