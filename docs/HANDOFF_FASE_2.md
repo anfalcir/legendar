@@ -8,6 +8,7 @@
 - **Branch de implementação:** `phase-2/professional-ui`
 - **Base:** `main` com Fases 0 e 1 integradas
 - **CI final:** [run #42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434)
+- **Plano operacional:** [FASE_2_PLANO.md](FASE_2_PLANO.md)
 
 Este handoff registra o que foi alterado e as fronteiras preservadas. A implementação foi feita sobre a branch dedicada; não houve mudanças diretas na `main` durante a execução. A Fase 3 permanece bloqueada até aprovação explícita do responsável.
 
