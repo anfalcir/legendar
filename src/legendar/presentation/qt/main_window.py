@@ -506,12 +506,69 @@ class MainWindow(QMainWindow):
                 return candidate
             counter += 1
 
+    def _source_kind(self) -> MediaKind:
+        return MediaKind(str(self.media_kind_combo.currentData()))
+
+    def _sync_source_controls(self) -> None:
+        local = self._source_kind() is MediaKind.LOCAL_FILE
+        self.browse_button.setVisible(local)
+        self.browse_button.setEnabled(local and not self.is_running)
+        self.file_edit.setPlaceholderText(
+            "Caminho do arquivo de áudio ou vídeo"
+            if local
+            else "https://www.youtube.com/watch?v=..."
+        )
+        self.inspect_button.setVisible(local)
+        self.inspect_button.setEnabled(
+            local
+            and self._deps.media_inspector is not None
+            and not self.is_running
+            and self._inspection_thread is None
+        )
+        self.inspect_cancel_button.setVisible(self._inspection_thread is not None)
+        self.inspect_cancel_button.setEnabled(
+            self._inspection_thread is not None
+            and not self._inspection_cancel_pending
+        )
+        self.stream_combo.setEnabled(
+            local
+            and self._media_info is not None
+            and bool(self._media_info.audio_streams)
+            and not self.is_running
+        )
+        if not local:
+            self.media_info_label.setText(
+                "O áudio do vídeo será obtido automaticamente. "
+                "A seleção manual de faixa local não se aplica ao download."
+            )
+            self.stream_combo.clear()
+            self.stream_combo.addItem("Faixa de áudio selecionada automaticamente", None)
+
+    def _invalidate_media_inspection(self) -> None:
+        self._media_info = None
+        self.stream_combo.clear()
+        self.stream_combo.addItem("Usar faixa padrão da mídia", None)
+        self.stream_combo.setEnabled(False)
+        self.media_info_label.setText(
+            "Inspecione a mídia para consultar as faixas de áudio disponíveis."
+        )
+        self._sync_source_controls()
+
+    def _on_media_kind_changed(self, _index: int) -> None:
+        self._invalidate_media_inspection()
+        if self._source_kind() is MediaKind.YOUTUBE:
+            self._output_touched = False
+            self._suggest_output(Path("youtube-media"))
+        elif self.file_edit.text().strip():
+            self._suggest_output(Path(self.file_edit.text().strip()))
+
     def _choose_file(self) -> None:
         selected, _ = QFileDialog.getOpenFileName(
             self, "Selecionar mídia", str(Path.home()), _MEDIA_FILTER
         )
         if selected:
             self.file_edit.setText(selected)
+            self._invalidate_media_inspection()
             self._suggest_output(Path(selected))
 
     def _choose_output(self) -> None:
@@ -524,13 +581,134 @@ class MainWindow(QMainWindow):
             self._output_touched = True
 
     def _on_file_edited(self, text: str) -> None:
-        if text.strip():
+        self._invalidate_media_inspection()
+        if self._source_kind() is MediaKind.LOCAL_FILE and text.strip():
             self._suggest_output(Path(text.strip()))
+        elif self._source_kind() is MediaKind.YOUTUBE and text.strip():
+            self._suggest_output(Path("youtube-media"))
 
     def _suggest_output(self, source_path: Path) -> None:
         if self._output_touched:
             return
         self.output_edit.setText(str(self._default_output_path(source_path.stem)))
+
+    def _start_media_inspection(self) -> None:
+        if (
+            self._inspection_thread is not None
+            or self._thread is not None
+            or self._deps.media_inspector is None
+        ):
+            return
+        source_text = self.file_edit.text().strip()
+        if not source_text:
+            self._render(
+                self._view_model.report_error("Selecione um arquivo antes de inspecionar.")
+            )
+            return
+        source_path = Path(source_text).expanduser()
+        try:
+            source = MediaSource(
+                kind=MediaKind.LOCAL_FILE,
+                location=str(source_path),
+            )
+        except DomainError as exc:
+            self._render(self._view_model.report_error(exc.message))
+            return
+        if not source_path.is_file():
+            self._render(
+                self._view_model.report_error(
+                    f"Arquivo de mídia não encontrado: {source_path}"
+                )
+            )
+            return
+
+        self._inspection_cancel_pending = False
+        self._media_info = None
+        thread = QThread(self)
+        worker = MediaInspectionWorker(self._deps.media_inspector, source)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.completed.connect(
+            self._on_media_inspected, Qt.ConnectionType.QueuedConnection
+        )
+        worker.failed.connect(
+            self._on_media_inspection_failed, Qt.ConnectionType.QueuedConnection
+        )
+        worker.finished.connect(thread.quit, Qt.ConnectionType.DirectConnection)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(self._on_media_inspection_thread_finished)
+        thread.finished.connect(thread.deleteLater)
+
+        self._inspection_worker = worker
+        self._inspection_thread = thread
+        self._sync_source_controls()
+        self._render(self._view_model.snapshot)
+        try:
+            thread.start()
+        except RuntimeError as exc:
+            self._inspection_worker = None
+            self._inspection_thread = None
+            self._sync_source_controls()
+            self._render(self._view_model.report_error(str(exc)))
+
+    @Slot(object)
+    def _on_media_inspected(self, info: MediaInfo) -> None:
+        self._media_info = info
+        self.stream_combo.clear()
+        self.stream_combo.addItem("Usar faixa padrão da mídia", None)
+        for stream in info.audio_streams:
+            suffix = " · padrão" if stream.is_default else ""
+            self.stream_combo.addItem(f"{stream.label_pt}{suffix}", stream.index)
+        if info.audio_streams:
+            duration = (
+                f"{info.duration_seconds:.2f} s"
+                if info.duration_seconds is not None
+                else "duração não informada"
+            )
+            default = info.default_stream()
+            self.media_info_label.setText(
+                f"{info.container} · {duration} · {len(info.audio_streams)} "
+                f"faixa(s) de áudio. Padrão: faixa {default.index} "
+                f"({default.codec}, {default.channels} canais, "
+                f"{default.sample_rate_hz} Hz; offset {default.start_time_seconds:.3f} s)."
+            )
+            default_index = self.stream_combo.findData(default.index)
+            if default_index >= 0:
+                self.stream_combo.setCurrentIndex(default_index)
+        else:
+            self.media_info_label.setText(
+                "A mídia foi aberta, mas não contém nenhuma faixa de áudio."
+            )
+        self._sync_source_controls()
+
+    @Slot(object)
+    def _on_media_inspection_failed(self, error: Exception) -> None:
+        message = (
+            error.message
+            if isinstance(error, DomainError)
+            else f"Não foi possível inspecionar a mídia: {error}"
+        )
+        self.media_info_label.setText(message)
+        self.statusBar().showMessage(message, 10000)
+
+    @Slot()
+    def _on_media_inspection_thread_finished(self) -> None:
+        self._inspection_thread = None
+        self._inspection_worker = None
+        self._inspection_cancel_pending = False
+        self._sync_source_controls()
+        self._render(self._view_model.snapshot)
+
+    def _cancel_media_inspection(self) -> None:
+        if self._inspection_worker is None or self._inspection_cancel_pending:
+            return
+        if not self._confirm_cancel():
+            return
+        self._inspection_cancel_pending = True
+        self.inspect_cancel_button.setEnabled(False)
+        self.inspect_button.setEnabled(False)
+        self._inspection_worker.request_cancel()
+        self.media_info_label.setText("Cancelando a inspeção de mídia…")
 
     def _on_output_edited(self, _text: str) -> None:
         self._output_touched = True
