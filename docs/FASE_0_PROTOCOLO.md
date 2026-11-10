@@ -34,6 +34,7 @@ Foi adicionado `scripts/phase0_inventory.py`, ferramenta independente que usa so
 - Quantidade de CPUs lógicas, memória física total/disponível e capacidade livre/total do disco.
 - Controladores gráficos PCI detectáveis em Linux (fabricante, IDs PCI, classe e driver, sem identificadores únicos do equipamento).
 - Disponibilidade e versão de FFmpeg e ffprobe, incluindo a pasta local `ffmpeg/bin` quando existir.
+- Controladores gráficos PCI detectáveis em Linux (fabricante, IDs PCI, classe e driver, sem identificadores únicos do equipamento).
 - Presença de `nvidia-smi` e identificação das GPUs NVIDIA consultáveis. A ausência desta ferramenta não significa ausência de GPU AMD/Intel.
 - Versões instaladas de Whisper, WhisperX, stable-ts, PyTorch, torchaudio, torchvision, NumPy, PySide6 e yt-dlp.
 - Opcionalmente, resultado da importação do PyTorch, disponibilidade CUDA/ROCm exposta pela API CUDA do PyTorch e dispositivos reconhecidos.
@@ -82,7 +83,7 @@ python -m unittest discover -s tests -v
 
 A validação inicial executada durante a preparação desta entrega resultou em:
 
-- 5 testes automatizados aprovados.
+- 7 testes automatizados aprovados na CI após a ampliação dos testes de distribuição Linux e gráficos PCI.
 - Compilação dos arquivos Python aprovada.
 - Execução do `--help` aprovada.
 - Execução de ponta a ponta do coletor e validação sintática do JSON aprovadas.
@@ -124,7 +125,7 @@ Arquivo recebido: `legendar-phase0-environment.json`, gerado em `2026-11-10T12:3
 | Memória RAM | 12,59 GiB total; 7,65 GiB disponíveis no momento da coleta |
 | Disco | 218,51 GiB total; 165,60 GiB livres no volume consultado |
 | GPU NVIDIA | Nenhum `nvidia-smi` detectado |
-| Gráficos integrados | O identificador do processador declara Radeon Vega Graphics; a primeira versão do coletor não enumerava controladores AMD/Intel por PCI |
+| Gráficos integrados | O identificador do processador declara Radeon Vega Graphics; o relatório enviado antecede a enumeração PCI adicionada ao coletor atualizado |
 | FFmpeg / ffprobe | Não encontrados no PATH nem em `ffmpeg/bin` do projeto |
 | Pacotes Python | Somente `yt-dlp 2024.4.9` entre os pacotes consultados; Whisper, PyTorch, PySide6, NumPy, WhisperX e stable-ts ausentes neste interpretador |
 | Runtime PyTorch | Não importado: `ModuleNotFoundError` |
@@ -145,7 +146,9 @@ Fontes oficiais consultadas em 10/11/2026:
 - [Modelos e requisitos aproximados do Whisper](https://github.com/openai/whisper/blob/main/README.md)
 - [Pacote FFmpeg no Ubuntu](https://packages.ubuntu.com/ffmpeg)
 
-**Decisão técnica provisória:** homologar CPU primeiro; não instalar ROCm; não alterar ainda as dependências do produto. Fazer inventário complementar de distribuição/driver e depois preparar ambiente de prova isolado.
+**Decisão técnica provisória:** homologar CPU primeiro; não instalar ROCm; não alterar ainda as dependências do produto. Reexecutar o coletor atualizado para identificar distribuição/driver PCI; depois preparar ambiente de prova isolado.
+
+O coletor foi ampliado após o primeiro relatório para identificar distribuição (`/etc/os-release`) e controladores gráficos PCI AMD/Intel/NVIDIA por sysfs. A CI valida essas novas rotinas. Repetir a coleta no computador-alvo com a versão atual da branch para completar a evidência de distribuição e driver gráfico.
 
 ## 5. Plano experimental
 
