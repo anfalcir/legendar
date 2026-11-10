@@ -7,3 +7,8 @@ __pycache__/
 /*.mp4
 /ffmpeg/bin/ffmpeg*
 /ffmpeg/bin/ffprobe*
+
+# Phase 0 local diagnostics, downloaded corpus/models and benchmark output
+.cache/
+phase0-model-poc.json
+legendar-phase0-environment.json
