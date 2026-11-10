@@ -17,7 +17,7 @@ runtime-cpu = [
     "torch>=2.8,<2.9",
     "torchvision>=0.23,<0.24",
     "torchaudio>=2.8,<2.9",
-    "whisperx>=3.8.6,<3.9",
+    "whisperx>=3.8.6,<3.8.7",
 ]
 runtime-cu128 = [
     "openai-whisper>=20250625; sys_platform == 'linux' or sys_platform == 'win32'",
@@ -26,7 +26,7 @@ runtime-cu128 = [
     "torch>=2.8,<2.9; sys_platform == 'linux' or sys_platform == 'win32'",
     "torchvision>=0.23,<0.24; sys_platform == 'linux' or sys_platform == 'win32'",
     "torchaudio>=2.8,<2.9; sys_platform == 'linux' or sys_platform == 'win32'",
-    "whisperx>=3.8.6,<3.9; sys_platform == 'linux' or sys_platform == 'win32'",
+    "whisperx>=3.8.6,<3.8.7; sys_platform == 'linux' or sys_platform == 'win32'",
 ]
 
 [dependency-groups]
@@ -44,6 +44,7 @@ build = [
 phase0 = [
     "datasets>=5.2,<6",
     "jiwer>=4,<5",
+    "soundfile>=0.13,<1",
 ]
 dev = [
     { include-group = "test" },
