@@ -68,6 +68,21 @@ def test_application_only_depends_on_domain_and_ports():
     )
 
 
+
+def test_infrastructure_and_presentation_do_not_depend_on_bootstrap_or_each_other():
+    assert _violations(
+        "infrastructure", {"legendar.presentation", "legendar.bootstrap"}
+    ) == []
+    assert _violations(
+        "presentation",
+        {
+            "legendar.infrastructure",
+            "legendar.bootstrap",
+            *FORBIDDEN_DEPENDENCIES,
+        },
+    ) == []
+
+
 def test_domain_has_no_io_side_effects_at_import_time():
     """Nenhum módulo de domínio deve abrir arquivos, rede ou processos ao importar."""
     forbidden_calls = {"open", "system", "popen", "run", "urlopen", "socket", "connect"}
