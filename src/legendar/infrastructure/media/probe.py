@@ -11,6 +11,7 @@ import subprocess
 from collections.abc import Callable
 from pathlib import Path
 
+from legendar.application.ports.protocols import CancellationToken
 from legendar.domain.entities.media import MediaInfo, MediaSource
 from legendar.domain.errors.catalog import InvalidInputError, MediaToolError
 from legendar.infrastructure.media.ffprobe import parse_ffprobe_document
@@ -49,7 +50,14 @@ class FfprobeInspector:
         self._runner = runner
         self._timeout = timeout
 
-    def inspect(self, source: MediaSource) -> MediaInfo:
+    def inspect(
+        self,
+        source: MediaSource,
+        *,
+        token: CancellationToken | None = None,
+    ) -> MediaInfo:
+        if token is not None:
+            token.raise_if_cancelled()
         if not source.is_local:
             raise InvalidInputError(
                 "A inspeção exige um arquivo local; baixe a mídia remota antes."
@@ -81,6 +89,8 @@ class FfprobeInspector:
                 technical_detail=str(exc),
             ) from exc
 
+        if token is not None:
+            token.raise_if_cancelled()
         if completed.returncode != 0:
             stderr = (completed.stderr or "").strip()
             raise MediaToolError(
