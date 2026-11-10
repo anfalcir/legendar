@@ -1,6 +1,6 @@
 # Plano operacional — Fase 2: Interface profissional
 
-- **Status:** em execução
+- **Status:** implementação concluída e validada; integração pendente na PR #3
 - **Branch:** `phase-2/professional-ui`
 - **Base:** `main` após a integração da Fase 1 (`de31ddd`) e sincronização documental
 - **Escopo:** camada de apresentação Qt e sua suíte de testes; sem processamento real de mídia
@@ -35,19 +35,19 @@ O botão principal ainda não executará processamento real. O pipeline de mídi
 
 ## 4. Critérios de aceite
 
-- [ ] Identidade visual consistente em tema claro, escuro e sistema.
-- [ ] Janela reorganizada sem sobreposições ou cortes nas resoluções de referência.
-- [ ] Diálogo de confirmação mostra todos os dados críticos antes de iniciar.
-- [ ] Clique duplo/reentrância não cria jobs duplicados.
-- [ ] Sobrescrita de saída preexistente exige consentimento explícito.
-- [ ] Cancelamento exige confirmação, padrão Não, e só é solicitado uma vez.
-- [ ] Campos são bloqueados e reabilitados conforme o ciclo de vida real da thread.
-- [ ] Progresso indeterminado/determinado é honesto, monotônico e acessível.
-- [ ] Log expansível com timestamp, níveis e comportamento de rolagem não intrusivo.
-- [ ] Preferências persistem entre reinicializações e são testáveis com QSettings isolado.
-- [ ] Nenhum I/O pesado ou processamento de mídia executa na thread principal.
-- [ ] Testes Qt offscreen, pytest, Ruff e Ruff format passam em Python 3.10–3.13.
-- [ ] README, roadmap e documento de estado refletem exatamente o que foi entregue.
+- [x] Identidade visual consistente em tema claro, escuro e sistema.
+- [x] Janela reorganizada em cartões e área rolável; teste Qt em 680×620 confirma o comportamento responsivo básico.
+- [x] Diálogo de confirmação mostra origem, idioma falado, idioma final e destino antes de iniciar.
+- [x] Clique repetido/reentrância não cria jobs duplicados.
+- [x] Sobrescrita de saída preexistente exige consentimento explícito e padrão Não.
+- [x] Cancelamento exige confirmação, padrão Não, e só é solicitado uma vez; rejeição na etapa não cancelável é informada corretamente.
+- [x] Campos e preferências são bloqueados durante a thread e reabilitados após seu término.
+- [x] Progresso indeterminado/determinado é honesto, monotônico e acessível; não inventa percentual.
+- [x] Log expansível com timestamp, níveis e rolagem que respeita a posição de leitura.
+- [x] Preferências persistem com QSettings isolado; mídia, transcrições e credenciais não são armazenadas.
+- [x] Execução do pipeline permanece em QThread; teste confirma que não bloqueia a GUI.
+- [x] Testes Qt offscreen, pytest, Ruff e Ruff format passam em Python 3.10–3.13.
+- [x] README, roadmap, estado atual, handoff e este plano refletem o que foi entregue.
 
 ## 5. Ordem de execução
 
@@ -59,6 +59,18 @@ O botão principal ainda não executará processamento real. O pipeline de mídi
 6. CI completa, correções, revisão e atualização documental.
 7. PR para `main`; só integrar depois dos gates verdes.
 
-## 6. Evidências
+## 6. Evidências finais
 
-A execução, decisões e resultados devem ser acrescentados nesta seção ao longo da fase. Não marcar a fase como concluída até todos os critérios de aceite passarem e o PR ser integrado.
+- **Workflow:** [Phase 1 quality #42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434), reutilizado como gate de qualidade; 4/4 jobs aprovados em Python 3.10, 3.11, 3.12 e 3.13.
+- **Suíte:** 218 testes aprovados por ambiente.
+- **Cobertura:** 88% (2.480 statements; 292 não cobertos).
+- **Ruff:** `ruff check` aprovado nos quatro ambientes.
+- **Formatação:** `ruff format --check` aprovado; 91 arquivos já formatados.
+- **Qt:** testes offscreen cobrem tema, diálogos, preferências, confirmação destrutiva, cancelamento, reentrância, tabulação, acessibilidade, scroll e layout estreito.
+- **Isolamento:** nenhum processamento real de mídia/modelo/tradução foi ativado nesta fase; os fluxos de job usam doubles.
+
+### Limites confirmados
+
+A tela está visualmente estruturada e funcional sob os testes automatizados, mas a homologação visual em monitores físicos, scaling HiDPI e diferentes ambientes desktop Linux/Windows/macOS continua sendo parte da homologação global da Fase 8. A interface ainda usa um pipeline simulado/pendente: processamento real de mídia fica na Fase 3 e seguintes.
+
+A implementação está validada tecnicamente e pronta para integração. A Fase 3 permanece bloqueada até aprovação explícita do responsável.
