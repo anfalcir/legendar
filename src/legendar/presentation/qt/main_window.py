@@ -528,8 +528,7 @@ class MainWindow(QMainWindow):
         )
         self.inspect_cancel_button.setVisible(self._inspection_thread is not None)
         self.inspect_cancel_button.setEnabled(
-            self._inspection_thread is not None
-            and not self._inspection_cancel_pending
+            self._inspection_thread is not None and not self._inspection_cancel_pending
         )
         self.stream_combo.setEnabled(
             local
@@ -543,7 +542,9 @@ class MainWindow(QMainWindow):
                 "A seleção manual de faixa local não se aplica ao download."
             )
             self.stream_combo.clear()
-            self.stream_combo.addItem("Faixa de áudio selecionada automaticamente", None)
+            self.stream_combo.addItem(
+                "Faixa de áudio selecionada automaticamente", None
+            )
 
     def _invalidate_media_inspection(self) -> None:
         self._media_info = None
@@ -603,7 +604,9 @@ class MainWindow(QMainWindow):
         source_text = self.file_edit.text().strip()
         if not source_text:
             self._render(
-                self._view_model.report_error("Selecione um arquivo antes de inspecionar.")
+                self._view_model.report_error(
+                    "Selecione um arquivo antes de inspecionar."
+                )
             )
             return
         source_path = Path(source_text).expanduser()
@@ -1117,14 +1120,20 @@ class MainWindow(QMainWindow):
                 if self._starting and not worker_running
                 else snapshot.status_text
             )
-            if worker_running and not snapshot.progress_known and not snapshot.is_finished:
+            if (
+                worker_running
+                and not snapshot.progress_known
+                and not snapshot.is_finished
+            ):
                 self.progress_bar.setRange(0, 0)
                 self.progress_meta.setText("Etapa em andamento · sem percentual medido")
             else:
                 self.progress_bar.setRange(0, 100)
                 self.progress_bar.setValue(snapshot.progress_percent)
                 if snapshot.progress_known:
-                    self.progress_meta.setText(f"{snapshot.progress_percent}% concluído")
+                    self.progress_meta.setText(
+                        f"{snapshot.progress_percent}% concluído"
+                    )
                 elif snapshot.is_finished:
                     self.progress_meta.setText("Trabalho encerrado")
                 else:
@@ -1138,7 +1147,8 @@ class MainWindow(QMainWindow):
 
         if not busy:
             source_ready = self._deps.readiness_ok and (
-                self._source_kind() is MediaKind.LOCAL_FILE or self._deps.youtube_available
+                self._source_kind() is MediaKind.LOCAL_FILE
+                or self._deps.youtube_available
             )
             self.generate_button.setEnabled(source_ready)
             self.cancel_button.setEnabled(False)
@@ -1232,11 +1242,7 @@ class MainWindow(QMainWindow):
         )
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if (
-            self._starting
-            and self._thread is None
-            and self._inspection_thread is None
-        ):
+        if self._starting and self._thread is None and self._inspection_thread is None:
             event.ignore()
             return
         if self._inspection_thread is not None:
