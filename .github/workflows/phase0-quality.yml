@@ -1,0 +1,45 @@
+name: Phase 0 quality
+
+on:
+  push:
+    branches:
+      - phase-0/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/**"
+      - "tests/**"
+      - ".github/workflows/phase0-quality.yml"
+      - "docs/FASE_0_PROTOCOLO.md"
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-checks:
+    name: Deterministic Python checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile Python sources
+        run: python -m compileall -q scripts tests
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate command-line interface
+        run: python scripts/phase0_inventory.py --help
+
+      - name: Smoke-test inventory JSON
+        run: |
+          python scripts/phase0_inventory.py --output "$RUNNER_TEMP/legendar-inventory.json"
+          python -c "import json, pathlib; json.loads(pathlib.Path('$RUNNER_TEMP/legendar-inventory.json').read_text())"
