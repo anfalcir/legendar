@@ -37,11 +37,11 @@ class ParseLinuxMeminfoTests(unittest.TestCase):
 class LinuxHostMetadataTests(unittest.TestCase):
     def test_parses_os_release_fields_without_evaluating_shell_content(self):
         result = _parse_os_release(
-            'ID=linuxmint\\n'
-            'NAME="Linux Mint"\\n'
-            'VERSION_ID="22.1"\\n'
-            'PRETTY_NAME="Linux Mint 22.1"\\n'
-            'HOME_URL="$(touch /tmp/should-not-run)"\\n'
+            'ID=linuxmint\n'
+            'NAME="Linux Mint"\n'
+            'VERSION_ID="22.1"\n'
+            'PRETTY_NAME="Linux Mint 22.1"\n'
+            'HOME_URL="$(touch /tmp/should-not-run)"\n'
         )
         self.assertEqual(result["id"], "linuxmint")
         self.assertEqual(result["name"], "Linux Mint")
