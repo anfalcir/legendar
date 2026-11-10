@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import json
 import math
-from fractions import Fraction
 from collections.abc import Mapping, Sequence
+from fractions import Fraction
 from typing import Any
 
 from legendar.domain.entities.media import (
