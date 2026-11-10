@@ -144,11 +144,15 @@ def test_unexpected_error_is_wrapped_without_leaking_traceback(job_context):
 
 
 def test_cancellation_goes_through_cancelling_and_emits_single_terminal(job_context):
-    events: list[JobEvent] = []
-    controller = _build(events, transcriber=FakeTranscriber(token=job_context.token))
+    class CancellingTranscriber(FakeTranscriber):
+        def transcribe(self, audio, *, language=None, progress=None, token=None):
+            assert token is job_context.token
+            token.cancel("usuário desistiu durante a transcrição")
+            token.raise_if_cancelled()
 
-    # Pedido de cancelamento aceito antes da primeira etapa pesada.
-    assert job_context.token.cancel("usuário desistiu") is True
+    events: list[JobEvent] = []
+    controller = _build(events, transcriber=CancellingTranscriber())
+
     assert controller.run(_request(), job_context) is None
 
     states = [event.current for event in events if isinstance(event, StateChanged)]
