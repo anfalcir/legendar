@@ -73,12 +73,16 @@ def test_cleanup_surfaces_filesystem_errors_for_ui_diagnostics(
     def fail_cleanup(_path: Path) -> None:
         raise PermissionError("permissão negada")
 
-    monkeypatch.setattr("legendar.infrastructure.filesystem.workspace.shutil.rmtree", fail_cleanup)
+    monkeypatch.setattr(
+        "legendar.infrastructure.filesystem.workspace.shutil.rmtree", fail_cleanup
+    )
 
     with pytest.raises(PermissionError, match="permissão negada"):
         factory.cleanup(context)
 
-    monkeypatch.setattr("legendar.infrastructure.filesystem.workspace.shutil.rmtree", real_rmtree)
+    monkeypatch.setattr(
+        "legendar.infrastructure.filesystem.workspace.shutil.rmtree", real_rmtree
+    )
     real_rmtree(context.work_dir)
 
 
