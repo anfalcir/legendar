@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-O projeto está em fase de planejamento e remodelagem. O comportamento da versão atual ainda não representa todo o escopo futuro descrito nos documentos.
+A remodelagem está em execução. A arquitetura nova está sendo construída por fases, enquanto a aplicação anterior permanece preservada como baseline até que os fluxos substitutos sejam implementados e homologados. O comportamento atual ainda não representa todo o escopo futuro descrito nos documentos.
 
 ## Documentação do projeto
 
