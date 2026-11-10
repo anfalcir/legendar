@@ -208,7 +208,6 @@ def test_cancel_is_rejected_once_non_cancellable_publication_begins(job_context)
     assert controller.state is JobState.COMPLETED
 
 
-
 def test_controller_accepts_cancel_before_worker_thread_starts(job_context):
     events: list[JobEvent] = []
     controller = _build(events, context=job_context)
