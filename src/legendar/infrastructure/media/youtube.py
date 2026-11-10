@@ -43,6 +43,18 @@ def _default_ydl_factory(options: dict) -> object:
     return YoutubeDL(options)
 
 
+def _cleanup_download_artifacts(root: Path) -> None:
+    """Remove apenas arquivos com o prefixo reservado ao download deste job."""
+
+    for candidate in root.glob("legendar-youtube-*"):
+        try:
+            if candidate.is_file() and root in candidate.resolve().parents:
+                candidate.unlink(missing_ok=True)
+        except OSError:
+            # A limpeza principal do workspace é a segunda barreira de segurança.
+            continue
+
+
 class YtDlpDownloader:
     """Baixa somente a melhor faixa de áudio, sem playlist ou shell.
 
@@ -161,15 +173,18 @@ class YtDlpDownloader:
                         "O download terminou sem produzir um arquivo de áudio."
                     )
         except DownloadError:
+            _cleanup_download_artifacts(root)
             if token is not None and token.is_cancelled:
                 token.raise_if_cancelled()
             raise
         except Exception as exc:  # noqa: BLE001 - fronteira não confiável yt-dlp
+            _cleanup_download_artifacts(root)
             if token is not None:
                 token.raise_if_cancelled()
+            detail = str(exc).replace(url, "[URL omitida]")
             raise DownloadError(
                 "Não foi possível obter o áudio do YouTube.",
-                technical_detail=f"{type(exc).__name__}: {str(exc)[:500]}",
+                technical_detail=f"{type(exc).__name__}: {detail[:500]}",
             ) from exc
 
         if token is not None:
