@@ -164,6 +164,9 @@ O primeiro relatório antecede a ampliação do coletor que agora identifica dis
 | CI da Fase 1 | **Concluída e aprovada** | Workflows [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) e [#127](https://github.com/anfalcir/legendar/actions/runs/42905799938), ambos 4/4 verdes em Python 3.10–3.13 |
 | Suíte completa da Fase 2 | [CI #42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434): 218 passed por ambiente; cobertura 88% | 4/4 jobs aprovados em Python 3.10–3.13; inclui testes Qt offscreen, preferências e confirmações |
 | Ruff da Fase 2 | `ruff check` e `ruff format --check` aprovados na CI #42911438434 | 91 arquivos formatados; escopo mantido inteiro aprovado |
+| Suíte e integração de mídia da Fase 3 | CI push [#42921552291](https://github.com/anfalcir/legendar/actions/runs/42921552291) e CI PR [#42921987927](https://github.com/anfalcir/legendar/actions/runs/42921987927): 249 testes aprovados por ambiente Python 3.10–3.13; 87% de cobertura | 4/4 jobs aprovados em cada workflow; integração FFmpeg/ffprobe sintética real, Qt offscreen e contrato yt-dlp offline |
+| Ruff da Fase 3 | `ruff check` e `ruff format --check` aprovados nos workflows push/PR | 97 arquivos formatados |
+| Gates herdados da Fase 0/1 na PR da Fase 3 | PR workflows [Fase 0 #42921987820](https://github.com/anfalcir/legendar/actions/runs/42921987820) e [Fase 1 #42921987910](https://github.com/anfalcir/legendar/actions/runs/42921987910) aprovados | 14 jobs executados da Fase 0 e 4 jobs da Fase 1 aprovados; benchmark WhisperX e smoke CUDA pulados no evento PR por configuração |
 | Caracterização e destino do legado | Concluída | Nove testes com doubles; política de preservação, congelamento e gate de aposentadoria em `LEGACY_BASELINE.md` |
 | Inventário atualizado no computador-alvo | Pendente | Reexecutar antes da homologação de mídia/modelos |
 | Precisão temporal contra timestamps humanos | Pendente | Gate da Fase 5 |
@@ -182,7 +185,7 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 | 0 — Definições e prova técnica | **Concluída e integrada** | PR #1 merged por squash; CI final verde |
 | 1 — Reestruturação arquitetural | **Concluída e integrada** | PR #2 merged por squash no commit `de31ddd`; 196 testes por ambiente Python 3.10–3.13, cobertura 88%, Ruff/format aprovados |
 | 2 — Interface profissional | **Concluída e integrada** | PR #3 merged por squash no commit `4129f0a`; 218 testes por ambiente Python 3.10–3.13, cobertura 88%, Ruff/format aprovados |
-| 3 — Entrada e preparação de mídia | **Em execução na branch `phase-3/media-ingestion`** | Implementação presente; finalizar CI Python 3.10–3.13, revisão e PR/merge. Ainda não concluída |
+| 3 — Entrada e preparação de mídia | **Concluída e integrada** | PR #4 merged por squash em `dfa440b39e7623356388c774834e23ee53fc1d09`; CI 4/4 push e PR em Python 3.10–3.13, 249 testes por ambiente e cobertura 87% |
 | 4 — Reconhecimento Whisper | Não iniciada | Comparação PT-BR/EN e desempenho no computador-alvo |
 | 5 — Alinhamento temporal | Não iniciada | Referência humana, mediana/P95, cobertura e anomalias |
 | 6 — Tradução, segmentação e SRT | Não iniciada | Escolha de fornecedor antes da implementação da tradução |
@@ -192,20 +195,19 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 
 ## 8. Pendências encaminhadas às fases corretas
 
-1. **Fases 1 e 2:** concluídas e integradas à `main`; não há pendências atribuídas a essas fases. A Fase 2 não ativou processamento real de mídia.
-2. **Fase 3 (branch atual):** concluir a matriz CI Python 3.10–3.13 + FFmpeg, revisar cancelamento/cleanup e abrir PR; homologação com arquivos reais e computador-alvo permanece necessária antes da validação global da Fase 8.
-3. **Fase 4:** comparar modelos Whisper com corpus PT-BR/EN representativo; registrar WER/CER, duração, memória e RTF no hardware-alvo.
-4. **Fase 5:** anotar manualmente início/fim de palavras e medir erro mediano/P95, cobertura e falhas; não homologar sincronização só por WER.
-5. **Antes da Fase 6:** escolher provedor e aprovar custo, privacidade, retenção, limites e comportamento de falha.
-6. **Fase 8:** testar aplicação e fluxos completos nos sistemas/backends declarados como suportados.
+1. **Fases 1, 2 e 3:** concluídas e integradas à `main`. A Fase 3 foi integrada pela PR #4 após revisão, CI específica verde e gates herdados aprovados.
+2. **Fase 4:** comparar modelos Whisper com corpus PT-BR/EN representativo; registrar WER/CER, duração, memória e RTF no hardware-alvo.
+3. **Fase 5:** anotar manualmente início/fim de palavras e medir erro mediano/P95, cobertura e falhas; não homologar sincronização só por WER.
+4. **Antes da Fase 6:** escolher provedor e aprovar custo, privacidade, retenção, limites e comportamento de falha.
+5. **Fase 8:** testar aplicação e fluxos completos nos sistemas/backends declarados como suportados, incluindo arquivos reais e homologação online controlada do YouTube.
 
 As pendências acima são gates de produto alocados às fases responsáveis; elas não reabrem a Fase 0.
 
 ## 9. Próxima ação objetiva
 
-As Fases 1 e 2 estão concluídas e integradas à `main`. A Fase 3 está em implementação na branch
-`phase-3/media-ingestion`; a próxima ação é obter CI verde em todos os ambientes, concluir revisão e
-integrar por PR. Não iniciar a Fase 4 antes do merge e de aprovação explícita.
+As Fases 1–3 estão concluídas, validadas e integradas à `main`. A PR #4 foi merged por squash no
+commit `dfa440b39e7623356388c774834e23ee53fc1d09`. A próxima etapa prevista é a Fase 4 (reconhecimento
+Whisper), mas ela não deve começar antes de aprovação explícita.
 
 ---
 
@@ -224,4 +226,6 @@ integrar por PR. Não iniciar a Fase 4 antes do merge e de aprovação explícit
 | 10/11/2026 | Branch `phase-1/architecture` criada a partir da `main` atualizada; Fase 1 pronta para iniciar, sem implementação antecipada |
 | 10/11/2026 | Fase 1 concluída e integrada por squash na `main` pela PR #2, commit `de31ddd`; 196 testes aprovados em Python 3.10–3.13, cobertura de 88%, Ruff check/format verdes, CI #127 confirmada e CI Fase 0 PR #160 aprovada |
 | 10/11/2026 | Fase 2 concluída e integrada por squash na `main` pela PR #3, commit `4129f0a`; 218 testes aprovados em Python 3.10–3.13, cobertura 88%, Ruff check/format verdes; gates PR herdados Fase 0/1 aprovados |
-| 10/11/2026 | Fase 3 iniciada na branch `phase-3/media-ingestion`; adaptadores FFmpeg/ffprobe/yt-dlp, seleção de faixa e inspeção Qt assíncrona implementados; CI final e PR ainda pendentes |
+| 10/11/2026 | Fase 3 implementada na branch `phase-3/media-ingestion`; adaptadores FFmpeg/ffprobe/yt-dlp, seleção de faixa, preflight EJS e inspeção Qt assíncrona concluídos; CI de push 4/4 verde |
+| 10/11/2026 | PR #4 aprovada: CI da Fase 3 4/4, Fase 1 4/4 e 14 jobs executados da Fase 0 aprovados; dois jobs exclusivos de push foram pulados no evento PR conforme configuração |
+| 10/11/2026 | Fase 3 integrada por squash à `main` pela PR #4, commit `dfa440b39e7623356388c774834e23ee53fc1d09`; 249 testes por ambiente Python 3.10–3.13, cobertura 87%, Ruff/format verdes |
