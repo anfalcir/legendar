@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem está em execução por fases. A Fase 1 — reestruturação arquitetural — foi implementada, validada e integrada à `main` (PR #2), com CI em Python 3.10–3.13 (196 testes por ambiente). A aplicação anterior permanece preservada como baseline até que os fluxos substitutos sejam implementados e homologados. A Fase 2 e as integrações de produto seguintes ainda não foram iniciadas.
+A remodelagem está em execução por fases. As Fases 1 (reestruturação arquitetural) e 2 (interface profissional) foram implementadas e validadas; a Fase 1 está integrada à `main` pela PR #2 e a Fase 2 está pronta para integração pela PR #3. A CI da Fase 2 aprovou Python 3.10–3.13 com 218 testes por ambiente e 88% de cobertura. A aplicação anterior permanece preservada como baseline até que os fluxos substitutos sejam implementados e homologados. A Fase 3 ainda não foi iniciada.
 
 ## Documentação do projeto
 
@@ -12,7 +12,9 @@ A remodelagem está em execução por fases. A Fase 1 — reestruturação arqui
 - [Matriz de dependências](docs/MATRIZ_DEPENDENCIAS.md) — fonte canônica, faixas de versões, dependências externas, perfis de hardware e política de compatibilidade.
 - [Plano operacional da Fase 1](docs/FASE_1_PLANO.md) — etapas, evidências e critérios de conclusão da reestruturação.
 - [Baseline legada](docs/LEGACY_BASELINE.md) — contratos caracterizados, limitações e política de migração da aplicação anterior.
-- [Handoff da Fase 1](docs/HANDOFF_FASE_1.md) — decisões consolidadas, arquitetura-alvo, critérios de aceite e instruções para continuidade na IDE.
+- [Handoff da Fase 1](docs/HANDOFF_FASE_1.md) — arquitetura, critérios e decisões de migração.
+- [Plano operacional da Fase 2](docs/FASE_2_PLANO.md) — identidade visual, UX, confirmações, preferências e critérios de validação da interface profissional.
+- [Handoff da Fase 2](docs/HANDOFF_FASE_2.md) — implementação, evidências de CI, limitações e próximos gates.
 
 ## Direção do produto
 
@@ -27,7 +29,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A nova arquitetura em `src/legendar/` possui camadas, pipeline, máquina de estados, cancelamento cooperativo, publicação SRT atômica e GUI mínima. Ela ainda não processa mídia real: integração FFmpeg/YouTube, Whisper/WhisperX, tradução e refinamento visual pertencem às fases posteriores. O andamento e as evidências estão em [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A nova arquitetura em `src/legendar/` possui camadas, pipeline, máquina de estados, cancelamento cooperativo, publicação SRT atômica e uma interface profissional com temas, confirmações, preferências, progresso e log. Ela ainda não processa mídia real: integração FFmpeg/YouTube, Whisper/WhisperX e tradução pertencem às fases seguintes. O andamento e as evidências estão em [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md).
 
 ## Licença
 
