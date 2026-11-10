@@ -619,7 +619,7 @@ Versões, licenças, wheels, modelos, requisitos de runtime e combinações de b
 |---|---|---|---|
 | 0 | Definições e prova técnica | Inventário, governança/lock, perfis CPU/CUDA, prova de mídia/offset, POC smoke PT-BR/EN e decisões de tradução/modelos | Direção técnica e contratos suficientes para iniciar Fase 1; limitações e validações humanas encaminhadas explicitamente às Fases 4, 5, 6 e 8 |
 | 1 | Reestruturação arquitetural | Camadas, modelos de domínio, pipeline, estados, configurações, tratamento de erros, testes e CI | **Concluída e integrada à `main` pela PR #2 (squash, commit `de31ddd`):** arquitetura executável e testada; baseline legada caracterizada/preservada; CI Python 3.10–3.13 verde (196 testes por ambiente); critérios do [plano operacional da Fase 1](FASE_1_PLANO.md) aprovados |
-| 2 | Interface profissional | Janela, identidade visual, diálogos, máquina de estados, workers simulados, progresso e log | Todos os estados e proteções demonstrados sem processamento real |
+| 2 | Interface profissional | Janela, identidade visual, diálogos, máquina de estados, workers simulados, progresso e log | **Implementada e validada tecnicamente:** temas claro/escuro/sistema, confirmações seguras, proteção contra reentrância, preferências QSettings, acessibilidade, logs e progresso honesto; CI 4/4 em Python 3.10–3.13, 218 testes por ambiente, cobertura 88%; integração pela PR #3 pendente |
 | 3 | Entrada e preparação de mídia | YouTube, áudio/vídeo local, ffprobe, FFmpeg, faixas, normalização e temporários | Fixtures e formatos candidatos processados com metadados corretos |
 | 4 | Reconhecimento Whisper | Serviço de transcrição, idioma, perfis, cache, erros e worker | Transcrição original reproduzível em PT-BR/EN |
 | 5 | Alinhamento temporal | WhisperX, VAD, offsets, chunks, validação, fallback se aprovado e métricas | Base de referência atendendo aos limites aprovados ou limitações documentadas |
@@ -628,9 +628,10 @@ Versões, licenças, wheels, modelos, requisitos de runtime e combinações de b
 | 8 | Testes e homologação | Unitários, integração, GUI, E2E, regressão e relatório | Critérios de aceite atendidos e falhas críticas resolvidas |
 | 9 | Documentação e finalização | Guias, arquitetura, operação, instalação, decisões e revisão final | Documentação coerente com código e instalação reproduzível |
 
-A execução e as evidências da Fase 1 estão registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md),
-[FASE_1_PLANO.md](FASE_1_PLANO.md) e [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md). A fase está
-tecnicamente concluída e validada; a Fase 2 continua condicionada à aprovação explícita do responsável.
+A execução e as evidências das Fases 1 e 2 estão registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md),
+[FASE_1_PLANO.md](FASE_1_PLANO.md), [FASE_2_PLANO.md](FASE_2_PLANO.md), [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
+e [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md). As Fases 1 e 2 estão tecnicamente concluídas e validadas;
+a Fase 3 depende de aprovação explícita do responsável.
 
 ### 12.1. Regras de execução das fases
 
