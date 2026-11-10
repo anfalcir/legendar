@@ -8,14 +8,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Cada perfil runtime-* representa uma instalação completa da aplicação com
-# um backend PyTorch explicitamente selecionado. Instale exatamente um perfil.
+# Cada perfil é uma instalação completa da aplicação para POC, incluindo
+# transcrição e alinhamento. Instale exatamente um perfil por ambiente.
 runtime-cpu = [
     "openai-whisper>=20250625",
     "yt-dlp>=2025.4.30",
     "torch>=2.8,<2.9",
     "torchvision>=0.23,<0.24",
     "torchaudio>=2.8,<2.9",
+    "whisperx>=3.8.6,<3.9",
 ]
 runtime-cu128 = [
     "openai-whisper>=20250625",
@@ -23,11 +24,6 @@ runtime-cu128 = [
     "torch>=2.8,<2.9",
     "torchvision>=0.23,<0.24",
     "torchaudio>=2.8,<2.9",
-]
-
-# Alinhamento é um recurso opcional até que a POC PT-BR/EN seja aprovada.
-# Deve ser combinado com exatamente um dos perfis runtime-* acima.
-alignment-whisperx = [
     "whisperx>=3.8.6,<3.9",
 ]
 
