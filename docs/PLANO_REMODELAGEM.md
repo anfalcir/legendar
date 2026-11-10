@@ -569,7 +569,7 @@ O repositório Legendar é a fonte de verdade dos requisitos de software. O ambi
 ### 11.1. Governança
 
 - `pyproject.toml` é o manifesto canônico das dependências diretas, faixas de versão, extras e grupos de desenvolvimento.
-- `uv.lock` será o registro versionado da resolução exata de dependências transitivas, depois que a Fase 0 validar os perfis de plataforma e as fontes de wheels do PyTorch.
+- `uv.lock` é o registro versionado da resolução universal exata de dependências transitivas, variantes PyTorch e marcadores de plataforma; toda instalação de validação deve usar `uv sync --locked`.
 - `requirements.txt` é um snapshot legado da baseline e não deverá continuar sendo mantido manualmente como fonte concorrente. Após a migração, será removido ou gerado a partir do lockfile para compatibilidade com instalações que usam pip.
 - Dependências diretas devem refletir contratos usados pelo próprio Legendar. Dependências transitivas devem ser resolvidas pelo gerenciador e registradas no lockfile, sem duplicação manual desnecessária.
 - Utilizar faixas de versão com limites mínimos testados e limites máximos somente quando houver justificativa de compatibilidade. Fixações exatas ficam no lockfile, não no manifesto de requisitos.
@@ -583,11 +583,11 @@ O `pyproject.toml` foi introduzido na Fase 0 com PySide6 como dependência-base 
 
 A faixa inicial de Python é `>=3.10,<3.14`, determinada pela compatibilidade declarada pelo candidato WhisperX estável 3.8.6, e não pela versão instalada no computador-alvo. Essa faixa será ampliada quando a interseção das dependências críticas, os wheels e a CI demonstrarem suporte adicional.
 
-A matriz, os comandos de instalação, os perfis, as justificativas, as dependências externas e a política de manutenção estão em [docs/MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md). Uma resolução experimental anterior feita apenas contra PyPI puxou bibliotecas CUDA/NVIDIA por padrão para Linux e foi descartada; a resolução agora usa índices explícitos para não confundir perfil CPU com GPU. A presença do manifesto não significa que todas as versões tenham sido instaladas ou homologadas. O novo lock universal ainda deverá ser validado antes de entrar no repositório.
+A matriz, os comandos de instalação, os perfis, as justificativas, as dependências externas e a política de manutenção estão em [docs/MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md). Uma resolução experimental anterior feita apenas contra PyPI puxou bibliotecas CUDA/NVIDIA por padrão para Linux e foi descartada; a resolução agora usa índices explícitos para não confundir perfil CPU com GPU. O lock universal está versionado e validado por resolução. A CI executa instalação real/importação do perfil CPU e CUDA 12.8, além de uma POC de modelo PT-BR/EN; isso é evidência de compatibilidade inicial, não homologação completa do produto em todos os sistemas e hardwares.
 
 ### 11.3. Ferramentas externas
 
-FFmpeg e ffprobe são dependências externas obrigatórias do pipeline de mídia, não pacotes Python. O instalador/preflight deverá localizá-los, validar suas versões e informar como instalá-los. Requisitos complementares do fluxo YouTube, como runtime JavaScript compatível com a versão escolhida do yt-dlp, deverão ser identificados e tratados da mesma forma.
+FFmpeg e ffprobe são dependências externas obrigatórias do pipeline de mídia, não pacotes Python. O instalador/preflight deverá localizá-los, validar suas versões e informar como instalá-los. O fluxo YouTube declara `yt-dlp-ejs` e requer um runtime JavaScript compatível; Deno é o runtime preferencial a identificar no preflight, com Node avaliado somente conforme suporte da versão do yt-dlp.
 
 ### 11.4. Perfis de hardware e plataforma
 
@@ -617,7 +617,7 @@ Versões, licenças, wheels, modelos, requisitos de runtime e combinações de b
 
 | Fase | Nome | Entregáveis principais | Critério de saída |
 |---|---|---|---|
-| 0 | Definições e prova técnica | Matriz de modelos, POC PT-BR/EN, comparação de alinhadores, escolha de tradução e parâmetros de mídia | Qualidade e compatibilidade demonstradas; decisões registradas |
+| 0 | Definições e prova técnica | Inventário, governança/lock, perfis CPU/CUDA, prova de mídia/offset, POC smoke PT-BR/EN e decisões de tradução/modelos | Direção técnica e contratos suficientes para iniciar Fase 1; limitações e validações humanas encaminhadas explicitamente às Fases 4, 5, 6 e 8 |
 | 1 | Reestruturação arquitetural | Camadas, modelos de domínio, pipeline, estados, configurações e tratamento de erros | Aplicação executável com testes básicos e dependências organizadas |
 | 2 | Interface profissional | Janela, identidade visual, diálogos, máquina de estados, workers simulados, progresso e log | Todos os estados e proteções demonstrados sem processamento real |
 | 3 | Entrada e preparação de mídia | YouTube, áudio/vídeo local, ffprobe, FFmpeg, faixas, normalização e temporários | Fixtures e formatos candidatos processados com metadados corretos |
@@ -662,10 +662,10 @@ O projeto remodelado somente será considerado pronto quando:
 
 | Tema | Direção atual | O que falta decidir |
 |---|---|---|
-| Alinhador primário | WhisperX | Confirmar suporte, compatibilidade, qualidade e instalação no ambiente-alvo |
+| Alinhador primário | WhisperX estável 3.8.6 como candidato inicial | Compatibilidade de instalação testada; precisão temporal com timestamps humanos permanece gate da Fase 5 |
 | Alternativa | stable-ts em avaliação | Demonstrar ganho real antes de adotar |
-| Tradução | Um serviço contextual isolado por adapter | Escolher provedor, custo, privacidade e política de falha |
-| Modelo Whisper | Manter Whisper | Comparar modelos e perfis de desempenho/precisão |
+| Tradução | Porta/adaptador de tradução; texto original preservado e áudio nunca enviado | Provedor e política comercial/privacidade serão selecionados antes da Fase 6; manter independência de fornecedor na Fase 1 |
+| Modelo Whisper | Whisper multilingue como motor de reconhecimento candidato | POC smoke com `tiny` PT-BR/EN; escolha de modelo final exige comparação de WER, tempo e memória nas Fases 4/8 |
 | Normalização | WAV PCM, mono, 16 kHz como hipótese | Validar qualidade e compatibilidade dos modelos |
 | Idiomas de alinhamento | Prioridade PT-BR e EN | Confirmar modelos disponíveis e critérios de homologação |
 | Parâmetros SRT | Valores iniciais na seção 5.6 | Calibrar por amostras e leitura real |
