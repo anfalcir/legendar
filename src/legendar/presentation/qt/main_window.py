@@ -848,15 +848,15 @@ class MainWindow(QMainWindow):
 
         if self._deps.readiness_ok:
             self.readiness_icon.setStyleSheet("color: #16845b;")
+            details = " ".join(self._deps.readiness_details)
             self.readiness_label.setText(
-                "Ferramentas externas verificadas. " +
-                " ".join(self._deps.readiness_details)
+                f"Ferramentas externas verificadas. {details}"
             )
         else:
             self.readiness_icon.setStyleSheet("color: #a96712;")
+            details = " ".join(self._deps.readiness_details)
             self.readiness_label.setText(
-                "O ambiente precisa de ajustes. " +
-                " ".join(self._deps.readiness_details)
+                f"O ambiente precisa de ajustes. {details}"
             )
 
     def _set_inputs_enabled(self, enabled: bool) -> None:
