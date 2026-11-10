@@ -62,7 +62,7 @@ def _load_reference_rows(
     rows: list[dict[str, str]] = []
     seen_utterances: set[str] = set()
     with Path(tsv_path).open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle, delimiter="\\t")
+        reader = csv.DictReader(handle, delimiter="\t")
         required = {"id", "path"}
         if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
             raise RuntimeError(
