@@ -212,7 +212,10 @@ def test_audio_without_channels_is_rejected() -> None:
         parse_ffprobe_payload(payload)
 
 
-def test_start_time_after_duration_is_rejected() -> None:
+def test_absolute_stream_offset_is_not_compared_to_relative_duration() -> None:
+    # Alguns contêineres mantêm timestamps absolutos (por exemplo, MPEG-TS).
+    # Sem o início da timeline do contêiner, start_time=30 s e duration=10 s
+    # não provam que a faixa está fora da mídia: a mídia pode ocupar [30, 40].
     payload = {
         "streams": [
             {
@@ -227,8 +230,11 @@ def test_start_time_after_duration_is_rejected() -> None:
         "format": {"duration": "10.0"},
     }
 
-    with pytest.raises(UnsupportedMediaError):
-        parse_ffprobe_payload(payload)
+    info = parse_ffprobe_payload(payload)
+
+    assert info.duration_seconds == pytest.approx(10.0)
+    assert info.default_stream().start_time_seconds == pytest.approx(30.0)
+    assert info.default_stream().offset_source == "stream.start_time"
 
 
 def test_invalid_json_produces_tool_error() -> None:
