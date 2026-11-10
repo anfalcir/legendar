@@ -64,6 +64,9 @@ def _dependencies(
         readiness_ok=True,
         readiness_details=("ffmpeg e ffprobe encontrados.",),
         app_version="0.1.0",
+        media_inspector=FakeInspector(info=make_media_info()),
+        youtube_available=True,
+        youtube_readiness_details=("yt-dlp instalado", "Runtime EJS disponível"),
     )
 
 
