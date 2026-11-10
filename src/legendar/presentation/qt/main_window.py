@@ -32,8 +32,8 @@ from PySide6.QtWidgets import (
 
 from legendar.application.job.context import JobContext
 from legendar.application.pipeline.serial_pipeline import JobRequest, SerialPipeline
-from legendar.application.ports.protocols import WorkspaceFactory
-from legendar.domain.entities.media import MediaKind, MediaSource
+from legendar.application.ports.protocols import MediaInspector, WorkspaceFactory
+from legendar.domain.entities.media import MediaInfo, MediaKind, MediaSource
 from legendar.domain.errors.base import DomainError
 from legendar.domain.errors.catalog import InvalidInputError
 from legendar.domain.events.job_events import JobCompleted, JobEvent, JobFailed
@@ -54,6 +54,9 @@ from legendar.presentation.qt.view_model.job_view_model import (
     JobViewSnapshot,
 )
 from legendar.presentation.qt.workers.job_worker import JobWorker
+from legendar.presentation.qt.workers.media_inspection_worker import (
+    MediaInspectionWorker,
+)
 
 PipelineFactory = Callable[[], SerialPipeline]
 OutputPathFactory = Callable[[str, Language], Path]
@@ -79,6 +82,9 @@ class UiDependencies:
     readiness_ok: bool = True
     readiness_details: tuple[str, ...] = ()
     app_version: str = ""
+    media_inspector: MediaInspector | None = None
+    youtube_available: bool = False
+    youtube_readiness_details: tuple[str, ...] = ()
 
 
 class MainWindow(QMainWindow):
@@ -98,6 +104,10 @@ class MainWindow(QMainWindow):
         self._view_model = JobViewModel()
         self._thread = None
         self._worker: JobWorker | None = None
+        self._inspection_thread = None
+        self._inspection_worker: MediaInspectionWorker | None = None
+        self._media_info: MediaInfo | None = None
+        self._inspection_cancel_pending = False
         self._context: JobContext | None = None
         self._output_touched = False
         self._starting = False
@@ -119,7 +129,11 @@ class MainWindow(QMainWindow):
     @property
     def is_running(self) -> bool:
         """True durante confirmação, inicialização ou execução de um job."""
-        return self._starting or self._thread is not None
+        return (
+            self._starting
+            or self._thread is not None
+            or self._inspection_thread is not None
+        )
 
     @property
     def view_model(self) -> JobViewModel:
