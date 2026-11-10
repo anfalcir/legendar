@@ -1,9 +1,9 @@
 # Plano de execução — Fase 1: Reestruturação arquitetural
 
 - **Documento:** plano operacional da Fase 1 (escopo, sequência, critérios de aceite)
-- **Status:** concluída tecnicamente e validada; integração registrada na PR #2
-- **Branch de trabalho:** `phase-1/architecture`
-- **Base:** `main` pós-integração da Fase 0 (commit de squash `992cb87`)
+- **Status:** concluída, validada e integrada à `main` pela PR #2 (squash)
+- **Branch de implementação:** `phase-1/architecture` (integrada à `main`)
+- **Base:** `main` pós-integração da Fase 0 (commit de squash `992cb87`); integração final da Fase 1 em `de31ddd`
 - **Fontes de referência:** [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md), [ESTADO_ATUAL.md](ESTADO_ATUAL.md), [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
 
 ---
@@ -159,5 +159,6 @@ Desvios conscientes em relação ao plano original:
    legado e scripts históricos são compilados/caracterizados sem reformatação incidental.
 
 Resultado: todos os critérios técnicos da Fase 1 foram atendidos, a CI dedicada está verde
-em Python 3.10–3.13 e a revisão final foi concluída. A integração está registrada na PR #2;
-nenhuma atividade da Fase 2 foi iniciada. A Fase 2 permanece condicionada à aprovação explícita.
+em Python 3.10–3.13 e a revisão final foi concluída. A PR #2 foi integrada por squash à `main`
+no commit `de31dddffc4f8e761692129d4c47a02ca89b8b83`. Nenhuma atividade da Fase 2 foi iniciada;
+a Fase 2 permanece condicionada à aprovação explícita.
