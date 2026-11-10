@@ -1,0 +1,39 @@
+[project]
+name = "legendar"
+version = "0.1.0"
+description = "Aplicação desktop para transcrição, alinhamento e geração de legendas SRT."
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "PySide6>=6.9,<7",
+    "openai-whisper>=20250625",
+    "yt-dlp>=2025.4.30",
+]
+
+[project.optional-dependencies]
+# Candidato da Fase 0: mover para dependências obrigatórias somente após
+# validar resolução, compatibilidade multiplataforma e qualidade PT-BR/EN.
+alignment-whisperx = [
+    "whisperx>=3.8.6,<4",
+]
+
+[dependency-groups]
+test = [
+    "pytest>=8,<10",
+    "pytest-qt>=4.4,<5",
+    "pytest-cov>=6,<8",
+]
+lint = [
+    "ruff>=0.11,<1",
+]
+build = [
+    "pyinstaller>=6.13,<7",
+]
+dev = [
+    { include-group = "test" },
+    { include-group = "lint" },
+]
+
+[tool.uv]
+# O Legendar é um aplicativo desktop em layout flat neste estágio; uv gerencia
+# o ambiente sem tentar instalar o projeto como uma biblioteca Python.
+package = false
