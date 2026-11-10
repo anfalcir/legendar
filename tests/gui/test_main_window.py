@@ -309,9 +309,7 @@ def test_keyboard_tab_order_and_accessible_names_are_explicit(qtbot, tmp_path) -
 
 
 
-def test_destructive_prompts_use_no_as_the_default_choice(
-    qtbot, tmp_path, monkeypatch
-) -> None:
+def test_destructive_prompts_use_no_as_the_default_choice(qtbot, tmp_path, monkeypatch) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     del window._confirm_cancel
     calls = {}
@@ -375,9 +373,7 @@ def test_log_scroll_follows_only_when_the_user_is_at_the_bottom(
     assert scrollbar.value() == scrollbar.maximum()
 
 
-def test_narrow_window_keeps_content_in_a_vertical_scroll_area(
-    qtbot, tmp_path
-) -> None:
+def test_narrow_window_keeps_content_in_a_vertical_scroll_area(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window.resize(680, 620)
     qtbot.wait(20)
@@ -385,14 +381,8 @@ def test_narrow_window_keeps_content_in_a_vertical_scroll_area(
     scroll = window.findChild(QScrollArea, "mainScrollArea")
     assert scroll is not None
     assert scroll.widgetResizable()
-    assert (
-        scroll.horizontalScrollBarPolicy()
-        == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-    )
-    assert (
-        scroll.verticalScrollBarPolicy()
-        == Qt.ScrollBarPolicy.ScrollBarAsNeeded
-    )
+    assert scroll.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    assert scroll.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAsNeeded
     assert window.width() >= window.minimumWidth()
 
 
