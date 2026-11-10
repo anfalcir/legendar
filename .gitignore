@@ -1,0 +1,9 @@
+.venv/
+venv/
+.idea/
+__pycache__/
+*.py[cod]
+/cache/
+/*.mp4
+/ffmpeg/bin/ffmpeg*
+/ffmpeg/bin/ffprobe*
