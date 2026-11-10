@@ -111,7 +111,6 @@ def test_output_without_srt_suffix_is_normalized(qtbot, tmp_path, media) -> None
     assert window.view_model.snapshot.output_path == str(tmp_path / "legenda-final.srt")
 
 
-
 def test_output_cannot_overwrite_the_selected_media_file(qtbot, tmp_path) -> None:
     source = tmp_path / "origem.srt"
     source.write_text("conteúdo original", encoding="utf-8")
@@ -177,7 +176,6 @@ def test_pipeline_failure_is_shown_and_allows_retry(qtbot, tmp_path, media) -> N
     assert snapshot.state is JobState.FAILED
     assert "ffprobe" in snapshot.error_message
     assert window.generate_button.isEnabled()
-
 
 
 def test_close_after_thread_wait_cleans_workspace_before_window_exit(
