@@ -188,7 +188,6 @@ def test_cancel_declined_keeps_the_job_running(qtbot, tmp_path, media) -> None:
     assert window.view_model.snapshot.state is JobState.COMPLETED
 
 
-
 def test_cancel_rejection_is_reported_when_pipeline_has_entered_publication(
     qtbot, tmp_path
 ) -> None:
