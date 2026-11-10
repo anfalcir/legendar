@@ -2,19 +2,21 @@
 
 - **Última atualização:** 10/11/2026
 - **Repositório:** anfalcir/legendar
-- **Branch atual de implementação:** `phase-2/professional-ui`
+- **Branch atual:** `main`
 - **Branch de implementação da Fase 1:** `phase-1/architecture` (integrada)
+- **Branch de implementação da Fase 2:** `phase-2/professional-ui` (integrada)
 - **Branch padrão:** `main`
-- **Fases concluídas:** Fase 0 — Definições e prova técnica; Fase 1 — Reestruturação arquitetural
-- **Fase em fechamento:** Fase 2 — Interface profissional (implementação e CI concluídas; integração pendente)
-- **Fase de implementação mais recente:** Fase 2 — Interface profissional, implementada e validada na branch dedicada; integração pendente
+- **Fases concluídas:** Fase 0 — Definições e prova técnica; Fase 1 — Reestruturação arquitetural; Fase 2 — Interface profissional
+- **Fase concluída mais recente:** Fase 2 — Interface profissional, implementada, validada e integrada à `main`
 - **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), integrada por squash
 - **PR da Fase 1:** [#2](https://github.com/anfalcir/legendar/pull/2), merged por squash em 10/11/2026
+- **PR da Fase 2:** [#3](https://github.com/anfalcir/legendar/pull/3), merged por squash em 10/11/2026
 - **Commit de integração da Fase 0:** `992cb874274e73d0264994e39926113f1461236f`
 - **Commit de integração da Fase 1:** `de31dddffc4f8e761692129d4c47a02ca89b8b83`
+- **Commit de integração da Fase 2:** `4129f0a906a04693502f298b71767605499e3f68`
 - **Documentos de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md) e [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md)
 
-> As Fases 0 e 1 estão concluídas e integradas à `main`. A Fase 2 foi implementada na branch `phase-2/professional-ui` e validada pela CI [#42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434): 4/4 ambientes Python 3.10–3.13, 218 testes por ambiente, cobertura de 88%, Ruff check e format verdes. A integração da Fase 2 à `main` será feita pela PR #3 após revisão; a Fase 3 permanece não iniciada e depende de aprovação explícita.
+> As Fases 0, 1 e 2 estão concluídas e integradas à `main`. A Fase 2 foi integrada por squash pela PR [#3](https://github.com/anfalcir/legendar/pull/3), no commit `4129f0a906a04693502f298b71767605499e3f68`. A CI aprovou Python 3.10–3.13 (218 testes por ambiente, 88% de cobertura, Ruff check/format verdes) e os gates herdados da Fase 0/1 também passaram. A Fase 3 permanece não iniciada e depende de aprovação explícita.
 
 ---
 
@@ -31,10 +33,10 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | Item | Estado |
 |---|---|
 | Repositório | `anfalcir/legendar` |
-| PRs de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1) e [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), ambas merged por squash; PR #3 da Fase 2 será aberta após esta atualização documental |
+| PRs de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1), [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2) e [#3 — Fase 2](https://github.com/anfalcir/legendar/pull/3), todas merged por squash |
 | Branch de conclusão da Fase 0 | `phase-0/technical-inventory` |
 | Branch de implementação da Fase 1 | `phase-1/architecture`, integrada na `main` pela PR #2 |
-| `main` | Contém as entregas integrais das Fases 0 e 1; HEAD inclui o merge squash `de31ddd`; Fase 2 validada no branch dedicado, aguardando PR #3 |
+| `main` | Contém as entregas integrais das Fases 0, 1 e 2; HEAD inclui o merge squash `4129f0a` |
 | Fonte de dependências | `pyproject.toml` |
 | Lock | `uv.lock` regenerado pela CI e integrado à `main`; invariantes, fontes e exports CPU/CUDA aprovados no workflow #113 |
 | Coletor | `scripts/phase0_inventory.py` |
@@ -44,7 +46,7 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | Documentação técnica | plano mestre, estado vivo, protocolo, matriz de dependências, planos operacionais e handoffs das Fases 1 e 2 |
 | CI | `.github/workflows/phase0-quality.yml` cobre evidências da Fase 0; `.github/workflows/phase1-quality.yml` valida testes, Qt offscreen, Ruff e lock em Python 3.10–3.13 |
 
-As PRs #1 e #2 foram revisadas e integradas. A `main` contém as entregas das Fases 0 e 1; a branch `phase-2/professional-ui` contém a Fase 2 validada, pronta para revisão e integração pela PR #3.
+As PRs #1, #2 e #3 foram revisadas e integradas. A `main` contém as entregas integrais das Fases 0, 1 e 2; as branches `phase-1/architecture` e `phase-2/professional-ui` preservam o histórico de implementação.
 
 ### 2.1. Checkpoint atual da Fase 1
 
@@ -170,7 +172,7 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 |---|---|---|
 | 0 — Definições e prova técnica | **Concluída e integrada** | PR #1 merged por squash; CI final verde |
 | 1 — Reestruturação arquitetural | **Concluída e integrada** | PR #2 merged por squash no commit `de31ddd`; 196 testes por ambiente Python 3.10–3.13, cobertura 88%, Ruff/format aprovados |
-| 2 — Interface profissional | **Implementada e validada; integração pendente na PR #3** | 218 testes por ambiente, 88% de cobertura, Ruff/format verdes; temas, diálogos, preferências, bloqueios, progresso, logs e acessibilidade |
+| 2 — Interface profissional | **Concluída e integrada** | PR #3 merged por squash no commit `4129f0a`; 218 testes por ambiente Python 3.10–3.13, cobertura 88%, Ruff/format aprovados |
 | 3 — Entrada e preparação de mídia | Não iniciada | Homologar formatos, streams, offsets e temporários; não começar sem aprovação explícita |
 | 4 — Reconhecimento Whisper | Não iniciada | Comparação PT-BR/EN e desempenho no computador-alvo |
 | 5 — Alinhamento temporal | Não iniciada | Referência humana, mediana/P95, cobertura e anomalias |
@@ -181,7 +183,7 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 
 ## 8. Pendências encaminhadas às fases corretas
 
-1. **Fases 1 e 2:** Fase 1 integrada; Fase 2 implementada e validada, aguardando integração pela PR #3. Não há processamento real de mídia nesta Fase 2.
+1. **Fases 1 e 2:** concluídas e integradas à `main`; não há pendências atribuídas a essas fases. A Fase 2 não ativou processamento real de mídia.
 2. **Antes da Fase 3:** repetir o inventário atualizado no computador-alvo e instalar/verificar FFmpeg/ffprobe.
 3. **Fase 4:** comparar modelos Whisper com corpus PT-BR/EN representativo; registrar WER/CER, duração, memória e RTF no hardware-alvo.
 4. **Fase 5:** anotar manualmente início/fim de palavras e medir erro mediano/P95, cobertura e falhas; não homologar sincronização só por WER.
@@ -192,7 +194,7 @@ As pendências acima são gates de produto alocados às fases responsáveis; ela
 
 ## 9. Próxima ação objetiva
 
-A Fase 2 está implementada e validada na branch `phase-2/professional-ui`; abrir e integrar a PR #3 após revisão. Depois, obter aprovação explícita antes de iniciar a Fase 3 — Entrada e preparação de mídia.
+As Fases 1 e 2 estão concluídas e integradas à `main`. O próximo marco é obter aprovação explícita para iniciar a Fase 3 — Entrada e preparação de mídia; não iniciar sua implementação antecipadamente.
 
 ---
 
@@ -210,4 +212,4 @@ A Fase 2 está implementada e validada na branch `phase-2/professional-ui`; abri
 | 10/11/2026 | Workflow final push #113 aprovado com 16/16 jobs e PR workflow #114 concluído com sucesso; PR #1 integrada por squash na `main` (commit `992cb874274e73d0264994e39926113f1461236f`) |
 | 10/11/2026 | Branch `phase-1/architecture` criada a partir da `main` atualizada; Fase 1 pronta para iniciar, sem implementação antecipada |
 | 10/11/2026 | Fase 1 concluída e integrada por squash na `main` pela PR #2, commit `de31ddd`; 196 testes aprovados em Python 3.10–3.13, cobertura de 88%, Ruff check/format verdes, CI #127 confirmada e CI Fase 0 PR #160 aprovada |
-| 10/11/2026 | Fase 2 — Interface profissional implementada na branch `phase-2/professional-ui`; CI #42911438434 verde em 4/4 Python 3.10–3.13, 218 testes por ambiente, cobertura de 88%, Ruff check/format verdes; integração pendente em PR #3 |
+| 10/11/2026 | Fase 2 concluída e integrada por squash na `main` pela PR #3, commit `4129f0a`; 218 testes aprovados em Python 3.10–3.13, cobertura 88%, Ruff check/format verdes; gates PR herdados Fase 0/1 aprovados |
