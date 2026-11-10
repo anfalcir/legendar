@@ -201,7 +201,7 @@ Forced alignment localiza no áudio um texto fornecido; não corrige por si só 
 
 **Candidato primário:** WhisperX, condicionado à prova técnica de compatibilidade, instalação, licença, suporte de idioma e qualidade.
 
-**Alternativa em avaliação:** stable-ts. Não será introduzido como dependência redundante nem como fallback automático antes de uma comparação objetiva. A Fase 0 deverá decidir se ele agrega valor e em quais situações.
+**Alternativa não selecionada na Fase 0:** stable-ts. Ela não foi adicionada ao manifesto nem definida como fallback automático. Reconsiderar somente se a avaliação com timestamps humanos da Fase 5 identificar limitações relevantes no alinhador primário; nesse caso, comparar ambos no mesmo corpus anotado, idiomas e condições. Essa eventual comparação é uma decisão de produto da Fase 5, não uma pendência da Fase 0.
 
 O alinhador deverá ser selecionado por idioma. Deve existir matriz explícita de suporte e de homologação. Quando não houver alinhador compatível ou a qualidade for insuficiente, o sistema deverá informar a limitação e evitar apresentar o resultado como plenamente sincronizado.
 
@@ -488,7 +488,7 @@ Avaliar:
 
 ### 9.4. Metas iniciais de sincronização
 
-Para áudios controlados e casos homologados, metas iniciais a validar na Fase 0:
+Para áudios controlados e casos homologados, metas de referência provisórias a validar na Fase 5, usando timestamps de palavras anotados manualmente:
 
 - Erro mediano de início/fim de palavra: até 150 ms.
 - Percentil 95 de erro: até 350 ms.
@@ -597,7 +597,7 @@ O inventário do computador-alvo será usado para medir desempenho e validar um 
 
 ### 11.5. Reprodutibilidade e qualidade
 
-A Fase 0 deverá gerar e validar a resolução lockada em ambiente isolado, testar instalações limpas, confirmar a compatibilidade dos wheels e registrar a matriz Python/OS/arquitetura. A CI leve da Fase 0 testa o coletor; ela não representa homologação completa das dependências da aplicação. A fase de integração deverá separar testes com lockfile (reprodutibilidade) e testes de compatibilidade/atualização (faixas de versão).
+A Fase 0 gerou e validou a resolução lockada em ambiente isolado, confirmou a compatibilidade inicial dos wheels e executou a matriz do coletor/CLI em Python 3.10–3.13 × Ubuntu/Windows/macOS. O workflow #109 também instalou/importou os perfis CPU e CUDA 12.8, executou a prova FFmpeg/offset e o smoke benchmark WhisperX PT-BR/EN. Isso demonstra reprodutibilidade e compatibilidade inicial dos componentes avaliados; não equivale à homologação completa das dependências e fluxos do produto em todos os sistemas e hardwares. A fase de integração deverá separar testes com lockfile (reprodutibilidade) e testes de compatibilidade/atualização (faixas de versão).
 
 Referências técnicas:
 
@@ -658,18 +658,20 @@ O projeto remodelado somente será considerado pronto quando:
 - Documentação estiver completa e corresponder ao comportamento real.
 - Dependências, modelos, licenças e dados transmitidos a serviços externos estiverem documentados.
 
-## 14. Decisões pendentes da Fase 0
+## 14. Decisões consolidadas e validações encaminhadas
 
-| Tema | Direção atual | O que falta decidir |
+| Tema | Decisão de saída da Fase 0 | Validação ou decisão restante |
 |---|---|---|
-| Alinhador primário | WhisperX estável 3.8.6 como candidato inicial | Compatibilidade de instalação testada; precisão temporal com timestamps humanos permanece gate da Fase 5 |
-| Alternativa | stable-ts em avaliação | Demonstrar ganho real antes de adotar |
-| Tradução | Porta/adaptador de tradução; texto original preservado e áudio nunca enviado | Provedor e política comercial/privacidade serão selecionados antes da Fase 6; manter independência de fornecedor na Fase 1 |
-| Modelo Whisper | Whisper multilingue como motor de reconhecimento candidato | POC smoke com `tiny` PT-BR/EN; escolha de modelo final exige comparação de WER, tempo e memória nas Fases 4/8 |
-| Normalização | WAV PCM, mono, 16 kHz como hipótese | Validar qualidade e compatibilidade dos modelos |
-| Idiomas de alinhamento | Prioridade PT-BR e EN | Confirmar modelos disponíveis e critérios de homologação |
-| Parâmetros SRT | Valores iniciais na seção 5.6 | Calibrar por amostras e leitura real |
-| Distribuição | Avaliar depois | Definir sistemas operacionais e empacotamento após estabilização |
+| Alinhador primário | WhisperX estável 3.8.6 é o primeiro candidato/adaptador; compatibilidade de instalação e POC smoke PT-BR/EN passaram | Precisão temporal, cobertura e tolerância a casos difíceis serão avaliadas na Fase 5 contra timestamps humanos |
+| Alternativa | stable-ts não foi incluído como dependência nem como fallback automático | Reconsiderar na Fase 5 somente se houver evidência mensurável de limitação do alinhador primário |
+| Tradução | Porta/adaptador independente; preservar original e não enviar áudio ao fornecedor | Selecionar provedor e aprovar preço, privacidade, retenção, limites e falhas antes da Fase 6 |
+| Modelo Whisper | Whisper multilingue é o motor candidato; `tiny` foi usado apenas para smoke benchmark de compatibilidade | Comparar modelos e perfis com corpus PT-BR/EN representativo e no computador-alvo nas Fases 4/8 |
+| Normalização | WAV PCM signed 16-bit, mono, 16 kHz; conversão sintética e preservação de offset foram aprovadas | Homologar codecs, contêineres, streams, qualidade de áudio e fixtures reais na Fase 3 |
+| Idiomas | PT-BR e EN passaram pela POC pública mínima | Não declarar qualidade ou suporte de alinhamento homologado antes das Fases 4/5/8 |
+| Parâmetros SRT | Regras e faixas iniciais documentadas na seção 5.6 | Calibrar com leitura real, segmentação e critérios de aceite nas Fases 6/8 |
+| Distribuição | Perfis CPU e CUDA 12.8 estão declarados; macOS usa wheels PyPI do perfil CPU e pode expor MPS conforme runtime | Definir plataformas/backends oficialmente suportados somente após homologação da aplicação integrada na Fase 8 |
+
+A Fase 0 encerra as decisões estruturais necessárias para começar a arquitetura. Os itens da terceira coluna são validações de produto, dependem de evidências ou decisões de fornecedor e permanecem atribuídos às fases que os consomem; não são critérios ocultos para reabrir esta fase.
 
 ## 15. Política de manutenção da documentação
 
