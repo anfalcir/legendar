@@ -186,7 +186,6 @@ def test_youtube_downloader_rejects_output_outside_workspace(tmp_path: Path) -> 
     outside.unlink()
 
 
-
 def test_youtube_downloader_rejects_incomplete_js_runtime_configuration() -> None:
     with pytest.raises(ValueError, match="runtime e caminho"):
         YtDlpDownloader(js_runtime="node")

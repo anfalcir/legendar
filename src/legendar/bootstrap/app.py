@@ -73,9 +73,7 @@ def _js_runtime_details(
         elif version is None:
             details.append(f"{name}: versão não identificada (mínimo {minimum_label})")
         elif version < minimum:
-            details.append(
-                f"{status.version}: abaixo do mínimo {minimum_label}"
-            )
+            details.append(f"{status.version}: abaixo do mínimo {minimum_label}")
         else:
             details.append(f"{status.version}: compatível")
     return tuple(details)

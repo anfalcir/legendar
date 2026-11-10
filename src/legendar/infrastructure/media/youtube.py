@@ -69,7 +69,13 @@ class YtDlpDownloader:
     usuário.
     """
 
-    __slots__ = ("_ydl_factory", "_socket_timeout", "_retries", "_js_runtime", "_js_runtime_path")
+    __slots__ = (
+        "_ydl_factory",
+        "_socket_timeout",
+        "_retries",
+        "_js_runtime",
+        "_js_runtime_path",
+    )
 
     def __init__(
         self,
@@ -156,9 +162,7 @@ class YtDlpDownloader:
         if self._js_runtime is not None and self._js_runtime_path is not None:
             # Node não é habilitado por padrão em todas as versões do yt-dlp.
             # Declarar o runtime selecionado evita falso preflight positivo.
-            options["js_runtimes"] = {
-                self._js_runtime: {"path": self._js_runtime_path}
-            }
+            options["js_runtimes"] = {self._js_runtime: {"path": self._js_runtime_path}}
 
         try:
             ydl = self._ydl_factory(options)

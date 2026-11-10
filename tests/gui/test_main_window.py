@@ -503,7 +503,6 @@ def test_pipeline_failure_is_shown_and_allows_retry(qtbot, tmp_path, media) -> N
     assert window.generate_button.isEnabled()
 
 
-
 def test_source_selector_switches_between_local_and_youtube(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
@@ -518,7 +517,9 @@ def test_source_selector_switches_between_local_and_youtube(qtbot, tmp_path) -> 
     assert "youtube.com" in window.file_edit.placeholderText()
     assert not window.stream_combo.isEnabled()
 
-    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("local_file"))
+    window.media_kind_combo.setCurrentIndex(
+        window.media_kind_combo.findData("local_file")
+    )
 
     assert window.browse_button.isVisible()
     assert window.inspect_button.isVisible()
@@ -546,9 +547,7 @@ def test_youtube_job_is_blocked_when_runtime_or_ejs_is_missing(qtbot, tmp_path) 
         youtube_readiness_details=("yt-dlp não instalado",),
     )
     window = _window(qtbot, dependencies, tmp_path)
-    window.media_kind_combo.setCurrentIndex(
-        window.media_kind_combo.findData("youtube")
-    )
+    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("youtube"))
     window.file_edit.setText("https://youtu.be/video123")
 
     with pytest.raises(InvalidInputError, match="suporte ao YouTube"):
@@ -645,6 +644,7 @@ def test_media_inspection_can_be_cancelled_without_blocking_the_window(
     assert window.media_info_label.text() == "Inspeção de mídia cancelada."
     assert window.file_edit.isEnabled()
 
+
 def test_close_after_thread_wait_cleans_workspace_before_window_exit(
     qtbot, tmp_path, monkeypatch
 ) -> None:
@@ -711,7 +711,6 @@ def test_cancel_stops_a_cooperative_pipeline(qtbot, tmp_path, media) -> None:
     qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
 
     assert window.view_model.snapshot.state is JobState.CANCELLED
-
 
 
 def test_youtube_readiness_also_requires_ffmpeg_and_ffprobe(qtbot, tmp_path) -> None:
