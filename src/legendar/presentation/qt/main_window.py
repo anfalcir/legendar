@@ -638,8 +638,8 @@ class MainWindow(QMainWindow):
         worker.failed.connect(
             self._on_media_inspection_failed, Qt.ConnectionType.QueuedConnection
         )
+        worker.finished.connect(worker.deleteLater)
         worker.finished.connect(thread.quit, Qt.ConnectionType.DirectConnection)
-        thread.finished.connect(worker.deleteLater)
         thread.finished.connect(self._on_media_inspection_thread_finished)
         thread.finished.connect(thread.deleteLater)
 
