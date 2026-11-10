@@ -30,10 +30,11 @@ Foi adicionado `scripts/phase0_inventory.py`, ferramenta independente que usa so
 ### O que coleta
 
 - Versão e implementação do Python.
-- Sistema operacional, versão, arquitetura e modelo de CPU.
+- Sistema operacional, kernel, distribuição Linux (quando aplicável), arquitetura e modelo de CPU.
 - Quantidade de CPUs lógicas, memória física total/disponível e capacidade livre/total do disco.
+- Controladores gráficos PCI detectáveis em Linux (fabricante, IDs PCI, classe e driver, sem identificadores únicos do equipamento).
 - Disponibilidade e versão de FFmpeg e ffprobe, incluindo a pasta local `ffmpeg/bin` quando existir.
-- Presença de `nvidia-smi` e identificação das GPUs NVIDIA consultáveis.
+- Presença de `nvidia-smi` e identificação das GPUs NVIDIA consultáveis. A ausência desta ferramenta não significa ausência de GPU AMD/Intel.
 - Versões instaladas de Whisper, WhisperX, stable-ts, PyTorch, torchaudio, torchvision, NumPy, PySide6 e yt-dlp.
 - Opcionalmente, resultado da importação do PyTorch, disponibilidade CUDA/ROCm exposta pela API CUDA do PyTorch e dispositivos reconhecidos.
 
@@ -109,6 +110,42 @@ Fontes primárias:
 - [Repositório stable-ts e aviso de arquivamento](https://github.com/jianfch/stable-ts)
 
 **Decisão provisória:** não alterar `requirements.txt` nesta etapa. Primeiro, definir o Python e o sistema operacional de referência e resolver o conjunto compatível de versões em ambiente virtual isolado.
+
+## 4A. Inventário recebido do computador-alvo (10/11/2026)
+
+Arquivo recebido: `legendar-phase0-environment.json`, gerado em `2026-11-10T12:38:10Z`. A evidência foi incorporada ao estado do projeto; o arquivo JSON não foi adicionado ao repositório.
+
+| Item | Resultado observado |
+|---|---|
+| Runtime | CPython 3.12.3 |
+| Sistema | Linux, kernel 7.0.0-42-generic, arquitetura x86_64 |
+| CPU | AMD Ryzen 3 2200G with Radeon Vega Graphics |
+| CPU lógica | 4 processadores lógicos |
+| Memória RAM | 12,59 GiB total; 7,65 GiB disponíveis no momento da coleta |
+| Disco | 218,51 GiB total; 165,60 GiB livres no volume consultado |
+| GPU NVIDIA | Nenhum `nvidia-smi` detectado |
+| Gráficos integrados | O identificador do processador declara Radeon Vega Graphics; a primeira versão do coletor não enumerava controladores AMD/Intel por PCI |
+| FFmpeg / ffprobe | Não encontrados no PATH nem em `ffmpeg/bin` do projeto |
+| Pacotes Python | Somente `yt-dlp 2024.4.9` entre os pacotes consultados; Whisper, PyTorch, PySide6, NumPy, WhisperX e stable-ts ausentes neste interpretador |
+| Runtime PyTorch | Não importado: `ModuleNotFoundError` |
+
+### Interpretação técnica
+
+1. **CPU é a baseline de homologação.** O Ryzen 3 2200G tem 4 CPUs lógicas reportadas. O caminho inicial deverá priorizar modelos pequenos e processamento sequencial, medindo tempo real por minuto de áudio e pico de memória. Não há evidência suficiente para prometer processamento em tempo real.
+2. **A Radeon integrada não deve ser tratada como acelerador ROCm suportado.** A matriz oficial Linux do ROCm 7.2.1 lista APUs Ryzen AI recentes (arquiteturas gfx1150/gfx1151) e não lista o Ryzen 3 2200G. Portanto, a arquitetura não dependerá de ROCm neste equipamento; soluções comunitárias fora da matriz não serão assumidas como estáveis.
+3. **Python 3.12.3 está dentro da faixa declarada pelo WhisperX 3.8.6 (>=3.10 e <3.14), mas isso não prova compatibilidade do conjunto de dependências.** A árvore de desenvolvimento atual do WhisperX especifica `torch~=2.8.0` e `torchvision~=0.23.0`, enquanto a baseline do Legendar fixa PyTorch 2.7.0. A resolução deverá ocorrer em ambiente virtual isolado, sem misturar os pacotes do aplicativo legado.
+4. **A preparação de mídia está bloqueada até instalar e validar FFmpeg/ffprobe.** Não se deve iniciar a POC de alinhamento ou processamento de mídia antes de confirmar esses binários e suas versões.
+5. **O inventário representa o interpretador usado no comando, não necessariamente todas as instalações Python da máquina.** A ausência de pacotes deve ser interpretada como ausência nesse runtime específico.
+6. **O snapshot de RAM é momentâneo.** A memória disponível pode mudar; medir também o pico durante transcrição/alinhamento.
+
+Fontes oficiais consultadas em 10/11/2026:
+- [Matriz de compatibilidade ROCm para Ryzen em Linux](https://rocmdocs.amd.com/projects/radeon-ryzen/en/latest/docs/compatibility/compatibilityryz/native_linux/native_linux_compatibility.html)
+- [WhisperX 3.8.6 no PyPI](https://pypi.org/project/whisperx/)
+- [Dependências da branch principal do WhisperX](https://github.com/m-bain/whisperX/blob/main/pyproject.toml)
+- [Modelos e requisitos aproximados do Whisper](https://github.com/openai/whisper/blob/main/README.md)
+- [Pacote FFmpeg no Ubuntu](https://packages.ubuntu.com/ffmpeg)
+
+**Decisão técnica provisória:** homologar CPU primeiro; não instalar ROCm; não alterar ainda as dependências do produto. Fazer inventário complementar de distribuição/driver e depois preparar ambiente de prova isolado.
 
 ## 5. Plano experimental
 
