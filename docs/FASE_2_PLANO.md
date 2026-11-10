@@ -73,4 +73,4 @@ O botão principal ainda não executará processamento real. O pipeline de mídi
 
 A tela está visualmente estruturada e funcional sob os testes automatizados, mas a homologação visual em monitores físicos, scaling HiDPI e diferentes ambientes desktop Linux/Windows/macOS continua sendo parte da homologação global da Fase 8. A interface ainda usa um pipeline simulado/pendente: processamento real de mídia fica na Fase 3 e seguintes.
 
-A implementação está validada tecnicamente e pronta para integração. A Fase 3 permanece bloqueada até aprovação explícita do responsável.
+A implementação está validada tecnicamente e pronta para integração pela PR #3. A Fase 3 permanece bloqueada até aprovação explícita do responsável.
