@@ -45,7 +45,7 @@ funcionalidades isoladas, testáveis e substituíveis — não a implementação
 | 7 | `presentation`: view model sem Qt + janela Qt mínima + worker que traduz eventos em sinais | testes pytest-qt de estados/fakes | Concluída no escopo da Fase 1; polimento visual/preferências pertencem à Fase 2 |
 | 8 | `bootstrap`: composição explícita, entrypoint `python -m legendar`, preflight de ferramentas externas | smoke test offscreen | Concluída |
 | 9 | Migração/estratégia do legado (`main.py`, `core/`, `gui/`) documentada e executada | baseline caracterizada, congelada fora da arquitetura nova e com gate de aposentadoria | Concluída; arquivos preservados temporariamente até paridade e homologação end-to-end |
-| 10 | CI da Fase 1 (ruff + pytest + import-check de fronteiras + pytest-qt offscreen) + documentação | workflow dedicado verde em Python 3.10–3.13 | Concluída; run [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857), quatro ambientes aprovados |
+| 10 | CI da Fase 1 (ruff + pytest + import-check de fronteiras + pytest-qt offscreen) + documentação | workflow dedicado verde em Python 3.10–3.13 | Concluída; runs [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) e [#127](https://github.com/anfalcir/legendar/actions/runs/42905799938), ambos 4/4 aprovados |
 
 ## 4. Layout-alvo (ajustado do handoff à realidade do repositório)
 
@@ -104,6 +104,7 @@ A implementação arquitetural está na branch `phase-1/architecture`, sobre a b
 Evidências finais verificadas no GitHub Actions:
 
 - Workflow [Phase 1 quality #116](https://github.com/anfalcir/legendar/actions/runs/42905199857): **4/4 jobs aprovados** em Python 3.10, 3.11, 3.12 e 3.13.
+- Workflow final [Phase 1 quality #127](https://github.com/anfalcir/legendar/actions/runs/42905799938): **4/4 jobs aprovados** após as atualizações finais de documentação.
 - A suíte completa registrou **196 testes aprovados por ambiente**, com cobertura total reportada de **88%**.
 - `ruff check` e `ruff format --check` passaram no escopo mantido da arquitetura e dos testes em todos os quatro ambientes.
 - `compileall`, verificação de lock e inicialização Qt offscreen passaram.
