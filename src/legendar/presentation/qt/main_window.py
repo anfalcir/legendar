@@ -478,6 +478,11 @@ class MainWindow(QMainWindow):
         if self._worker is not None:
             self._worker.request_cancel()
         if self._thread.wait(_CLOSE_WAIT_MS):
+            # A UI thread blocked in wait() cannot process the queued
+            # ``completed`` slot; clean the workspace here before closing.
+            context, self._context = self._context, None
+            if context is not None:
+                self._discard_workspace(context)
             super().closeEvent(event)
         else:
             self.status_label.setText(
