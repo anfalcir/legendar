@@ -58,7 +58,7 @@ class JobController:
         self._pipeline = pipeline
         self._emit = emit
         self._min_progress_delta = min_progress_delta
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._sequence = 0
         self._machine = StateMachine()
         self._context: JobContext | None = None
@@ -70,21 +70,24 @@ class JobController:
 
     @property
     def state(self) -> JobState:
-        return self._machine.state
+        with self._lock:
+            return self._machine.state
 
     @property
     def is_cancelled(self) -> bool:
-        context = self._context
-        return context is not None and context.token.is_cancelled
+        with self._lock:
+            context = self._context
+            return context is not None and context.token.is_cancelled
 
     # -- controle ---------------------------------------------------------
 
     def cancel(self) -> bool:
         """Solicita cancelamento; retorna ``False`` se não há job ativo."""
-        context = self._context
-        if context is None or self._terminal_emitted:
-            return False
-        return context.token.cancel("Cancelado pelo usuário.")
+        with self._lock:
+            context = self._context
+            if context is None or self._terminal_emitted:
+                return False
+            return context.token.cancel("Cancelado pelo usuário.")
 
     def run(self, request: JobRequest, context: JobContext) -> PipelineResult | None:
         """Executa o job até o fim, emitindo eventos; ``None`` se cancelado/falhou."""
