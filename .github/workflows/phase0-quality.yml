@@ -121,6 +121,59 @@ jobs:
           python scripts/phase0_inventory.py --output "$RUNNER_TEMP/legendar-inventory.json"
           python -c "import json, pathlib; json.loads(pathlib.Path('$RUNNER_TEMP/legendar-inventory.json').read_text())"
 
+
+  model-language-poc:
+    name: WhisperX smoke benchmark / PT-BR and English
+    if: github.event_name == 'push'
+    needs:
+      - dependency-resolution
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DISABLE_PROGRESS_BARS: "1"
+      TOKENIZERS_PARALLELISM: "false"
+    steps:
+      - name: Check out latest branch head (includes generated lock)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned uv
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
+
+      - name: Cache model and dataset files
+        uses: actions/cache@v4
+        with:
+          path: .cache/phase0
+          key: phase0-whisperx-tiny-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            phase0-whisperx-tiny-
+
+      - name: Install locked CPU runtime and evaluation group
+        run: uv sync --locked --no-dev --group phase0 --extra runtime-cpu --no-progress
+
+      - name: Run public PT-BR and English model smoke benchmark
+        run: |
+          uv run --locked python scripts/phase0_model_poc.py \
+            --model tiny \
+            --samples-per-language 2 \
+            --cache-dir .cache/phase0 \
+            --output phase0-model-poc.json
+
+      - name: Upload model benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendar-phase0-model-poc
+          path: phase0-model-poc.json
+          if-no-files-found: error
+          retention-days: 90
+
   media-timeline-poc:
     name: FFmpeg normalization and offset preservation
     runs-on: ubuntu-latest
