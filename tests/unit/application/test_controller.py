@@ -130,7 +130,7 @@ def test_domain_error_becomes_job_failed_with_category(job_context):
 
 def test_unexpected_error_is_wrapped_without_leaking_traceback(job_context):
     class ExplodingAligner:
-        def align(self, audio, transcript, *, progress=None):
+        def align(self, audio, transcript, *, progress=None, token=None):
             raise ValueError("boom")
 
     events: list[JobEvent] = []
