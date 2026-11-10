@@ -71,6 +71,28 @@ jobs:
             echo "uv.lock is already current."
           fi
 
+      - name: Validate critical lockfile invariants
+        run: python scripts/phase0_validate_lock.py
+
+      - name: Ensure CPU export does not pull NVIDIA/CUDA packages
+        shell: bash
+        run: |
+          uv export --locked --no-dev --extra runtime-cpu --no-emit-project > "$RUNNER_TEMP/legendar-cpu-requirements.txt"
+          if grep -Eiq '^nvidia[-_]' "$RUNNER_TEMP/legendar-cpu-requirements.txt"; then
+            echo "::error::CPU profile unexpectedly includes NVIDIA packages."
+            grep -Ein '^nvidia[-_]' "$RUNNER_TEMP/legendar-cpu-requirements.txt"
+            exit 1
+          fi
+
+      - name: Verify CUDA export contains CUDA runtime packages
+        shell: bash
+        run: |
+          uv export --locked --no-dev --extra runtime-cu128 --no-emit-project > "$RUNNER_TEMP/legendar-cu128-requirements.txt"
+          if ! grep -Eiq '^nvidia[-_]' "$RUNNER_TEMP/legendar-cu128-requirements.txt"; then
+            echo "::error::CUDA 12.8 profile did not resolve NVIDIA runtime packages."
+            exit 1
+          fi
+
       - name: Upload lockfile evidence
         uses: actions/upload-artifact@v4
         with:
@@ -115,6 +137,9 @@ jobs:
 
       - name: Validate media POC command-line interface
         run: python scripts/phase0_media_poc.py --help
+
+      - name: Validate lock-checker command-line interface
+        run: python scripts/phase0_validate_lock.py --help
 
       - name: Smoke-test inventory JSON
         run: |
