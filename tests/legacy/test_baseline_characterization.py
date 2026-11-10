@@ -232,7 +232,6 @@ def test_legacy_window_exposes_youtube_and_mp4_tabs_and_rejects_other_formats(
     assert not hasattr(window, "worker")
 
 
-
 def test_legacy_youtube_worker_updates_mp3_path_after_a_collision(
     legacy_modules: SimpleNamespace,
     monkeypatch: pytest.MonkeyPatch,
