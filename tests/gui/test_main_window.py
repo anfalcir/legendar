@@ -96,7 +96,6 @@ def test_generate_runs_off_the_ui_thread_and_completes(qtbot, tmp_path, media) -
     assert not window.cancel_button.isEnabled()
 
 
-
 def test_start_declined_does_not_create_workspace(qtbot, tmp_path, media) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window.file_edit.setText(str(media))
@@ -121,9 +120,7 @@ def test_reentrant_start_confirmation_cannot_create_duplicate_jobs(
         return SerialPipeline(_ports())
 
     dependencies = _dependencies(tmp_path)
-    dependencies = replace(
-        dependencies, pipeline_factory=pipeline_factory
-    )
+    dependencies = replace(dependencies, pipeline_factory=pipeline_factory)
     window = _window(qtbot, dependencies, tmp_path)
     window.file_edit.setText(str(media))
     window.output_edit.setText(str(tmp_path / "saida.srt"))
@@ -172,7 +169,8 @@ def test_cancel_declined_keeps_the_job_running(qtbot, tmp_path, media) -> None:
 
     slow = SlowTranscriber()
     window = _window(
-        qtbot, _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow))),
+        qtbot,
+        _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow))),
         tmp_path,
     )
     window.file_edit.setText(str(media))
@@ -231,7 +229,9 @@ def test_progress_is_indeterminate_until_pipeline_reports_a_measurement(
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window._thread = object()
     snapshot = window.view_model.apply(
-        StateChanged("job-1", 1, previous=JobState.IDLE, current=JobState.VALIDATING_INPUT)
+        StateChanged(
+            "job-1", 1, previous=JobState.IDLE, current=JobState.VALIDATING_INPUT
+        )
     )
     window._render(snapshot)
 
