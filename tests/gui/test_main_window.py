@@ -313,6 +313,7 @@ def test_destructive_prompts_use_no_as_the_default_choice(
     qtbot, tmp_path, monkeypatch
 ) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    del window._confirm_cancel
     calls = {}
 
     def warning(*args):
