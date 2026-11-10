@@ -34,7 +34,7 @@ class JobWorker(QObject):
         super().__init__(parent)
         self._request = request
         self._context = context
-        self._controller = JobController(pipeline, self.event_received.emit)
+        self._controller = JobController(\n            pipeline, self.event_received.emit, context=context\n        )
 
     @property
     def controller(self) -> JobController:
