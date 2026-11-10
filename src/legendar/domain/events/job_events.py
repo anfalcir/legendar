@@ -7,14 +7,14 @@ A camada de apresentação os traduz em sinais Qt.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from legendar.domain.errors.base import ErrorCategory
 from legendar.domain.state.machine import JobState
 
 
 def _now() -> datetime:
-    return datetime.now(tz=UTC)
+    return datetime.now(tz=timezone.utc)
 
 
 @dataclass(frozen=True, slots=True)
