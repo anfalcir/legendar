@@ -42,7 +42,7 @@ build = [
     "pyinstaller>=6.13,<7",
 ]
 phase0 = [
-    "datasets>=5.2,<6",
+    "huggingface-hub>=0.30,<1",
     "jiwer>=4,<5",
     "soundfile>=0.13,<1",
 ]
