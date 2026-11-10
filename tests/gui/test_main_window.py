@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -120,7 +121,7 @@ def test_reentrant_start_confirmation_cannot_create_duplicate_jobs(
         return SerialPipeline(_ports())
 
     dependencies = _dependencies(tmp_path)
-    dependencies = __import__("dataclasses").replace(
+    dependencies = replace(
         dependencies, pipeline_factory=pipeline_factory
     )
     window = _window(qtbot, dependencies, tmp_path)
