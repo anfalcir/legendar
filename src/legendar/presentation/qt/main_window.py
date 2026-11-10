@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, QThread, Qt, Slot
+from PySide6.QtCore import QSettings, Qt, QThread, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -37,8 +37,8 @@ from legendar.domain.entities.media import MediaKind, MediaSource
 from legendar.domain.errors.base import DomainError
 from legendar.domain.errors.catalog import InvalidInputError
 from legendar.domain.events.job_events import JobCompleted, JobEvent, JobFailed
-from legendar.domain.value_objects.language import Language
 from legendar.domain.state.machine import JobState
+from legendar.domain.value_objects.language import Language
 from legendar.presentation.qt.dialogs import (
     JobConfirmationDialog,
     PreferencesDialog,
