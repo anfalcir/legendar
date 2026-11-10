@@ -84,8 +84,10 @@ class FakeInspector:
     info: MediaInfo = field(default_factory=make_media_info)
     calls: list = field(default_factory=list)
 
-    def inspect(self, source) -> MediaInfo:
+    def inspect(self, source, *, token=None) -> MediaInfo:
         self.calls.append(source)
+        if token is not None:
+            token.raise_if_cancelled()
         return self.info
 
 
@@ -94,8 +96,12 @@ class FakeAudioPreparer:
     asset: AudioAsset | None = None
     calls: list = field(default_factory=list)
 
-    def prepare(self, media_path, *, stream, destination_path) -> AudioAsset:
+    def prepare(
+        self, media_path, *, stream, destination_path, token=None
+    ) -> AudioAsset:
         self.calls.append((media_path, stream, destination_path))
+        if token is not None:
+            token.raise_if_cancelled()
         if self.asset is not None:
             return self.asset
         return AudioAsset(
@@ -112,13 +118,13 @@ class FakeTranscriber:
     transcript: Transcript = field(
         default_factory=lambda: make_transcript(language=Language.PORTUGUESE)
     )
-    token: object | None = None
-
-    def transcribe(self, audio, *, language=None, progress=None) -> Transcript:
+    def transcribe(
+        self, audio, *, language=None, progress=None, token=None
+    ) -> Transcript:
         if progress is not None:
             progress.report(0.5, "Transcrevendo")
-        if self.token is not None:
-            self.token.raise_if_cancelled()
+        if token is not None:
+            token.raise_if_cancelled()
         if progress is not None:
             progress.report(1.0, "Fim")
         return self.transcript
@@ -127,13 +133,13 @@ class FakeTranscriber:
 @dataclass
 class FakeAligner:
     alignment: AlignmentResult | None = None
-    token: object | None = None
-
-    def align(self, audio, transcript, *, progress=None) -> AlignmentResult:
+    def align(
+        self, audio, transcript, *, progress=None, token=None
+    ) -> AlignmentResult:
         if progress is not None:
             progress.report(0.5, "Alinhando")
-        if self.token is not None:
-            self.token.raise_if_cancelled()
+        if token is not None:
+            token.raise_if_cancelled()
         return self.alignment or make_alignment(transcript)
 
 
@@ -142,7 +148,11 @@ class FakeTranslator:
     language: Language = Language.PORTUGUESE
     keep_shape: bool = True
 
-    def translate(self, transcript, *, target_language, progress=None) -> Transcript:
+    def translate(
+        self, transcript, *, target_language, progress=None, token=None
+    ) -> Transcript:
+        if token is not None:
+            token.raise_if_cancelled()
         if not self.keep_shape:
             return Transcript(
                 segments=(TranscriptSegment(text="texto único"),),
