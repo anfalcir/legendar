@@ -11,6 +11,7 @@ from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QMessageBox, QScrollArea
 
 from legendar.application.pipeline.serial_pipeline import PipelinePorts, SerialPipeline
+from legendar.domain.entities.media import MediaKind
 from legendar.domain.errors.catalog import InvalidInputError, MediaToolError
 from legendar.domain.events.job_events import (
     JobFailed,
@@ -569,7 +570,6 @@ def test_media_inspection_runs_in_worker_and_exposes_stream_selection(
     qtbot, tmp_path, media
 ) -> None:
     from legendar.domain.entities.media import AudioStreamInfo
-    from legendar.domain.entities.media import MediaInfo
 
     inspected_threads = []
     original_info = make_media_info()
