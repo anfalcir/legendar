@@ -1,163 +1,155 @@
 # Matriz e política de dependências do Legendar
 
-- **Status:** política aprovada como direção de engenharia; versões experimentais ainda em validação na Fase 0
-- **Fonte canônica de requisitos diretos:** `pyproject.toml`
-- **Fonte canônica da resolução exata:** `uv.lock` (a criar após validar a matriz de plataforma e o stack PyTorch)
-- **Snapshot legado:** `requirements.txt` (transitório; não é fonte de verdade)
+- **Status:** política de dependências consolidada na Fase 0; compatibilidade completa do produto permanece condicionada à integração/homologação.
+- **Fonte canônica de requisitos diretos:** `pyproject.toml`.
+- **Fonte canônica de resolução exata:** `uv.lock`, versionado no repositório.
+- **Gerenciador:** `uv`, ferramenta de desenvolvimento/instalação; não é dependência de runtime.
+- **Snapshot legado:** `requirements.txt`, não autoritativo e não deve ser atualizado manualmente.
 
 ---
 
 ## 1. Princípio de governança
 
-O repositório Legendar é a fonte de verdade dos requisitos de software. O computador em que o aplicativo será executado é um ambiente de validação e implantação, não a autoridade que define as dependências, as versões permitidas ou os limites arquiteturais do produto.
+O repositório Legendar é a fonte de verdade dos requisitos de software. O computador onde o aplicativo será executado é um perfil de validação/implantação, não a autoridade que define dependências, versões ou limites arquiteturais do produto.
 
-As decisões de dependências devem ser orientadas por:
+Decisões devem considerar contratos do produto, compatibilidade upstream, interseção de dependências, disponibilidade de wheels/binários, CI multiplataforma, segurança, licença, manutenção, privacidade e reprodutibilidade.
 
-1. Funcionalidades e contratos do produto.
-2. Compatibilidade declarada e testada pelos projetos upstream.
-3. Interseção de versões suportadas entre dependências diretas e transitivas.
-4. Disponibilidade de wheels/binários para os sistemas e arquiteturas que o projeto pretende suportar.
-5. Testes automatizados em matriz de Python e sistemas operacionais.
-6. Segurança, licença, manutenção, custo operacional e reprodutibilidade.
-
-O inventário de uma máquina identifica o perfil daquele ambiente. Não deve, isoladamente, excluir tecnologias, definir versões mínimas globais, obrigar o projeto a usar CPU ou impedir que outros usuários utilizem aceleração compatível.
+Nenhuma instalação/update global deve ser executada silenciosamente pelo aplicativo. Alterações devem ocorrer em ambiente isolado e ser registradas no manifesto e no lockfile.
 
 ## 2. Fontes de verdade
 
 | Artefato | Responsabilidade | Regra |
 |---|---|---|
-| `pyproject.toml` | Requisitos diretos, faixas de versões, extras e grupos de desenvolvimento | Cadastro canônico; alterações de dependências começam aqui |
-| `uv.lock` | Resolução exata das dependências transitivas e diretas para os ambientes declarados | Deve ser versionado e atualizado junto da mudança de requisitos, após conclusão da resolução da Fase 0 |
-| `requirements.txt` | Snapshot de instalação da baseline anterior | Legado transitório; não editar manualmente nem tratar como autoridade; remover ou substituir por exportação gerada quando a migração for concluída |
-| `docs/MATRIZ_DEPENDENCIAS.md` | Justificativas, categorias, compatibilidade, políticas e estado da homologação | Documenta decisões; não substitui os manifestos executáveis |
+| `pyproject.toml` | Dependências diretas, intervalos, extras e grupos de desenvolvimento/avaliação | Fonte canônica; toda alteração começa aqui |
+| `uv.lock` | Resolução exata, dependências transitivas, marcadores e origens dos wheels | Versionar e atualizar com o manifesto; instalar com `--locked` |
+| `requirements.txt` | Snapshot da baseline antiga | Legado transitório; não editar manualmente; remover ou gerar exportação somente após migração |
+| `docs/MATRIZ_DEPENDENCIAS.md` | Justificativas, categorias, compatibilidade, políticas e evidências | Documentação; não substitui artefatos executáveis |
 
-O `pyproject.toml` registra PySide6 como dependência-base e oferece dois perfis completos de POC: `runtime-cpu` e `runtime-cu128`. Cada perfil reúne Whisper, yt-dlp, PyTorch, torchvision, torchaudio e WhisperX. Deve-se instalar exatamente um perfil. Essa composição evita que uma instalação do alinhador ocorra sem a variante PyTorch explicitamente selecionada.
+Dependências transitivas não devem ser copiadas para o manifesto só porque constam de `pip freeze`. Declarar diretamente bibliotecas importadas como contrato pelo código Legendar ou necessárias para uma decisão explícita de compatibilidade.
 
-A primeira resolução experimental feita apenas contra PyPI foi **rejeitada e não foi commitada**: o pacote `torch` selecionado puxava bibliotecas CUDA/NVIDIA mesmo sem o projeto ter escolhido um perfil CUDA. Isso demonstrou que um lock universal sem seleção explícita da origem PyTorch não é suficiente. Uma segunda tentativa avaliou índices explícitos para CPU, CUDA e ROCm e encontrou uma incompatibilidade real: o índice ROCm 7.2 disponível começa em PyTorch 2.11, enquanto o WhisperX estável 3.8.6 exige PyTorch `>=2.8,<2.9`. Por isso, ROCm permanece como possibilidade arquitetural futura, mas não é oferecido como perfil completo instalável nesta matriz. Não vamos usar uma versão pré-release do WhisperX para mascarar esse conflito.
+## 3. Manifesto de runtime e perfis
 
-O manifesto usa índices oficiais explícitos para os perfis CPU e CUDA 12.8. No macOS, o perfil CPU utiliza wheels PyPI do PyTorch, que podem expor aceleração MPS conforme hardware e sistema; não há um índice MPS separado. A nova resolução universal será validada antes de versionar `uv.lock`.
+A dependência-base é PySide6. O aplicativo completo deve instalar exatamente um perfil de runtime; os extras CPU e CUDA são declarados como conflitantes.
 
-A escolha de `uv` é uma decisão de gerenciamento de projeto, não uma dependência de runtime do aplicativo. Seu lockfile suporta resolução universal com marcadores de plataforma, versões Python e variantes por extra; isso permite registrar diferentes perfis sem fazer do computador local a referência do projeto.
-
-## 3. Requisitos iniciais registrados em pyproject.toml
-
-| Componente | Categoria | Requisito atual | Motivo / situação |
-|---|---|---|---|
-| PySide6 | Runtime-base | `>=6.9,<7` | Framework GUI; faixa minor ampla, com limite major para exigir revisão de compatibilidade |
-| openai-whisper | Runtime nos perfis `runtime-*` | `>=20250625` | Motor de reconhecimento central; declarado como requisito em todos os perfis completos |
-| yt-dlp | Runtime nos perfis `runtime-*` | `>=2025.4.30` | Entrada YouTube; declarado como requisito em todos os perfis completos |
-| Stack completo Whisper + WhisperX + PyTorch (CPU) | Perfil de POC `runtime-cpu` | WhisperX `>=3.8.6,<3.9`; Torch `>=2.8,<2.9`; torchvision `>=0.23,<0.24`; torchaudio `>=2.8,<2.9` | Usa índice CPU explícito em Linux/Windows e wheels PyPI em macOS |
-| Stack completo Whisper + WhisperX + PyTorch (CUDA 12.8) | Perfil de POC `runtime-cu128` | Mesmas faixas do perfil CPU | Perfil opcional para Linux/Windows com CUDA 12.8 compatível; utiliza índice oficial cu128 |
-| PyTorch ROCm 7.2 | Futuro perfil; não declarado como runtime instalável | Índice oficial disponível resolve PyTorch `>=2.11`, incompatível com WhisperX estável 3.8.6 (`>=2.8,<2.9`) | Bloqueado pela interseção atual do stack; reavaliar quando upstream estável for compatível ou outro alinhador for homologado |
-| WhisperX | Incluído nos perfis `runtime-*` da POC | `>=3.8.6,<3.9` | Alinhador candidato; incluído junto da variante PyTorch para que a resolução sempre tenha um backend explícito; sua qualidade PT-BR/EN ainda precisa ser homologada |
-| pytest / pytest-qt / pytest-cov | Desenvolvimento e testes | Declarados no grupo `test` | Testes unitários, integração e GUI; não são dependências do usuário final |
-| Ruff | Desenvolvimento | Declarado no grupo `lint` | Lint e formatação; não é dependência do usuário final |
-| PyInstaller | Empacotamento | Declarado no grupo `build` | Ferramenta de build; não é dependência de runtime |
+| Componente | Requisito no manifesto | Categoria e observação |
+|---|---|---|
+| PySide6 | `>=6.9,<7` | GUI base |
+| openai-whisper | `>=20250625` | Reconhecimento |
+| yt-dlp | `>=2025.4.30` | Entrada YouTube |
+| yt-dlp-ejs | `>=0.8,<1` | Suporte EJS do fluxo YouTube |
+| PyTorch | `>=2.8,<2.9` | Backend tensorial; origem do wheel selecionada pelo perfil |
+| torchvision | `>=0.23,<0.24` | Pareado com Torch 2.8 |
+| torchaudio | `>=2.8,<2.9` | Pareado com Torch 2.8 |
+| WhisperX | `>=3.8.6,<3.8.7` | Alinhador candidato; intervalo deliberado para aceitar release estável 3.8.6 e excluir 3.8.7rc1 |
+| pytest / pytest-qt / pytest-cov | Grupo `test` | Testes; não runtime |
+| Ruff | Grupo `lint` | Qualidade de código; não runtime |
+| PyInstaller | Grupo `build` | Empacotamento; não runtime |
+| jiwer / soundfile / huggingface-hub | Grupo `phase0` | Métrica lexical, decodificação de áudio e download dos dados públicos de avaliação; não runtime do produto |
 
 ### Python
 
-O requisito inicial do projeto é `>=3.10,<3.14`. O limite superior atual decorre do candidato WhisperX 3.8.6, cuja metadata ainda não declara suporte a Python 3.14. Ele não foi escolhido por causa do Python 3.12.3 instalado no computador-alvo.
+O projeto declara `>=3.10,<3.14`. O limite superior decorre do candidato WhisperX estável 3.8.6, cuja metadata não declara suporte a Python 3.14; não foi escolhido pela versão instalada no computador-alvo. Ampliar exige rever a interseção do perfil completo e testar wheels/integrações.
 
-Esse intervalo é provisório e deverá ser expandido assim que a interseção das dependências críticas, os wheels e a CI demonstrarem compatibilidade com versões adicionais. A CI de compatibilidade deve testar as versões mínimas e máximas admitidas pelo projeto, não apenas a versão instalada na máquina de desenvolvimento.
+### Perfis disponíveis
 
-### Instalação por perfil
+| Extra | Seleção PyTorch | Plataformas pretendidas | Observação |
+|---|---|---|---|
+| `runtime-cpu` | Índice oficial CPU em Linux/Windows; wheels PyPI em macOS | Linux, Windows, macOS | Perfil de compatibilidade |
+| `runtime-cu128` | Índice oficial CUDA 12.8 | Linux/Windows compatíveis | Opcional; depende de GPU/driver NVIDIA compatíveis |
+| ROCm 7.2 | Não exposto como extra | — | PyTorch disponível no índice ROCm consultado começa em 2.11; WhisperX 3.8.6 exige Torch 2.8.x |
+| Apple MPS | Wheel PyTorch PyPI no perfil CPU | macOS/Apple Silicon quando suportado | A disponibilidade é detectada no runtime; não há índice MPS separado |
 
-O aplicativo completo exige um dos perfis abaixo. O manifesto não pressupõe o computador do mantenedor:
+Comandos:
 
 ```bash
-# CPU (Linux/Windows usa o índice CPU do PyTorch; macOS usa wheels PyPI)
-uv sync --no-dev --extra runtime-cpu
+# Instalação completa em CPU
+uv sync --locked --no-dev --extra runtime-cpu
 
-# CUDA 12.8 em Linux/Windows compatíveis
-uv sync --no-dev --extra runtime-cu128
+# Instalação completa CUDA 12.8 (Linux/Windows compatíveis)
+uv sync --locked --no-dev --extra runtime-cu128
 ```
 
-Não combinar mais de um extra `runtime-*`. O próprio `uv` declara os perfis disponíveis como conflitantes para impedir a resolução acidental de variantes PyTorch incompatíveis. O perfil CUDA é destinado a Linux/Windows compatíveis; no macOS, usar `runtime-cpu`, que recorre aos wheels PyPI e pode disponibilizar MPS em Apple Silicon. ROCm 7.2 não está exposto como extra runtime porque sua versão atual de PyTorch não cruza a faixa exigida pelo WhisperX estável.
+Não combinar extras `runtime-*`. Não forçar a instalação de ROCm 7.2 com override ou versão pré-release do WhisperX; reavaliar quando o upstream estável oferecer interseção compatível ou houver outra solução de alinhamento homologada.
 
-A faixa Python `>=3.10,<3.14` é atualmente limitada pelo candidato WhisperX estável 3.8.6, não pelo computador do usuário. Aumentar a faixa exige revalidar a interseção de dependências do perfil completo, inclusive o alinhador.
+Uma resolução antiga contra PyPI sem origem explícita foi descartada porque introduziu bibliotecas NVIDIA/CUDA sem seleção explícita de perfil. A configuração atual direciona Torch/torchvision/torchaudio para os índices oficiais CPU/cu128 onde aplicável. O lock universal preserva as variantes e seus marcadores; a CI deve verificar os perfis separadamente.
 
-## 4. Dependências transitivas e componentes externos
+**Correção de integridade do lock:** a primeira faixa `whisperx>=3.8.6,<3.9` permitiu selecionar `3.8.7rc1`. Isso foi corrigido para `>=3.8.6,<3.8.7`. O lock atual deve conter somente WhisperX 3.8.6, nunca uma pré-release.
 
-### Dependências Python transitivas
+## 4. Dependências transitivas e conflitos relevantes
 
-Pacotes como PyTorch, torchaudio, torchvision, NumPy, tiktoken, CTranslate2, faster-whisper, pyannote-audio, torchcodec, transformers e NLTK podem ser instalados por dependências diretas. Não devem ser repetidos como dependências diretas do Legendar apenas porque aparecem em um snapshot de `pip freeze`.
+Pacotes como NumPy, CTranslate2, faster-whisper, transformers, pyannote-audio, torchcodec, NLTK e bibliotecas NVIDIA podem surgir como dependências transitivas. Não duplicar no manifesto sem contrato próprio ou necessidade explícita de controle.
 
-Uma biblioteca será declarada diretamente quando o código do Legendar a importar/utilizar como contrato próprio ou quando houver uma decisão explícita de controlar sua compatibilidade. A versão exata de dependências transitivas e os wheels/índices correspondentes a cada perfil serão registrados no lockfile universal; o lockfile não deverá transformar uma instalação CPU em uma instalação CUDA por resolução implícita contra PyPI.
+Um conflito identificado na prova de avaliação: `datasets>=5.2` exige `huggingface-hub>=1.31`, enquanto WhisperX estável 3.8.6 exige `huggingface-hub<1.0`. A dependência `datasets` foi removida do grupo de avaliação; a POC lê TSV e arquivos de áudio do FLEURS diretamente usando `huggingface-hub`, respeitando a interseção do runtime. Não contornar com `--no-deps`, alterações manuais de metadata ou constraints ocultos.
 
-O stack de WhisperX requer atenção especial: o metadata e a configuração upstream em evolução podem alterar os requisitos de PyTorch/torchvision/torchcodec. Não se deve acrescentar `torch==...` ao manifesto do Legendar sem validar o alinhador, o backend e as fontes de wheels em todos os perfis pretendidos.
+## 5. Executáveis e runtimes externos
 
-### Executáveis e runtimes externos
-
-| Componente | Categoria | Requisito |
+| Componente | Categoria | Política |
 |---|---|---|
-| FFmpeg | Ferramenta externa obrigatória | Executável `ffmpeg` disponível no PATH ou fornecido pelo instalador do Legendar |
-| ffprobe | Ferramenta externa obrigatória | Executável `ffprobe` disponível no PATH ou fornecido pelo instalador |
-| Runtime JavaScript compatível | Requisito condicional do fluxo YouTube | Avaliar a combinação recomendada pelo yt-dlp para a versão selecionada; declarar e verificar no preflight quando necessária |
-| Modelos Whisper/alinhamento | Artefatos de runtime | Downloads sob demanda/cache; registrar nome, origem, licença e política de armazenamento; não incluí-los indiscriminadamente no Git |
+| FFmpeg | Ferramenta externa obrigatória | Localizar `ffmpeg` no PATH ou distribuição gerenciada pelo instalador; verificar versão/capacidades |
+| ffprobe | Ferramenta externa obrigatória | Localizar e verificar; inspeção de streams e timestamps |
+| Deno | Runtime JavaScript recomendado a detectar no fluxo YouTube | Pré-flight deve identificar e explicar ausência quando requerido pela versão do yt-dlp |
+| Node.js | Runtime alternativo a detectar conforme suporte yt-dlp | Não assumir que sua presença basta sem verificar compatibilidade |
+| Modelos Whisper/alinhadores | Artefatos de runtime | Cache/download sob demanda; registrar ID/revisão, licença e local; não incluir pesos no Git |
 
-FFmpeg/ffprobe não são substituídos por pacotes Python com nomes semelhantes. O preflight do aplicativo deverá localizar, identificar a versão e apresentar instruções de instalação sem tentar alterar o sistema operacional silenciosamente.
+FFmpeg/ffprobe não são substituídos por pacotes Python com nomes semelhantes. O aplicativo deverá apresentar orientações para instalar ferramentas ausentes, sem alterar o sistema operacional silenciosamente.
 
-## 5. Perfis de execução e aceleração
+## 6. Política de hardware e backend
 
-Os perfis de hardware não definem a lista global de dependências do produto. Eles selecionam uma combinação compatível de wheels e backend:
+A aplicação deve detectar capacidades em runtime e selecionar apenas backends homologados. Presença de GPU não é evidência de que todas as etapas podem usá-la.
 
-| Perfil | Política |
-|---|---|
-| CPU | Perfil completo `runtime-cpu`; índice oficial CPU do PyTorch em Linux/Windows e wheel PyPI no macOS |
-| NVIDIA CUDA 12.8 | Perfil completo `runtime-cu128`; índice oficial cu128 em Linux/Windows compatíveis |
-| AMD ROCm 7.2 | Possibilidade futura; perfil completo temporariamente bloqueado pela incompatibilidade entre PyTorch ROCm 7.2 disponível e WhisperX 3.8.6 estável |
-| Apple Silicon / MPS | Usa wheel PyPI do PyTorch em macOS; MPS é detectado/selecionado no runtime quando disponível, sem índice separado |
-| Outros aceleradores | Não presumir compatibilidade; exigir adapter, wheels disponíveis, preflight e teste antes de declarar suporte |
+- **CPU:** caminho de compatibilidade quando suportado pelas dependências e modelos.
+- **NVIDIA CUDA 12.8:** perfil opcional Linux/Windows com wheels PyTorch oficiais e driver compatível.
+- **Apple MPS:** possível por wheels PyPI no macOS/Apple Silicon; precisa ser testado na aplicação integrada.
+- **AMD ROCm 7.2:** sem perfil completo no estado atual pela incompatibilidade entre Torch >=2.11 do índice e Torch 2.8.x requerido pelo WhisperX estável 3.8.6.
+- **Outros backends:** não anunciar sem wheels, preflight e testes específicos.
 
-A aplicação deverá detectar capacidades disponíveis em runtime e selecionar um backend validado. A presença de uma GPU não garante que cada etapa do pipeline possa utilizá-la. O produto deverá manter um fallback CPU quando a funcionalidade e as dependências escolhidas o permitirem, e deverá explicar quando determinado backend não estiver disponível.
+O computador inventariado (Ryzen 3 2200G, quatro CPUs lógicas, Radeon Vega) é somente um perfil concreto de homologação CPU; não limita os requisitos globais do produto.
 
-O Ryzen 3 2200G inventariado é um perfil de teste concreto. A ausência de aceleração ROCm suportada nele não determina a arquitetura. A razão atual para não oferecer ROCm como perfil completo é distinta: o índice ROCm 7.2 disponível resolve PyTorch a partir de 2.11, enquanto o WhisperX estável 3.8.6 exige torch entre 2.8 e antes de 2.9. O projeto poderá reabrir esse perfil quando a compatibilidade upstream ou a estratégia de alinhamento mudar.
+## 7. Reprodutibilidade e CI
 
-## 6. Política de versões: versatilidade sem perda de controle
+A CI da Fase 0 separa:
+1. Testes determinísticos do coletor em Python 3.10–3.13 × Linux/Windows/macOS.
+2. Resolução/consistência do lock e simulação de instalação dos dois perfis com `uv sync --locked --dry-run`.
+3. Instalação real e importação do perfil CPU junto da POC de modelo PT-BR/EN.
+4. Instalação real e importação de Torch, torchvision e torchaudio no perfil CUDA 12.8; o runner não precisa ter GPU física, portanto `torch.cuda.is_available() == False` é esperado e não é falha do teste de wheel.
+5. Prova FFmpeg/ffprobe de normalização e mapeamento de offsets.
 
-- Usar faixas de compatibilidade, não pins exatos de todas as dependências no manifesto.
-- Definir limite mínimo a partir de funcionalidade realmente utilizada e de uma versão testada.
-- Usar limite superior somente quando houver incompatibilidade conhecida, mudança major previsível ou requisito upstream explícito.
-- Fixar versões exatas no lockfile para tornar uma instalação reproduzível.
-- Não duplicar dependências transitivas no manifesto sem motivo técnico.
-- Não usar pre-releases, branches móveis ou commits Git em produção sem justificativa registrada e aprovação.
-- Preferir releases estáveis; pre-releases só entram em laboratório.
-- Evitar overrides de dependências; qualquer override deve ter evidência, escopo e prazo de revisão.
-- Reavaliar dependências sem manutenção, vulneráveis, com licenças incompatíveis ou sem wheels para os ambientes declarados.
-- Alterações de versão deverão passar por CI, testes funcionais relevantes e atualização desta matriz.
+Os 12 cenários de coletor não equivalem a suporte funcional completo do aplicativo em todos os sistemas operacionais. A POC FLEURS é um smoke benchmark pequeno; WER mede reconhecimento lexical, não precisão temporal. A precisão de alinhamento deve ser medida com timestamps humanos anotados e amostras representativas do uso final.
 
-## 7. Estratégia de compatibilidade e CI
+### POC de idioma
 
-A matriz de homologação será progressiva:
+A avaliação controlada usa FLEURS `pt_br` e `en_us`, split test, revisão de dataset fixada, modelo WhisperX `tiny`, CPU/int8 e amostras pequenas. Registra WER, tempos, RTF, memória máxima do processo, palavras alinhadas e palavras sem timestamp válido. O corpus é CC-BY-4.0 e consiste em fala lida; não representa sermões, música, ruído, fala espontânea ou sobreposição.
 
-1. Testar a aplicação e os requisitos determinísticos em Python 3.10, 3.11, 3.12 e 3.13 enquanto esse for o intervalo suportado pela dependência crítica de alinhamento.
-2. Testar sistemas Linux, Windows e macOS em CI para componentes multiplataforma; não declarar suporte funcional do aplicativo em um sistema antes dos testes GUI, mídia, Whisper e alinhamento nesse sistema.
-3. Manter uma execução com lockfile para reprodutibilidade e uma verificação periódica de atualização/compatibilidade para detectar releases novas.
-4. Separar testes leves (sem baixar modelos nem acessar a rede) dos testes reais de modelo, que serão controlados, identificados e medidos.
-5. Testar o perfil CPU e, quando houver infraestrutura, perfis acelerados em runners/equipamentos compatíveis.
-6. Registrar versões testadas, sistema, arquitetura, resultado e limitações no estado atual.
+Relatório CI: artefato `legendar-phase0-model-poc`, quando a execução do job terminar. Ele é evidência experimental, não dado de runtime do aplicativo.
 
-A matriz do inventário nesta Fase 0 verifica somente o coletor de diagnóstico. Ela não equivale à homologação do aplicativo completo nos três sistemas operacionais.
+## 8. Migração do legado
 
-## 8. Migração do snapshot legado
+Manter `requirements.txt` apenas até que:
+1. `pyproject.toml` e `uv.lock` estejam validados.
+2. Instalações limpas dos perfis sejam reproduzíveis.
+3. Fluxos essenciais estejam homologados.
+4. Migração do aplicativo e documentação estejam coerentes.
 
-O `requirements.txt` existente é um snapshot com dependências transitivas fixadas, contém itens que podem não ser necessários no produto final e não separa runtime, testes e build. Ele será preservado até que:
+Depois, remover o snapshot ou gerar exportação automaticamente para consumidores que ainda precisem de pip. Nunca manter dois manifestos editados manualmente.
 
-1. O manifesto `pyproject.toml` esteja validado.
-2. A resolução `uv.lock` seja criada para os ambientes declarados.
-3. A instalação limpa seja testada.
-4. Os fluxos essenciais sejam homologados.
+## 9. Manutenção e atualização
 
-Depois disso, o snapshot legado será removido ou substituído por exportações geradas do lockfile para consumidores que necessitem de `pip`. Nunca haverá dois manifestos mantidos manualmente como fontes concorrentes.
+- Preferir releases estáveis; pré-releases e branches móveis somente em laboratório com aprovação explícita.
+- Definir mínimos a partir de funcionalidades utilizadas e versões testadas.
+- Fixar versões exatas no lockfile; usar intervalos no manifesto.
+- Atualizar lock junto de manifesto e documentação.
+- Revalidar origem de wheels, índices, marcadores, licenças, segurança e Python/OS/arquiteturas.
+- Evitar overrides; quando inevitáveis, justificar escopo e prazo de revisão.
+- Reavaliar dependências sem manutenção, com licença inadequada ou sem wheels compatíveis.
+- Não confundir a presença de pacote/modelo com qualidade comprovada.
 
-## 9. Referências técnicas consultadas em 10/11/2026
-
-- [Python Packaging User Guide — pyproject.toml](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/)
-- [Python Packaging User Guide — dependency groups](https://packaging.python.org/en/latest/specifications/dependency-groups/)
-- [uv — universal resolution e lockfile multiplataforma](https://docs.astral.sh/uv/concepts/resolution/)
-- [PyTorch — instalação por sistema operacional e backend](https://docs.pytorch.org/get-started/locally/)
-- [PySide6 no PyPI](https://pypi.org/project/PySide6/)
-- [openai-whisper no PyPI](https://pypi.org/project/openai-whisper/)
-- [WhisperX estável no PyPI](https://pypi.org/project/whisperx/)
-- [yt-dlp no PyPI](https://pypi.org/project/yt-dlp/)
-
+Referências técnicas:
+- [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/)
+- [Dependency Groups](https://packaging.python.org/en/latest/specifications/dependency-groups/)
+- [uv universal resolution](https://docs.astral.sh/uv/concepts/resolution/)
+- [PyTorch installation](https://docs.pytorch.org/get-started/locally/)
+- [OpenAI Whisper](https://github.com/openai/whisper)
+- [WhisperX](https://github.com/m-bain/whisperX)
+- [FFmpeg](https://ffmpeg.org/documentation.html)
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+- [Google FLEURS dataset](https://huggingface.co/datasets/google/fleurs)
