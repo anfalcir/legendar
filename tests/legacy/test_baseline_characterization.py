@@ -231,6 +231,57 @@ def test_legacy_window_exposes_youtube_and_mp4_tabs_and_rejects_other_formats(
     assert not hasattr(window, "worker")
 
 
+
+def test_legacy_youtube_worker_updates_mp3_path_after_a_collision(
+    legacy_modules: SimpleNamespace,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    output_dir = tmp_path / "output"
+    worker = legacy_modules.worker.DownloadTranscribeWorker(
+        "https://www.youtube.com/watch?v=example", str(output_dir), "sermao"
+    )
+    monkeypatch.setattr(legacy_modules.worker, "CACHE_DIR", str(cache_dir))
+    monkeypatch.setattr(legacy_modules.worker.time, "sleep", lambda _seconds: None)
+
+    original_exists = os.path.exists
+    collided_mp3 = str(cache_dir / "temp_audio.mp3")
+    alternate_mp3 = str(cache_dir / "temp_audio_1.mp3")
+
+    def exists(path: str | os.PathLike[str]) -> bool:
+        candidate = os.fspath(path)
+        if candidate == collided_mp3:
+            return True
+        if candidate == alternate_mp3:
+            return False
+        return original_exists(path)
+
+    monkeypatch.setattr(legacy_modules.worker.os.path, "exists", exists)
+    downloaded: list[str] = []
+    transcribed: list[str] = []
+
+    def fake_download(_url: str, output_base: str) -> None:
+        downloaded.append(output_base)
+        Path(f"{output_base}.mp3").write_bytes(b"audio")
+
+    def fake_transcribe(audio_path: str, output_file: str) -> None:
+        transcribed.append(audio_path)
+        Path(output_file).write_text("Transcrição", encoding="utf-8")
+
+    monkeypatch.setattr(legacy_modules.worker, "download_audio_youtube", fake_download)
+    monkeypatch.setattr(
+        legacy_modules.worker, "transcribe_and_save_audio_youtube", fake_transcribe
+    )
+
+    worker.run()
+
+    assert downloaded == [str(cache_dir / "temp_audio_1")]
+    assert transcribed == [alternate_mp3]
+    assert (output_dir / "sermao.txt").read_text(encoding="utf-8") == "Transcrição"
+
+
 def test_legacy_instagram_integration_is_explicitly_unimplemented(
     legacy_modules: SimpleNamespace, tmp_path: Path
 ) -> None:
