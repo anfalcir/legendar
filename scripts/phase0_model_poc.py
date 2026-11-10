@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import gc
 import io
+from importlib.metadata import version as package_version
 import json
 import math
 import os
@@ -216,7 +217,7 @@ def run_benchmark(
             "python": platform.python_version(),
             "platform": platform.platform(),
             "torch": str(torch.__version__),
-            "whisperx": __import__("importlib.metadata").metadata.version("whisperx"),
+            "whisperx": package_version("whisperx"),
             "model": model_name,
             "device": "cpu",
             "compute_type": "int8",
