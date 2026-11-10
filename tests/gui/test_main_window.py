@@ -504,7 +504,6 @@ def test_pipeline_failure_is_shown_and_allows_retry(qtbot, tmp_path, media) -> N
 
 
 
-
 def test_source_selector_switches_between_local_and_youtube(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
@@ -512,26 +511,20 @@ def test_source_selector_switches_between_local_and_youtube(qtbot, tmp_path) -> 
     assert window.browse_button.isVisible()
     assert window.inspect_button.isVisible()
 
-    window.media_kind_combo.setCurrentIndex(
-        window.media_kind_combo.findData("youtube")
-    )
+    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("youtube"))
 
     assert not window.browse_button.isVisible()
     assert not window.inspect_button.isVisible()
     assert "youtube.com" in window.file_edit.placeholderText()
     assert not window.stream_combo.isEnabled()
 
-    window.media_kind_combo.setCurrentIndex(
-        window.media_kind_combo.findData("local_file")
-    )
+    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("local_file"))
 
     assert window.browse_button.isVisible()
     assert window.inspect_button.isVisible()
 
 
-def test_youtube_job_request_uses_remote_source_and_safe_label(
-    qtbot, tmp_path
-) -> None:
+def test_youtube_job_request_uses_remote_source_and_safe_label(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window.media_kind_combo.setCurrentIndex(
         window.media_kind_combo.findData("youtube")
@@ -548,9 +541,7 @@ def test_youtube_job_request_uses_remote_source_and_safe_label(
     assert output_path == tmp_path / "youtube.srt"
 
 
-def test_youtube_job_is_blocked_when_runtime_or_ejs_is_missing(
-    qtbot, tmp_path
-) -> None:
+def test_youtube_job_is_blocked_when_runtime_or_ejs_is_missing(qtbot, tmp_path) -> None:
     dependencies = replace(
         _dependencies(tmp_path),
         youtube_available=False,
