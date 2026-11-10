@@ -208,6 +208,7 @@ class MainWindow(QMainWindow):
         self.status_pill.setObjectName("statusPill")
         self.status_pill.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_pill.setMinimumWidth(112)
+        self.status_pill.setAccessibleName("Estado geral do Legendar")
 
         self.preferences_button = QPushButton("Preferências", card)
         self.preferences_button.setObjectName("preferencesButton")
@@ -348,9 +349,11 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         self.status_label = QLabel("Aguardando um arquivo de mídia.", panel)
         self.status_label.setObjectName("statusText")
+        self.status_label.setAccessibleName("Estado do processamento")
         self.status_label.setWordWrap(True)
         self.progress_meta = QLabel("Pronto para iniciar", panel)
         self.progress_meta.setObjectName("progressMeta")
+        self.progress_meta.setAccessibleName("Percentual de progresso")
         top.addWidget(self.status_label, stretch=1)
         top.addWidget(
             self.progress_meta,
@@ -385,6 +388,7 @@ class MainWindow(QMainWindow):
         self.log_view = QPlainTextEdit(panel)
         self.log_view.setObjectName("logView")
         self.log_view.setReadOnly(True)
+        self.log_view.setAccessibleName("Registro de atividade do trabalho")
         self.log_view.setMaximumBlockCount(500)
         self.log_view.setMinimumHeight(132)
         self.log_view.setPlaceholderText(
@@ -401,6 +405,7 @@ class MainWindow(QMainWindow):
         self.readiness_icon = QLabel("●", panel)
         self.readiness_label = QLabel(panel)
         self.readiness_label.setObjectName("readinessDetail")
+        self.readiness_label.setAccessibleName("Estado das ferramentas externas")
         self.readiness_label.setWordWrap(True)
         layout.addWidget(self.readiness_icon)
         layout.addWidget(self.readiness_label, stretch=1)
@@ -418,6 +423,18 @@ class MainWindow(QMainWindow):
         self.log_toggle.toggled.connect(self._on_log_toggled)
         self.generate_button.clicked.connect(self._start_job)
         self.cancel_button.clicked.connect(self._cancel_job)
+
+        # Ordem explícita e previsível para navegação sem mouse.
+        self.setTabOrder(self.preferences_button, self.file_edit)
+        self.setTabOrder(self.file_edit, self.browse_button)
+        self.setTabOrder(self.browse_button, self.source_combo)
+        self.setTabOrder(self.source_combo, self.target_combo)
+        self.setTabOrder(self.target_combo, self.translate_check)
+        self.setTabOrder(self.translate_check, self.output_edit)
+        self.setTabOrder(self.output_edit, self.output_browse_button)
+        self.setTabOrder(self.output_browse_button, self.cancel_button)
+        self.setTabOrder(self.cancel_button, self.generate_button)
+        self.setTabOrder(self.generate_button, self.log_toggle)
 
     # -- entradas e preferências ------------------------------------------
 
