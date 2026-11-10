@@ -101,6 +101,14 @@ class JobViewModel:
         )
         return self._snapshot
 
+    def report_warning(self, message: str) -> JobViewSnapshot:
+        """Registra um aviso operacional sem alterar o estado do processamento."""
+        self._snapshot = replace(
+            self._snapshot,
+            log_lines=_append_text(self._snapshot.log_lines, f"Aviso: {message}"),
+        )
+        return self._snapshot
+
     def apply(self, event: JobEvent) -> JobViewSnapshot:
         """Aplica um evento fora de ordem/duplicado de forma conservadora."""
         if event.sequence <= self._last_sequence or self._terminal_seen:
