@@ -795,13 +795,37 @@ class MainWindow(QMainWindow):
 
     # -- confirmação e montagem do trabalho -------------------------------
 
-    def _build_job(self) -> tuple[JobRequest, Path, Path]:
+    def _build_job(self) -> tuple[JobRequest, str, Path]:
         media_text = self.file_edit.text().strip()
         if not media_text:
-            raise InvalidInputError("Selecione um arquivo de mídia.")
-        media_path = Path(media_text).expanduser()
-        if not media_path.is_file():
-            raise InvalidInputError(f"Arquivo de mídia não encontrado: {media_path}")
+            raise InvalidInputError("Selecione um arquivo ou informe uma URL.")
+        kind = self._source_kind()
+        source = MediaSource(kind=kind, location=media_text)
+        stream_index = None
+
+        if kind is MediaKind.LOCAL_FILE:
+            media_path = Path(media_text).expanduser()
+            if not media_path.is_file():
+                raise InvalidInputError(
+                    f"Arquivo de mídia não encontrado: {media_path}"
+                )
+            source_label = media_path.name
+            selected_stream = self.stream_combo.currentData()
+            if selected_stream is not None:
+                if self._media_info is None:
+                    raise InvalidInputError(
+                        "Inspecione novamente a mídia antes de escolher uma faixa."
+                    )
+                stream_index = int(selected_stream)
+                self._media_info.stream_by_index(stream_index)
+        else:
+            if not self._deps.youtube_available:
+                details = " ".join(self._deps.youtube_readiness_details)
+                raise InvalidInputError(
+                    "O suporte ao YouTube não está pronto neste ambiente. " + details
+                )
+            source_label = "vídeo do YouTube"
+            media_path = None
 
         output_text = self.output_edit.text().strip()
         if not output_text:
@@ -811,7 +835,7 @@ class MainWindow(QMainWindow):
             output_path = output_path.with_suffix(".srt")
 
         resolved_output = output_path.resolve()
-        if resolved_output == media_path.resolve():
+        if media_path is not None and resolved_output == media_path.resolve():
             raise InvalidInputError(
                 "O destino da legenda não pode sobrescrever o arquivo de mídia."
             )
@@ -823,12 +847,13 @@ class MainWindow(QMainWindow):
 
         source_language, target_language, translate = self._resolved_languages()
         request = JobRequest(
-            source=MediaSource(kind=MediaKind.LOCAL_FILE, location=str(media_path)),
+            source=source,
             output_language=target_language,
             source_language=source_language,
             translate=translate,
+            stream_index=stream_index,
         )
-        return request, media_path, output_path
+        return request, source_label, output_path
 
     def _resolved_languages(self) -> tuple[Language | None, Language, bool]:
         source = self._source_language()
@@ -849,7 +874,7 @@ class MainWindow(QMainWindow):
         return source, target, translate
 
     def _confirm_start(
-        self, request: JobRequest, media_path: Path, output_path: Path
+        self, request: JobRequest, source_label: str, output_path: Path
     ) -> bool:
         source_language = (
             self._source_language().label_pt
@@ -857,7 +882,7 @@ class MainWindow(QMainWindow):
             else "Detectar automaticamente"
         )
         dialog = JobConfirmationDialog(
-            source_label=media_path.name,
+            source_label=source_label,
             source_language=source_language,
             target_language=request.output_language.label_pt,
             output_path=output_path,
@@ -898,19 +923,23 @@ class MainWindow(QMainWindow):
         return response == QMessageBox.StandardButton.Yes
 
     def _start_job(self) -> None:
-        if self._starting or self._thread is not None:
+        if (
+            self._starting
+            or self._thread is not None
+            or self._inspection_thread is not None
+        ):
             return
         self._starting = True
         self._render(self._view_model.snapshot)
         try:
-            request, media_path, output_path = self._build_job()
+            request, source_label, output_path = self._build_job()
         except (DomainError, ValueError) as exc:
             self._starting = False
             message = exc.message if isinstance(exc, DomainError) else str(exc)
             self._render(self._view_model.report_error(message))
             return
 
-        if not self._confirm_start(request, media_path, output_path):
+        if not self._confirm_start(request, source_label, output_path):
             self._starting = False
             self._render(self._view_model.snapshot)
             return
@@ -924,7 +953,7 @@ class MainWindow(QMainWindow):
             output_path.parent.mkdir(parents=True, exist_ok=True)
             context = self._deps.workspace_factory.create(
                 job_id=uuid.uuid4().hex[:12],
-                source_label=media_path.name,
+                source_label=source_label,
                 output_path=output_path,
                 cache_dir=self._deps.cache_dir,
             )
