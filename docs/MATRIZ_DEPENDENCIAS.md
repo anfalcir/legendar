@@ -31,9 +31,11 @@ O inventário de uma máquina identifica o perfil daquele ambiente. Não deve, i
 | `requirements.txt` | Snapshot de instalação da baseline anterior | Legado transitório; não editar manualmente nem tratar como autoridade; remover ou substituir por exportação gerada quando a migração for concluída |
 | `docs/MATRIZ_DEPENDENCIAS.md` | Justificativas, categorias, compatibilidade, políticas e estado da homologação | Documenta decisões; não substitui os manifestos executáveis |
 
-O `pyproject.toml` registra PySide6 como dependência-base e oferece perfis completos de runtime (`runtime-cpu`, `runtime-cu128` e `runtime-rocm72`). Cada perfil reúne Whisper, yt-dlp e o conjunto de pacotes PyTorch correspondente; deve-se instalar exatamente um perfil. O extra `alignment-whisperx` acrescenta o alinhador candidato e pode ser combinado com qualquer perfil cuja plataforma/versão seja compatível.
+O `pyproject.toml` registra PySide6 como dependência-base e oferece dois perfis completos de runtime atualmente resolvíveis com o alinhador estável candidato: `runtime-cpu` e `runtime-cu128`. Cada perfil reúne Whisper, yt-dlp e o conjunto de pacotes PyTorch correspondente; deve-se instalar exatamente um perfil. O extra `alignment-whisperx` acrescenta o alinhador candidato e pode ser combinado com qualquer um desses perfis.
 
-A primeira resolução experimental feita apenas contra PyPI foi **rejeitada e não foi commitada**: o pacote `torch` selecionado puxava bibliotecas CUDA/NVIDIA mesmo sem o projeto ter escolhido um perfil CUDA. Isso demonstrou que um lock universal sem seleção explícita da origem PyTorch não é suficiente. O manifesto agora direciona os pacotes PyTorch para índices explícitos por perfil, usando CPU, CUDA 12.8 ou ROCm 7.2. No macOS, o perfil CPU utiliza os wheels PyPI do PyTorch, nos quais a aceleração MPS pode estar disponível conforme o hardware/sistema. A nova resolução universal será validada antes de versionar `uv.lock`.
+A primeira resolução experimental feita apenas contra PyPI foi **rejeitada e não foi commitada**: o pacote `torch` selecionado puxava bibliotecas CUDA/NVIDIA mesmo sem o projeto ter escolhido um perfil CUDA. Isso demonstrou que um lock universal sem seleção explícita da origem PyTorch não é suficiente. Uma segunda tentativa avaliou índices explícitos para CPU, CUDA e ROCm e encontrou uma incompatibilidade real: o índice ROCm 7.2 disponível começa em PyTorch 2.11, enquanto o WhisperX estável 3.8.6 exige PyTorch `>=2.8,<2.9`. Por isso, ROCm permanece como possibilidade arquitetural futura, mas não é oferecido como perfil completo instalável nesta matriz. Não vamos usar uma versão pré-release do WhisperX para mascarar esse conflito.
+
+O manifesto usa índices oficiais explícitos para os perfis CPU e CUDA 12.8. No macOS, o perfil CPU utiliza wheels PyPI do PyTorch, que podem expor aceleração MPS conforme hardware e sistema; não há um índice MPS separado. A nova resolução universal será validada antes de versionar `uv.lock`.
 
 A escolha de `uv` é uma decisão de gerenciamento de projeto, não uma dependência de runtime do aplicativo. Seu lockfile suporta resolução universal com marcadores de plataforma, versões Python e variantes por extra; isso permite registrar diferentes perfis sem fazer do computador local a referência do projeto.
 
@@ -44,9 +46,9 @@ A escolha de `uv` é uma decisão de gerenciamento de projeto, não uma dependê
 | PySide6 | Runtime-base | `>=6.9,<7` | Framework GUI; faixa minor ampla, com limite major para exigir revisão de compatibilidade |
 | openai-whisper | Runtime nos perfis `runtime-*` | `>=20250625` | Motor de reconhecimento central; declarado como requisito em todos os perfis completos |
 | yt-dlp | Runtime nos perfis `runtime-*` | `>=2025.4.30` | Entrada YouTube; declarado como requisito em todos os perfis completos |
-| PyTorch / torchvision / torchaudio (CPU) | Perfil completo `runtime-cpu` | `torch>=2.8,<3`; `torchvision>=0.23,<1`; `torchaudio>=2.8,<3` | Rota sem GPU dedicada; usa índice CPU explícito em Linux/Windows e wheels PyPI em macOS |
+| PyTorch / torchvision / torchaudio (CPU) | Perfil completo `runtime-cpu` | `torch>=2.8,<2.9`; `torchvision>=0.23,<0.24`; `torchaudio>=2.8,<2.9` | Rota sem GPU dedicada; usa índice CPU explícito em Linux/Windows e wheels PyPI em macOS |
 | PyTorch / torchvision / torchaudio (CUDA 12.8) | Perfil completo `runtime-cu128` | Mesmas faixas PyTorch do perfil CPU | Perfil opcional para Linux/Windows com CUDA 12.8 compatível; utiliza índice oficial cu128 |
-| PyTorch / torchvision / torchaudio + Triton ROCm | Perfil experimental `runtime-rocm72` | Faixas e pacotes declarados no manifesto | Perfil opcional Linux/ROCm 7.2; exige GPU/driver suportados e homologação própria |
+| PyTorch ROCm 7.2 | Futuro perfil; não declarado como runtime instalável | Índice oficial disponível resolve PyTorch `>=2.11`, incompatível com WhisperX estável 3.8.6 (`>=2.8,<2.9`) | Bloqueado pela interseção atual do stack; reavaliar quando upstream estável for compatível ou outro alinhador for homologado |
 | WhisperX | Extra `alignment-whisperx` | `>=3.8.6,<4` | Candidato de alinhamento; deve ser combinado com exatamente um perfil `runtime-*`; só será promovido após POC PT-BR/EN |
 | pytest / pytest-qt / pytest-cov | Desenvolvimento e testes | Declarados no grupo `test` | Testes unitários, integração e GUI; não são dependências do usuário final |
 | Ruff | Desenvolvimento | Declarado no grupo `lint` | Lint e formatação; não é dependência do usuário final |
@@ -69,14 +71,14 @@ uv sync --no-dev --extra runtime-cpu
 # CUDA 12.8 em Linux/Windows compatíveis
 uv sync --no-dev --extra runtime-cu128
 
-# AMD ROCm 7.2 em Linux compatível (experimental)
-uv sync --no-dev --extra runtime-rocm72
+# No macOS, runtime-cpu usa wheels PyPI; MPS pode ficar disponível no runtime.
+uv sync --no-dev --extra runtime-cpu
 
-# Acrescentar forced alignment depois/para a POC
+# Acrescentar forced alignment para a POC
 uv sync --no-dev --extra runtime-cpu --extra alignment-whisperx
 ```
 
-Não combinar mais de um extra `runtime-*`. O próprio `uv` declara esses perfis como conflitantes para impedir a resolução acidental de variantes PyTorch incompatíveis. No macOS, a rota é o wheel PyPI do PyTorch; MPS é capacidade do runtime/macOS quando hardware e versão suportarem, não um pacote separado neste manifesto.
+Não combinar mais de um extra `runtime-*`. O próprio `uv` declara os perfis disponíveis como conflitantes para impedir a resolução acidental de variantes PyTorch incompatíveis. O perfil CUDA é destinado a Linux/Windows compatíveis; no macOS, usar `runtime-cpu`, que recorre aos wheels PyPI e pode disponibilizar MPS em Apple Silicon. ROCm 7.2 não está exposto como extra runtime porque sua versão atual de PyTorch não cruza a faixa exigida pelo WhisperX estável.
 
 A faixa Python `>=3.10,<3.14` é atualmente limitada pelo candidato WhisperX estável 3.8.6, não pelo computador do usuário. Aumentar a faixa exige revalidar a interseção de dependências do perfil completo, inclusive o alinhador.
 
@@ -109,13 +111,13 @@ Os perfis de hardware não definem a lista global de dependências do produto. E
 |---|---|
 | CPU | Perfil completo `runtime-cpu`; índice oficial CPU do PyTorch em Linux/Windows e wheel PyPI no macOS |
 | NVIDIA CUDA 12.8 | Perfil completo `runtime-cu128`; índice oficial cu128 em Linux/Windows compatíveis |
-| AMD ROCm 7.2 | Perfil completo experimental `runtime-rocm72`; índice oficial rocm7.2 em Linux, sujeito à matriz de GPU/driver |
+| AMD ROCm 7.2 | Possibilidade futura; perfil completo temporariamente bloqueado pela incompatibilidade entre PyTorch ROCm 7.2 disponível e WhisperX 3.8.6 estável |
 | Apple Silicon / MPS | Usa wheel PyPI do PyTorch em macOS; MPS é detectado/selecionado no runtime quando disponível, sem índice separado |
 | Outros aceleradores | Não presumir compatibilidade; exigir adapter, wheels disponíveis, preflight e teste antes de declarar suporte |
 
 A aplicação deverá detectar capacidades disponíveis em runtime e selecionar um backend validado. A presença de uma GPU não garante que cada etapa do pipeline possa utilizá-la. O produto deverá manter um fallback CPU quando a funcionalidade e as dependências escolhidas o permitirem, e deverá explicar quando determinado backend não estiver disponível.
 
-O Ryzen 3 2200G inventariado é um perfil de teste concreto. A ausência de NVIDIA e a ausência do APU na matriz ROCm consultada significam apenas que não foi demonstrada aceleração suportada nesse equipamento. Isso não restringe o projeto a CPU em outros ambientes nem elimina perfis CUDA/ROCm/MPS homologáveis.
+O Ryzen 3 2200G inventariado é um perfil de teste concreto. A ausência de aceleração ROCm suportada nele não determina a arquitetura. A razão atual para não oferecer ROCm como perfil completo é distinta: o índice ROCm 7.2 disponível resolve PyTorch a partir de 2.11, enquanto o WhisperX estável 3.8.6 exige torch entre 2.8 e antes de 2.9. O projeto poderá reabrir esse perfil quando a compatibilidade upstream ou a estratégia de alinhamento mudar.
 
 ## 6. Política de versões: versatilidade sem perda de controle
 
