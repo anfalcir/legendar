@@ -1,6 +1,6 @@
 # Plano operacional — Fase 2: Interface profissional
 
-- **Status:** implementação concluída e validada; integração pendente na PR #3
+- **Status:** concluída, validada e integrada à `main` pela PR #3 (squash)
 - **Branch:** `phase-2/professional-ui`
 - **Base:** `main` após a integração da Fase 1 (`de31ddd`) e sincronização documental
 - **Escopo:** camada de apresentação Qt e sua suíte de testes; sem processamento real de mídia
@@ -73,4 +73,4 @@ O botão principal ainda não executará processamento real. O pipeline de mídi
 
 A tela está visualmente estruturada e funcional sob os testes automatizados, mas a homologação visual em monitores físicos, scaling HiDPI e diferentes ambientes desktop Linux/Windows/macOS continua sendo parte da homologação global da Fase 8. A interface ainda usa um pipeline simulado/pendente: processamento real de mídia fica na Fase 3 e seguintes.
 
-A implementação está validada tecnicamente e pronta para integração pela PR #3. A Fase 3 permanece bloqueada até aprovação explícita do responsável.
+A PR #3 foi integrada por squash à `main` no commit `4129f0a906a04693502f298b71767605499e3f68`. A Fase 2 está concluída; a Fase 3 permanece bloqueada até aprovação explícita do responsável.
