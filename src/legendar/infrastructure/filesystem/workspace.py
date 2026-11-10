@@ -51,12 +51,8 @@ class TempWorkspaceFactory:
                 output_path=Path(output_path).expanduser(),
             )
         except Exception:
-            try:
-            shutil.rmtree(work_dir)
-        except FileNotFoundError:
-            # Limpeza repetida é segura; erros de permissão/I/O devem subir
-            # para que a camada de apresentação registre o aviso.
-            pass
+            # Não mascarar o erro que impediu a criação do contexto.
+            shutil.rmtree(work_dir, ignore_errors=True)
             raise
 
     def cleanup(self, context: JobContext) -> None:
@@ -73,4 +69,9 @@ class TempWorkspaceFactory:
             )
         if work_dir == context.cache_dir.resolve():
             raise UnsafeWorkspaceError("Diretório de trabalho não pode ser o cache.")
-        shutil.rmtree(work_dir, ignore_errors=True)
+        try:
+            shutil.rmtree(work_dir)
+        except FileNotFoundError:
+            # A operação é idempotente; erros de permissão/I/O devem subir
+            # para que a camada de apresentação registre o aviso.
+            pass
