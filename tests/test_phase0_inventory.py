@@ -54,13 +54,13 @@ class LinuxHostMetadataTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            device = root / "0000:00:01.0"
+            device = root / "display-amd-1"
             device.mkdir()
             (device / "class").write_text("0x030000", encoding="ascii")
             (device / "vendor").write_text("0x1002", encoding="ascii")
             (device / "device").write_text("0x9999", encoding="ascii")
 
-            network = root / "0000:00:02.0"
+            network = root / "network-device-2"
             network.mkdir()
             (network / "class").write_text("0x020000", encoding="ascii")
             (network / "vendor").write_text("0x1002", encoding="ascii")
