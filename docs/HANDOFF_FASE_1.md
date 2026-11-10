@@ -270,23 +270,25 @@ Falha -> FAILED
 
 Status detalhado por critério, com pendências marcadas, está no [plano da Fase 1](FASE_1_PLANO.md).
 Já há evidência local para domínio/fronteiras, máquina de estados, pipeline com fakes,
-cancelamento/progresso/publicação, temporários/cache, configuração e inicialização offscreen.
-Ainda bloqueiam a conclusão: caracterização e estratégia para o legado, CI de Fase 1 e revisão
-final aprovada. A janela atual é mínima, não a interface profissional da Fase 2.
+cancelamento/progresso/publicação, temporários/cache, configuração, inicialização offscreen e
+caracterização da baseline legada. A estratégia de convivência, preservação e futura aposentadoria
+está documentada; a política de Ruff e o workflow próprio da Fase 1 também foram implementados.
+Bloqueiam a aprovação formal somente a confirmação de CI verde em Python 3.10–3.13 e a revisão
+final do diff. A janela atual é mínima, não a interface profissional da Fase 2.
 
 ## 6. Instrução operacional para a próxima IA
 
 1. Confirme a branch e leia o estado, este handoff e o [plano da Fase 1](FASE_1_PLANO.md).
    O trabalho existente é o checkpoint a continuar; não recrie os pacotes já presentes.
 2. Execute `uv run --locked pytest -q` e confira a árvore/diff antes de alterar.
-3. Crie testes de caracterização dos módulos legados antes de removê-los ou adaptá-los. Preserve
-   `main.py`, `core/` e `gui/` enquanto a compatibilidade deles não estiver documentada.
-4. Defina uma política de Ruff que permita verificar o escopo do projeto sem reformatação
-   incidental do legado e dos artefatos históricos da Fase 0.
-5. Adicione CI da Fase 1 para instalação lockada, Ruff, pytest e GUI offscreen; não substitua nem
-   enfraqueça os gates da Fase 0.
-6. Revise falhas/decisões abertas e atualize `ESTADO_ATUAL.md`, este handoff e o plano
-   operacional junto com a implementação.
+3. Os testes de caracterização da baseline já estão em `tests/legacy/`; preserve `main.py`,
+   `core/` e `gui/` conforme `LEGACY_BASELINE.md` até que exista paridade homologada.
+4. A política Ruff está definida em `LEGACY_BASELINE.md`: lint estrito sobre o código novo e
+   testes mantidos, sem reformatação incidental do legado/histórico.
+5. O workflow `.github/workflows/phase1-quality.yml` já existe. Confirme todos os jobs verdes
+   em Python 3.10–3.13 e preserve os gates históricos da Fase 0.
+6. Revise o diff completo e corrija falhas; atualize `ESTADO_ATUAL.md`, este handoff e o plano
+   operacional com a contagem real de testes e as evidências finais.
 7. Só propor a conclusão formal da Fase 1 depois de CI verde em Python 3.10–3.13 e revisão final.
    A Fase 2 depende de aprovação explícita do responsável.
 
