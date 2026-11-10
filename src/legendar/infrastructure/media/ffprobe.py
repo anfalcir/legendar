@@ -8,6 +8,8 @@ permite testar todos os casos de borda sem FFmpeg instalado.
 from __future__ import annotations
 
 import json
+import math
+from fractions import Fraction
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -35,9 +37,35 @@ def _optional_float(value: Any) -> float | None:
         return None
     try:
         parsed = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
-    return parsed
+    return parsed if math.isfinite(parsed) else None
+
+
+def _stream_offset(
+    stream: Mapping[str, Any], format_info: Mapping[str, Any]
+) -> tuple[float, str]:
+    """Obtém o offset sem inferir zero quando o ffprobe oferece outra origem."""
+
+    direct = _optional_float(stream.get("start_time"))
+    if direct is not None:
+        return direct, "stream.start_time"
+
+    start_pts = _optional_float(stream.get("start_pts"))
+    time_base = _text(stream.get("time_base"))
+    if start_pts is not None and time_base and "/" in time_base:
+        try:
+            base = Fraction(time_base)
+            derived = start_pts * float(base)
+        except (ValueError, ZeroDivisionError, OverflowError):
+            derived = math.nan
+        if math.isfinite(derived):
+            return derived, "stream.start_pts*time_base"
+
+    container_start = _optional_float(format_info.get("start_time"))
+    if container_start is not None:
+        return container_start, "format.start_time_fallback"
+    return 0.0, "assumed_zero_missing_source_timestamp"
 
 
 def _seconds(value: Any) -> float:
@@ -61,7 +89,11 @@ def _container_name(format_info: Mapping[str, Any]) -> str:
     return raw.split(",")[0].strip() or "desconhecido"
 
 
-def _audio_stream(stream: Mapping[str, Any], position: int) -> AudioStreamInfo:
+def _audio_stream(
+    stream: Mapping[str, Any],
+    position: int,
+    format_info: Mapping[str, Any],
+) -> AudioStreamInfo:
     index = stream.get("index", position)
     if not isinstance(index, int):
         raise UnsupportedMediaError("ffprobe retornou índice de faixa inválido.")
@@ -76,14 +108,19 @@ def _audio_stream(stream: Mapping[str, Any], position: int) -> AudioStreamInfo:
         raise UnsupportedMediaError(
             "A faixa de áudio não declara canais ou taxa de amostragem."
         ) from exc
+    offset, offset_source = _stream_offset(stream, format_info)
+    disposition = stream.get("disposition")
+    disposition = disposition if isinstance(disposition, Mapping) else {}
     return AudioStreamInfo(
         index=index,
         codec=_text(stream.get("codec_name")) or "desconhecido",
         channels=channels_value,
         sample_rate_hz=sample_rate_value,
-        start_time_seconds=_seconds(stream.get("start_time")),
+        start_time_seconds=offset,
         language=_text(tags.get("language")),
         title=_text(tags.get("title")),
+        is_default=disposition.get("default") in (1, "1", True),
+        offset_source=offset_source,
     )
 
 
@@ -104,18 +141,18 @@ def parse_ffprobe_payload(
     if not streams:
         raise UnsupportedMediaError("A mídia não possui faixas reconhecíveis.")
 
-    audio_streams = tuple(
-        _audio_stream(stream, position)
-        for position, stream in enumerate(streams)
-        if stream.get("codec_type") == "audio"
-    )
-    video_count = sum(1 for stream in streams if stream.get("codec_type") == "video")
-
     format_info = document.get("format")
     if format_info is not None:
         format_info = _as_mapping(format_info, field="formato")
     else:
         format_info = {}
+
+    audio_streams = tuple(
+        _audio_stream(stream, position, format_info)
+        for position, stream in enumerate(streams)
+        if stream.get("codec_type") == "audio"
+    )
+    video_count = sum(1 for stream in streams if stream.get("codec_type") == "video")
     duration = _optional_float(format_info.get("duration"))
     if duration is not None and duration <= 0:
         duration = None
