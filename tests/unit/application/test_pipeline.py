@@ -78,7 +78,6 @@ def test_happy_path_publishes_and_reports_states(job_context):
     ]
 
 
-
 def test_youtube_source_is_downloaded_before_local_inspection(job_context, tmp_path):
     downloaded = str(tmp_path / "workspace" / "legendar-youtube-id.webm")
     downloader = FakeDownloader(path=downloaded)
