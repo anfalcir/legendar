@@ -167,6 +167,42 @@ def test_progress_is_monotonic_and_deduplicated(job_context):
     assert len(fractions) > 0
 
 
+
+def test_cancel_is_rejected_once_non_cancellable_publication_begins(job_context):
+    from threading import Event, Thread
+
+    entered_publication = Event()
+    release_publication = Event()
+    events: list[JobEvent] = []
+    outcomes = []
+
+    class BlockingPublisher(FakePublisher):
+        def publish(self, track, destination_path):
+            entered_publication.set()
+            assert release_publication.wait(timeout=5)
+            return super().publish(track, destination_path)
+
+    controller = _build(events, publisher=BlockingPublisher())
+
+    worker = Thread(
+        target=lambda: outcomes.append(controller.run(_request(), job_context))
+    )
+    worker.start()
+
+    assert entered_publication.wait(timeout=5)
+    assert controller.state is JobState.PUBLISHING
+    assert controller.cancel() is False
+    assert not job_context.token.is_cancelled
+
+    release_publication.set()
+    worker.join(timeout=5)
+
+    assert not worker.is_alive()
+    assert len(outcomes) == 1
+    assert outcomes[0] is not None
+    assert controller.state is JobState.COMPLETED
+
+
 def test_cancel_without_active_job_returns_false():
     controller = _build([])
     assert controller.cancel() is False
