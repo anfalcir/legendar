@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from shutil import rmtree as real_rmtree
 
 import pytest
 
@@ -51,9 +52,34 @@ def test_cleanup_removes_only_job_workspace(tmp_path: Path):
     (context.work_dir / "audio.wav").write_text("x", encoding="utf-8")
 
     factory.cleanup(context)
+    factory.cleanup(context)  # limpeza repetida é idempotente
 
     assert not context.work_dir.exists()
     assert model_file.exists()
+
+
+
+def test_cleanup_surfaces_filesystem_errors_for_ui_diagnostics(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory = TempWorkspaceFactory(root=tmp_path / "tmp")
+    context = factory.create(
+        job_id="cleanup-error",
+        source_label="aula.mp4",
+        output_path=tmp_path / "aula.srt",
+        cache_dir=tmp_path / "models",
+    )
+
+    def fail_cleanup(_path: Path) -> None:
+        raise PermissionError("permissão negada")
+
+    monkeypatch.setattr("legendar.infrastructure.filesystem.workspace.shutil.rmtree", fail_cleanup)
+
+    with pytest.raises(PermissionError, match="permissão negada"):
+        factory.cleanup(context)
+
+    monkeypatch.setattr("legendar.infrastructure.filesystem.workspace.shutil.rmtree", real_rmtree)
+    real_rmtree(context.work_dir)
 
 
 def test_cleanup_refuses_directory_outside_root(tmp_path: Path):
