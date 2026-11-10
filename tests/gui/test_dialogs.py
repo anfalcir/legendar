@@ -65,7 +65,7 @@ def test_job_confirmation_requires_explicit_start(qtbot) -> None:
     qtbot.addWidget(dialog)
     dialog.show()
 
-    qtbot.mouseClick(dialog.confirm_button, __import__("PySide6").QtCore.Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(dialog.confirm_button, Qt.MouseButton.LeftButton)
 
     assert dialog.result() == QDialog.DialogCode.Accepted
 
