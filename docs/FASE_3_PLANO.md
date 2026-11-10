@@ -1,6 +1,6 @@
 # Plano operacional — Fase 3: Entrada e preparação de mídia
 
-- **Status:** em execução
+- **Status:** implementação desenvolvida; validação final em andamento (não concluída, sem PR/merge)
 - **Branch:** `phase-3/media-ingestion`
 - **Base:** `main` com Fases 0, 1 e 2 integradas (Fase 2: `4129f0a`)
 - **Escopo:** aquisição de fonte, inspeção, seleção de faixa, normalização de áudio e isolamento/limpeza dos artefatos de mídia
@@ -60,6 +60,32 @@ A camada GUI deve iniciar inspeções e processamento fora da thread principal, 
 6. Suíte unitária, contrato de downloader e integração sintética real.
 7. CI dedicada, correções, revisão arquitetural, documentação e PR para `main`.
 
-## 6. Evidências
+## 6. Evidências e estado da execução
 
-Registrar os IDs de workflow, testes, formatos, limitações e decisão de merge após executar. Não marcar a fase como concluída antes de todos os critérios de aceite passarem e o PR ser integrado.
+### Implementação presente na branch
+
+- Entidade `AudioStreamInfo` agora registra `is_default` e origem do offset. `MediaInfo.default_stream()` prefere a faixa default; índices globais explícitos continuam respeitados.
+- Parser ffprobe deriva offset por `stream.start_time`, `start_pts × time_base`, fallback de `format.start_time` ou zero assumido, registrando a proveniência.
+- `FfmpegAudioPreparer` usa subprocesso sem shell, timeouts/cancelamento, arquivo parcial exclusivo, validação do WAV por ffprobe e publicação sem sobrescrever um destino concorrente.
+- `YtDlpDownloader` aceita hosts oficiais do YouTube, rejeita playlists e caminhos fora do workspace, usa hooks para progresso/cancelamento e evita expor a URL em mensagens de erro.
+- Bootstrap compõe portas reais de inspeção, preparação e download. Transcrição, alinhamento e publicação final permanecem placeholders explícitos das Fases 4–7.
+- GUI possui seleção local/YouTube, inspeção prévia em QThread, seleção de faixa local e exibição dos metadados da faixa escolhida. Inspeção é repetida no pipeline quando o job inicia.
+- Testes unitários e fixtures sintéticas reais de FFmpeg/ffprobe foram adicionados. Testes de downloader usam doubles; não acessam rede.
+
+### Validação CI
+
+- Workflow dedicado: [phase3-quality.yml](../.github/workflows/phase3-quality.yml).
+- Primeira execução [#42914913047](https://github.com/anfalcir/legendar/actions/runs/42914913047): identificou seis falhas de fixtures/expectativas; corrigidas em commits subsequentes.
+- Execuções seguintes chegaram a **245 testes aprovados** nos ambientes Python 3.10, 3.11 e 3.12. Nessas tentativas o gate de lint passou, mas a formatação ainda falhou; uma execução Python 3.13 sofreu segfault durante o teste de cancelamento Qt.
+- O ciclo de vida do worker de inspeção foi ajustado para autoexclusão na própria thread; os nove arquivos apontados pelo Ruff foram formatados.
+- Último run disparado para o snapshot após essas correções: [#42916191288](https://github.com/anfalcir/legendar/actions/runs/42916191288), ainda sem jobs atribuídos quando este documento foi atualizado. Portanto, não conta como aprovação.
+
+### Bloqueios para conclusão
+
+1. Obter uma execução de CI do snapshot atual com os quatro ambientes Python 3.10–3.13 concluídos, incluindo testes, Ruff e formatação.
+2. Revisar resultados e eventuais correções da CI; confirmar que a correção de ciclo de vida Qt eliminou o segfault no Python 3.13.
+3. Fazer revisão final de segurança/arquitetura e confirmar que a limpeza dos workspaces mantém a origem e o cache intactos.
+4. Completar este documento e os documentos vivos com a evidência final.
+5. Abrir PR para `main`, aguardar CI de PR e revisão, então integrar por squash.
+
+A Fase 3 **não está concluída**. Não marcar os critérios abaixo como aprovados com base apenas em código presente ou testes de uma parte da matriz. Não declarar integração à `main` até existir PR merged e commit confirmado.
