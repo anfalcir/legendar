@@ -153,24 +153,47 @@ O coletor foi ampliado após o primeiro relatório para identificar distribuiç�
 
 A diretriz do projeto é que o **repositório seja a fonte de verdade das dependências**. O inventário do computador-alvo serve para identificar um perfil de implantação e medir desempenho; não define sozinho as bibliotecas, as versões ou as tecnologias permitidas.
 
-Foi criado nesta branch:
+Foram criados nesta branch:
 
-- `pyproject.toml`: manifesto canônico de dependências diretas, faixas de versão, extra experimental de alinhamento e grupos de desenvolvimento.
-- `docs/MATRIZ_DEPENDENCIAS.md`: justificativas, requisitos externos, política de versão, perfis de hardware e critérios de compatibilidade.
+- `pyproject.toml`: manifesto canônico de dependências-base, perfis completos de runtime, faixas de versão, extra experimental de alinhamento e grupos de desenvolvimento.
+- `docs/MATRIZ_DEPENDENCIAS.md`: justificativas, comandos de instalação, requisitos externos, política de versão, perfis de hardware e critérios de compatibilidade.
 
-Requisitos diretos iniciais registrados:
+### Perfis completos de runtime declarados
 
-| Componente | Requisito |
-|---|---|
-| PySide6 | `>=6.9,<7` |
-| openai-whisper | `>=20250625` |
-| yt-dlp | `>=2025.4.30` |
-| WhisperX | Extra experimental `alignment-whisperx`, `>=3.8.6,<4` |
-| Python | `>=3.10,<3.14`, faixa inicial orientada pelo candidato WhisperX, não pelo Python instalado no equipamento |
+| Extra | Backend/índice | Plataformas pretendidas | Situação |
+|---|---|---|---|
+| `runtime-cpu` | PyTorch CPU oficial em Linux/Windows; wheel PyPI no macOS | Linux, Windows e macOS | Perfil de compatibilidade |
+| `runtime-cu128` | PyTorch CUDA 12.8 oficial | Linux e Windows compatíveis | Opcional; depende de GPU/driver suportados |
+| `runtime-rocm72` | PyTorch ROCm 7.2 oficial + Triton ROCm | Linux compatível | Experimental; exige GPU/driver suportados |
+| `alignment-whisperx` | WhisperX estável `>=3.8.6,<4` | Combinar com um perfil runtime compatível | Experimental até homologação PT-BR/EN |
 
-O arquivo `requirements.txt` permanece preservado como snapshot legado e não é a fonte canônica. O `uv.lock` ainda não foi criado: primeiro será necessário validar a resolução PyTorch/WhisperX, os wheels e as fontes de distribuição para os sistemas e perfis pretendidos; depois o lockfile será versionado para reprodutibilidade. Não foram instaladas nem promovidas dependências por esta alteração documental/manifesto.
+Cada extra `runtime-*` inclui Whisper, yt-dlp e os pacotes PyTorch correspondentes. Instalar **exatamente um** perfil runtime. O extra `alignment-whisperx` poderá ser combinado com o perfil escolhido.
 
-CPU é um caminho de compatibilidade quando suportado pelos componentes. CUDA, ROCm e MPS são perfis opcionais. A ausência de suporte ROCm no equipamento atual não limita a arquitetura ou a compatibilidade que o projeto poderá oferecer em outros equipamentos.
+Exemplos:
+
+```bash
+# Instalação de runtime em CPU
+uv sync --no-dev --extra runtime-cpu
+
+# Instalação de runtime com CUDA 12.8
+uv sync --no-dev --extra runtime-cu128
+
+# Instalação experimental com ROCm 7.2
+uv sync --no-dev --extra runtime-rocm72
+
+# Acrescentar WhisperX à instalação CPU para a POC de alinhamento
+uv sync --no-dev --extra runtime-cpu --extra alignment-whisperx
+```
+
+### Resolução PyTorch e lockfile
+
+A primeira tentativa de `uv lock` contra PyPI sem seleção explícita de backend foi **rejeitada e não foi versionada**: para Linux x86_64, a resolução do PyTorch incluiu pacotes CUDA/NVIDIA mesmo sem o projeto ter selecionado um perfil CUDA. Isso confirma que a fonte dos wheels faz parte do requisito do perfil, não pode ser deixada ao acaso.
+
+O manifesto foi atualizado para apontar explicitamente para os índices oficiais `cpu`, `cu128` e `rocm7.2`, com índices marcados como explícitos e fontes condicionadas ao extra/plataforma. No macOS, o perfil CPU utiliza os wheels PyPI do PyTorch; MPS é capacidade do runtime quando o hardware e a versão suportarem, não um índice separado neste manifesto.
+
+O `requirements.txt` permanece preservado como snapshot legado e não é a fonte canônica. O novo `uv.lock` ainda deverá ser gerado pela CI, inspecionado quanto aos índices e marcadores por perfil e validado antes de ser commitado. Nenhum pacote foi instalado no ambiente do usuário por essas alterações.
+
+O hardware atual é um perfil de homologação. A ausência de suporte ROCm demonstrado no Ryzen 3 2200G não limita a matriz de requisitos nem impede que o projeto ofereça perfis CUDA/ROCm/MPS em outros ambientes depois de homologados.
 
 ## 5. Plano experimental
 
