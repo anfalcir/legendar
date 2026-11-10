@@ -526,9 +526,7 @@ def test_source_selector_switches_between_local_and_youtube(qtbot, tmp_path) -> 
 
 def test_youtube_job_request_uses_remote_source_and_safe_label(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
-    window.media_kind_combo.setCurrentIndex(
-        window.media_kind_combo.findData("youtube")
-    )
+    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("youtube"))
     window.file_edit.setText("https://www.youtube.com/watch?v=video123")
     window.output_edit.setText(str(tmp_path / "youtube.srt"))
 
