@@ -8,23 +8,25 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Cada perfil é uma instalação completa da aplicação para POC, incluindo
-# transcrição e alinhamento. Instale exatamente um perfil por ambiente.
+# Cada perfil representa uma instalação completa para a POC e o produto.
+# O perfil seleciona explicitamente a variante PyTorch; não combinar perfis.
 runtime-cpu = [
     "openai-whisper>=20250625",
     "yt-dlp>=2025.4.30",
+    "yt-dlp-ejs>=0.8,<1",
     "torch>=2.8,<2.9",
     "torchvision>=0.23,<0.24",
     "torchaudio>=2.8,<2.9",
     "whisperx>=3.8.6,<3.9",
 ]
 runtime-cu128 = [
-    "openai-whisper>=20250625",
-    "yt-dlp>=2025.4.30",
-    "torch>=2.8,<2.9",
-    "torchvision>=0.23,<0.24",
-    "torchaudio>=2.8,<2.9",
-    "whisperx>=3.8.6,<3.9",
+    "openai-whisper>=20250625; sys_platform == 'linux' or sys_platform == 'win32'",
+    "yt-dlp>=2025.4.30; sys_platform == 'linux' or sys_platform == 'win32'",
+    "yt-dlp-ejs>=0.8,<1; sys_platform == 'linux' or sys_platform == 'win32'",
+    "torch>=2.8,<2.9; sys_platform == 'linux' or sys_platform == 'win32'",
+    "torchvision>=0.23,<0.24; sys_platform == 'linux' or sys_platform == 'win32'",
+    "torchaudio>=2.8,<2.9; sys_platform == 'linux' or sys_platform == 'win32'",
+    "whisperx>=3.8.6,<3.9; sys_platform == 'linux' or sys_platform == 'win32'",
 ]
 
 [dependency-groups]
@@ -38,6 +40,10 @@ lint = [
 ]
 build = [
     "pyinstaller>=6.13,<7",
+]
+phase0 = [
+    "datasets>=5.2,<6",
+    "jiwer>=4,<5",
 ]
 dev = [
     { include-group = "test" },
@@ -56,15 +62,15 @@ explicit = true
 
 [tool.uv.sources]
 torch = [
-    { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform != 'darwin'" },
+    { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { index = "pytorch-cu128", extra = "runtime-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
 torchvision = [
-    { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform != 'darwin'" },
+    { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { index = "pytorch-cu128", extra = "runtime-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
 torchaudio = [
-    { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform != 'darwin'" },
+    { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { index = "pytorch-cu128", extra = "runtime-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
 
