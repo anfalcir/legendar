@@ -149,6 +149,46 @@ def test_pipeline_failure_is_shown_and_allows_retry(qtbot, tmp_path, media) -> N
     assert window.generate_button.isEnabled()
 
 
+
+def test_close_after_thread_wait_cleans_workspace_before_window_exit(
+    qtbot, tmp_path, monkeypatch
+) -> None:
+    from PySide6.QtGui import QCloseEvent
+
+    window = _window(qtbot, _dependencies(tmp_path))
+    context = window._deps.workspace_factory.create(
+        job_id="close-test",
+        source_label="aula.mp4",
+        output_path=tmp_path / "aula.srt",
+        cache_dir=window._deps.cache_dir,
+    )
+
+    class FinishedThread:
+        def wait(self, _timeout: int) -> bool:
+            return True
+
+    class FakeWorker:
+        cancelled = False
+
+        def request_cancel(self) -> None:
+            self.cancelled = True
+
+    worker = FakeWorker()
+    cleaned = []
+    window._thread = FinishedThread()
+    window._worker = worker
+    window._context = context
+    monkeypatch.setattr(window, "_discard_workspace", cleaned.append)
+
+    event = QCloseEvent()
+    window.closeEvent(event)
+
+    assert worker.cancelled
+    assert cleaned == [context]
+    assert window._context is None
+    assert event.isAccepted()
+
+
 def test_cancel_stops_a_cooperative_pipeline(qtbot, tmp_path, media) -> None:
     class SlowTranscriber:
         def __init__(self) -> None:
