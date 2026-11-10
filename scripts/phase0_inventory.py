@@ -202,6 +202,7 @@ def _probe_torch_runtime() -> dict[str, Any]:
             "version": str(torch.__version__),
             "cuda_available": cuda_available,
             "cuda_runtime_version": getattr(torch.version, "cuda", None),
+            "hip_runtime_version": getattr(torch.version, "hip", None),
             "cudnn_version": torch.backends.cudnn.version(),
             "devices": devices,
         }
