@@ -2,48 +2,49 @@
 
 - **Última atualização:** 10/11/2026
 - **Repositório:** anfalcir/legendar
-- **Branch atual:** `main`
+- **Branch atual de implementação:** `phase-2/professional-ui`
 - **Branch de implementação da Fase 1:** `phase-1/architecture` (integrada)
 - **Branch padrão:** `main`
 - **Fases concluídas:** Fase 0 — Definições e prova técnica; Fase 1 — Reestruturação arquitetural
-- **Fase concluída mais recente:** Fase 1 — Reestruturação arquitetural, implementação, caracterização, CI e revisão técnica concluídas e integradas
+- **Fase em fechamento:** Fase 2 — Interface profissional (implementação e CI concluídas; integração pendente)
+- **Fase de implementação mais recente:** Fase 2 — Interface profissional, implementada e validada na branch dedicada; integração pendente
 - **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), integrada por squash
 - **PR da Fase 1:** [#2](https://github.com/anfalcir/legendar/pull/2), merged por squash em 10/11/2026
 - **Commit de integração da Fase 0:** `992cb874274e73d0264994e39926113f1461236f`
 - **Commit de integração da Fase 1:** `de31dddffc4f8e761692129d4c47a02ca89b8b83`
-- **Documento de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
+- **Documentos de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md) e [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md)
 
-> As Fases 0 e 1 estão concluídas e integradas à `main`. A Fase 1 foi integrada por squash pela PR [#2](https://github.com/anfalcir/legendar/pull/2), no commit `de31dddffc4f8e761692129d4c47a02ca89b8b83`. A CI dedicada aprovou Python 3.10–3.13 (196 testes por ambiente, 88% de cobertura, Ruff check/format verdes). A Fase 2 permanece não iniciada, aguardando aprovação explícita.
+> As Fases 0 e 1 estão concluídas e integradas à `main`. A Fase 2 foi implementada na branch `phase-2/professional-ui` e validada pela CI [#42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434): 4/4 ambientes Python 3.10–3.13, 218 testes por ambiente, cobertura de 88%, Ruff check e format verdes. A integração da Fase 2 à `main` será feita pela PR #3 após revisão; a Fase 3 permanece não iniciada e depende de aprovação explícita.
 
 ---
 
 ## 1. Resumo executivo
 
-A aplicação nova já tem camadas `domain`, `application`, `infrastructure`, `presentation` e `bootstrap`; inclui entidades e invariantes, máquina de estados, pipeline serial com portas/fakes, cancelamento/progresso, workspaces isolados, publicação SRT atômica, configuração, preflight e uma janela Qt mínima. A integração real de mídia/modelos/tradução e o refinamento visual não foram feitos. O legado `main.py`/`core/`/`gui/` continua preservado.
+A aplicação nova já tem camadas `domain`, `application`, `infrastructure`, `presentation` e `bootstrap`; inclui entidades e invariantes, máquina de estados, pipeline serial com portas/fakes, cancelamento/progresso, workspaces isolados, publicação SRT atômica e configuração. A Fase 2 acrescentou interface Qt profissional com temas claro/escuro/sistema, diálogos de confirmação, preferências persistidas, progresso honesto, log expansível, acessibilidade e proteção contra ações acidentais. O processamento real de mídia/modelos/tradução ainda pertence às fases seguintes. O legado `main.py`/`core/`/`gui/` continua preservado.
 
 A Fase 0 estabeleceu e documentou a direção técnica: governança de dependências, perfis de runtime, coletor de ambiente, prova sintética de mídia/offset, script de POC PT-BR/EN e contrato arquitetural. O plano operacional e o handoff da Fase 1 foram atualizados para registrar o checkpoint, as evidências e as pendências.
 
-**Estado:** Fase 0 concluída e integrada. O workflow push #113 terminou com 16/16 jobs aprovados e a PR workflow #114 concluiu com sucesso; os jobs exclusivos de push (benchmark completo e instalação CUDA) foram pulados no evento PR por configuração. A PR #1 foi integrada por squash no commit `992cb874274e73d0264994e39926113f1461236f`. Na Fase 1, o workflow [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) aprovou a matriz Python 3.10–3.13 (4/4), com 196 testes e 88% de cobertura em cada ambiente, além de Ruff check/format. O workflow de PR da Fase 0 [#160](https://github.com/anfalcir/legendar/actions/runs/42905199743) aprovou as 12 combinações Python/SO, lock/perfis e prova FFmpeg/offset; CUDA e benchmark WhisperX foram pulados intencionalmente nesse evento. A Fase 1 está integrada à `main`; a Fase 2 permanece não iniciada e depende de aprovação explícita.
+**Estado:** Fase 0 concluída e integrada. O workflow push #113 terminou com 16/16 jobs aprovados e a PR workflow #114 concluiu com sucesso; os jobs exclusivos de push (benchmark completo e instalação CUDA) foram pulados no evento PR por configuração. A PR #1 foi integrada por squash no commit `992cb874274e73d0264994e39926113f1461236f`. Na Fase 1, os workflows [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) e [#127](https://github.com/anfalcir/legendar/actions/runs/42905799938) aprovaram Python 3.10–3.13 (196 testes, cobertura 88%, Ruff/format verdes); a Fase 1 foi integrada à `main` pela PR #2, commit `de31ddd`. A validação da Fase 2 está no workflow [#42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434): 4/4 ambientes, 218 testes por ambiente, cobertura 88%, Ruff check/format aprovados. A PR #3 será a integração da Fase 2; a Fase 3 continua bloqueada até aprovação explícita.
 
 ## 2. Situação do repositório
 
 | Item | Estado |
 |---|---|
 | Repositório | `anfalcir/legendar` |
-| PRs de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1) e [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), ambas merged por squash |
+| PRs de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1) e [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), ambas merged por squash; PR #3 da Fase 2 será aberta após esta atualização documental |
 | Branch de conclusão da Fase 0 | `phase-0/technical-inventory` |
 | Branch de implementação da Fase 1 | `phase-1/architecture`, integrada na `main` pela PR #2 |
-| `main` | Contém as entregas integrais das Fases 0 e 1; HEAD inclui o merge squash `de31ddd` |
+| `main` | Contém as entregas integrais das Fases 0 e 1; HEAD inclui o merge squash `de31ddd`; Fase 2 validada no branch dedicado, aguardando PR #3 |
 | Fonte de dependências | `pyproject.toml` |
 | Lock | `uv.lock` regenerado pela CI e integrado à `main`; invariantes, fontes e exports CPU/CUDA aprovados no workflow #113 |
 | Coletor | `scripts/phase0_inventory.py` |
 | POC de mídia | `scripts/phase0_media_poc.py` |
 | POC de modelos | `scripts/phase0_model_poc.py` |
 | Validador do lock | `scripts/phase0_validate_lock.py` |
-| Documentação técnica | plano mestre, estado vivo, protocolo, matriz de dependências, plano operacional e handoff Fase 1 |
+| Documentação técnica | plano mestre, estado vivo, protocolo, matriz de dependências, planos operacionais e handoffs das Fases 1 e 2 |
 | CI | `.github/workflows/phase0-quality.yml` cobre evidências da Fase 0; `.github/workflows/phase1-quality.yml` valida testes, Qt offscreen, Ruff e lock em Python 3.10–3.13 |
 
-As PRs #1 e #2 foram revisadas e integradas. A `main` contém as entregas das Fases 0 e 1; a branch `phase-1/architecture` é o histórico de implementação da Fase 1.
+As PRs #1 e #2 foram revisadas e integradas. A `main` contém as entregas das Fases 0 e 1; a branch `phase-2/professional-ui` contém a Fase 2 validada, pronta para revisão e integração pela PR #3.
 
 ### 2.1. Checkpoint atual da Fase 1
 
@@ -51,7 +52,9 @@ Implementação existente em `src/legendar/`: domínio independente de Qt/infrae
 orquestração serial por portas injetadas; eventos e estado do job; cancelamento cooperativo;
 segmentação pura; configuração/logging; parsing de metadados de ffprobe e detecção de
 ferramentas externas; cache de modelos somente observável; publicação SRT validada e atômica;
-bootstrap, entrypoint e apresentação Qt mínima com view model, worker e testes offscreen.
+bootstrap e entrypoint. A camada Qt evoluiu na Fase 2 para uma janela profissional com temas,
+diálogos, preferências QSettings, proteções de início/cancelamento, progresso, log, acessibilidade
+e testes offscreen; ver `docs/FASE_2_PLANO.md` e `docs/HANDOFF_FASE_2.md`.
 
 Não há download/processamento real de mídia, integração Whisper/WhisperX, tradução concreta ou
 refinamento visual profissional. O pipeline composto pelo bootstrap falha de forma explícita
@@ -147,7 +150,9 @@ O primeiro relatório antecede a ampliação do coletor que agora identifica dis
 | Suíte completa da Fase 1 | CI [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857): 196 passed em cada ambiente Python 3.10–3.13; cobertura total de 88% | 4/4 jobs aprovados; inclui domínio, aplicação, infraestrutura, integração, GUI e caracterização legada |
 | Ruff da Fase 1 | `ruff check` e `ruff format --check` aprovados na CI #116 em Python 3.10–3.13 | Todo o escopo mantido da arquitetura e dos testes está lintado e formatado |
 | Inicialização da GUI nova | `PYTHONPATH=src QT_QPA_PLATFORM=offscreen timeout 5s uv run --locked python -m legendar`: abriu e permaneceu no event loop até timeout | Smoke test local, sem processamento real |
-| CI da Fase 1 | **Concluída e aprovada** | Workflows [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) e [#127](https://github.com/anfalcir/legendar/actions/runs/42905799938), ambos 4/4 verdes em Python 3.10–3.13; #127 valida o snapshot documental final |
+| CI da Fase 1 | **Concluída e aprovada** | Workflows [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) e [#127](https://github.com/anfalcir/legendar/actions/runs/42905799938), ambos 4/4 verdes em Python 3.10–3.13 |
+| Suíte completa da Fase 2 | [CI #42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434): 218 passed por ambiente; cobertura 88% | 4/4 jobs aprovados em Python 3.10–3.13; inclui testes Qt offscreen, preferências e confirmações |
+| Ruff da Fase 2 | `ruff check` e `ruff format --check` aprovados na CI #42911438434 | 91 arquivos formatados; escopo mantido inteiro aprovado |
 | Caracterização e destino do legado | Concluída | Nove testes com doubles; política de preservação, congelamento e gate de aposentadoria em `LEGACY_BASELINE.md` |
 | Inventário atualizado no computador-alvo | Pendente | Reexecutar antes da homologação de mídia/modelos |
 | Precisão temporal contra timestamps humanos | Pendente | Gate da Fase 5 |
@@ -165,8 +170,8 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 |---|---|---|
 | 0 — Definições e prova técnica | **Concluída e integrada** | PR #1 merged por squash; CI final verde |
 | 1 — Reestruturação arquitetural | **Concluída e integrada** | PR #2 merged por squash no commit `de31ddd`; 196 testes por ambiente Python 3.10–3.13, cobertura 88%, Ruff/format aprovados |
-| 2 — Interface profissional | Não iniciada | Refinamento visual, preferências e UX final; aguarda aprovação explícita do responsável |
-| 3 — Entrada e preparação de mídia | Não iniciada | Homologar formatos, streams, offsets e temporários |
+| 2 — Interface profissional | **Implementada e validada; integração pendente na PR #3** | 218 testes por ambiente, 88% de cobertura, Ruff/format verdes; temas, diálogos, preferências, bloqueios, progresso, logs e acessibilidade |
+| 3 — Entrada e preparação de mídia | Não iniciada | Homologar formatos, streams, offsets e temporários; não começar sem aprovação explícita |
 | 4 — Reconhecimento Whisper | Não iniciada | Comparação PT-BR/EN e desempenho no computador-alvo |
 | 5 — Alinhamento temporal | Não iniciada | Referência humana, mediana/P95, cobertura e anomalias |
 | 6 — Tradução, segmentação e SRT | Não iniciada | Escolha de fornecedor antes da implementação da tradução |
@@ -176,7 +181,7 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 
 ## 8. Pendências encaminhadas às fases corretas
 
-1. **Fase 1 — concluída e integrada:** não há pendências nesta fase. A Fase 2 somente poderá começar depois de aprovação explícita.
+1. **Fases 1 e 2:** Fase 1 integrada; Fase 2 implementada e validada, aguardando integração pela PR #3. Não há processamento real de mídia nesta Fase 2.
 2. **Antes da Fase 3:** repetir o inventário atualizado no computador-alvo e instalar/verificar FFmpeg/ffprobe.
 3. **Fase 4:** comparar modelos Whisper com corpus PT-BR/EN representativo; registrar WER/CER, duração, memória e RTF no hardware-alvo.
 4. **Fase 5:** anotar manualmente início/fim de palavras e medir erro mediano/P95, cobertura e falhas; não homologar sincronização só por WER.
@@ -187,7 +192,7 @@ As pendências acima são gates de produto alocados às fases responsáveis; ela
 
 ## 9. Próxima ação objetiva
 
-A Fase 1 está concluída e integrada à `main`. O próximo marco é obter aprovação explícita para iniciar a Fase 2 — Interface profissional; não começar sua implementação antecipadamente.
+A Fase 2 está implementada e validada na branch `phase-2/professional-ui`; abrir e integrar a PR #3 após revisão. Depois, obter aprovação explícita antes de iniciar a Fase 3 — Entrada e preparação de mídia.
 
 ---
 
@@ -205,3 +210,4 @@ A Fase 1 está concluída e integrada à `main`. O próximo marco é obter aprov
 | 10/11/2026 | Workflow final push #113 aprovado com 16/16 jobs e PR workflow #114 concluído com sucesso; PR #1 integrada por squash na `main` (commit `992cb874274e73d0264994e39926113f1461236f`) |
 | 10/11/2026 | Branch `phase-1/architecture` criada a partir da `main` atualizada; Fase 1 pronta para iniciar, sem implementação antecipada |
 | 10/11/2026 | Fase 1 concluída e integrada por squash na `main` pela PR #2, commit `de31ddd`; 196 testes aprovados em Python 3.10–3.13, cobertura de 88%, Ruff check/format verdes, CI #127 confirmada e CI Fase 0 PR #160 aprovada |
+| 10/11/2026 | Fase 2 — Interface profissional implementada na branch `phase-2/professional-ui`; CI #42911438434 verde em 4/4 Python 3.10–3.13, 218 testes por ambiente, cobertura de 88%, Ruff check/format verdes; integração pendente em PR #3 |

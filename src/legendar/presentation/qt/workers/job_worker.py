@@ -51,6 +51,6 @@ class JobWorker(QObject):
             self.completed.emit()
 
     @Slot()
-    def request_cancel(self) -> None:
-        """Sinaliza cancelamento cooperativo (seguro em qualquer thread)."""
-        self._controller.cancel()
+    def request_cancel(self) -> bool:
+        """Sinaliza cancelamento e informa se o controlador aceitou o pedido."""
+        return self._controller.cancel()

@@ -25,6 +25,7 @@ def test_starts_idle_and_ready() -> None:
 
     assert snapshot.state is JobState.IDLE
     assert snapshot.progress_percent == 0
+    assert not snapshot.progress_known
     assert snapshot.can_start
     assert not snapshot.can_cancel
     assert not snapshot.is_running
@@ -72,6 +73,7 @@ def test_progress_never_regresses_and_uses_message() -> None:
 
     assert snapshot.progress == 0.4
     assert snapshot.progress_percent == 40
+    assert snapshot.progress_known
     assert snapshot.status_text == "Tarde"
 
 
@@ -92,7 +94,10 @@ def test_log_lines_are_appended_and_prefixed_by_level() -> None:
         LogRecorded("job-1", 2, level="warning", message="Faixa alternativa")
     )
 
-    assert snapshot.log_lines == ("Iniciando", "Aviso: Faixa alternativa")
+    assert snapshot.log_lines[0].endswith("Iniciando")
+    assert snapshot.log_lines[1].endswith("Aviso: Faixa alternativa")
+    assert snapshot.log_lines[0].startswith("[")
+    assert snapshot.log_lines[1].startswith("[")
 
 
 def test_log_is_bounded() -> None:
@@ -103,8 +108,8 @@ def test_log_is_bounded() -> None:
     lines = vm.snapshot.log_lines
 
     assert len(lines) == MAX_LOG_LINES
-    assert lines[-1] == f"linha {MAX_LOG_LINES + 9}"
-    assert lines[0] == "linha 10"
+    assert lines[-1].endswith(f"linha {MAX_LOG_LINES + 9}")
+    assert lines[0].endswith("linha 10")
 
 
 def test_out_of_order_and_duplicate_events_are_ignored() -> None:
@@ -128,7 +133,7 @@ def test_completion_is_terminal_and_exposes_output() -> None:
     assert snapshot.is_finished
     assert snapshot.can_start
     assert snapshot.output_path == "/tmp/aula.srt"
-    assert "Concluído com 12" in snapshot.log_lines[-1]
+    assert snapshot.log_lines[-1].endswith("Concluído com 12 legenda(s).")
     ignored = vm.apply(JobFailed("job-1", 4, message="tarde demais"))
     assert ignored.state is JobState.COMPLETED
 
@@ -168,7 +173,7 @@ def test_operational_warning_survives_rerender_after_terminal_event() -> None:
     assert snapshot.state is JobState.FAILED
     assert snapshot.error_message == "falha controlada"
     assert snapshot.status_text == "Falha: falha controlada"
-    assert snapshot.log_lines[-1] == (
+    assert snapshot.log_lines[-1].endswith(
         "Aviso: não foi possível limpar o diretório temporário"
     )
 

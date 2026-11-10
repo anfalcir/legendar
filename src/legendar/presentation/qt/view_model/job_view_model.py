@@ -7,6 +7,7 @@ regra de quais botões habilitar e qual texto mostrar fica testável aqui.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import datetime
 
 from legendar.domain.events.job_events import (
     JobCancelled,
@@ -40,6 +41,7 @@ class JobViewSnapshot:
 
     state: JobState = JobState.IDLE
     progress: float = 0.0
+    progress_known: bool = False
     status_text: str = IDLE_STATUS
     log_lines: tuple[str, ...] = ()
     output_path: str = ""
@@ -97,7 +99,9 @@ class JobViewModel:
             self._snapshot,
             status_text=f"Falha: {message}",
             error_message=message,
-            log_lines=_append_text(self._snapshot.log_lines, f"Erro: {message}"),
+            log_lines=_append_text(
+                self._snapshot.log_lines, _timestamped(f"Erro: {message}")
+            ),
         )
         return self._snapshot
 
@@ -105,7 +109,9 @@ class JobViewModel:
         """Registra um aviso operacional sem alterar o estado do processamento."""
         self._snapshot = replace(
             self._snapshot,
-            log_lines=_append_text(self._snapshot.log_lines, f"Aviso: {message}"),
+            log_lines=_append_text(
+                self._snapshot.log_lines, _timestamped(f"Aviso: {message}")
+            ),
         )
         return self._snapshot
 
@@ -128,15 +134,29 @@ class JobViewModel:
                 status_text=f"Processando: {event.source_label or 'mídia'}",
                 error_message="",
                 output_path="",
+                log_lines=_append_text(
+                    snapshot.log_lines,
+                    _timestamped(
+                        f"Processamento iniciado: {event.source_label or 'mídia'}",
+                        event.occurred_at,
+                    ),
+                ),
             )
         if isinstance(event, StateChanged):
             return replace(
-                snapshot, state=event.current, status_text=event.current.label_pt
+                snapshot,
+                state=event.current,
+                status_text=event.current.label_pt,
+                log_lines=_append_text(
+                    snapshot.log_lines,
+                    _timestamped(event.current.label_pt, event.occurred_at),
+                ),
             )
         if isinstance(event, ProgressReported):
             return replace(
                 snapshot,
                 progress=max(snapshot.progress, event.fraction),
+                progress_known=True,
                 status_text=event.message or snapshot.status_text,
             )
         if isinstance(event, LogRecorded):
@@ -149,9 +169,13 @@ class JobViewModel:
                 status_text=f"Legenda publicada: {event.output_path}",
                 output_path=event.output_path,
                 error_message="",
+                progress_known=True,
                 log_lines=_append_text(
                     snapshot.log_lines,
-                    f"Concluído com {event.cue_count} legenda(s).",
+                    _timestamped(
+                        f"Concluído com {event.cue_count} legenda(s).",
+                        event.occurred_at,
+                    ),
                 ),
             )
         if isinstance(event, JobFailed):
@@ -161,21 +185,34 @@ class JobViewModel:
                 status_text=f"Falha: {event.message}",
                 error_message=event.message,
                 output_path="",
-                log_lines=_append_text(snapshot.log_lines, f"Erro: {event.message}"),
+                log_lines=_append_text(
+                    snapshot.log_lines,
+                    _timestamped(f"Erro: {event.message}", event.occurred_at),
+                ),
             )
         if isinstance(event, JobCancelled):
             return replace(
                 snapshot,
                 state=JobState.CANCELLED,
                 status_text=event.message or "Trabalho cancelado.",
-                log_lines=_append_text(snapshot.log_lines, "Trabalho cancelado."),
+                log_lines=_append_text(
+                    snapshot.log_lines,
+                    _timestamped("Trabalho cancelado.", event.occurred_at),
+                ),
             )
         return snapshot
 
 
 def _append_log(lines: tuple[str, ...], event: LogRecorded) -> tuple[str, ...]:
     prefix = _LEVEL_PREFIX.get(event.level, "")
-    return _append_text(lines, f"{prefix}{event.message}")
+    return _append_text(
+        lines, _timestamped(f"{prefix}{event.message}", event.occurred_at)
+    )
+
+
+def _timestamped(message: str, occurred_at: datetime | None = None) -> str:
+    timestamp = occurred_at or datetime.now().astimezone()
+    return f"[{timestamp.astimezone().strftime('%H:%M:%S')}] {message}"
 
 
 def _append_text(lines: tuple[str, ...], text: str) -> tuple[str, ...]:
