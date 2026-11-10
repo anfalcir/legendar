@@ -59,6 +59,7 @@ class MediaDownloader(Protocol):
         destination_dir: str,
         *,
         token: CancellationToken | None = None,
+        progress: ProgressSink | None = None,
     ) -> str:
         """Baixa e retorna o caminho local; verifica o token em checkpoints."""
         ...
@@ -75,6 +76,7 @@ class AudioPreparer(Protocol):
         stream: AudioStreamInfo,
         destination_path: str,
         token: CancellationToken | None = None,
+        progress: ProgressSink | None = None,
     ) -> AudioAsset: ...
 
 
