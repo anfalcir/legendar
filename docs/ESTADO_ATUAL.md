@@ -2,16 +2,18 @@
 
 - **Última atualização:** 10/11/2026
 - **Repositório:** anfalcir/legendar
-- **Branch de execução da Fase 1:** `phase-1/architecture` (aguardando integração da PR #2)
+- **Branch atual:** `main`
+- **Branch de implementação da Fase 1:** `phase-1/architecture` (integrada)
 - **Branch padrão:** `main`
-- **Fase concluída:** Fase 0 — Definições e prova técnica
-- **Fase concluída mais recente:** Fase 1 — Reestruturação arquitetural, implementação, caracterização, CI e revisão técnica concluídas; integração registrada na PR #2
+- **Fases concluídas:** Fase 0 — Definições e prova técnica; Fase 1 — Reestruturação arquitetural
+- **Fase concluída mais recente:** Fase 1 — Reestruturação arquitetural, implementação, caracterização, CI e revisão técnica concluídas e integradas
 - **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), integrada por squash
-- **PR da Fase 1:** [#2](https://github.com/anfalcir/legendar/pull/2), pronta para integração
-- **Commit de integração na main:** `992cb874274e73d0264994e39926113f1461236f`
+- **PR da Fase 1:** [#2](https://github.com/anfalcir/legendar/pull/2), merged por squash em 10/11/2026
+- **Commit de integração da Fase 0:** `992cb874274e73d0264994e39926113f1461236f`
+- **Commit de integração da Fase 1:** `de31dddffc4f8e761692129d4c47a02ca89b8b83`
 - **Documento de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
 
-> A Fase 0 está concluída e integrada. A Fase 1 está tecnicamente concluída na branch `phase-1/architecture`: baseline legada caracterizada, política de migração/lint documentada e CI dedicada aprovada em Python 3.10–3.13. A suíte final registrou 196 testes aprovados por ambiente e cobertura total de 88%; Ruff check e format também passaram. A integração da Fase 1 está registrada na PR #2.
+> As Fases 0 e 1 estão concluídas e integradas à `main`. A Fase 1 foi integrada por squash pela PR [#2](https://github.com/anfalcir/legendar/pull/2), no commit `de31dddffc4f8e761692129d4c47a02ca89b8b83`. A CI dedicada aprovou Python 3.10–3.13 (196 testes por ambiente, 88% de cobertura, Ruff check/format verdes). A Fase 2 permanece não iniciada, aguardando aprovação explícita.
 
 ---
 
@@ -21,17 +23,17 @@ A aplicação nova já tem camadas `domain`, `application`, `infrastructure`, `p
 
 A Fase 0 estabeleceu e documentou a direção técnica: governança de dependências, perfis de runtime, coletor de ambiente, prova sintética de mídia/offset, script de POC PT-BR/EN e contrato arquitetural. O plano operacional e o handoff da Fase 1 foram atualizados para registrar o checkpoint, as evidências e as pendências.
 
-**Estado:** Fase 0 concluída e integrada. O workflow push #113 terminou com 16/16 jobs aprovados e a PR workflow #114 concluiu com sucesso; os jobs exclusivos de push (benchmark completo e instalação CUDA) foram pulados no evento PR por configuração. A PR #1 foi integrada por squash no commit `992cb874274e73d0264994e39926113f1461236f`. Na Fase 1, o workflow [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) aprovou a matriz Python 3.10–3.13 (4/4), com 196 testes e 88% de cobertura em cada ambiente, além de Ruff check/format. O workflow de PR da Fase 0 [#160](https://github.com/anfalcir/legendar/actions/runs/42905199743) aprovou as 12 combinações Python/SO, lock/perfis e prova FFmpeg/offset; CUDA e benchmark WhisperX foram pulados intencionalmente nesse evento. A Fase 1 aguarda somente a integração da PR #2; a Fase 2 permanece não iniciada.
+**Estado:** Fase 0 concluída e integrada. O workflow push #113 terminou com 16/16 jobs aprovados e a PR workflow #114 concluiu com sucesso; os jobs exclusivos de push (benchmark completo e instalação CUDA) foram pulados no evento PR por configuração. A PR #1 foi integrada por squash no commit `992cb874274e73d0264994e39926113f1461236f`. Na Fase 1, o workflow [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) aprovou a matriz Python 3.10–3.13 (4/4), com 196 testes e 88% de cobertura em cada ambiente, além de Ruff check/format. O workflow de PR da Fase 0 [#160](https://github.com/anfalcir/legendar/actions/runs/42905199743) aprovou as 12 combinações Python/SO, lock/perfis e prova FFmpeg/offset; CUDA e benchmark WhisperX foram pulados intencionalmente nesse evento. A Fase 1 está integrada à `main`; a Fase 2 permanece não iniciada e depende de aprovação explícita.
 
 ## 2. Situação do repositório
 
 | Item | Estado |
 |---|---|
 | Repositório | `anfalcir/legendar` |
-| PR de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1), merged por squash; [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), validada e pronta para merge |
+| PRs de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1) e [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), ambas merged por squash |
 | Branch de conclusão da Fase 0 | `phase-0/technical-inventory` |
-| Branch de trabalho da Fase 1 | `phase-1/architecture`, criada do commit de integração |
-| `main` | Atualizada e contém a entrega integral da Fase 0 |
+| Branch de implementação da Fase 1 | `phase-1/architecture`, integrada na `main` pela PR #2 |
+| `main` | Contém as entregas integrais das Fases 0 e 1; HEAD inclui o merge squash `de31ddd` |
 | Fonte de dependências | `pyproject.toml` |
 | Lock | `uv.lock` regenerado pela CI e integrado à `main`; invariantes, fontes e exports CPU/CUDA aprovados no workflow #113 |
 | Coletor | `scripts/phase0_inventory.py` |
@@ -41,7 +43,7 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | Documentação técnica | plano mestre, estado vivo, protocolo, matriz de dependências, plano operacional e handoff Fase 1 |
 | CI | `.github/workflows/phase0-quality.yml` cobre evidências da Fase 0; `.github/workflows/phase1-quality.yml` valida testes, Qt offscreen, Ruff e lock em Python 3.10–3.13 |
 
-A PR #1 foi revisada e integrada. Continuar na branch `phase-1/architecture`, derivada do commit de squash da `main`, para finalizar a Fase 1.
+As PRs #1 e #2 foram revisadas e integradas. A `main` contém as entregas das Fases 0 e 1; a branch `phase-1/architecture` é o histórico de implementação da Fase 1.
 
 ### 2.1. Checkpoint atual da Fase 1
 
@@ -162,7 +164,7 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 | Fase | Status | Observação |
 |---|---|---|
 | 0 — Definições e prova técnica | **Concluída e integrada** | PR #1 merged por squash; CI final verde |
-| 1 — Reestruturação arquitetural | **Concluída tecnicamente; integração na PR #2** | Camadas, pipeline, domínio, estados, SRT, bootstrap, GUI mínima, legado caracterizado, CI e revisão técnica aprovadas |
+| 1 — Reestruturação arquitetural | **Concluída e integrada** | PR #2 merged por squash no commit `de31ddd`; 196 testes por ambiente Python 3.10–3.13, cobertura 88%, Ruff/format aprovados |
 | 2 — Interface profissional | Não iniciada | Refinamento visual, preferências e UX final; não começar antes da aprovação da Fase 1 |
 | 3 — Entrada e preparação de mídia | Não iniciada | Homologar formatos, streams, offsets e temporários |
 | 4 — Reconhecimento Whisper | Não iniciada | Comparação PT-BR/EN e desempenho no computador-alvo |
@@ -174,7 +176,7 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 
 ## 8. Pendências encaminhadas às fases corretas
 
-1. **Fase 1 — concluída tecnicamente:** CI e revisão técnica aprovadas; integrar a PR [#2](https://github.com/anfalcir/legendar/pull/2). Não iniciar a Fase 2 sem aprovação explícita.
+1. **Fase 1 — concluída e integrada:** não há pendências nesta fase. A Fase 2 somente poderá começar depois de aprovação explícita.
 2. **Antes da Fase 3:** repetir o inventário atualizado no computador-alvo e instalar/verificar FFmpeg/ffprobe.
 3. **Fase 4:** comparar modelos Whisper com corpus PT-BR/EN representativo; registrar WER/CER, duração, memória e RTF no hardware-alvo.
 4. **Fase 5:** anotar manualmente início/fim de palavras e medir erro mediano/P95, cobertura e falhas; não homologar sincronização só por WER.
@@ -185,7 +187,7 @@ As pendências acima são gates de produto alocados às fases responsáveis; ela
 
 ## 9. Próxima ação objetiva
 
-Integrar a PR [#2](https://github.com/anfalcir/legendar/pull/2), já validada pela CI e revisão técnica. Depois do merge, o próximo marco é solicitar aprovação explícita para iniciar a Fase 2; não começar sua implementação antecipadamente.
+A Fase 1 está concluída e integrada à `main`. O próximo marco é obter aprovação explícita para iniciar a Fase 2 — Interface profissional; não começar sua implementação antecipadamente.
 
 ---
 
@@ -202,4 +204,4 @@ Integrar a PR [#2](https://github.com/anfalcir/legendar/pull/2), já validada pe
 | 10/11/2026 | Workflow #109 concluído com 16/16 jobs aprovados; lock e perfis CPU/CUDA validados, matriz de 12 ambientes verde, POC FFmpeg/offset verde e benchmark WhisperX PT-BR/EN concluído |
 | 10/11/2026 | Workflow final push #113 aprovado com 16/16 jobs e PR workflow #114 concluído com sucesso; PR #1 integrada por squash na `main` (commit `992cb874274e73d0264994e39926113f1461236f`) |
 | 10/11/2026 | Branch `phase-1/architecture` criada a partir da `main` atualizada; Fase 1 pronta para iniciar, sem implementação antecipada |
-| 10/11/2026 | Fase 1 tecnicamente concluída: 196 testes aprovados em Python 3.10–3.13, cobertura total de 88%, Ruff check/format verdes, CI Fase 0 PR #160 aprovada e revisão técnica concluída; integração pendente na PR #2 |
+| 10/11/2026 | Fase 1 concluída e integrada por squash na `main` pela PR #2, commit `de31ddd`; 196 testes aprovados em Python 3.10–3.13, cobertura de 88%, Ruff check/format verdes, CI #127 confirmada e CI Fase 0 PR #160 aprovada |
