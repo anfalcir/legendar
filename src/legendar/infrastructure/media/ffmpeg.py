@@ -195,6 +195,11 @@ class FfmpegAudioPreparer:
         ):
             temporary.unlink(missing_ok=True)
             raise
+        except FileExistsError as exc:
+            temporary.unlink(missing_ok=True)
+            raise InvalidInputError(
+                "O destino do áudio normalizado foi criado durante o processamento."
+            ) from exc
         except OSError as exc:
             temporary.unlink(missing_ok=True)
             raise MediaToolError(
