@@ -827,11 +827,11 @@ class MainWindow(QMainWindow):
         self._update_status_pill(snapshot, busy)
 
     def _update_status_pill(self, snapshot: JobViewSnapshot, busy: bool) -> None:
-        if snapshot.state is not None and snapshot.state.name == "FAILED":
+        if snapshot.state is JobState.FAILED:
             label, state = "Atenção necessária", "error"
-        elif snapshot.state.name == "COMPLETED":
+        elif snapshot.state is JobState.COMPLETED:
             label, state = "Concluído", "success"
-        elif snapshot.state.name == "CANCELLED":
+        elif snapshot.state is JobState.CANCELLED:
             label, state = "Cancelado", "warning"
         elif busy:
             label, state = "Em andamento", "running"
