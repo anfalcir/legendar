@@ -65,17 +65,11 @@ Esse intervalo é provisório e deverá ser expandido assim que a interseção d
 O aplicativo completo exige um dos perfis abaixo. O manifesto não pressupõe o computador do mantenedor:
 
 ```bash
-# CPU (Linux/Windows usa o índice CPU do PyTorch; macOS usa o wheel PyPI)
+# CPU (Linux/Windows usa o índice CPU do PyTorch; macOS usa wheels PyPI)
 uv sync --no-dev --extra runtime-cpu
 
 # CUDA 12.8 em Linux/Windows compatíveis
 uv sync --no-dev --extra runtime-cu128
-
-# No macOS, runtime-cpu usa wheels PyPI; MPS pode ficar disponível no runtime.
-uv sync --no-dev --extra runtime-cpu
-
-# WhisperX já vem no perfil completo da POC; não precisa de extra adicional
-uv sync --no-dev --extra runtime-cpu
 ```
 
 Não combinar mais de um extra `runtime-*`. O próprio `uv` declara os perfis disponíveis como conflitantes para impedir a resolução acidental de variantes PyTorch incompatíveis. O perfil CUDA é destinado a Linux/Windows compatíveis; no macOS, usar `runtime-cpu`, que recorre aos wheels PyPI e pode disponibilizar MPS em Apple Silicon. ROCm 7.2 não está exposto como extra runtime porque sua versão atual de PyTorch não cruza a faixa exigida pelo WhisperX estável.
