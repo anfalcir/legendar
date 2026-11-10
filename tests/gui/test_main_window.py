@@ -6,7 +6,7 @@ import threading
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSettings, Qt
 
 from legendar.application.pipeline.serial_pipeline import PipelinePorts, SerialPipeline
 from legendar.domain.errors.catalog import MediaToolError
@@ -66,15 +66,19 @@ def media(tmp_path: Path) -> Path:
     return path
 
 
-def _window(qtbot, dependencies: UiDependencies) -> MainWindow:
-    window = MainWindow(dependencies)
+def _window(qtbot, dependencies: UiDependencies, tmp_path: Path) -> MainWindow:
+    settings = QSettings(str(tmp_path / "ui-settings.ini"), QSettings.Format.IniFormat)
+    window = MainWindow(dependencies, settings=settings)
+    # Os testes de fluxo exercitam o job; diálogos modais têm testes próprios.
+    window._confirm_start = lambda *_args: True
+    window._confirm_cancel = lambda **_kwargs: True
     qtbot.addWidget(window)
     window.show()
     return window
 
 
 def test_generate_runs_off_the_ui_thread_and_completes(qtbot, tmp_path, media) -> None:
-    window = _window(qtbot, _dependencies(tmp_path))
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window.file_edit.setText(str(media))
     window.output_edit.setText(str(tmp_path / "saida.srt"))
 
@@ -91,7 +95,7 @@ def test_generate_runs_off_the_ui_thread_and_completes(qtbot, tmp_path, media) -
 
 
 def test_missing_file_is_reported_without_starting(qtbot, tmp_path) -> None:
-    window = _window(qtbot, _dependencies(tmp_path))
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window.file_edit.setText(str(tmp_path / "nao-existe.mp4"))
 
     qtbot.mouseClick(window.generate_button, Qt.MouseButton.LeftButton)
@@ -101,7 +105,7 @@ def test_missing_file_is_reported_without_starting(qtbot, tmp_path) -> None:
 
 
 def test_output_without_srt_suffix_is_normalized(qtbot, tmp_path, media) -> None:
-    window = _window(qtbot, _dependencies(tmp_path))
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window.file_edit.setText(str(media))
     window.output_edit.setText(str(tmp_path / "legenda-final"))
 
@@ -114,7 +118,7 @@ def test_output_without_srt_suffix_is_normalized(qtbot, tmp_path, media) -> None
 def test_output_cannot_overwrite_the_selected_media_file(qtbot, tmp_path) -> None:
     source = tmp_path / "origem.srt"
     source.write_text("conteúdo original", encoding="utf-8")
-    window = _window(qtbot, _dependencies(tmp_path))
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window.file_edit.setText(str(source))
     window.output_edit.setText(str(source))
 
@@ -128,7 +132,7 @@ def test_output_cannot_overwrite_the_selected_media_file(qtbot, tmp_path) -> Non
 def test_output_cannot_be_placed_inside_model_cache(qtbot, tmp_path, media) -> None:
     dependencies = _dependencies(tmp_path)
     dependencies.cache_dir.mkdir()
-    window = _window(qtbot, dependencies)
+    window = _window(qtbot, dependencies, tmp_path)
     window.file_edit.setText(str(media))
     destination = dependencies.cache_dir / "saida.srt"
     window.output_edit.setText(str(destination))
@@ -143,7 +147,7 @@ def test_output_cannot_be_placed_inside_model_cache(qtbot, tmp_path, media) -> N
 def test_source_language_syncs_target_when_not_translating(
     qtbot, tmp_path, media
 ) -> None:
-    window = _window(qtbot, _dependencies(tmp_path))
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
     window.source_combo.setCurrentIndex(window.source_combo.findData("en"))
 
@@ -152,7 +156,7 @@ def test_source_language_syncs_target_when_not_translating(
 
 
 def test_translation_checkbox_is_disabled_without_translator(qtbot, tmp_path) -> None:
-    window = _window(qtbot, _dependencies(tmp_path))
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
     assert not window.translate_check.isEnabled()
 
@@ -165,6 +169,7 @@ def test_pipeline_failure_is_shown_and_allows_retry(qtbot, tmp_path, media) -> N
     window = _window(
         qtbot,
         _dependencies(tmp_path, SerialPipeline(_ports(inspector=BrokenInspector()))),
+        tmp_path,
     )
     window.file_edit.setText(str(media))
     window.output_edit.setText(str(tmp_path / "saida.srt"))
@@ -183,7 +188,7 @@ def test_close_after_thread_wait_cleans_workspace_before_window_exit(
 ) -> None:
     from PySide6.QtGui import QCloseEvent
 
-    window = _window(qtbot, _dependencies(tmp_path))
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     context = window._deps.workspace_factory.create(
         job_id="close-test",
         source_label="aula.mp4",
@@ -230,7 +235,7 @@ def test_cancel_stops_a_cooperative_pipeline(qtbot, tmp_path, media) -> None:
 
     slow = SlowTranscriber()
     window = _window(
-        qtbot, _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow)))
+        qtbot, _dependencies(tmp_path, SerialPipeline(_ports(transcriber=slow))), tmp_path
     )
     window.file_edit.setText(str(media))
     window.output_edit.setText(str(tmp_path / "saida.srt"))
