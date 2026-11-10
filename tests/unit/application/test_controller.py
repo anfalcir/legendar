@@ -230,7 +230,7 @@ def test_controller_rejects_context_replacement_before_start(job_context):
         job_id="other-job",
         source_label="outro.mp4",
         output_path=job_context.output_path,
-        workspace_dir=job_context.workspace_dir,
+        work_dir=job_context.work_dir,
         cache_dir=job_context.cache_dir,
         token=CancellationTokenImpl(),
     )
