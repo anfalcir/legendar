@@ -10,7 +10,9 @@ O projeto está em fase de planejamento e remodelagem. O comportamento da versã
 - [Estado atual](docs/ESTADO_ATUAL.md) — documento vivo com o que existe, o que está em andamento, decisões, testes, riscos e próximos passos.
 - [Protocolo da Fase 0](docs/FASE_0_PROTOCOLO.md) — inventário do ambiente, experimentos, métricas, evidências e critérios para a prova técnica.
 - [Matriz de dependências](docs/MATRIZ_DEPENDENCIAS.md) — fonte canônica, faixas de versões, dependências externas, perfis de hardware e política de compatibilidade.
-- [Handoff da Fase 1](docs/HANDOFF_FASE_1.md) — decisões consolidadas, arquitetura-alvo, critérios de aceite e instruções para a IA que continuará o trabalho na IDE.
+- [Plano operacional da Fase 1](docs/FASE_1_PLANO.md) — etapas, evidências e critérios de conclusão da reestruturação.
+- [Baseline legada](docs/LEGACY_BASELINE.md) — contratos caracterizados, limitações e política de migração da aplicação anterior.
+- [Handoff da Fase 1](docs/HANDOFF_FASE_1.md) — decisões consolidadas, arquitetura-alvo, critérios de aceite e instruções para continuidade na IDE.
 
 ## Direção do produto
 
@@ -25,7 +27,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A baseline ainda contém uma aplicação PySide6 com fluxos de transcrição para YouTube e MP4 local, utilizando Whisper e yt-dlp. A saída atual é texto; alinhamento forçado, tradução e geração SRT ainda precisam ser implementados. O andamento real está registrado em [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A nova arquitetura em `src/legendar/` possui camadas, pipeline, máquina de estados, cancelamento, publicação SRT e GUI mínima, mas ainda não processa mídia real; integrações de FFmpeg/Whisper/WhisperX e tradução pertencem às fases posteriores. O andamento real está registrado em [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md).
 
 ## Licença
 
