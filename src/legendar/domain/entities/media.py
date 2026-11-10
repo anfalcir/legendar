@@ -109,9 +109,11 @@ class AudioStreamInfo:
 class MediaInfo:
     """Resultado da inspeção de mídia, mapeado para o domínio.
 
-    ``duration_seconds`` é ``None`` quando o contêiner não declara duração
-    (casos de stream). Nesse caso a validação temporal não pode afirmar que
-    timestamps estão dentro da mídia.
+    ``duration_seconds`` representa a extensão da mídia, enquanto o início
+    de cada stream pode ser um timestamp absoluto do contêiner. Esses valores
+    não são comparáveis sem conhecer também o início da timeline do contêiner;
+    por isso a entidade preserva ambos e não rejeita offsets apenas por serem
+    numericamente maiores que a duração.
     """
 
     kind: MediaKind
@@ -126,12 +128,6 @@ class MediaInfo:
             not math.isfinite(self.duration_seconds) or self.duration_seconds <= 0
         ):
             raise UnsupportedMediaError("Duração de mídia inválida.")
-        for stream in self.audio_streams:
-            duration = self.duration_seconds
-            if duration is not None and stream.start_time_seconds >= duration:
-                raise UnsupportedMediaError(
-                    "Offset da faixa de áudio posterior à duração da mídia."
-                )
 
     @property
     def has_audio(self) -> bool:
