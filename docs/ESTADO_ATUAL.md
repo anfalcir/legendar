@@ -79,7 +79,7 @@ A documentação inicial foi publicada no commit f5101b0f587fd545aadcea93e0cc3d0
 | Máquina de estados | Não identificada como componente explícito |
 | Cancelamento cooperativo | Não implementado de forma completa |
 | Cache isolado por job | Não implementado |
-| Testes automatizados | Baseline sem suíte; branch Fase 0 adiciona 5 testes unittest para o coletor de ambiente |
+| Testes automatizados | Baseline sem suíte; branch Fase 0 adiciona 7 testes unittest para o coletor de ambiente |
 | Documentação técnica | README, plano mestre, estado vivo e protocolo de execução da Fase 0 |
 
 ### 3.3. Pontos técnicos da baseline que exigem revisão
@@ -97,7 +97,7 @@ Esses itens são observações de inspeção da baseline, não evidência de fal
 
 | Fase | Status | Observação |
 |---|---|---|
-| 0 — Definições e prova técnica | **Em andamento** | Coletor de ambiente e protocolo experimental adicionados; inventário do computador-alvo e POCs pendentes |
+| 0 — Definições e prova técnica | **Em andamento** | Inventário inicial do computador-alvo recebido; coletor ampliado para distribuição e gráficos PCI; CPU como caminho inicial; FFmpeg e POCs pendentes |
 | 1 — Reestruturação arquitetural | Não iniciada | Depende da aprovação dos resultados da Fase 0 |
 | 2 — Interface profissional | Não iniciada | Começar com workers simulados para validar os estados |
 | 3 — Entrada e preparação de mídia | Não iniciada | Incluir YouTube, formatos locais, streams e offsets |
@@ -145,9 +145,10 @@ Reduzir os maiores riscos técnicos antes de estruturar a aplicação nova: qual
 
 ### Entregáveis iniciais implementados na branch `phase-0/technical-inventory`
 
-- `scripts/phase0_inventory.py`: coletor somente leitura, sem dependências externas, com informações de Python, SO, CPU, RAM, armazenamento, FFmpeg/ffprobe, GPU NVIDIA e versões dos pacotes relevantes.
-- `tests/test_phase0_inventory.py`: cinco testes automatizados com `unittest`.
-- `docs/FASE_0_PROTOCOLO.md`: comandos, política de privacidade, matriz experimental, métricas e critérios de saída.
+- `scripts/phase0_inventory.py`: coletor somente leitura, sem dependências externas, com informações de Python, distribuição Linux, CPU, RAM, armazenamento, controladores gráficos PCI em Linux, FFmpeg/ffprobe, NVIDIA e versões dos pacotes relevantes.
+- `tests/test_phase0_inventory.py`: sete testes automatizados com `unittest`, incluindo parsing de `os-release` e detecção de gráficos PCI AMD.
+- `docs/FASE_0_PROTOCOLO.md`: comandos, política de privacidade, inventário recebido, análise de compatibilidade, matriz experimental, métricas e critérios de saída.
+- `.github/workflows/phase0-quality.yml`: CI determinística para compilação, testes, CLI e JSON smoke test.
 - README atualizado para apontar para o novo protocolo.
 
 ### Validação realizada nesta entrega
@@ -155,20 +156,22 @@ Reduzir os maiores riscos técnicos antes de estruturar a aplicação nova: qual
 | Verificação | Resultado | Limite da evidência |
 |---|---|---|
 | `python -m compileall -q scripts tests` | Aprovado | Executado no ambiente de desenvolvimento desta entrega |
-| `python -m unittest discover -s tests -v` | 5 testes aprovados | Testes do coletor; não cobrem Whisper, alinhamento ou GUI |
-| Execução do coletor e parsing do JSON | Aprovado | Smoke test no ambiente de desenvolvimento; não representa o computador-alvo |
+| `python -m unittest discover -s tests -v` | 7 testes aprovados na CI | Testes do coletor; não cobrem Whisper, alinhamento ou GUI |
+| Execução do coletor e parsing do JSON | Aprovado na CI | Smoke test no runner Ubuntu; o inventário real do computador-alvo foi recebido separadamente |
 | Alteração de dependências/modelos | Nenhuma | Nenhuma dependência experimental foi instalada ou promovida |
 
-O ambiente de desenvolvimento usado para validar o script não deve ser confundido com o ambiente-alvo. Os resultados de hardware e versões do computador do usuário ainda precisam ser coletados.
+O ambiente de desenvolvimento usado para validar o script não deve ser confundido com o ambiente-alvo. O primeiro inventário do computador-alvo foi recebido em 10/11/2026 e está documentado em `docs/FASE_0_PROTOCOLO.md`. Como esse relatório foi gerado antes da ampliação do coletor, ainda falta repetir a coleta para obter a distribuição Linux e os IDs PCI/driver da Radeon.
 
 ### Atividades pendentes
 
-1. Executar o coletor no computador-alvo e definir o sistema operacional e a versão de Python oficialmente suportados.
-2. Criar amostras curtas próprias/autorizadas em PT-BR e inglês, transcrições de referência e marcações temporais revisadas manualmente.
-3. Testar Whisper em perfis/modelos candidatos e comparar WhisperX para ambos os idiomas.
-4. Avaliar normalização, streams, offsets, chunks e comportamento com números, siglas, música e fala sobreposta.
-5. Avaliar opções de tradução contextual, custo, privacidade, limites e formato estruturado.
-6. Medir qualidade, velocidade e memória; consolidar dependências e critérios antes de solicitar aprovação para a Fase 1.
+1. Reexecutar o coletor atualizado no computador-alvo para registrar distribuição, GPU/driver PCI e confirmar o runtime Python usado.
+2. Instalar/validar FFmpeg e ffprobe no ambiente do usuário; ainda não foram encontrados no inventário enviado.
+3. Criar amostras curtas próprias/autorizadas em PT-BR e inglês, transcrições de referência e marcações temporais revisadas manualmente.
+4. Resolver dependências em ambiente virtual isolado e testar Whisper em CPU, começando por `tiny` e `base`; medir também `small` se os limites de memória permitirem.
+5. Testar WhisperX para ambos os idiomas após resolver a matriz de versões; sem adotar ROCm como requisito para o Ryzen 3 2200G.
+6. Avaliar normalização, streams, offsets, chunks e comportamento com números, siglas, música e fala sobreposta.
+7. Avaliar opções de tradução contextual, custo, privacidade, limites e formato estruturado.
+8. Medir qualidade, velocidade e memória; consolidar dependências e critérios antes de solicitar aprovação para a Fase 1.
 
 O protocolo executável e os comandos estão em [docs/FASE_0_PROTOCOLO.md](FASE_0_PROTOCOLO.md).
 
@@ -188,7 +191,7 @@ O protocolo executável e os comandos estão em [docs/FASE_0_PROTOCOLO.md](FASE_
 | Data | Escopo | Resultado | Evidência |
 |---|---|---|---|
 | 09/11/2026 | Inspeção da árvore e documentação inicial | Plano e estado preparados; ainda não havia testes de remodelagem | Verificação da baseline no GitHub |
-| 10/11/2026 | Coletor da Fase 0 | `compileall`, 5 testes `unittest`, CLI e JSON smoke test aprovados; sem benchmark de modelos | Branch `phase-0/technical-inventory` |
+| 10/11/2026 | Coletor da Fase 0 e CI | `compileall`, 7 testes `unittest`, CLI e JSON smoke test aprovados no workflow `Phase 0 quality`; inventário do computador-alvo recebido; sem benchmark de modelos | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
 
 **Nenhum teste funcional da nova arquitetura foi executado até esta atualização.** Não há ainda evidência de homologação do SRT, WhisperX, tradução, cancelamento ou formatos além dos fluxos atuais da baseline.
 
@@ -216,7 +219,9 @@ Quando testes forem executados, registrar:
 | R-08 | Serviço externo de tradução implica custo e transmissão de texto | Escolher provedor conscientemente e documentar dados enviados |
 | R-09 | Formatos e codecs variam por instalação de FFmpeg | Inspecionar streams e manter matriz de formatos homologados |
 | R-10 | Arquivo LICENSE não estava presente na baseline inspecionada | Recuperar/restaurar aviso MIT apropriado e validar dependências/licenças antes de distribuição |
-| R-11 | Sistema operacional e versão de Python do equipamento-alvo ainda não estão definidos; versões recentes de WhisperX possuem requisitos de runtime/PyTorch diferentes da baseline | Coletar inventário real; resolver dependências em ambiente virtual isolado; não alterar `requirements.txt` por tentativa |
+| R-11 | Distribuição Linux e driver gráfico do equipamento-alvo ainda não foram confirmados; WhisperX/PyTorch precisam de resolução de versões específica | Reexecutar o coletor ampliado; resolver dependências em ambiente virtual isolado; não alterar `requirements.txt` por tentativa |
+| R-12 | Ryzen 3 2200G com Radeon Vega não aparece como APU oficialmente suportada na matriz Linux ROCm 7.2.1 consultada | Planejar homologação em CPU; não depender de ROCm; reavaliar somente se surgir evidência oficial/compatível |
+| R-13 | FFmpeg/ffprobe não foram encontrados no computador-alvo | Instalar por canal do sistema operacional após identificar a distribuição; verificar `ffmpeg -version` e `ffprobe -version` antes das POCs de mídia |
 
 ## 9. Regras de atualização deste documento
 
@@ -239,4 +244,4 @@ Não registrar como concluído somente porque o código foi escrito ou porque um
 | Data | Atualização |
 |---|---|
 | 09/11/2026 | Criados o plano mestre de remodelagem e o documento vivo de estado inicial. README conectado à documentação; estrutura proposta revisada. Nenhuma fase de implementação funcional iniciada. |
-| 10/11/2026 | Iniciada a Fase 0 em branch separada: coletor de ambiente, cinco testes automatizados, protocolo experimental e README atualizados. Nenhuma dependência experimental promovida; POC no equipamento-alvo pendente. |
+| 10/11/2026 | Iniciada a Fase 0 em branch separada: coletor de ambiente, sete testes automatizados, protocolo experimental, CI e README. Inventário do computador-alvo recebido (Ryzen 3 2200G, 4 CPUs lógicas, 12,59 GiB RAM, Python 3.12.3; FFmpeg/PyTorch ausentes no runtime). CPU definida como caminho inicial; nenhuma dependência experimental promovida. |
