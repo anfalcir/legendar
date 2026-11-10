@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "phase-1/**"
+      - "phase-2/**"
   pull_request:
     branches:
       - main
@@ -17,6 +18,7 @@ on:
       - "pyproject.toml"
       - "uv.lock"
       - "docs/FASE_1_PLANO.md"
+      - "docs/FASE_2_PLANO.md"
       - "docs/ESTADO_ATUAL.md"
       - "docs/HANDOFF_FASE_1.md"
       - "docs/LEGACY_BASELINE.md"
