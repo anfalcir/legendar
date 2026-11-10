@@ -34,20 +34,20 @@ class DownloadTranscribeWorker(QThread):
         self.url = url
         self.output_dir = output_dir
         self.filename = filename
-        
+
     def log(self, message):
         self.log_signal.emit(message)
 
     def run(self):
         try:
             filename = self.filename or "transcription"
-            
+
             if not os.path.exists(CACHE_DIR):
                 os.makedirs(CACHE_DIR)
-            
+
             self.log("Processando o seu vídeo para gerar a legenda...")
             time.sleep(3)
-            
+
             if os.path.exists(CACHE_DIR):
                 shutil.rmtree(CACHE_DIR)
                 os.makedirs(CACHE_DIR)
@@ -56,7 +56,8 @@ class DownloadTranscribeWorker(QThread):
             counter_audio = 1
             audio_path = f"{audio_base}.mp3"
             while os.path.exists(f"{audio_base}.mp3"):
-                audio_base = f"{os.path.join(CACHE_DIR, "temp_audio")}_{counter_audio}"
+                audio_base = os.path.join(CACHE_DIR, f"temp_audio_{counter_audio}")
+                audio_path = f"{audio_base}.mp3"
                 counter_audio += 1
 
             transcription_path = unique_transcription_path(
@@ -69,7 +70,7 @@ class DownloadTranscribeWorker(QThread):
             self.log("Finalizando a geração da legenda e salvando o arquivo...")
             transcribe_and_save_audio_youtube(audio_path, transcription_path)
             time.sleep(2)
-            
+
             self.log("Transcrição realizada sem erros!")
             if os.path.exists(audio_path):
                 os.remove(audio_path)
