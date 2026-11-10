@@ -6,6 +6,7 @@ estrutural e determinística; a inspeção real pertence à infraestrutura.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -76,8 +77,12 @@ class AudioStreamInfo:
     start_time_seconds: float = 0.0
     language: str | None = None
     title: str | None = None
+    is_default: bool = False
+    offset_source: str = "assumed_zero_missing_source_timestamp"
 
     def __post_init__(self) -> None:
+        if not math.isfinite(self.start_time_seconds):
+            raise UnsupportedMediaError("Offset da faixa de áudio não é finito.")
         if self.index < 0:
             raise UnsupportedMediaError("Índice da faixa de áudio inválido.")
         if self.channels < 1:
@@ -112,7 +117,9 @@ class MediaInfo:
     video_streams_count: int = 0
 
     def __post_init__(self) -> None:
-        if self.duration_seconds is not None and self.duration_seconds <= 0:
+        if self.duration_seconds is not None and (
+            not math.isfinite(self.duration_seconds) or self.duration_seconds <= 0
+        ):
             raise UnsupportedMediaError("Duração de mídia inválida.")
         for stream in self.audio_streams:
             duration = self.duration_seconds
@@ -139,7 +146,10 @@ class MediaInfo:
     def default_stream(self) -> AudioStreamInfo:
         if not self.audio_streams:
             raise UnsupportedMediaError("A mídia não possui faixa de áudio.")
-        return self.audio_streams[0]
+        return next(
+            (stream for stream in self.audio_streams if stream.is_default),
+            self.audio_streams[0],
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,7 +170,9 @@ class AudioAsset:
     def __post_init__(self) -> None:
         if not self.path:
             raise InvalidInputError("Áudio normalizado sem caminho.")
-        if self.duration_seconds <= 0:
+        if not math.isfinite(self.duration_seconds) or self.duration_seconds <= 0:
             raise InvalidInputError("Áudio normalizado com duração inválida.")
+        if not math.isfinite(self.timeline_start_seconds):
+            raise InvalidInputError("Offset da linha do tempo não é finito.")
         if self.sample_rate_hz < 1 or self.channels < 1:
             raise InvalidInputError("Formato do áudio normalizado inválido.")
