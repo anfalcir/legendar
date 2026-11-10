@@ -284,9 +284,7 @@ class MainWindow(QMainWindow):
         grid.addWidget(self.target_combo, 1, 1)
         layout.addLayout(grid)
 
-        self.translate_check = QCheckBox(
-            "Traduzir a fala para o idioma final", panel
-        )
+        self.translate_check = QCheckBox("Traduzir a fala para o idioma final", panel)
         self.translate_check.setObjectName("translateCheck")
         self.translate_check.setEnabled(self._deps.translate_available)
         if not self._deps.translate_available:
@@ -497,7 +495,9 @@ class MainWindow(QMainWindow):
 
     def _target_language(self) -> Language:
         value = self.target_combo.currentData()
-        return Language(value) if value is not None else self._preferences.target_language
+        return (
+            Language(value) if value is not None else self._preferences.target_language
+        )
 
     def _open_preferences(self) -> None:
         if self.is_running:
@@ -737,9 +737,7 @@ class MainWindow(QMainWindow):
         if isinstance(event, JobFailed):
             self.statusBar().showMessage("O trabalho terminou com erro.", 8000)
         elif isinstance(event, JobCompleted):
-            self.statusBar().showMessage(
-                f"Legenda salva em {event.output_path}", 10000
-            )
+            self.statusBar().showMessage(f"Legenda salva em {event.output_path}", 10000)
 
     @Slot()
     def _on_job_finished(self) -> None:
@@ -802,9 +800,7 @@ class MainWindow(QMainWindow):
             self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(snapshot.progress_percent)
             if snapshot.progress_known:
-                self.progress_meta.setText(
-                    f"{snapshot.progress_percent}% concluído"
-                )
+                self.progress_meta.setText(f"{snapshot.progress_percent}% concluído")
             elif snapshot.is_finished:
                 self.progress_meta.setText("Trabalho encerrado")
             else:
