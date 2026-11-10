@@ -225,7 +225,7 @@ def test_cancel_stops_a_cooperative_pipeline(qtbot, tmp_path, media) -> None:
             self.started = threading.Event()
             self.release = threading.Event()
 
-        def transcribe(self, audio, *, language=None, progress=None):
+        def transcribe(self, audio, *, language=None, progress=None, token=None):
             self.started.set()
             self.release.wait(timeout=5)
             return make_transcript(language=Language.PORTUGUESE)
