@@ -8,10 +8,16 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QSettings, Qt
+from PySide6.QtWidgets import QMessageBox, QScrollArea
 
 from legendar.application.pipeline.serial_pipeline import PipelinePorts, SerialPipeline
 from legendar.domain.errors.catalog import MediaToolError
-from legendar.domain.events.job_events import JobFailed, ProgressReported, StateChanged
+from legendar.domain.events.job_events import (
+    JobFailed,
+    LogRecorded,
+    ProgressReported,
+    StateChanged,
+)
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
@@ -183,9 +189,16 @@ def test_cancel_declined_keeps_the_job_running(qtbot, tmp_path, media) -> None:
 
     assert window.is_running
     assert window.cancel_button.isEnabled()
+    assert not window.file_edit.isEnabled()
+    assert not window.output_edit.isEnabled()
+    assert not window.source_combo.isEnabled()
+    assert not window.preferences_button.isEnabled()
     slow.release.set()
     qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
     assert window.view_model.snapshot.state is JobState.COMPLETED
+    assert window.file_edit.isEnabled()
+    assert window.output_edit.isEnabled()
+    assert window.preferences_button.isEnabled()
 
 
 def test_cancel_rejection_is_reported_when_pipeline_has_entered_publication(
@@ -293,6 +306,93 @@ def test_keyboard_tab_order_and_accessible_names_are_explicit(qtbot, tmp_path) -
     qtbot.waitUntil(window.file_edit.hasFocus)
     qtbot.keyClick(window.file_edit, Qt.Key.Key_Tab)
     qtbot.waitUntil(window.browse_button.hasFocus)
+
+
+
+def test_destructive_prompts_use_no_as_the_default_choice(
+    qtbot, tmp_path, monkeypatch
+) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    calls = {}
+
+    def warning(*args):
+        calls["overwrite"] = args
+        return QMessageBox.StandardButton.No
+
+    def question(*args):
+        calls["cancel"] = args
+        return QMessageBox.StandardButton.No
+
+    monkeypatch.setattr(QMessageBox, "warning", warning)
+    monkeypatch.setattr(QMessageBox, "question", question)
+
+    assert not window._confirm_overwrite(tmp_path / "saida.srt")
+    assert not window._confirm_cancel()
+
+    assert calls["overwrite"][-1] == QMessageBox.StandardButton.No
+    assert calls["cancel"][-1] == QMessageBox.StandardButton.No
+
+
+def test_activity_panel_can_be_collapsed_and_expanded(qtbot, tmp_path) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+
+    assert window.log_view.isVisible()
+    qtbot.mouseClick(window.log_toggle, Qt.MouseButton.LeftButton)
+    assert not window.log_view.isVisible()
+    assert window._preferences.log_expanded is False
+
+    qtbot.mouseClick(window.log_toggle, Qt.MouseButton.LeftButton)
+    assert window.log_view.isVisible()
+    assert window._preferences.log_expanded is True
+
+
+def test_log_scroll_follows_only_when_the_user_is_at_the_bottom(
+    qtbot, tmp_path
+) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    for sequence in range(1, 45):
+        window.view_model.apply(
+            LogRecorded("job-1", sequence, message=f"atividade {sequence}")
+        )
+    window._render(window.view_model.snapshot)
+
+    scrollbar = window.log_view.verticalScrollBar()
+    assert scrollbar.maximum() > 0
+
+    scrollbar.setValue(0)
+    snapshot = window.view_model.apply(
+        LogRecorded("job-1", 45, message="nova atividade enquanto lê o histórico")
+    )
+    window._render(snapshot)
+    assert scrollbar.value() == 0
+
+    scrollbar.setValue(scrollbar.maximum())
+    snapshot = window.view_model.apply(
+        LogRecorded("job-1", 46, message="atividade mais recente")
+    )
+    window._render(snapshot)
+    assert scrollbar.value() == scrollbar.maximum()
+
+
+def test_narrow_window_keeps_content_in_a_vertical_scroll_area(
+    qtbot, tmp_path
+) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    window.resize(680, 620)
+    qtbot.wait(20)
+
+    scroll = window.findChild(QScrollArea, "mainScrollArea")
+    assert scroll is not None
+    assert scroll.widgetResizable()
+    assert (
+        scroll.horizontalScrollBarPolicy()
+        == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    )
+    assert (
+        scroll.verticalScrollBarPolicy()
+        == Qt.ScrollBarPolicy.ScrollBarAsNeeded
+    )
+    assert window.width() >= window.minimumWidth()
 
 
 def test_missing_file_is_reported_without_starting(qtbot, tmp_path) -> None:
