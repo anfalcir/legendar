@@ -107,7 +107,7 @@ def test_legacy_transcription_prepends_bundled_ffmpeg_only_once(
     module_file = project / "core" / "transcription.py"
     module_file.parent.mkdir()
     monkeypatch.setattr(legacy_modules.transcription, "__file__", str(module_file))
-    monkeypatch.setenv("PATH", os.pathsep.join(("/usr/bin", str(bundled_ffmpeg))))
+    monkeypatch.setenv("PATH", "/usr/bin")
 
     class FakeModel:
         def transcribe(self, _audio_path: str) -> dict[str, str]:
@@ -116,6 +116,9 @@ def test_legacy_transcription_prepends_bundled_ffmpeg_only_once(
     legacy_modules.whisper.load_model = Mock(return_value=FakeModel())
     output_path = tmp_path / "saida.txt"
 
+    legacy_modules.transcription.transcribe_and_save_audio(
+        tmp_path / "entrada.wav", output_path
+    )
     legacy_modules.transcription.transcribe_and_save_audio(
         tmp_path / "entrada.wav", output_path
     )
