@@ -20,7 +20,7 @@ def validate(project_path: Path, lock_path: Path) -> list[str]:
     extras = project_config.get("optional-dependencies", {})
     packages: list[dict[str, Any]] = lock.get("package", [])
 
-    if lock.get("requires-python") != project_config.get("requires-python"):
+    if str(lock.get("requires-python", "")).replace(" ", "") != str(project_config.get("requires-python", "")).replace(" ", ""):
         failures.append("uv.lock requires-python does not match pyproject.toml")
 
     whisperx = [item for item in packages if item.get("name") == "whisperx"]
