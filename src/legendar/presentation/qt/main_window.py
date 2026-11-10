@@ -40,6 +40,7 @@ from legendar.domain.errors.base import DomainError
 from legendar.domain.errors.catalog import InvalidInputError
 from legendar.domain.events.job_events import JobCompleted, JobEvent, JobFailed
 from legendar.domain.value_objects.language import Language
+from legendar.domain.state.machine import JobState
 from legendar.presentation.qt.dialogs import (
     JobConfirmationDialog,
     PreferencesDialog,
@@ -459,7 +460,7 @@ class MainWindow(QMainWindow):
     def _suggest_output(self, source_path: Path) -> None:
         if self._output_touched:
             return
-        self.output_edit.setText(self._default_output_path(source_path.stem).as_posix())
+        self.output_edit.setText(str(self._default_output_path(source_path.stem)))
 
     def _on_output_edited(self, _text: str) -> None:
         self._output_touched = True
@@ -662,6 +663,7 @@ class MainWindow(QMainWindow):
             self._render(self._view_model.snapshot)
             return
 
+        context: JobContext | None = None
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             context = self._deps.workspace_factory.create(
@@ -674,6 +676,8 @@ class MainWindow(QMainWindow):
             worker = JobWorker(self._deps.pipeline_factory(), request, context)
         except (DomainError, OSError, ValueError, RuntimeError) as exc:
             self._starting = False
+            if context is not None:
+                self._discard_workspace(context)
             message = exc.message if isinstance(exc, DomainError) else str(exc)
             self._render(
                 self._view_model.report_error(
@@ -683,6 +687,8 @@ class MainWindow(QMainWindow):
             return
         except Exception as exc:  # noqa: BLE001 - fronteira da apresentação
             self._starting = False
+            if context is not None:
+                self._discard_workspace(context)
             self._render(
                 self._view_model.report_error(
                     f"Não foi possível preparar o trabalho: {exc}"
@@ -715,6 +721,7 @@ class MainWindow(QMainWindow):
         except RuntimeError as exc:
             self._thread = None
             self._worker = None
+            self._context = None
             self._starting = False
             self._discard_workspace(context)
             self._render(self._view_model.report_error(str(exc)))
@@ -887,22 +894,34 @@ class MainWindow(QMainWindow):
             super().closeEvent(event)
             return
 
-        if not self._view_model.snapshot.can_cancel:
+        current_state = self._view_model.snapshot.state
+        if not self._cancel_pending and current_state is JobState.PUBLISHING:
             QMessageBox.information(
                 self,
                 "Trabalho em etapa final",
-                "A etapa atual não pode ser cancelada com segurança. "
-                "Aguarde sua conclusão para fechar a janela.",
+                "A publicação está em andamento e não pode ser interrompida. "
+                "Aguarde a conclusão para fechar a janela.",
             )
             event.ignore()
             return
 
-        if not self._confirm_cancel(closing=True):
-            event.ignore()
-            return
-        if self._worker is not None and not self._cancel_pending:
-            self._cancel_pending = True
-            self._worker.request_cancel()
+        if not self._cancel_pending and not current_state.is_terminal:
+            # IDLE também é cancelável aqui: a thread pode ter iniciado antes
+            # de o primeiro evento chegar à thread visual.
+            if current_state is not JobState.IDLE and not current_state.is_cancellable:
+                QMessageBox.information(
+                    self,
+                    "Trabalho em andamento",
+                    "Aguarde a confirmação do estado atual antes de fechar.",
+                )
+                event.ignore()
+                return
+            if not self._confirm_cancel(closing=True):
+                event.ignore()
+                return
+            if self._worker is not None:
+                self._cancel_pending = True
+                self._worker.request_cancel()
 
         if self._thread.wait(_CLOSE_WAIT_MS):
             context, self._context = self._context, None
