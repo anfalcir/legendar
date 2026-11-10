@@ -618,7 +618,7 @@ Versões, licenças, wheels, modelos, requisitos de runtime e combinações de b
 | Fase | Nome | Entregáveis principais | Critério de saída |
 |---|---|---|---|
 | 0 | Definições e prova técnica | Inventário, governança/lock, perfis CPU/CUDA, prova de mídia/offset, POC smoke PT-BR/EN e decisões de tradução/modelos | Direção técnica e contratos suficientes para iniciar Fase 1; limitações e validações humanas encaminhadas explicitamente às Fases 4, 5, 6 e 8 |
-| 1 | Reestruturação arquitetural | Camadas, modelos de domínio, pipeline, estados, configurações, tratamento de erros, testes e CI | **Concluída tecnicamente:** arquitetura executável e testada; baseline legada caracterizada/preservada; CI Python 3.10–3.13 verde (196 testes por ambiente); critérios do [plano operacional da Fase 1](FASE_1_PLANO.md) aprovados |
+| 1 | Reestruturação arquitetural | Camadas, modelos de domínio, pipeline, estados, configurações, tratamento de erros, testes e CI | **Concluída e integrada à `main` pela PR #2 (squash, commit `de31ddd`):** arquitetura executável e testada; baseline legada caracterizada/preservada; CI Python 3.10–3.13 verde (196 testes por ambiente); critérios do [plano operacional da Fase 1](FASE_1_PLANO.md) aprovados |
 | 2 | Interface profissional | Janela, identidade visual, diálogos, máquina de estados, workers simulados, progresso e log | Todos os estados e proteções demonstrados sem processamento real |
 | 3 | Entrada e preparação de mídia | YouTube, áudio/vídeo local, ffprobe, FFmpeg, faixas, normalização e temporários | Fixtures e formatos candidatos processados com metadados corretos |
 | 4 | Reconhecimento Whisper | Serviço de transcrição, idioma, perfis, cache, erros e worker | Transcrição original reproduzível em PT-BR/EN |
