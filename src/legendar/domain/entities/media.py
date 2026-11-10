@@ -166,6 +166,7 @@ class AudioAsset:
     sample_format: str
     duration_seconds: float
     timeline_start_seconds: float = 0.0
+    timeline_offset_source: str = "stream.start_time"
 
     def __post_init__(self) -> None:
         if not self.path:
