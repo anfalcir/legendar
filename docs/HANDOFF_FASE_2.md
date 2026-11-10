@@ -4,8 +4,10 @@
 - **Atualização:** 10/11/2026
 - **Fase 0:** concluída e integrada à `main`
 - **Fase 1:** concluída, validada e integrada à `main` pela PR #2, commit `de31ddd`
-- **Fase 2:** implementação concluída e validada; PR #3 aguardando integração
-- **Branch de implementação:** `phase-2/professional-ui`
+- **Fase 2:** concluída, validada e integrada à `main` pela PR #3 (squash)
+- **Branch de implementação:** `phase-2/professional-ui` (integrada)
+- **PR de integração:** [#3 — Fase 2: interface profissional](https://github.com/anfalcir/legendar/pull/3), merged por squash
+- **Commit de integração na main:** `4129f0a906a04693502f298b71767605499e3f68`
 - **Base:** `main` com Fases 0 e 1 integradas
 - **CI final:** [run #42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434)
 - **Plano operacional:** [FASE_2_PLANO.md](FASE_2_PLANO.md)
@@ -66,7 +68,7 @@ O pipeline real permanece explicitamente pendente até a Fase 3. O botão princi
 
 ## 5. Próximo marco
 
-A Fase 2 está tecnicamente concluída e validada; a integração à `main` será feita pela PR #3 após revisão dos gates verdes. Não iniciar a Fase 3 sem aprovação explícita do responsável.
+A Fase 2 está concluída, validada e integrada à `main`. Não iniciar a Fase 3 sem aprovação explícita do responsável.
 
 ## 6. Documentos relacionados
 
