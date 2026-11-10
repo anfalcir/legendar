@@ -207,6 +207,9 @@ QPushButton:disabled {{
     color: {colors["disabled"]};
     border-color: {colors["border"]};
 }}
+QPushButton:focus, QToolButton:focus, QCheckBox:focus {{
+    border: 2px solid {colors["accent"]};
+}}
 QPushButton[variant="primary"] {{
     background: {colors["accent"]};
     color: #ffffff;
