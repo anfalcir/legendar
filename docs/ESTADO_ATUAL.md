@@ -2,256 +2,174 @@
 
 - **Última atualização:** 10/11/2026
 - **Repositório:** anfalcir/legendar
-- **Branch de referência:** main
-- **Visibilidade verificada:** privada
-- **Fase atual:** Fase 0 — Definições e prova técnica (em andamento)
-- **Fonte de verdade:** este documento para progresso; PLANO_REMODELAGEM.md para escopo e critérios
+- **Branch de referência de implementação:** `phase-0/technical-inventory`
+- **Branch padrão:** `main`
+- **Fase:** Fase 0 — Definições e prova técnica, em fechamento técnico
+- **Próxima fase:** Fase 1 — Reestruturação arquitetural
+- **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), aberta e ainda Draft
+- **Documento de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
 
-> Este é um documento vivo. Atualize-o ao iniciar/concluir fases, aprovar decisões, executar testes ou identificar bloqueios. Não marque como concluído algo que não tenha evidência verificável.
+> A branch da Fase 0 está isolada da `main`. Não iniciar a Fase 1 na branch padrão até revisar e integrar a PR #1. Não interpretar uma CI enfileirada como aprovação. O repositório continua sendo a fonte de verdade dos requisitos e das dependências.
 
 ---
 
 ## 1. Resumo executivo
 
-O repositório foi limpo e o plano mestre de remodelagem foi registrado. A remodelagem funcional ainda não começou.
+A remodelagem funcional do Legendar ainda não começou. A baseline continua sendo uma pequena aplicação Python/PySide6 com fluxos antigos de transcrição via Whisper/yt-dlp e saída textual; ela não implementa ainda o pipeline SRT final, alinhamento robusto, tradução ou cancelamento arquitetural completo.
 
-A aplicação existente é uma base legada pequena em Python/PySide6, com integração básica ao Whisper, yt-dlp e FFmpeg. O comportamento atual ainda está orientado à geração de transcrições em texto, não à produção de SRT temporizado e traduzido.
+A Fase 0 estabeleceu e documentou a direção técnica: governança de dependências, perfis de runtime, coletor de ambiente, prova sintética de mídia/offset, script de POC PT-BR/EN e contrato arquitetural para a próxima fase. A documentação de passagem para a IA da IDE está em `docs/HANDOFF_FASE_1.md`.
 
-A Fase 0 foi iniciada em 10/11/2026 em uma branch isolada. A primeira entrega estabelece coleta reproduzível do ambiente e um protocolo de prova técnica. Ainda não foram executados benchmarks de Whisper/WhisperX no computador-alvo nem homologados idiomas, modelos ou dependências experimentais.
-
-**Estado do produto:** baseline preservada; Fase 0 em andamento; nenhuma fase de implementação funcional da remodelagem aprovada como concluída.
+**Estado de fechamento:** os entregáveis e decisões foram preparados na branch. A validação automatizada final do manifesto/lock e a execução do smoke benchmark de modelo estão em workflows GitHub Actions enfileirados. O lock existente deve ser regenerado após a última alteração do manifesto, porque a resolução anterior continha WhisperX 3.8.7rc1 e o grupo de avaliação antigo que dependia de `datasets` 5.2.0. Até essa regeneração e aprovação, não tratar `uv sync --locked` como validado no HEAD atual.
 
 ## 2. Situação do repositório
 
-| Item | Estado observado |
+| Item | Estado |
 |---|---|
-| Repositório | anfalcir/legendar |
-| Visibilidade | Privada, confirmada na API do GitHub em 09/11/2026 |
-| Branch padrão | main |
-| Histórico da main | Baseline e documentação preservadas; a execução da Fase 0 ocorre em branch separada |
-| Diretórios de testes | Criados para a Fase 0; testes de domínio e pipeline ainda inexistentes |
-| Diretório docs | Contém plano mestre, estado vivo, protocolo da Fase 0 e matriz/política de dependências |
-| Configuração de projeto | pyproject.toml como fonte canônica; perfis completos runtime-cpu/runtime-cu128; ROCm 7.2 bloqueado pela incompatibilidade com WhisperX estável; resolução universal aprovada na CI e artefato uv.lock candidato gerado, ainda não versionado; requirements.txt é snapshot legado transitório |
-| Licença | MIT, conforme informado pelo responsável; o arquivo LICENSE não estava presente na baseline inspecionada e precisa ser restaurado com o aviso original apropriado antes da distribuição |
-| Releases/tags | Nenhuma identificada na última inspeção |
-| CI | `.github/workflows/phase0-quality.yml` ativo; última execução da PR aprovada; 12 combinações Python 3.10–3.13 × Linux/Windows/macOS e job de resolução universal aprovados |
+| Repositório | `anfalcir/legendar` |
+| PR de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1) |
+| Branch de execução | `phase-0/technical-inventory` |
+| `main` | Mantida sem as alterações desta branch; ainda não integrada |
+| Fonte de dependências | `pyproject.toml` |
+| Lock | `uv.lock` versionado, mas a revisão mais recente ainda depende da regeneração pela CI para ficar coerente com o manifesto final |
+| Coletor | `scripts/phase0_inventory.py` |
+| POC de mídia | `scripts/phase0_media_poc.py` |
+| POC de modelos | `scripts/phase0_model_poc.py` |
+| Validador do lock | `scripts/phase0_validate_lock.py` |
+| Documentação técnica | plano mestre, estado vivo, protocolo, matriz de dependências e handoff Fase 1 |
+| CI | workflow `.github/workflows/phase0-quality.yml`; matriz determinística, validação do lock, instalação CPU/CUDA, prova de mídia e benchmark PT-BR/EN |
 
-A documentação inicial foi publicada no commit f5101b0f587fd545aadcea93e0cc3d0b96c3e5df. A revisão estrutural foi publicada em ba8a34a04be899ea22f6fe4779eab76003757769. A estrutura proposta mantém src/legendar como pacote de aplicação e deixa tests/, docs/ e resources/ na raiz do projeto. O README aponta para o plano, o estado vivo e o protocolo da Fase 0. A branch de execução atual é `phase-0/technical-inventory`.
+O PR #1 deve ser revisado e integrado antes de criar `phase-1/architecture` a partir da `main` atualizada. Não mesclar automaticamente.
 
-## 3. Baseline técnica identificada
+## 3. Baseline da aplicação antes da Fase 1
 
-### 3.1. Arquivos existentes antes da documentação
+Arquivos da baseline identificados:
 
-    .gitignore
-    README.md
-    core/
-      __init__.py
-      instagram.py
-      transcription.py
-      youtube.py
-    gui/
-      __init__.py
-      styles.py
-      ui_main.py
-      worker.py
-    main.py
-    requirements.txt
+```text
+core/
+  __init__.py
+  instagram.py
+  transcription.py
+  youtube.py
+gui/
+  __init__.py
+  styles.py
+  ui_main.py
+  worker.py
+main.py
+requirements.txt
+```
 
-### 3.2. Capacidades atuais identificadas por inspeção
+Situação funcional observada:
 
-| Área | Situação da baseline |
+| Área | Estado da baseline |
 |---|---|
-| Interface | PySide6; janela principal simples com abas YouTube e Arquivo MP4 |
+| GUI | PySide6, janela simples com fluxos YouTube e MP4 |
 | YouTube | Integração existente com yt-dlp |
-| Arquivo local | Fluxo de seleção e transcrição de MP4 |
-| Whisper | Integração existente com modelo base |
-| FFmpeg | Caminho local ffmpeg/bin ou PATH |
-| Saída | Arquivo TXT |
-| Alinhamento por palavra | Não implementado |
-| WhisperX | Não integrado |
-| VAD | Não integrado como etapa própria |
-| Tradução EN/PT-BR | Não implementada |
-| Geração SRT | Não implementada |
-| Validador SRT | Não implementado |
-| Seleção de faixa de áudio | Não implementada |
-| Progresso por etapa | Parcial e ainda não estruturado como pipeline |
-| Logs | Área de texto simples na interface |
-| Máquina de estados | Não identificada como componente explícito |
+| Arquivo local | Fluxo de seleção/transcrição de MP4 |
+| Reconhecimento | Whisper, saída textual |
+| FFmpeg | Caminho local ou PATH, ainda depende de instalação verificável |
+| Alinhamento por palavra | Não implementado na baseline |
+| WhisperX | Não integrado na baseline |
+| Tradução | Não implementada |
+| SRT | Não implementado |
+| Inspeção e seleção de áudio | Parcial/inexistente como pipeline explícito |
+| Máquina de estados | Não identificada como componente completo |
 | Cancelamento cooperativo | Não implementado de forma completa |
-| Cache isolado por job | Não implementado |
-| Testes automatizados | Baseline sem suíte; branch Fase 0 adiciona 7 testes unittest para o coletor de ambiente; CI ampliada para Python 3.10–3.13 em Linux, Windows e macOS |
-| Documentação técnica | README, plano mestre, estado vivo, protocolo da Fase 0 e matriz de dependências |
+| Temporários por job | Não implementados de forma completa |
+| Testes | Sem suíte funcional prévia; os testes atuais cobrem infraestrutura da Fase 0 |
 
-### 3.3. Pontos técnicos da baseline que exigem revisão
+Os módulos antigos devem ser caracterizados com testes antes de remoção/refatoração. Não presumir que os scripts da Fase 0 já tenham reorganizado a aplicação.
 
-- O worker de processamento contém pausas artificiais e lógica de limpeza de cache compartilhado. Isso deverá ser removido e substituído por gerenciamento isolado por job.
-- A interface utiliza atualização manual de eventos em um ponto do fluxo. A arquitetura nova deverá usar sinais/eventos sem bloquear a thread principal.
-- O processamento atual não tem uma máquina de estados completa, política consistente de cancelamento ou progresso estruturado.
-- Há uma integração de Instagram simbólica/incompleta, que não faz parte do escopo futuro e deverá ser removida durante a reorganização, depois de confirmar que nenhuma dependência funcional a utiliza.
-- A lista atual de dependências precisa ser auditada, simplificada e compatibilizada com WhisperX/alinhadores e ambiente-alvo.
-- O formato atual de saída TXT deverá deixar de ser o objetivo principal; o produto final terá SRT.
+## 4. Decisões consolidadas na Fase 0
 
-Esses itens são observações de inspeção da baseline, não evidência de falha em todos os cenários de execução. A primeira fase deverá estabelecer testes reproduzíveis antes de substituir comportamentos.
+- Repositório como fonte de verdade das dependências; máquina local como perfil de homologação.
+- `pyproject.toml` para dependências diretas e `uv.lock` para resolução exata.
+- Python declarado `>=3.10,<3.14`.
+- Perfis `runtime-cpu` e `runtime-cu128`, mutuamente exclusivos.
+- PyTorch CPU e CUDA 12.8 com índices explícitos; MPS possível via wheel PyPI macOS; ROCm 7.2 não oferecido devido à incompatibilidade atual com WhisperX estável 3.8.6.
+- WhisperX estável 3.8.6 é o candidato inicial de alinhamento; o intervalo `>=3.8.6,<3.8.7` exclui a pré-release 3.8.7rc1.
+- Whisper permanece o motor candidato de reconhecimento.
+- `yt-dlp-ejs` declarado; Deno deve ser detectado no preflight YouTube.
+- FFmpeg e ffprobe são ferramentas externas obrigatórias.
+- Normalização inicial: WAV PCM signed 16-bit, mono, 16 kHz.
+- O offset/time base original deve ser preservado separadamente do WAV; timestamp global = offset da origem + offset do chunk + timestamp local.
+- Tradução é opcional e isolada por porta/adaptador; a Fase 1 não escolhe fornecedor. A Fase 6 deverá avaliar custo, privacidade, retenção e limites.
+- Texto traduzido mantém referência temporal aos segmentos originais; não inventar timestamps por palavra para texto traduzido.
 
-## 4. Roadmap e status das fases
+Detalhes e comandos: [MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md), [FASE_0_PROTOCOLO.md](FASE_0_PROTOCOLO.md) e [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md).
+
+## 5. Inventário do computador-alvo recebido
+
+O relatório inicial, recebido em 10/11/2026, identificou:
+
+| Item | Observação |
+|---|---|
+| Python | CPython 3.12.3 |
+| Sistema | Linux x86_64, kernel 7.0.0-42-generic |
+| CPU | AMD Ryzen 3 2200G, quatro CPUs lógicas |
+| RAM | 12,59 GiB total; 7,65 GiB disponíveis no momento da coleta |
+| Disco | 218,51 GiB total; 165,60 GiB livres |
+| Gráficos | Radeon Vega integrada; sem NVIDIA detectada por `nvidia-smi` |
+| FFmpeg/ffprobe | Não encontrados no inventário enviado |
+| PyTorch/Whisper/WhisperX/PySide6 | Ausentes no interpretador consultado |
+
+O primeiro relatório antecede a ampliação do coletor que agora identifica distribuição Linux, controladores PCI e runtimes JS. Reexecutar antes da homologação das fases 3–5. O resultado de hardware não restringe o manifesto do produto e não autoriza prometer aceleração ROCm.
+
+## 6. Evidências e estado das validações
+
+| Verificação | Evidência atual | Interpretação |
+|---|---|---|
+| Coletor de ambiente | 12 combinações Python 3.10–3.13 × Linux/Windows/macOS passaram em execução anterior | Valida o coletor, não a aplicação completa |
+| Prova sintética FFmpeg/ffprobe | Workflow #65 e PR #67 passaram com teste de normalização e offset não-zero | Contrato sintético de áudio/timeline validado |
+| Lockfile histórico | Resolução anterior gerou lock, mas revelou WhisperX 3.8.7rc1 e conflito do grupo `datasets` 5.2.0 | Não usar esse lock como evidência do manifesto final |
+| Manifesto corrigido | WhisperX restringido a 3.8.6 estável; grupo de avaliação usa huggingface-hub compatível com WhisperX e remove datasets | Corrige as incompatibilidades identificadas; precisa regenerar o lock |
+| Validador do lock | `scripts/phase0_validate_lock.py` verifica WhisperX estável, yt-dlp-ejs, fontes de Torch e conflito CPU/CUDA | Pronto para CI; execução final ainda pendente |
+| Exportação CPU/CUDA | CI agora verifica ausência de pacotes NVIDIA no perfil CPU e presença no perfil CUDA | Execução final ainda pendente |
+| Instalação CPU e WhisperX PT-BR/EN | Job instala runtime CPU e executa script FLEURS tiny/int8 | A execução final do job está enfileirada; não há resultado publicado no momento deste registro |
+| Instalação/import CUDA | Job instala perfil cu128 e importa Torch/torchaudio/torchvision sem exigir GPU física | A execução final do job está enfileirada |
+| Inventário atualizado no computador-alvo | Pendente | Deve ocorrer antes de homologação de mídia/modelos |
+| Precisão temporal contra timestamps humanos | Pendente | Gate da Fase 5 |
+| Tradução com fornecedor/custo/privacidade | Decidido adiar escolha de provedor até antes da Fase 6 | Não bloqueia arquitetura |
+
+A POC FLEURS usa fala lida, corpus público CC-BY-4.0, dois idiomas e amostras pequenas. WER mede fidelidade lexical, não erro de timestamps. A medição definitiva precisa de amostras representativas e palavras anotadas manualmente.
+
+## 7. Status das fases
 
 | Fase | Status | Observação |
 |---|---|---|
-| 0 — Definições e prova técnica | **Em andamento** | Inventário inicial recebido; perfis CPU/CUDA explícitos; ROCm bloqueado por incompatibilidade upstream; resolução universal aprovada na CI e artefato candidato gerado, ainda não incorporado ao Git; FFmpeg e POCs pendentes |
-| 1 — Reestruturação arquitetural | Não iniciada | Depende da aprovação dos resultados da Fase 0 |
-| 2 — Interface profissional | Não iniciada | Começar com workers simulados para validar os estados |
-| 3 — Entrada e preparação de mídia | Não iniciada | Incluir YouTube, formatos locais, streams e offsets |
-| 4 — Reconhecimento Whisper | Não iniciada | Manter idioma original |
-| 5 — Alinhamento temporal | Não iniciada | WhisperX candidato principal; validar PT-BR e EN |
-| 6 — Tradução, segmentação e SRT | Não iniciada | Definir provedor de tradução e regras de vínculo temporal |
-| 7 — Integração de ponta a ponta | Não iniciada | Progresso real, cancelamento e recuperação |
-| 8 — Testes e homologação | Não iniciada | Métricas temporais e testes E2E |
-| 9 — Documentação e finalização | Em preparação | Plano mestre e estado vivo registrados; documentação final ainda dependerá da implementação |
+| 0 — Definições e prova técnica | **Em fechamento técnico** | Decisões, scripts, testes e handoff preparados; sincronização final do lock e jobs de instalação/POC ainda aguardam execução CI |
+| 1 — Reestruturação arquitetural | Não iniciada | Handoff pronto; iniciar após integração da PR #1 e conclusão dos checks finais |
+| 2 — Interface profissional | Não iniciada | Workers simulados e máquina de estados da GUI |
+| 3 — Entrada e preparação de mídia | Não iniciada | Homologar formatos, streams, offsets e temporários |
+| 4 — Reconhecimento Whisper | Não iniciada | Comparação PT-BR/EN e desempenho no computador-alvo |
+| 5 — Alinhamento temporal | Não iniciada | Referência humana, mediana/P95, cobertura e anomalias |
+| 6 — Tradução, segmentação e SRT | Não iniciada | Escolha de fornecedor antes da implementação da tradução |
+| 7 — Integração ponta a ponta | Não iniciada | Conectar GUI ao pipeline real |
+| 8 — Testes e homologação | Não iniciada | Homologação nos ambientes declarados suportados |
+| 9 — Documentação e finalização | Em preparação | Documentação inicial e handoff registrados |
 
-**Regra:** status de fase só poderá mudar para concluída quando os critérios de saída do plano mestre tiverem sido verificados. A documentação inicial não significa que a Fase 9 esteja concluída.
+## 8. Pendências encaminhadas às fases corretas
 
-## 5. Decisões já estabelecidas
+1. **Fechamento operacional da Fase 0:** aguardar workflow final atualizar `uv.lock`, confirmar `scripts/phase0_validate_lock.py`, exportação CPU/CUDA, instalação/importação dos dois perfis, prova FFmpeg e relatório da POC FLEURS. Se a fila do GitHub continuar sem execução, rodar `uv lock` com a versão de uv fixada no workflow, revisar e commitar o lock antes de instalar.
+2. **Antes da Fase 3:** repetir inventário atualizado no computador-alvo e instalar/verificar FFmpeg/ffprobe.
+3. **Fase 4:** comparar modelos Whisper com corpus PT-BR/EN representativo; registrar WER/CER, duração, memória e RTF.
+4. **Fase 5:** anotar manualmente início/fim de palavras e medir erro mediano/P95, cobertura e falhas; não homologar sincronização só por WER.
+5. **Antes da Fase 6:** escolher provedor e aprovar custo, privacidade, retenção, limites e comportamento de falha.
+6. **Fase 8:** testar aplicações e fluxos completos nos sistemas/backends declarados como suportados.
 
-### Confirmadas como direção do produto
+## 9. Próxima ação objetiva
 
-- Aplicação desktop de uso pessoal.
-- Repositório privado.
-- PySide6 permanece como framework de interface, salvo evidência técnica contrária.
-- Whisper permanece como motor central de reconhecimento de fala.
-- Fontes: URL do YouTube e arquivo local de áudio/vídeo.
-- Saída principal: SRT.
-- Idiomas finais: inglês e português brasileiro.
-- Idioma de origem detectado automaticamente, com correção manual.
-- Interface com confirmação, bloqueio de controles, cancelamento controlado, progresso honesto e log recolhível.
-- Escopo enxuto; sem editor de vídeo, banco de dados de projetos, nuvem ou múltiplos jobs simultâneos na primeira versão.
+Concluir a CI final e regeneração do lock na branch `phase-0/technical-inventory`; então revisar e integrar a PR #1. A IA da IDE deverá iniciar a Fase 1 a partir da `main` atualizada, criando `phase-1/architecture`, e seguir [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md).
 
-### Recomendações técnicas ainda sujeitas à prova/decisão
+---
 
-- WhisperX como primeiro candidato a forced alignment.
-- stable-ts permanece apenas como referência comparativa condicionada a benefício mensurável; o repositório upstream foi arquivado em 30/05/2026.
-- VAD para apoiar delimitação de fala e tratamento de silêncios.
-- Serviço de tradução contextual único, encapsulado por interface.
-- WAV PCM mono 16 kHz como formato interno inicial a validar.
-- QSettings para preferências simples.
-- Diretório temporário por job e publicação atômica de SRT.
-- CPU como caminho de compatibilidade quando suportado; CUDA, ROCm e MPS como perfis opcionais e independentes, sujeitos à homologação.
-- pytest, pytest-qt, pytest-cov e Ruff como conjunto candidato de qualidade.
-
-## 6. Fase 0 — definições e prova técnica (em andamento)
-
-### Objetivo
-
-Reduzir os maiores riscos técnicos antes de estruturar a aplicação nova: qualidade de alinhamento, suporte de idioma, compatibilidade das dependências do produto em diferentes ambientes, custo/privacidade da tradução e desempenho em perfis de hardware representativos.
-
-**Diretriz de arquitetura de dependências:** o repositório é a fonte de verdade dos requisitos de software. O equipamento atual é um perfil de homologação; não define sozinho o conjunto de dependências nem limita os sistemas e backends que o produto poderá suportar. A seleção de wheels PyTorch faz parte do perfil runtime; uma resolução genérica contra PyPI que introduza CUDA/NVIDIA sem seleção explícita foi descartada.
-
-### Entregáveis iniciais implementados na branch `phase-0/technical-inventory`
-
-- `scripts/phase0_inventory.py`: coletor somente leitura, sem dependências externas, com informações de Python, distribuição Linux, CPU, RAM, armazenamento, controladores gráficos PCI em Linux, FFmpeg/ffprobe, NVIDIA e versões dos pacotes relevantes.
-- `tests/test_phase0_inventory.py`: sete testes automatizados com `unittest`, incluindo parsing de `os-release` e detecção de gráficos PCI AMD.
-- `pyproject.toml`: manifesto canônico para dependências-base e perfis completos `runtime-cpu` e `runtime-cu128`, que incluem Whisper, yt-dlp, PyTorch e WhisperX com índices PyTorch explícitos.
-- `docs/MATRIZ_DEPENDENCIAS.md`: política de governança, comandos de instalação por perfil, faixas de versão, requisitos externos e estratégia de compatibilidade.
-- `docs/FASE_0_PROTOCOLO.md`: comandos, política de privacidade, inventário recebido, histórico das resoluções experimentais, critérios dos perfis completos, incompatibilidade upstream que impede oferecer ROCm 7.2 com WhisperX estável 3.8.6, matriz experimental, métricas e critérios de saída.
-- `.github/workflows/phase0-quality.yml`: CI para Python 3.10–3.13 em Linux, Windows e macOS; 12 combinações passaram na execução mais recente da PR.
-- README atualizado para apontar para a matriz e o protocolo.
-
-### Validação realizada nesta entrega
-
-| Verificação | Resultado | Limite da evidência |
-|---|---|---|
-| `python -m compileall -q scripts tests` | Aprovado | Executado no ambiente de desenvolvimento desta entrega |
-| `python -m unittest discover -s tests -v` | 7 testes aprovados em 12 combinações de Python/SO na CI | Testes do coletor; não cobrem Whisper, alinhamento ou GUI |
-| Execução do coletor e parsing do JSON | Aprovado em 12 combinações de Python/SO | Smoke test do coletor; não equivale a instalação ou homologação do aplicativo completo |
-| Resolução universal do manifesto | `uv lock` aprovado na CI e artefato candidato gerado; inspeção estática confirma variantes CPU e cu128 com fontes separadas e dependências NVIDIA ligadas ao perfil cu128; `uv.lock` ainda não foi incorporado ao Git nem submetido a instalação real por perfil |
-
-O ambiente de desenvolvimento usado para validar o script não deve ser confundido com o ambiente-alvo. O primeiro inventário do computador-alvo foi recebido em 10/11/2026 e está documentado em `docs/FASE_0_PROTOCOLO.md`. Como esse relatório foi gerado antes da ampliação do coletor, ainda falta repetir a coleta para obter a distribuição Linux e os IDs PCI/driver da Radeon. O hardware recebido é um perfil real de desempenho e implantação; não será usado para restringir os requisitos de software do produto.
-
-### Atividades pendentes
-
-1. Reexecutar o coletor atualizado no computador-alvo para registrar distribuição, GPU/driver PCI e confirmar o runtime Python usado; esse resultado complementará o perfil de implantação, não redefinirá os requisitos do produto.
-2. Instalar/validar FFmpeg e ffprobe nos perfis de teste; ainda não foram encontrados no inventário enviado.
-3. Incorporar ao Git o `uv.lock` candidato da última execução aprovada, depois de revisar marcadores/origens CPU e cu128; adicionar instalação de verificação com `--locked` por perfil e validar instalação limpa. Reavaliar ROCm quando a compatibilidade PyTorch/WhisperX tiver versão estável compatível.
-4. Executar CI de compatibilidade para Python 3.10–3.13 e Linux/Windows/macOS nos componentes multiplataforma; a CI do coletor não vale como homologação da aplicação completa nem do stack Whisper/PyTorch.
-5. Criar amostras próprias/autorizadas em PT-BR e inglês, transcrições de referência e marcações temporais revisadas manualmente.
-6. Testar Whisper e WhisperX em perfis CPU e acelerados quando houver infraestrutura compatível; medir qualidade, tempo e memória em mais de um perfil representativo.
-7. Avaliar normalização, streams, offsets, chunks e comportamento com números, siglas, música e fala sobreposta.
-8. Avaliar opções de tradução contextual, custo, privacidade, limites e formato estruturado; consolidar decisões antes da Fase 1.
-
-O protocolo executável e os comandos estão em [docs/FASE_0_PROTOCOLO.md](FASE_0_PROTOCOLO.md).
-
-### Critério de saída da Fase 0
-
-- POC reproduzível para PT-BR e inglês.
-- Transcrição e alinhamento avaliados contra referências humanas.
-- Limitações e idiomas suportados documentados.
-- Estratégia de chunking/offset definida para mídias longas.
-- Estratégia de tradução escolhida ou decisão de adiar tradução externa justificada.
-- Dependências e ambiente compatíveis documentados.
-- Metas de sincronização confirmadas ou recalibradas com evidência.
-- Aprovação do responsável pelo projeto para iniciar a Fase 1.
-
-## 7. Registro de testes e evidências
-
-| Data | Escopo | Resultado | Evidência |
-|---|---|---|---|
-| 09/11/2026 | Inspeção da árvore e documentação inicial | Plano e estado preparados; ainda não havia testes de remodelagem | Verificação da baseline no GitHub |
-| 10/11/2026 | Coletor da Fase 0 e CI inicial | `compileall`, 7 testes `unittest`, CLI e JSON smoke test aprovados no workflow `Phase 0 quality`; inventário do computador-alvo recebido; sem benchmark de modelos | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
-| 10/11/2026 | Governança de dependências | `pyproject.toml` e matriz de dependências adicionados; `requirements.txt` classificado como snapshot legado; `uv.lock` condicionado à validação do stack e das plataformas | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
-| 10/11/2026 | Perfis PyTorch e POC integrada | Perfis completos CPU e CUDA 12.8 incluem Whisper, yt-dlp e WhisperX com variantes PyTorch explícitas. Primeira resolução PyPI descartada por incluir libs CUDA/NVIDIA implicitamente; ROCm 7.2 bloqueado pela incompatibilidade com WhisperX 3.8.6 | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
-| 10/11/2026 | Resolução universal | `uv lock` aprovado nos workflows #53 (push) e #54 (PR); artefato candidato gerado e inspecionado, ainda não commitado. A matriz do coletor passou em 12 combinações Python/SO | [workflow #53](https://github.com/anfalcir/legendar/actions/runs/42825049085) · [workflow #54](https://github.com/anfalcir/legendar/actions/runs/42825062521) |
-
-**Nenhum teste funcional da nova arquitetura foi executado até esta atualização.** Não há ainda evidência de homologação do SRT, WhisperX, tradução, cancelamento ou formatos além dos fluxos atuais da baseline.
-
-Quando testes forem executados, registrar:
-
-- Comando ou cenário.
-- Versões e ambiente.
-- Fixture utilizada.
-- Resultado observado.
-- Métrica e limite esperado.
-- Falhas e correções.
-- Link para CI ou commit, quando houver.
-
-## 8. Riscos e pendências
-
-| ID | Risco/pendência | Tratamento |
-|---|---|---|
-| R-01 | Forced alignment pode não suportar igualmente todos os idiomas | Matriz de modelos e idiomas na Fase 0 |
-| R-02 | Texto reconhecido incorretamente compromete o alinhamento | Separar qualidade textual e temporal; sinalizar inconsistências |
-| R-03 | Tradução mais longa não cabe no intervalo original | Segmentar por âncoras de fala; não distribuir tempos artificialmente |
-| R-04 | Offset e chunking podem deslocar ou duplicar legendas | Preservar time base, offset e origem global de cada chunk |
-| R-05 | Modelos grandes podem exigir recursos excessivos | Benchmark CPU/GPU, cache e perfis de execução |
-| R-06 | Dependências Whisper/PyTorch/WhisperX podem conflitar | POC em ambiente isolado e versões fixadas |
-| R-07 | Falha ou cancelamento pode deixar arquivos incompletos | Diretório por job e publicação atômica |
-| R-08 | Serviço externo de tradução implica custo e transmissão de texto | Escolher provedor conscientemente e documentar dados enviados |
-| R-09 | Formatos e codecs variam por instalação de FFmpeg | Inspecionar streams e manter matriz de formatos homologados |
-| R-10 | Arquivo LICENSE não estava presente na baseline inspecionada | Recuperar/restaurar aviso MIT apropriado e validar dependências/licenças antes de distribuição |
-| R-11 | Distribuição Linux e driver gráfico do equipamento-alvo ainda não foram confirmados; WhisperX/PyTorch precisam de resolução de versões específica | Reexecutar o coletor ampliado; resolver dependências em ambiente virtual isolado; não alterar `requirements.txt` por tentativa |
-| R-12 | Ryzen 3 2200G com Radeon Vega não aparece como APU oficialmente suportada na matriz Linux ROCm 7.2.1 consultada | Planejar homologação em CPU; não depender de ROCm; reavaliar somente se surgir evidência oficial/compatível |
-| R-13 | FFmpeg/ffprobe não foram encontrados no computador-alvo | Instalar por canal do sistema operacional após identificar a distribuição; verificar `ffmpeg -version` e `ffprobe -version` antes das POCs de mídia |
-| R-14 | Resolução PyTorch/WhisperX varia por Python, SO, arquitetura e backend; PyPI pode resolver wheels CUDA sem seleção explícita; PyTorch ROCm 7.2 disponível exige versão incompatível com WhisperX 3.8.6 | Usar índices oficiais explícitos por perfil; validar perfis em ambientes isolados; não anunciar ROCm como runtime completo até compatibilidade upstream; inspecionar o lock universal |
-| R-15 | `requirements.txt` contém um snapshot antigo, com pins transitivos e plataformas misturadas | Migrar para `pyproject.toml` + `uv.lock`; remover ou gerar exportação do snapshot somente após instalação limpa e homologação |
-
-## 9. Regras de atualização deste documento
-
-A cada avanço, atualizar:
-
-1. Data da última atualização.
-2. Fase atual e status de cada fase.
-3. Entregáveis concluídos e pendentes.
-4. Decisões aprovadas, rejeitadas ou ainda abertas.
-5. Testes executados, com evidências.
-6. Bugs, riscos e bloqueios.
-7. Próxima ação objetiva.
-
-Use os status: **Não iniciada**, **Em andamento**, **Bloqueada**, **Concluída** e **Aprovada**. Uma fase pode estar concluída tecnicamente e aguardar aprovação; nesse caso, não a marque como aprovada.
-
-Não registrar como concluído somente porque o código foi escrito ou porque um workflow iniciou. Exigir resultado verificável.
-
-## 10. Histórico de atualizações
+## Histórico de atualizações
 
 | Data | Atualização |
 |---|---|
-| 09/11/2026 | Criados o plano mestre de remodelagem e o documento vivo de estado inicial. README conectado à documentação; estrutura proposta revisada. Nenhuma fase de implementação funcional iniciada. |
-| 10/11/2026 | Iniciada a Fase 0 em branch separada: coletor de ambiente, sete testes automatizados, protocolo experimental, CI e README. Inventário do computador-alvo recebido (Ryzen 3 2200G, 4 CPUs lógicas, 12,59 GiB RAM, Python 3.12.3; FFmpeg/PyTorch ausentes no runtime). CPU é um perfil de homologação e não limita os requisitos globais do produto. |
-| 10/11/2026 | Manifesto de dependências adicionado: `pyproject.toml` é a fonte canônica de dependências diretas; `docs/MATRIZ_DEPENDENCIAS.md` define a política; lockfile pendente da validação multiplataforma e dos backends PyTorch. |
+| 09/11/2026 | Plano mestre e estado inicial registrados; remodelagem funcional ainda não iniciada |
+| 10/11/2026 | Coletor de ambiente, CI inicial, matriz de dependências e protocolo da Fase 0 introduzidos |
+| 10/11/2026 | Prova FFmpeg/ffprobe adicionada e aprovada em CI para WAV mono/16 kHz e mapeamento de offset |
+| 10/11/2026 | Identificada e corrigida seleção indevida de WhisperX 3.8.7rc1; intervalo restrito ao estável 3.8.6 |
+| 10/11/2026 | Identificado conflito de datasets 5.2.0 com huggingface-hub<1.0 do WhisperX 3.8.6; dependência removida e avaliação migrou para TSV/arquivos FLEURS |
+| 10/11/2026 | Handoff da Fase 1 criado com decisões, arquitetura, contratos, testes, limites e instruções de execução |
