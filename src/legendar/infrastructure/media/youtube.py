@@ -23,13 +23,18 @@ _ALLOWED_HOSTS = {
 
 
 def _validate_youtube_url(value: str) -> str:
-    parsed = urlsplit(value.strip())
-    host = (parsed.hostname or "").lower().rstrip(".")
-    allowed = host in _ALLOWED_HOSTS or host.endswith(".youtube.com")
-    if parsed.scheme not in {"http", "https"} or not allowed:
+    try:
+        parsed = urlsplit(value.strip())
+        host = (parsed.hostname or "").lower().rstrip(".")
+        port = parsed.port
+    except ValueError as exc:
+        raise InvalidInputError("A URL do YouTube está malformada.") from exc
+    if parsed.scheme not in {"http", "https"} or host not in _ALLOWED_HOSTS:
         raise InvalidInputError("Informe uma URL válida do YouTube.")
     if parsed.username or parsed.password:
         raise InvalidInputError("A URL do YouTube não pode conter credenciais.")
+    if port is not None and port not in {80, 443}:
+        raise InvalidInputError("A URL do YouTube usa uma porta não permitida.")
     return value.strip()
 
 
