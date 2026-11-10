@@ -195,9 +195,7 @@ def test_cancel_rejection_is_reported_when_pipeline_has_entered_publication(
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window._thread = object()
     window._view_model.apply(
-        StateChanged(
-            "job-1", 1, previous=JobState.IDLE, current=JobState.TRANSCRIBING
-        )
+        StateChanged("job-1", 1, previous=JobState.IDLE, current=JobState.TRANSCRIBING)
     )
 
     class PublishingWorker:
