@@ -332,19 +332,20 @@ A arquitetura deverá separar regras de negócio, orquestração, infraestrutura
             styles/
         config/
           settings.py
-      tests/
-        unit/
-        integration/
-        e2e/
-        fixtures/
-      docs/
-        PLANO_REMODELAGEM.md
-        ESTADO_ATUAL.md
-      resources/
-        icons/
-      README.md
-      LICENSE
-      pyproject.toml
+    tests/
+      unit/
+      integration/
+      e2e/
+      fixtures/
+    docs/
+      PLANO_REMODELAGEM.md
+      ESTADO_ATUAL.md
+    resources/
+      icons/
+    README.md
+    LICENSE
+    pyproject.toml
+    requirements.txt
 
 ### 7.1. Responsabilidades
 

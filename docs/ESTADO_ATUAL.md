@@ -30,11 +30,11 @@ A aplicação existente é uma base legada pequena em Python/PySide6, com integr
 | Diretórios de testes | Ainda não existentes na baseline |
 | Diretório docs | Criado com o plano e este documento |
 | Configuração de projeto | requirements.txt existente; pyproject.toml ainda não existe |
-| Licença | Projeto tratado pelo responsável como MIT; recuperar/restaurar aviso e arquivo LICENSE apropriado antes da distribuição |
+| Licença | MIT, conforme informado pelo responsável; o arquivo LICENSE não estava presente na baseline inspecionada e precisa ser restaurado com o aviso original apropriado antes da distribuição |
 | Releases/tags | Nenhuma identificada na última inspeção |
 | CI | Não avaliada nesta etapa |
 
-A documentação deste plano será publicada em um commit próprio após a baseline. O estado do histórico deverá ser atualizado com o hash desse commit após a publicação.
+A documentação inicial foi publicada no commit f5101b0f587fd545aadcea93e0cc3d0b96c3e5df. Esta atualização registra esse marco e corrige a representação da estrutura proposta para deixar tests/, docs/ e resources/ na raiz do projeto.
 
 ## 3. Baseline técnica identificada
 
