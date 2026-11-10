@@ -50,7 +50,9 @@ class FixedInspector:
 
 
 class FakeProcess:
-    def __init__(self, command, *, stdin=None, stdout=None, stderr, returncode=0, token=None) -> None:
+    def __init__(
+        self, command, *, stdin=None, stdout=None, stderr, returncode=0, token=None
+    ) -> None:
         self.command = command
         self.stderr = stderr
         self.returncode = None
