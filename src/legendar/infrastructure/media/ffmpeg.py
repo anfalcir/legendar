@@ -210,9 +210,7 @@ class FfmpegAudioPreparer:
             temporary.unlink(missing_ok=True)
             raise
 
-    def _run(
-        self, command: list[str], token: CancellationToken | None
-    ) -> None:
+    def _run(self, command: list[str], token: CancellationToken | None) -> None:
         with tempfile.TemporaryFile(mode="w+b") as stderr_file:
             try:
                 process = self._process_factory(
@@ -245,9 +243,7 @@ class FfmpegAudioPreparer:
                             "O FFmpeg excedeu o tempo limite ao normalizar o áudio."
                         )
                     try:
-                        process.wait(
-                            timeout=min(_POLL_INTERVAL_SECONDS, remaining)
-                        )
+                        process.wait(timeout=min(_POLL_INTERVAL_SECONDS, remaining))
                         break
                     except subprocess.TimeoutExpired:
                         continue
