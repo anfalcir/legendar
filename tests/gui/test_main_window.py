@@ -160,7 +160,7 @@ def test_translation_checkbox_is_disabled_without_translator(qtbot, tmp_path) ->
 
 def test_pipeline_failure_is_shown_and_allows_retry(qtbot, tmp_path, media) -> None:
     class BrokenInspector:
-        def inspect(self, source):
+        def inspect(self, source, *, token=None):
             raise MediaToolError("ffprobe falhou ao inspecionar a mídia.")
 
     window = _window(
