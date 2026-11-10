@@ -7,10 +7,13 @@ from pathlib import Path
 import pytest
 
 from legendar.bootstrap.app import build_ui_dependencies
-from legendar.domain.errors.catalog import ModelError
+from legendar.application.pipeline.serial_pipeline import SerialPipeline
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.config.settings import AppSettings
+from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
+from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus
+from legendar.infrastructure.media.youtube import YtDlpDownloader
 
 
 def _settings(tmp_path: Path) -> AppSettings:
@@ -20,7 +23,7 @@ def _settings(tmp_path: Path) -> AppSettings:
 def _locator(*statuses: ToolStatus):
     def locate(names: tuple[str, ...]):
         by_name = {status.name: status for status in statuses}
-        return {name: by_name[name] for name in names}
+        return {name: by_name.get(name, ToolStatus(name=name)) for name in names}
 
     return locate
 
@@ -52,19 +55,28 @@ def test_missing_tool_is_reported_without_raising(tmp_path) -> None:
 
     assert not dependencies.readiness_ok
     assert "não encontrado" in dependencies.readiness_details[0]
+    assert not dependencies.readiness_ok
 
 
-def test_pipeline_is_explicitly_pending_until_phase_three(tmp_path) -> None:
+def test_pipeline_composes_real_media_adapters_and_future_stage_placeholders(
+    tmp_path,
+) -> None:
     dependencies = build_ui_dependencies(
         _settings(tmp_path),
         tool_locator=_locator(
             ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
             ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+            ToolStatus(name="deno", path="/usr/bin/deno"),
         ),
     )
 
-    with pytest.raises(ModelError, match="Fase 3"):
-        dependencies.pipeline_factory()
+    pipeline = dependencies.pipeline_factory()
+
+    assert isinstance(pipeline, SerialPipeline)
+    assert isinstance(pipeline._ports.inspector, FfprobeInspector)
+    assert isinstance(pipeline._ports.audio_preparer, FfmpegAudioPreparer)
+    assert isinstance(pipeline._ports.downloader, YtDlpDownloader)
+    assert not dependencies.translate_available
 
 
 def test_suggested_output_stays_under_the_configured_directory(tmp_path) -> None:
