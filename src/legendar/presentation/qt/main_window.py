@@ -769,8 +769,20 @@ class MainWindow(QMainWindow):
             return
         self._cancel_pending = True
         self.cancel_button.setEnabled(False)
-        self.cancel_button.setText("Cancelando…")
-        self._worker.request_cancel()
+        accepted = self._worker.request_cancel()
+        if accepted:
+            self.cancel_button.setText("Cancelando…")
+            self.status_label.setText("Cancelando em um ponto seguro…")
+        else:
+            self.cancel_button.setText("Etapa finalizando…")
+            self.status_label.setText(
+                "O trabalho avançou para uma etapa que não pode ser cancelada. "
+                "Aguarde a publicação terminar."
+            )
+            self.statusBar().showMessage(
+                "O cancelamento não foi aceito porque a publicação já começou.",
+                8000,
+            )
 
     def _discard_workspace(self, context: JobContext) -> None:
         try:
@@ -916,8 +928,7 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
             if self._worker is not None:
-                self._cancel_pending = True
-                self._worker.request_cancel()
+                self._cancel_pending = self._worker.request_cancel()
 
         if self._thread.wait(_CLOSE_WAIT_MS):
             context, self._context = self._context, None
