@@ -14,7 +14,6 @@ from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from pytestqt.qtbot import QtBot
 
 
 _LEGACY_MODULES = (
@@ -212,7 +211,7 @@ def test_legacy_local_worker_emits_the_text_file_path(
 
 @pytest.mark.gui
 def test_legacy_window_exposes_youtube_and_mp4_tabs_and_rejects_other_formats(
-    qtbot: QtBot, legacy_modules: SimpleNamespace, tmp_path: Path
+    qtbot, legacy_modules: SimpleNamespace, tmp_path: Path
 ) -> None:
     window = legacy_modules.ui.MainWindow()
     qtbot.addWidget(window)
