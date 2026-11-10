@@ -15,7 +15,6 @@ from unittest.mock import Mock
 
 import pytest
 
-
 _LEGACY_MODULES = (
     "gui.ui_main",
     "gui.worker",
