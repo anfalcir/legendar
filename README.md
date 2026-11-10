@@ -10,6 +10,7 @@ O projeto está em fase de planejamento e remodelagem. O comportamento da versã
 - [Estado atual](docs/ESTADO_ATUAL.md) — documento vivo com o que existe, o que está em andamento, decisões, testes, riscos e próximos passos.
 - [Protocolo da Fase 0](docs/FASE_0_PROTOCOLO.md) — inventário do ambiente, experimentos, métricas, evidências e critérios para a prova técnica.
 - [Matriz de dependências](docs/MATRIZ_DEPENDENCIAS.md) — fonte canônica, faixas de versões, dependências externas, perfis de hardware e política de compatibilidade.
+- [Handoff da Fase 1](docs/HANDOFF_FASE_1.md) — decisões consolidadas, arquitetura-alvo, critérios de aceite e instruções para a IA que continuará o trabalho na IDE.
 
 ## Direção do produto
 
