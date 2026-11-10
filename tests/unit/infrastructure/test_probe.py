@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 
 from legendar.domain.entities.media import MediaKind, MediaSource
-from legendar.domain.errors.catalog import InvalidInputError, MediaToolError
+from legendar.application.job.context import CancellationTokenImpl
+from legendar.domain.errors.catalog import (
+    InvalidInputError,
+    JobCancelledError,
+    MediaToolError,
+)
 from legendar.infrastructure.media.probe import (
     FfprobeInspector,
     build_ffprobe_command,
@@ -71,6 +76,53 @@ def test_inspect_returns_domain_info(tmp_path: Path) -> None:
     assert info.has_audio
     assert runner.calls[0][0][-1] == str(media)
     assert runner.calls[0][1]["check"] is False
+
+
+
+def test_inspect_terminates_ffprobe_when_job_is_cancelled(tmp_path: Path) -> None:
+    media = tmp_path / "video.mp4"
+    media.write_bytes(b"\\x00")
+    token = CancellationTokenImpl()
+
+    class BlockingProcess:
+        def __init__(self) -> None:
+            self.returncode = None
+            self.terminated = False
+            self.terminate_calls = 0
+
+        def poll(self):
+            return self.returncode
+
+        def communicate(self, timeout=None):
+            if not self.terminated:
+                token.cancel("cancelar ffprobe")
+                raise subprocess.TimeoutExpired(cmd="ffprobe", timeout=timeout)
+            return "", ""
+
+        def terminate(self) -> None:
+            self.terminate_calls += 1
+            self.terminated = True
+            self.returncode = -15
+
+        def kill(self) -> None:
+            self.terminated = True
+            self.returncode = -9
+
+    process = BlockingProcess()
+
+    def process_factory(*_args, **_kwargs):
+        return process
+
+    inspector = FfprobeInspector(process_factory=process_factory)
+
+    with pytest.raises(JobCancelledError, match="cancelar ffprobe"):
+        inspector.inspect(
+            MediaSource(kind=MediaKind.LOCAL_FILE, location=str(media)),
+            token=token,
+        )
+
+    assert process.terminate_calls == 1
+    assert process.returncode == -15
 
 
 def test_inspect_rejects_missing_file(tmp_path: Path) -> None:
