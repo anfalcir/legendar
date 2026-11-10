@@ -15,7 +15,7 @@ from legendar.application.pipeline.serial_pipeline import (
 )
 from legendar.domain.entities.media import AudioAsset
 from legendar.domain.entities.subtitle import SubtitleTrack
-from legendar.domain.entities.transcript import AlignmentResult, Transcript
+from legendar.domain.entities.transcript import Transcript
 from legendar.domain.errors.catalog import ModelError
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
@@ -58,9 +58,7 @@ class _PendingPublisher:
         raise ModelError("A geração e publicação SRT serão concluídas nas Fases 6/7.")
 
 
-def _pipeline_factory(
-    inspector: FfprobeInspector, cache_dir
-) -> SerialPipeline:
+def _pipeline_factory(inspector: FfprobeInspector) -> SerialPipeline:
     """Monta aquisição, inspeção e normalização reais.
 
     Os motores posteriores são placeholders explícitos; o pipeline pode
@@ -113,7 +111,7 @@ def build_ui_dependencies(
         output_dir=settings.output_dir,
         cache_dir=settings.models_dir,
         workspace_factory=TempWorkspaceFactory(settings.temp_dir),
-        pipeline_factory=lambda: _pipeline_factory(inspector, settings.models_dir),
+        pipeline_factory=lambda: _pipeline_factory(inspector),
         output_path_factory=lambda stem, _language: suggest_output_path(settings, stem),
         translate_available=False,
         readiness_ok=readiness_ok,
