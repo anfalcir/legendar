@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem está em execução. A arquitetura nova está sendo construída por fases, enquanto a aplicação anterior permanece preservada como baseline até que os fluxos substitutos sejam implementados e homologados. O comportamento atual ainda não representa todo o escopo futuro descrito nos documentos.
+A remodelagem está em execução por fases. A Fase 1 — reestruturação arquitetural — foi implementada e validada com CI em Python 3.10–3.13 (196 testes por ambiente). A aplicação anterior permanece preservada como baseline até que os fluxos substitutos sejam implementados e homologados. A Fase 2 e as integrações de produto seguintes ainda não foram iniciadas.
 
 ## Documentação do projeto
 
@@ -27,7 +27,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A nova arquitetura em `src/legendar/` possui camadas, pipeline, máquina de estados, cancelamento, publicação SRT e GUI mínima, mas ainda não processa mídia real; integrações de FFmpeg/Whisper/WhisperX e tradução pertencem às fases posteriores. O andamento real está registrado em [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A nova arquitetura em `src/legendar/` possui camadas, pipeline, máquina de estados, cancelamento cooperativo, publicação SRT atômica e GUI mínima. Ela ainda não processa mídia real: integração FFmpeg/YouTube, Whisper/WhisperX, tradução e refinamento visual pertencem às fases posteriores. O andamento e as evidências estão em [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md).
 
 ## Licença
 
