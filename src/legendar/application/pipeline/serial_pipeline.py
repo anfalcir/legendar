@@ -20,6 +20,7 @@ from legendar.application.pipeline.segmentation import (
 from legendar.application.ports.protocols import (
     Aligner,
     AudioPreparer,
+    CancellationToken,
     MediaDownloader,
     MediaInspector,
     SubtitlePublisher,
@@ -227,7 +228,7 @@ class SerialPipeline:
         request: JobRequest,
         context: JobContext,
         stage: ScaledProgress,
-        token,
+        token: CancellationToken,
     ) -> str:
         if request.source.kind is MediaKind.LOCAL_FILE:
             stage.report(1.0, "Arquivo local selecionado")
@@ -247,7 +248,7 @@ class SerialPipeline:
         track: SubtitleTrack,
         enter: Callable[[JobState], ScaledProgress],
         warnings: list[str],
-        token,
+        token: CancellationToken,
     ) -> SubtitleTrack:
         if self._ports.translator is None:
             raise UnsupportedLanguageError(
