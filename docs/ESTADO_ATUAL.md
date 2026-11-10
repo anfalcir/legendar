@@ -149,9 +149,9 @@ Reduzir os maiores riscos técnicos antes de estruturar a aplicação nova: qual
 
 - `scripts/phase0_inventory.py`: coletor somente leitura, sem dependências externas, com informações de Python, distribuição Linux, CPU, RAM, armazenamento, controladores gráficos PCI em Linux, FFmpeg/ffprobe, NVIDIA e versões dos pacotes relevantes.
 - `tests/test_phase0_inventory.py`: sete testes automatizados com `unittest`, incluindo parsing de `os-release` e detecção de gráficos PCI AMD.
-- `pyproject.toml`: manifesto canônico para dependências-base, perfis completos `runtime-cpu` e `runtime-cu128`, extra `alignment-whisperx`, índices PyTorch explícitos e grupos de desenvolvimento.
+- `pyproject.toml`: manifesto canônico para dependências-base e perfis completos `runtime-cpu` e `runtime-cu128`, que incluem Whisper, yt-dlp, PyTorch e WhisperX com índices PyTorch explícitos.
 - `docs/MATRIZ_DEPENDENCIAS.md`: política de governança, comandos de instalação por perfil, faixas de versão, requisitos externos e estratégia de compatibilidade.
-- `docs/FASE_0_PROTOCOLO.md`: histórico das resoluções experimentais e incompatibilidade upstream que impede oferecer ROCm 7.2 com WhisperX estável 3.8.6.
+- `docs/FASE_0_PROTOCOLO.md`: histórico das resoluções experimentais, critérios dos perfis completos e incompatibilidade upstream que impede oferecer ROCm 7.2 com WhisperX estável 3.8.6.
 
 - `docs/FASE_0_PROTOCOLO.md`: comandos, política de privacidade, inventário recebido, análise de compatibilidade, matriz experimental, métricas e critérios de saída.
 - `.github/workflows/phase0-quality.yml`: CI ampliada para Python 3.10–3.13 em Linux, Windows e macOS (execuções desta matriz pendentes).
@@ -171,8 +171,8 @@ O ambiente de desenvolvimento usado para validar o script não deve ser confundi
 ### Atividades pendentes
 
 1. Reexecutar o coletor atualizado no computador-alvo para registrar distribuição, GPU/driver PCI e confirmar o runtime Python usado; esse resultado complementará o perfil de implantação, não redefinirá os requisitos do produto.
-2. Instalar/validar FFmpeg e ffprobe no ambiente de teste; ainda não foram encontrados no inventário enviado.
-3. Resolver os perfis `runtime-cpu` e `runtime-cu128` em ambientes isolados; inspecionar os índices/wheels selecionados e gerar `uv.lock` universal sem misturar variantes de backend. Reavaliar ROCm quando a compatibilidade PyTorch/WhisperX tiver versão estável compatível.
+2. Instalar/validar FFmpeg e ffprobe nos perfis de teste; ainda não foram encontrados no inventário enviado.
+3. Resolver os perfis completos `runtime-cpu` e `runtime-cu128` em ambientes isolados; inspecionar os índices/wheels selecionados e gerar `uv.lock` universal sem misturar variantes de backend. Reavaliar ROCm quando a compatibilidade PyTorch/WhisperX tiver versão estável compatível.
 4. Executar CI de compatibilidade para Python 3.10–3.13 e Linux/Windows/macOS nos componentes multiplataforma; a CI do coletor não vale como homologação da aplicação completa nem do stack Whisper/PyTorch.
 5. Criar amostras próprias/autorizadas em PT-BR e inglês, transcrições de referência e marcações temporais revisadas manualmente.
 6. Testar Whisper e WhisperX em perfis CPU e acelerados quando houver infraestrutura compatível; medir qualidade, tempo e memória em mais de um perfil representativo.
@@ -199,7 +199,7 @@ O protocolo executável e os comandos estão em [docs/FASE_0_PROTOCOLO.md](FASE_
 | 09/11/2026 | Inspeção da árvore e documentação inicial | Plano e estado preparados; ainda não havia testes de remodelagem | Verificação da baseline no GitHub |
 | 10/11/2026 | Coletor da Fase 0 e CI inicial | `compileall`, 7 testes `unittest`, CLI e JSON smoke test aprovados no workflow `Phase 0 quality`; inventário do computador-alvo recebido; sem benchmark de modelos | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
 | 10/11/2026 | Governança de dependências | `pyproject.toml` e matriz de dependências adicionados; `requirements.txt` classificado como snapshot legado; `uv.lock` condicionado à validação do stack e das plataformas | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
-| 10/11/2026 | Perfis PyTorch | Perfis runtime explícitos para CPU e CUDA 12.8 mantidos. Primeira resolução PyPI descartada por incluir libs CUDA/NVIDIA implicitamente; segunda resolução identificou conflito entre PyTorch ROCm 7.2 (>=2.11) e WhisperX 3.8.6 (>=2.8,<2.9), por isso ROCm não é oferecido como perfil runtime nesta versão | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
+| 10/11/2026 | Perfis PyTorch e POC integrada | Perfis completos CPU e CUDA 12.8 passaram a incluir Whisper, yt-dlp e WhisperX com variantes PyTorch explícitas. Primeira resolução PyPI descartada por incluir libs CUDA/NVIDIA implicitamente; ROCm 7.2 permanece bloqueado pela incompatibilidade com WhisperX 3.8.6 | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
 
 **Nenhum teste funcional da nova arquitetura foi executado até esta atualização.** Não há ainda evidência de homologação do SRT, WhisperX, tradução, cancelamento ou formatos além dos fluxos atuais da baseline.
 
