@@ -61,10 +61,27 @@ def _load_reference_rows(
     rows: list[dict[str, str]] = []
     seen_utterances: set[str] = set()
     with Path(tsv_path).open("r", encoding="utf-8", newline="") as handle:
-        for values in csv.reader(handle, delimiter="\t"):
-            if len(values) < 3:
+        reader = csv.DictReader(handle, delimiter="\\t")
+        required = {"id", "path"}
+        if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
+            raise RuntimeError(
+                f"Unexpected FLEURS TSV schema for {config}: {reader.fieldnames!r}"
+            )
+        text_column = (
+            "raw_transcription"
+            if "raw_transcription" in reader.fieldnames
+            else "transcription"
+        )
+        if text_column not in reader.fieldnames:
+            raise RuntimeError(
+                f"FLEURS TSV for {config} has no transcription reference column"
+            )
+        for row in reader:
+            utterance_id = str(row.get("id") or "").strip()
+            filename = str(row.get("path") or "").strip()
+            reference = str(row.get(text_column) or "").strip()
+            if not utterance_id or not filename or not reference:
                 continue
-            utterance_id, filename, raw_transcription = values[:3]
             if utterance_id in seen_utterances:
                 continue
             seen_utterances.add(utterance_id)
@@ -72,7 +89,7 @@ def _load_reference_rows(
                 {
                     "id": utterance_id,
                     "filename": Path(filename).name,
-                    "reference": raw_transcription,
+                    "reference": reference,
                 }
             )
             if len(rows) >= samples_per_language:
@@ -80,11 +97,10 @@ def _load_reference_rows(
 
     if len(rows) < samples_per_language:
         raise RuntimeError(
-            f"FLEURS {config} provided only {len(rows)} unique rows; "
+            f"FLEURS {config} provided only {len(rows)} unique valid rows; "
             f"{samples_per_language} requested"
         )
     return rows
-
 
 def _read_audio(audio_bytes: bytes) -> tuple[np.ndarray, int]:
     waveform, sample_rate = sf.read(io.BytesIO(audio_bytes), dtype="float32")
