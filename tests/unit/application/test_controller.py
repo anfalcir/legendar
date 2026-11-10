@@ -222,7 +222,7 @@ def test_controller_accepts_cancel_before_worker_thread_starts(job_context):
 
 
 def test_controller_rejects_context_replacement_before_start(job_context):
-    from legendar.application.job.context import JobContext, CancellationTokenImpl
+    from legendar.application.job.context import CancellationTokenImpl, JobContext
 
     events: list[JobEvent] = []
     controller = _build(events, context=job_context)
