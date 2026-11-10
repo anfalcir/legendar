@@ -134,7 +134,7 @@ jobs:
         run: python -m compileall -q scripts tests
 
       - name: Run unit tests
-        run: python -m unittest discover -s tests -v
+        run: python -m unittest discover -s tests -p "test_phase0_*.py" -v
 
       - name: Validate inventory command-line interface
         run: python scripts/phase0_inventory.py --help
