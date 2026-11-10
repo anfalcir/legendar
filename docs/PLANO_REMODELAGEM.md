@@ -340,6 +340,8 @@ A arquitetura deverá separar regras de negócio, orquestração, infraestrutura
     docs/
       PLANO_REMODELAGEM.md
       ESTADO_ATUAL.md
+      FASE_0_PROTOCOLO.md
+      MATRIZ_DEPENDENCIAS.md
     resources/
       icons/
     README.md
@@ -367,7 +369,7 @@ A arquitetura deverá separar regras de negócio, orquestração, infraestrutura
 - Cancelamento deverá atravessar as etapas por mecanismo cooperativo e explícito.
 - Dependências externas deverão ser encapsuladas por serviços/adaptadores.
 - O pipeline deverá receber dependências de forma testável, permitindo mocks nos testes.
-- A aplicação deverá suportar CPU e detectar aceleração disponível, sem exigir GPU.
+- O produto deverá oferecer um caminho de execução em CPU quando suportado pelos componentes e tratar aceleração por hardware como perfil opcional. O hardware de uma máquina de desenvolvimento não poderá, sozinho, determinar o conjunto de dependências, a arquitetura ou os sistemas suportados.
 - Persistência de preferências poderá utilizar QSettings; banco de dados não é necessário no escopo inicial.
 - Empacotamento deverá ser tratado depois de estabilizada a aplicação.
 
@@ -562,26 +564,51 @@ A interface deverá receber atualizações sem polling agressivo. O log deverá 
 
 ## 11. Dependências, instalação e distribuição
 
-- Consolidar dependências e versões compatíveis após a prova técnica.
-- Documentar requisitos de Python, PyTorch, Whisper, WhisperX, FFmpeg e modelos.
-- Evitar versões soltas em ambiente de produção.
-- Definir instalação reproduzível em ambiente limpo.
-- Separar dependências de execução, desenvolvimento e testes.
-- Avaliar distribuição/empacotamento somente após a homologação funcional.
-- Documentar diferenças de CPU/GPU, drivers e sistemas operacionais efetivamente suportados.
+O repositório Legendar é a fonte de verdade dos requisitos de software. O ambiente local é um perfil de execução/homologação; não define sozinho quais bibliotecas, versões ou backends o produto pode suportar.
 
-Links técnicos de referência:
+### 11.1. Governança
 
+- `pyproject.toml` é o manifesto canônico das dependências diretas, faixas de versão, extras e grupos de desenvolvimento.
+- `uv.lock` será o registro versionado da resolução exata de dependências transitivas, depois que a Fase 0 validar os perfis de plataforma e as fontes de wheels do PyTorch.
+- `requirements.txt` é um snapshot legado da baseline e não deverá continuar sendo mantido manualmente como fonte concorrente. Após a migração, será removido ou gerado a partir do lockfile para compatibilidade com instalações que usam pip.
+- Dependências diretas devem refletir contratos usados pelo próprio Legendar. Dependências transitivas devem ser resolvidas pelo gerenciador e registradas no lockfile, sem duplicação manual desnecessária.
+- Utilizar faixas de versão com limites mínimos testados e limites máximos somente quando houver justificativa de compatibilidade. Fixações exatas ficam no lockfile, não no manifesto de requisitos.
+- Separar dependências obrigatórias, extras opcionais e ferramentas de desenvolvimento/teste/build.
+- Nenhuma instalação ou atualização silenciosa de pacotes globais será feita pelo aplicativo.
+
+### 11.2. Manifesto e baseline inicial
+
+O `pyproject.toml` foi introduzido na Fase 0 com PySide6, openai-whisper e yt-dlp como dependências diretas iniciais; WhisperX está isolado no extra experimental `alignment-whisperx`. A faixa inicial de Python é `>=3.10,<3.14`, determinada pela compatibilidade declarada pelo candidato WhisperX 3.8.6, e não pela versão instalada no computador-alvo. Essa faixa será ampliada quando a interseção das dependências críticas, os wheels e a CI demonstrarem suporte adicional.
+
+A matriz, as justificativas, as dependências externas e a política de manutenção estão em [docs/MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md). A presença do manifesto não significa que todas as versões tenham sido instaladas ou homologadas. A resolução completa ainda depende da POC do stack de áudio/alinhamento e dos perfis de plataforma.
+
+### 11.3. Ferramentas externas
+
+FFmpeg e ffprobe são dependências externas obrigatórias do pipeline de mídia, não pacotes Python. O instalador/preflight deverá localizá-los, validar suas versões e informar como instalá-los. Requisitos complementares do fluxo YouTube, como runtime JavaScript compatível com a versão escolhida do yt-dlp, deverão ser identificados e tratados da mesma forma.
+
+### 11.4. Perfis de hardware e plataforma
+
+CPU deverá ser uma via de compatibilidade quando suportada pelos componentes. NVIDIA CUDA, AMD ROCm e Apple MPS serão perfis opcionais e independentes, selecionados segundo a compatibilidade oficial do PyTorch, alinhador, drivers e sistema operacional. O projeto não instalará todos os backends indiscriminadamente nem inferirá suporte apenas pela presença de uma GPU.
+
+O inventário do computador-alvo será usado para medir desempenho e validar um perfil concreto. Não poderá reduzir a matriz global do produto. Os sistemas operacionais e arquiteturas oficialmente suportados serão declarados somente depois de integração e CI comprovarem os fluxos GUI, mídia, Whisper e alinhamento.
+
+### 11.5. Reprodutibilidade e qualidade
+
+A Fase 0 deverá gerar e validar a resolução lockada em ambiente isolado, testar instalações limpas, confirmar a compatibilidade dos wheels e registrar a matriz Python/OS/arquitetura. A CI leve da Fase 0 testa o coletor; ela não representa homologação completa das dependências da aplicação. A fase de integração deverá separar testes com lockfile (reprodutibilidade) e testes de compatibilidade/atualização (faixas de versão).
+
+Referências técnicas:
+
+- Python Packaging User Guide: https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+- Dependency Groups: https://packaging.python.org/en/latest/specifications/dependency-groups/
+- uv universal resolution: https://docs.astral.sh/uv/concepts/resolution/
+- PyTorch: https://docs.pytorch.org/get-started/locally/
 - Whisper: https://github.com/openai/whisper
 - WhisperX: https://github.com/m-bain/whisperX
-- stable-ts: https://github.com/jianfch/stable-ts
 - FFmpeg: https://ffmpeg.org/documentation.html
 - yt-dlp: https://github.com/yt-dlp/yt-dlp
 - PySide6: https://doc.qt.io/qtforpython/
-- pytest-qt: https://pytest-qt.readthedocs.io/
-- pytest: https://docs.pytest.org/
 
-Essas referências são pontos de partida. Versões, licenças, compatibilidade de modelos, requisitos de hardware e disponibilidade de alinhadores deverão ser novamente conferidos na Fase 0 e fixados na implementação.
+Versões, licenças, wheels, modelos, requisitos de runtime e combinações de backend deverão ser conferidos e testados antes de serem declarados suportados.
 
 ## 12. Roadmap de execução
 
