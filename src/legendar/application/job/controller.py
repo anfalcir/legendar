@@ -54,6 +54,7 @@ class JobController:
         emit: EventSink,
         *,
         min_progress_delta: float = MIN_PROGRESS_DELTA,
+        context: JobContext | None = None,
     ) -> None:
         self._pipeline = pipeline
         self._emit = emit
@@ -61,7 +62,10 @@ class JobController:
         self._lock = threading.RLock()
         self._sequence = 0
         self._machine = StateMachine()
-        self._context: JobContext | None = None
+        # O worker pode vincular o contexto antes da thread iniciar, evitando
+        # perder um pedido de cancelamento recebido imediatamente após start().
+        self._context = context
+        self._started = False
         self._terminal_emitted = False
         self._last_progress = -1.0
         self._last_message = ""
@@ -85,20 +89,25 @@ class JobController:
         """Solicita cancelamento; retorna ``False`` se não há job ativo."""
         with self._lock:
             context = self._context
-            if (
-                context is None
-                or self._terminal_emitted
-                or not self._machine.state.is_cancellable
-            ):
+            if context is None or self._terminal_emitted:
+                return False
+            state = self._machine.state
+            # IDLE só aceita cancelamento quando o worker já vinculou um
+            # contexto, mas ainda não entrou em run(); o token será consumido
+            # na primeira fronteira segura do pipeline.
+            if state is not JobState.IDLE and not state.is_cancellable:
                 return False
             return context.token.cancel("Cancelado pelo usuário.")
 
     def run(self, request: JobRequest, context: JobContext) -> PipelineResult | None:
         """Executa o job até o fim, emitindo eventos; ``None`` se cancelado/falhou."""
         with self._lock:
-            if self._context is not None:
+            if self._started:
                 raise RuntimeError("Este JobController já foi iniciado.")
+            if self._context is not None and self._context is not context:
+                raise ValueError("JobContext difere do contexto vinculado ao controller.")
             self._context = context
+            self._started = True
             self._emit_event(
                 JobStarted(
                     job_id=context.job_id,
