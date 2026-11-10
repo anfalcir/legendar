@@ -60,10 +60,11 @@ def test_command_is_non_interactive_and_requests_json() -> None:
     assert "-show_streams" in command
     assert "-show_format" in command
     assert command[-1] == "/tmp/a.mp4"
+    assert Path(command[-1]).is_absolute()
 
 
 def test_inspect_returns_domain_info(tmp_path: Path) -> None:
-    media = tmp_path / "video.mp4"
+    media = tmp_path / "-arquivo com espaços.mp4"
     media.write_bytes(b"\x00")
     runner = RecordingRunner(_completed(stdout=json.dumps(PAYLOAD)))
 
@@ -74,7 +75,7 @@ def test_inspect_returns_domain_info(tmp_path: Path) -> None:
     assert info.container == "mp4"
     assert info.duration_seconds == 9.5
     assert info.has_audio
-    assert runner.calls[0][0][-1] == str(media)
+    assert runner.calls[0][0][-1] == str(media.resolve())
     assert runner.calls[0][1]["check"] is False
 
 

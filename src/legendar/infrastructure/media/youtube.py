@@ -69,7 +69,7 @@ class YtDlpDownloader:
     usuário.
     """
 
-    __slots__ = ("_ydl_factory", "_socket_timeout", "_retries")
+    __slots__ = ("_ydl_factory", "_socket_timeout", "_retries", "_js_runtime", "_js_runtime_path")
 
     def __init__(
         self,
@@ -77,14 +77,22 @@ class YtDlpDownloader:
         ydl_factory: YdlFactory | None = None,
         socket_timeout: float = 10.0,
         retries: int = 2,
+        js_runtime: str | None = None,
+        js_runtime_path: str | None = None,
     ) -> None:
         if socket_timeout <= 0:
             raise ValueError("O timeout de rede deve ser positivo.")
         if retries < 0:
             raise ValueError("A quantidade de tentativas não pode ser negativa.")
+        if js_runtime not in {None, "deno", "node"}:
+            raise ValueError("Runtime JavaScript do yt-dlp não suportado.")
+        if (js_runtime is None) != (js_runtime_path is None):
+            raise ValueError("Informe runtime e caminho JavaScript em conjunto.")
         self._ydl_factory = ydl_factory or _default_ydl_factory
         self._socket_timeout = socket_timeout
         self._retries = retries
+        self._js_runtime = js_runtime
+        self._js_runtime_path = js_runtime_path
 
     def fetch(
         self,
@@ -145,6 +153,12 @@ class YtDlpDownloader:
             "fragment_retries": self._retries,
             "progress_hooks": [progress_hook],
         }
+        if self._js_runtime is not None and self._js_runtime_path is not None:
+            # Node não é habilitado por padrão em todas as versões do yt-dlp.
+            # Declarar o runtime selecionado evita falso preflight positivo.
+            options["js_runtimes"] = {
+                self._js_runtime: {"path": self._js_runtime_path}
+            }
 
         try:
             ydl = self._ydl_factory(options)

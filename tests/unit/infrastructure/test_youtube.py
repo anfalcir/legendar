@@ -80,7 +80,11 @@ def test_youtube_download_is_confined_to_workspace_and_reports_measured_progress
         captured.update(options)
         return FakeYDL(options, root=tmp_path)
 
-    downloader = YtDlpDownloader(ydl_factory=factory)
+    downloader = YtDlpDownloader(
+        ydl_factory=factory,
+        js_runtime="node",
+        js_runtime_path="/usr/bin/node",
+    )
 
     path = downloader.fetch(
         _source(),
@@ -93,6 +97,7 @@ def test_youtube_download_is_confined_to_workspace_and_reports_measured_progress
     assert captured["noplaylist"] is True
     assert captured["format"] == "bestaudio/best"
     assert captured["socket_timeout"] > 0
+    assert captured["js_runtimes"] == {"node": {"path": "/usr/bin/node"}}
     assert progress.values[0][0] == pytest.approx(0.5)
     assert progress.values[-1][0] == 1.0
 
@@ -179,3 +184,9 @@ def test_youtube_downloader_rejects_output_outside_workspace(tmp_path: Path) -> 
 
     assert outside.exists()
     outside.unlink()
+
+
+
+def test_youtube_downloader_rejects_incomplete_js_runtime_configuration() -> None:
+    with pytest.raises(ValueError, match="runtime e caminho"):
+        YtDlpDownloader(js_runtime="node")

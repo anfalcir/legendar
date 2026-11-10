@@ -87,11 +87,17 @@ Um conflito identificado na prova de avaliação: `datasets>=5.2` exige `hugging
 |---|---|---|
 | FFmpeg | Ferramenta externa obrigatória | Localizar `ffmpeg` no PATH ou distribuição gerenciada pelo instalador; verificar versão/capacidades |
 | ffprobe | Ferramenta externa obrigatória | Localizar e verificar; inspeção de streams e timestamps |
-| Deno | Runtime JavaScript recomendado a detectar no fluxo YouTube | Pré-flight deve identificar e explicar ausência quando requerido pela versão do yt-dlp |
-| Node.js | Runtime alternativo a detectar conforme suporte yt-dlp | Não assumir que sua presença basta sem verificar compatibilidade |
+| Deno | Runtime JavaScript recomendado (>=2.3) a detectar no fluxo YouTube | Pré-flight deve identificar versão mínima e explicar ausência/incompatibilidade |
+| Node.js | Runtime alternativo (>=22) a detectar e configurar explicitamente no yt-dlp | Não assumir que sua presença basta sem verificar compatibilidade; não é habilitado por padrão em todas as versões do yt-dlp |
 | Modelos Whisper/alinhadores | Artefatos de runtime | Cache/download sob demanda; registrar ID/revisão, licença e local; não incluir pesos no Git |
 
 FFmpeg/ffprobe não são substituídos por pacotes Python com nomes semelhantes. O aplicativo deverá apresentar orientações para instalar ferramentas ausentes, sem alterar o sistema operacional silenciosamente.
+
+### Runtime JavaScript do YouTube (EJS)
+
+O fluxo YouTube depende do suporte JavaScript EJS do yt-dlp e não deve tratar a simples existência de um binário como compatibilidade. O preflight aceita Deno >=2.3 (preferencial) ou Node.js >=22. Quando Node é selecionado, o adaptador configura explicitamente `js_runtimes` na API Python do yt-dlp; não confiar no default, que pode habilitar somente Deno. A versão instalada é lida no preflight e a GUI informa runtime ausente, versão antiga ou selecionada.
+
+Referências oficiais: [yt-dlp EJS](https://github.com/yt-dlp/ejs) e [EJS wiki do yt-dlp](https://github.com/yt-dlp/yt-dlp-wiki/blob/master/EJS.md).
 
 ## 6. Política de hardware e backend
 

@@ -1168,6 +1168,10 @@ class MainWindow(QMainWindow):
         self._update_status_pill(snapshot, busy)
 
     def _update_status_pill(self, snapshot: JobViewSnapshot, busy: bool) -> None:
+        local_source = self._source_kind() is MediaKind.LOCAL_FILE
+        source_ready = self._deps.readiness_ok and (
+            local_source or self._deps.youtube_available
+        )
         if snapshot.state is JobState.FAILED:
             label, state = "Atenção necessária", "error"
         elif snapshot.state is JobState.COMPLETED:
@@ -1176,7 +1180,7 @@ class MainWindow(QMainWindow):
             label, state = "Cancelado", "warning"
         elif busy:
             label, state = "Em andamento", "running"
-        elif self._deps.readiness_ok:
+        elif source_ready:
             label, state = "Ambiente pronto", "success"
         else:
             label, state = "Verifique o ambiente", "warning"
@@ -1185,23 +1189,44 @@ class MainWindow(QMainWindow):
         self.status_pill.style().unpolish(self.status_pill)
         self.status_pill.style().polish(self.status_pill)
 
-        details = " ".join(self._deps.readiness_details)
-        if self._deps.readiness_ok:
+        tool_details = " ".join(self._deps.readiness_details)
+        if local_source:
+            if source_ready:
+                self.readiness_icon.setStyleSheet("color: #16845b;")
+                self.readiness_label.setText(
+                    f"FFmpeg e ffprobe verificados. {tool_details}"
+                )
+            else:
+                self.readiness_icon.setStyleSheet("color: #a96712;")
+                self.readiness_label.setText(
+                    "Entrada local indisponível até instalar FFmpeg e ffprobe. "
+                    f"{tool_details}"
+                )
+            return
+
+        online_details = " ".join(self._deps.youtube_readiness_details)
+        if source_ready:
             self.readiness_icon.setStyleSheet("color: #16845b;")
-            self.readiness_label.setText(f"FFmpeg e ffprobe verificados. {details}")
+            self.readiness_label.setText(
+                "YouTube pronto. FFmpeg e ffprobe verificados. "
+                f"{tool_details} {online_details}"
+            )
         else:
             self.readiness_icon.setStyleSheet("color: #a96712;")
-            self.readiness_label.setText(
-                f"Entrada local indisponível até instalar FFmpeg e ffprobe. {details}"
+            media_requirement = (
+                "FFmpeg e ffprobe precisam estar instalados. "
+                if not self._deps.readiness_ok
+                else ""
             )
-        if self._source_kind() is MediaKind.YOUTUBE:
-            online_details = " ".join(self._deps.youtube_readiness_details)
-            if self._deps.youtube_available:
-                self.readiness_label.setText(f"YouTube disponível. {online_details}")
-            else:
-                self.readiness_label.setText(
-                    f"YouTube indisponível neste ambiente. {online_details}"
-                )
+            youtube_requirement = (
+                ""
+                if self._deps.youtube_available
+                else "yt-dlp e um runtime EJS compatível são necessários. "
+            )
+            self.readiness_label.setText(
+                f"YouTube indisponível. {media_requirement}"
+                f"{youtube_requirement}{tool_details} {online_details}"
+            )
 
     def _set_inputs_enabled(self, enabled: bool) -> None:
         self.media_kind_combo.setEnabled(enabled)

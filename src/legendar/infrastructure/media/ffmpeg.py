@@ -107,7 +107,7 @@ class FfmpegAudioPreparer:
 
     O FFmpeg grava primeiro em um caminho único no diretório de destino.
     Somente depois de o WAV passar pela inspeção de formato o arquivo é
-    publicado com os.replace. O arquivo original nunca é modificado.
+    publicado por hard-link atômico que falha se o destino já existir. O arquivo original nunca é modificado.
     """
 
     __slots__ = ("_binary", "_inspector", "_process_factory", "_timeout")

@@ -711,3 +711,20 @@ def test_cancel_stops_a_cooperative_pipeline(qtbot, tmp_path, media) -> None:
     qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
 
     assert window.view_model.snapshot.state is JobState.CANCELLED
+
+
+
+def test_youtube_readiness_also_requires_ffmpeg_and_ffprobe(qtbot, tmp_path) -> None:
+    dependencies = replace(
+        _dependencies(tmp_path),
+        readiness_ok=False,
+        readiness_details=("ffmpeg: não encontrado", "ffprobe: não encontrado"),
+        youtube_available=True,
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("youtube"))
+    window._render(window.view_model.snapshot)
+
+    assert window.status_pill.text() == "Verifique o ambiente"
+    assert "YouTube indisponível" in window.readiness_label.text()
+    assert "FFmpeg e ffprobe precisam estar instalados" in window.readiness_label.text()

@@ -34,7 +34,7 @@ def build_ffprobe_command(binary: str, media_path: str | Path) -> list[str]:
         "json",
         "-show_format",
         "-show_streams",
-        str(media_path),
+        str(Path(media_path).expanduser().resolve()),
     ]
 
 
@@ -122,7 +122,7 @@ class FfprobeInspector:
             raise InvalidInputError(
                 "A inspeção exige um arquivo local; baixe a mídia remota antes."
             )
-        media_path = Path(source.location).expanduser()
+        media_path = Path(source.location).expanduser().resolve()
         if not media_path.is_file():
             raise InvalidInputError(f"Arquivo de mídia não encontrado: {media_path}")
 

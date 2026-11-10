@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from collections.abc import Callable, Mapping, Sequence
 
@@ -28,6 +29,56 @@ from legendar.infrastructure.media.youtube import YtDlpDownloader
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
 
 ToolLocator = Callable[[tuple[str, ...]], Mapping[str, ToolStatus]]
+_JS_RUNTIME_MINIMUMS = {"deno": (2, 3, 0), "node": (22, 0, 0)}
+
+
+def _runtime_version(status: ToolStatus) -> tuple[int, int, int] | None:
+    """Extrai a versão sem assumir que um executável encontrado é compatível."""
+    if not status.version:
+        return None
+    parts = re.findall("[0-9]+", status.version)
+    if len(parts) < 2:
+        return None
+    values = [int(part) for part in parts[:3]]
+    return tuple((values + [0, 0, 0])[:3])
+
+
+def _select_js_runtime(
+    statuses: Mapping[str, ToolStatus],
+) -> tuple[str, ToolStatus] | None:
+    """Prefere Deno >=2.3; Node >=22 é alternativa explícita."""
+    for name in ("deno", "node"):
+        status = statuses.get(name, ToolStatus(name=name))
+        version = _runtime_version(status)
+        if (
+            status.available
+            and version is not None
+            and version >= _JS_RUNTIME_MINIMUMS[name]
+        ):
+            return name, status
+    return None
+
+
+def _js_runtime_details(
+    statuses: Mapping[str, ToolStatus],
+) -> tuple[str, ...]:
+    details: list[str] = []
+    for name in ("deno", "node"):
+        status = statuses.get(name, ToolStatus(name=name))
+        minimum = _JS_RUNTIME_MINIMUMS[name]
+        minimum_label = ".".join(str(part) for part in minimum[:2])
+        version = _runtime_version(status)
+        if not status.available:
+            details.append(f"{name}: não encontrado (mínimo {minimum_label})")
+        elif version is None:
+            details.append(f"{name}: versão não identificada (mínimo {minimum_label})")
+        elif version < minimum:
+            details.append(
+                f"{status.version}: abaixo do mínimo {minimum_label}"
+            )
+        else:
+            details.append(f"{status.version}: compatível")
+    return tuple(details)
 
 
 class _PendingTranscriber:
@@ -58,7 +109,7 @@ class _PendingPublisher:
         raise ModelError("A geração e publicação SRT serão concluídas nas Fases 6/7.")
 
 
-def _pipeline_factory(inspector: FfprobeInspector) -> SerialPipeline:
+def _pipeline_factory(\n    inspector: FfprobeInspector, downloader: YtDlpDownloader\n) -> SerialPipeline:
     """Monta aquisição, inspeção e normalização reais.
 
     Os motores posteriores são placeholders explícitos; o pipeline pode
@@ -72,7 +123,7 @@ def _pipeline_factory(inspector: FfprobeInspector) -> SerialPipeline:
             transcriber=_PendingTranscriber(),
             aligner=_PendingAligner(),
             publisher=_PendingPublisher(),
-            downloader=YtDlpDownloader(),
+            downloader=downloader,
         )
     )
 
@@ -96,22 +147,29 @@ def build_ui_dependencies(
         ytdlp_installed = importlib.util.find_spec("yt_dlp") is not None
     except (ImportError, ValueError):
         ytdlp_installed = False
-    youtube_available = ytdlp_installed and (deno.available or node.available)
+    selected_runtime = _select_js_runtime(statuses)
+    youtube_available = ytdlp_installed and selected_runtime is not None
+    runtime_details = _js_runtime_details(statuses)
     youtube_details = (
         ("yt-dlp instalado" if ytdlp_installed else "yt-dlp não instalado"),
         (
-            "Runtime EJS disponível (Deno/Node)"
-            if deno.available or node.available
-            else "Runtime EJS (Deno ou Node) não encontrado"
+            f"Runtime EJS selecionado: {selected_runtime[0]} {selected_runtime[1].version}"
+            if selected_runtime is not None
+            else "Nenhum runtime EJS compatível encontrado"
         ),
+        *runtime_details,
     )
 
     inspector = FfprobeInspector()
+    downloader = YtDlpDownloader(
+        js_runtime=selected_runtime[0] if selected_runtime else None,
+        js_runtime_path=selected_runtime[1].path if selected_runtime else None,
+    )
     return UiDependencies(
         output_dir=settings.output_dir,
         cache_dir=settings.models_dir,
         workspace_factory=TempWorkspaceFactory(settings.temp_dir),
-        pipeline_factory=lambda: _pipeline_factory(inspector),
+        pipeline_factory=lambda: _pipeline_factory(inspector, downloader),
         output_path_factory=lambda stem, _language: suggest_output_path(settings, stem),
         translate_available=False,
         readiness_ok=readiness_ok,
