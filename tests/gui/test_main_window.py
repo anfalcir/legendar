@@ -11,7 +11,7 @@ from PySide6.QtCore import QSettings, Qt
 
 from legendar.application.pipeline.serial_pipeline import PipelinePorts, SerialPipeline
 from legendar.domain.errors.catalog import MediaToolError
-from legendar.domain.events.job_events import ProgressReported, StateChanged
+from legendar.domain.events.job_events import JobFailed, ProgressReported, StateChanged
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
@@ -295,6 +295,28 @@ def test_output_cannot_be_placed_inside_model_cache(qtbot, tmp_path, media) -> N
     assert not window.is_running
     assert not destination.exists()
     assert "cache de modelos" in window.view_model.snapshot.error_message
+
+
+
+def test_progress_indicator_stops_animating_after_terminal_failure(
+    qtbot, tmp_path
+) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    window._thread = object()
+    snapshot = window.view_model.apply(
+        StateChanged("job-1", 1, previous=JobState.IDLE, current=JobState.VALIDATING_INPUT)
+    )
+    window._render(snapshot)
+    assert window.progress_bar.maximum() == 0
+
+    snapshot = window.view_model.apply(
+        JobFailed("job-1", 2, message="falha de referência")
+    )
+    window._render(snapshot)
+
+    assert window.progress_bar.maximum() == 100
+    assert window.progress_bar.value() == 0
+    window._thread = None
 
 
 def test_source_language_syncs_target_when_not_translating(
