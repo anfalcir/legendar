@@ -31,7 +31,7 @@ A Fase 0 foi iniciada em 10/11/2026 em uma branch isolada. A primeira entrega es
 | Histórico da main | Baseline e documentação preservadas; a execução da Fase 0 ocorre em branch separada |
 | Diretórios de testes | Criados para a Fase 0; testes de domínio e pipeline ainda inexistentes |
 | Diretório docs | Contém plano mestre, estado vivo, protocolo da Fase 0 e matriz/política de dependências |
-| Configuração de projeto | pyproject.toml criado como fonte canônica das dependências diretas; uv.lock pendente da resolução multiplataforma; requirements.txt preservado como snapshot legado transitório |
+| Configuração de projeto | pyproject.toml como fonte canônica; perfis runtime-cpu/runtime-cu128/runtime-rocm72; uv.lock universal pendente de resolução/inspeção por perfil; requirements.txt é snapshot legado transitório |
 | Licença | MIT, conforme informado pelo responsável; o arquivo LICENSE não estava presente na baseline inspecionada e precisa ser restaurado com o aviso original apropriado antes da distribuição |
 | Releases/tags | Nenhuma identificada na última inspeção |
 | CI | Nenhum workflow encontrado na árvore verificada e nenhuma execução de Actions registrada |
@@ -97,7 +97,7 @@ Esses itens são observações de inspeção da baseline, não evidência de fal
 
 | Fase | Status | Observação |
 |---|---|---|
-| 0 — Definições e prova técnica | **Em andamento** | Inventário inicial recebido; manifesto canônico e política de dependências estabelecidos; matriz CI multiplataforma em execução; lockfile, FFmpeg e POCs pendentes |
+| 0 — Definições e prova técnica | **Em andamento** | Inventário inicial recebido; manifesto com perfis explícitos de backend; lock universal em nova validação na CI; FFmpeg e POCs pendentes |
 | 1 — Reestruturação arquitetural | Não iniciada | Depende da aprovação dos resultados da Fase 0 |
 | 2 — Interface profissional | Não iniciada | Começar com workers simulados para validar os estados |
 | 3 — Entrada e preparação de mídia | Não iniciada | Incluir YouTube, formatos locais, streams e offsets |
@@ -143,14 +143,15 @@ Esses itens são observações de inspeção da baseline, não evidência de fal
 
 Reduzir os maiores riscos técnicos antes de estruturar a aplicação nova: qualidade de alinhamento, suporte de idioma, compatibilidade das dependências do produto em diferentes ambientes, custo/privacidade da tradução e desempenho em perfis de hardware representativos.
 
-**Diretriz de arquitetura de dependências:** o repositório é a fonte de verdade dos requisitos de software. O equipamento atual é um perfil de homologação; não define sozinho o conjunto de dependências nem limita os sistemas e backends que o produto poderá suportar.
+**Diretriz de arquitetura de dependências:** o repositório é a fonte de verdade dos requisitos de software. O equipamento atual é um perfil de homologação; não define sozinho o conjunto de dependências nem limita os sistemas e backends que o produto poderá suportar. A seleção de wheels PyTorch faz parte do perfil runtime; uma resolução genérica contra PyPI que introduza CUDA/NVIDIA sem seleção explícita foi descartada.
 
 ### Entregáveis iniciais implementados na branch `phase-0/technical-inventory`
 
 - `scripts/phase0_inventory.py`: coletor somente leitura, sem dependências externas, com informações de Python, distribuição Linux, CPU, RAM, armazenamento, controladores gráficos PCI em Linux, FFmpeg/ffprobe, NVIDIA e versões dos pacotes relevantes.
 - `tests/test_phase0_inventory.py`: sete testes automatizados com `unittest`, incluindo parsing de `os-release` e detecção de gráficos PCI AMD.
-- `pyproject.toml`: manifesto canônico inicial para Python, dependências diretas, extra experimental WhisperX e grupos de desenvolvimento.
-- `docs/MATRIZ_DEPENDENCIAS.md`: política de governança, faixas de versão, requisitos externos, perfis de hardware e estratégia de compatibilidade.
+- `pyproject.toml`: manifesto canônico para dependências-base, perfis completos `runtime-cpu`, `runtime-cu128` e `runtime-rocm72`, extra `alignment-whisperx`, índices PyTorch explícitos e grupos de desenvolvimento.
+- `docs/MATRIZ_DEPENDENCIAS.md`: política de governança, comandos de instalação por perfil, faixas de versão, requisitos externos e estratégia de compatibilidade.
+- `docs/FASE_0_PROTOCOLO.md`: histórico da resolução PyPI rejeitada e protocolo para inspecionar o novo lock por perfil.
 - `docs/FASE_0_PROTOCOLO.md`: comandos, política de privacidade, inventário recebido, análise de compatibilidade, matriz experimental, métricas e critérios de saída.
 - `.github/workflows/phase0-quality.yml`: CI ampliada para Python 3.10–3.13 em Linux, Windows e macOS (execuções desta matriz pendentes).
 - README atualizado para apontar para a matriz e o protocolo.
@@ -162,7 +163,7 @@ Reduzir os maiores riscos técnicos antes de estruturar a aplicação nova: qual
 | `python -m compileall -q scripts tests` | Aprovado | Executado no ambiente de desenvolvimento desta entrega |
 | `python -m unittest discover -s tests -v` | 7 testes aprovados na CI | Testes do coletor; não cobrem Whisper, alinhamento ou GUI |
 | Execução do coletor e parsing do JSON | Aprovado na CI | Smoke test no runner Ubuntu; o inventário real do computador-alvo foi recebido separadamente |
-| Manifesto e instalação de dependências | `pyproject.toml` criado; nenhum pacote experimental instalado; `requirements.txt` mantido intacto como snapshot legado; `uv.lock` ainda pendente |
+| Manifesto e instalação de dependências | `pyproject.toml` declara perfis backend explícitos; nenhuma instalação no ambiente do usuário; primeira resolução PyPI descartada por incluir CUDA no perfil implícito; novo `uv.lock` em validação pela CI |
 
 O ambiente de desenvolvimento usado para validar o script não deve ser confundido com o ambiente-alvo. O primeiro inventário do computador-alvo foi recebido em 10/11/2026 e está documentado em `docs/FASE_0_PROTOCOLO.md`. Como esse relatório foi gerado antes da ampliação do coletor, ainda falta repetir a coleta para obter a distribuição Linux e os IDs PCI/driver da Radeon. O hardware recebido é um perfil real de desempenho e implantação; não será usado para restringir os requisitos de software do produto.
 
@@ -170,8 +171,8 @@ O ambiente de desenvolvimento usado para validar o script não deve ser confundi
 
 1. Reexecutar o coletor atualizado no computador-alvo para registrar distribuição, GPU/driver PCI e confirmar o runtime Python usado; esse resultado complementará o perfil de implantação, não redefinirá os requisitos do produto.
 2. Instalar/validar FFmpeg e ffprobe no ambiente de teste; ainda não foram encontrados no inventário enviado.
-3. Resolver o manifesto `pyproject.toml` em ambientes virtuais limpos, verificar wheels e compatibilidade do stack Whisper/PyTorch/WhisperX e gerar `uv.lock` após definir os perfis de plataforma.
-4. Executar CI de compatibilidade para Python 3.10–3.13 e Linux/Windows/macOS nos componentes multiplataforma; a CI do coletor não vale como homologação da aplicação completa.
+3. Resolver os perfis `runtime-cpu`, `runtime-cu128` e `runtime-rocm72` em ambientes isolados; inspecionar os índices/wheels selecionados e gerar `uv.lock` universal sem misturar variantes de backend.
+4. Executar CI de compatibilidade para Python 3.10–3.13 e Linux/Windows/macOS nos componentes multiplataforma; a CI do coletor não vale como homologação da aplicação completa nem do stack Whisper/PyTorch.
 5. Criar amostras próprias/autorizadas em PT-BR e inglês, transcrições de referência e marcações temporais revisadas manualmente.
 6. Testar Whisper e WhisperX em perfis CPU e acelerados quando houver infraestrutura compatível; medir qualidade, tempo e memória em mais de um perfil representativo.
 7. Avaliar normalização, streams, offsets, chunks e comportamento com números, siglas, música e fala sobreposta.
@@ -196,7 +197,8 @@ O protocolo executável e os comandos estão em [docs/FASE_0_PROTOCOLO.md](FASE_
 |---|---|---|---|
 | 09/11/2026 | Inspeção da árvore e documentação inicial | Plano e estado preparados; ainda não havia testes de remodelagem | Verificação da baseline no GitHub |
 | 10/11/2026 | Coletor da Fase 0 e CI inicial | `compileall`, 7 testes `unittest`, CLI e JSON smoke test aprovados no workflow `Phase 0 quality`; inventário do computador-alvo recebido; sem benchmark de modelos | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
-| 10/11/2026 | Governança de dependências | `pyproject.toml` e matriz de dependências adicionados; `requirements.txt` classificado como snapshot legado; criação do `uv.lock` condicionada à validação do stack e das plataformas | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
+| 10/11/2026 | Governança de dependências | `pyproject.toml` e matriz de dependências adicionados; `requirements.txt` classificado como snapshot legado; `uv.lock` condicionado à validação do stack e das plataformas | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
+| 10/11/2026 | Perfis PyTorch | Perfis runtime explícitos para CPU, CUDA 12.8 e ROCm 7.2 adicionados. Primeiro lock genérico contra PyPI descartado por resolver libs CUDA/NVIDIA implicitamente no Linux; nova resolução com índices oficiais em andamento | [PR #1](https://github.com/anfalcir/legendar/pull/1) |
 
 **Nenhum teste funcional da nova arquitetura foi executado até esta atualização.** Não há ainda evidência de homologação do SRT, WhisperX, tradução, cancelamento ou formatos além dos fluxos atuais da baseline.
 
@@ -227,7 +229,7 @@ Quando testes forem executados, registrar:
 | R-11 | Distribuição Linux e driver gráfico do equipamento-alvo ainda não foram confirmados; WhisperX/PyTorch precisam de resolução de versões específica | Reexecutar o coletor ampliado; resolver dependências em ambiente virtual isolado; não alterar `requirements.txt` por tentativa |
 | R-12 | Ryzen 3 2200G com Radeon Vega não aparece como APU oficialmente suportada na matriz Linux ROCm 7.2.1 consultada | Planejar homologação em CPU; não depender de ROCm; reavaliar somente se surgir evidência oficial/compatível |
 | R-13 | FFmpeg/ffprobe não foram encontrados no computador-alvo | Instalar por canal do sistema operacional após identificar a distribuição; verificar `ffmpeg -version` e `ffprobe -version` antes das POCs de mídia |
-| R-14 | Resolução PyTorch/WhisperX pode variar por Python, SO, arquitetura e backend de hardware | Validar o manifesto em ambientes isolados e múltiplos perfis; produzir lockfile universal/compatível sem assumir o hardware de uma única máquina |
+| R-14 | Resolução PyTorch/WhisperX pode variar por Python, SO, arquitetura e backend de hardware; PyPI pode resolver wheels CUDA sem seleção explícita de perfil | Usar índices oficiais explícitos por extra; validar perfis em ambientes isolados; inspecionar o lockfile universal e manter separação entre CPU/CUDA/ROCm |
 | R-15 | `requirements.txt` contém um snapshot antigo, com pins transitivos e plataformas misturadas | Migrar para `pyproject.toml` + `uv.lock`; remover ou gerar exportação do snapshot somente após instalação limpa e homologação |
 
 ## 9. Regras de atualização deste documento
