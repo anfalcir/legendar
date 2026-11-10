@@ -1,10 +1,10 @@
 # Estado atual do Legendar
 
-- **Última atualização:** 09/11/2026
+- **Última atualização:** 10/11/2026
 - **Repositório:** anfalcir/legendar
 - **Branch de referência:** main
 - **Visibilidade verificada:** privada
-- **Fase atual:** preparação — Fase 0 ainda não iniciada
+- **Fase atual:** Fase 0 — Definições e prova técnica (em andamento)
 - **Fonte de verdade:** este documento para progresso; PLANO_REMODELAGEM.md para escopo e critérios
 
 > Este é um documento vivo. Atualize-o ao iniciar/concluir fases, aprovar decisões, executar testes ou identificar bloqueios. Não marque como concluído algo que não tenha evidência verificável.
@@ -17,7 +17,9 @@ O repositório foi limpo e o plano mestre de remodelagem foi registrado. A remod
 
 A aplicação existente é uma base legada pequena em Python/PySide6, com integração básica ao Whisper, yt-dlp e FFmpeg. O comportamento atual ainda está orientado à geração de transcrições em texto, não à produção de SRT temporizado e traduzido.
 
-**Estado do produto:** baseline preservada; plano documentado; nenhuma fase de implementação da remodelagem aprovada como concluída.
+A Fase 0 foi iniciada em 10/11/2026 em uma branch isolada. A primeira entrega estabelece coleta reproduzível do ambiente e um protocolo de prova técnica. Ainda não foram executados benchmarks de Whisper/WhisperX no computador-alvo nem homologados idiomas, modelos ou dependências experimentais.
+
+**Estado do produto:** baseline preservada; Fase 0 em andamento; nenhuma fase de implementação funcional da remodelagem aprovada como concluída.
 
 ## 2. Situação do repositório
 
@@ -26,15 +28,15 @@ A aplicação existente é uma base legada pequena em Python/PySide6, com integr
 | Repositório | anfalcir/legendar |
 | Visibilidade | Privada, confirmada na API do GitHub em 09/11/2026 |
 | Branch padrão | main |
-| Histórico da main | Um commit raiz de baseline seguido dos commits de documentação; sem branches adicionais ou tags/releases identificadas na última verificação |
-| Diretórios de testes | Ainda não existentes na baseline |
-| Diretório docs | Criado com o plano e este documento |
+| Histórico da main | Baseline e documentação preservadas; a execução da Fase 0 ocorre em branch separada |
+| Diretórios de testes | Criados para a Fase 0; testes de domínio e pipeline ainda inexistentes |
+| Diretório docs | Contém plano mestre, estado vivo e protocolo de execução da Fase 0 |
 | Configuração de projeto | requirements.txt existente; pyproject.toml ainda não existe |
 | Licença | MIT, conforme informado pelo responsável; o arquivo LICENSE não estava presente na baseline inspecionada e precisa ser restaurado com o aviso original apropriado antes da distribuição |
 | Releases/tags | Nenhuma identificada na última inspeção |
-| CI | Não avaliada nesta etapa |
+| CI | Nenhum workflow encontrado na árvore verificada e nenhuma execução de Actions registrada |
 
-A documentação inicial foi publicada no commit f5101b0f587fd545aadcea93e0cc3d0b96c3e5df. A revisão estrutural foi publicada em ba8a34a04be899ea22f6fe4779eab76003757769. A estrutura proposta mantém src/legendar como pacote de aplicação e deixa tests/, docs/ e resources/ na raiz do projeto. O README aponta para os dois documentos.
+A documentação inicial foi publicada no commit f5101b0f587fd545aadcea93e0cc3d0b96c3e5df. A revisão estrutural foi publicada em ba8a34a04be899ea22f6fe4779eab76003757769. A estrutura proposta mantém src/legendar como pacote de aplicação e deixa tests/, docs/ e resources/ na raiz do projeto. O README aponta para o plano, o estado vivo e o protocolo da Fase 0. A branch de execução atual é `phase-0/technical-inventory`.
 
 ## 3. Baseline técnica identificada
 
@@ -77,8 +79,8 @@ A documentação inicial foi publicada no commit f5101b0f587fd545aadcea93e0cc3d0
 | Máquina de estados | Não identificada como componente explícito |
 | Cancelamento cooperativo | Não implementado de forma completa |
 | Cache isolado por job | Não implementado |
-| Testes automatizados | Nenhuma suíte identificada |
-| Documentação técnica | README existente; documentação de arquitetura ainda ausente antes deste plano |
+| Testes automatizados | Baseline sem suíte; branch Fase 0 adiciona 5 testes unittest para o coletor de ambiente |
+| Documentação técnica | README, plano mestre, estado vivo e protocolo de execução da Fase 0 |
 
 ### 3.3. Pontos técnicos da baseline que exigem revisão
 
@@ -95,7 +97,7 @@ Esses itens são observações de inspeção da baseline, não evidência de fal
 
 | Fase | Status | Observação |
 |---|---|---|
-| 0 — Definições e prova técnica | **Não iniciada** | Próxima fase recomendada |
+| 0 — Definições e prova técnica | **Em andamento** | Coletor de ambiente e protocolo experimental adicionados; inventário do computador-alvo e POCs pendentes |
 | 1 — Reestruturação arquitetural | Não iniciada | Depende da aprovação dos resultados da Fase 0 |
 | 2 — Interface profissional | Não iniciada | Começar com workers simulados para validar os estados |
 | 3 — Entrada e preparação de mídia | Não iniciada | Incluir YouTube, formatos locais, streams e offsets |
@@ -126,7 +128,7 @@ Esses itens são observações de inspeção da baseline, não evidência de fal
 ### Recomendações técnicas ainda sujeitas à prova/decisão
 
 - WhisperX como primeiro candidato a forced alignment.
-- stable-ts como alternativa a comparar, não como dependência confirmada.
+- stable-ts permanece apenas como referência comparativa condicionada a benefício mensurável; o repositório upstream foi arquivado em 30/05/2026.
 - VAD para apoiar delimitação de fala e tratamento de silêncios.
 - Serviço de tradução contextual único, encapsulado por interface.
 - WAV PCM mono 16 kHz como formato interno inicial a validar.
@@ -135,26 +137,40 @@ Esses itens são observações de inspeção da baseline, não evidência de fal
 - CPU como caminho de compatibilidade e GPU como aceleração opcional.
 - pytest, pytest-qt, pytest-cov e Ruff como conjunto candidato de qualidade.
 
-## 6. Fase atual — preparação da Fase 0
+## 6. Fase 0 — definições e prova técnica (em andamento)
 
 ### Objetivo
 
 Reduzir os maiores riscos técnicos antes de estruturar a aplicação nova: qualidade de alinhamento, suporte de idioma, compatibilidade de dependências, custo/privacidade da tradução e desempenho no equipamento-alvo.
 
-### Atividades necessárias
+### Entregáveis iniciais implementados na branch `phase-0/technical-inventory`
 
-1. Definir ambiente e sistema operacional de referência.
-2. Inventariar CPU, RAM, GPU e armazenamento disponíveis no ambiente-alvo.
-3. Criar amostras curtas de áudio próprio/autorizado em PT-BR e inglês, com fala clara e condições desafiadoras.
-4. Criar transcrições de referência e marcações temporais verificadas manualmente para parte dessas amostras.
-5. Testar Whisper em perfis/modelos candidatos.
-6. Testar WhisperX e confirmar modelos de alinhamento para PT-BR e inglês nas versões escolhidas.
-7. Comparar alinhamento com stable-ts somente se houver compatibilidade e benefício mensurável.
-8. Testar normalização e preservação de offsets com FFmpeg/ffprobe.
-9. Avaliar opções de tradução contextual, custo, privacidade, limites e formato estruturado da resposta.
-10. Medir qualidade, velocidade, memória e taxa de palavras alinhadas.
-11. Aprovar as dependências e as metas iniciais de qualidade.
-12. Registrar decisões e critérios antes de avançar para a Fase 1.
+- `scripts/phase0_inventory.py`: coletor somente leitura, sem dependências externas, com informações de Python, SO, CPU, RAM, armazenamento, FFmpeg/ffprobe, GPU NVIDIA e versões dos pacotes relevantes.
+- `tests/test_phase0_inventory.py`: cinco testes automatizados com `unittest`.
+- `docs/FASE_0_PROTOCOLO.md`: comandos, política de privacidade, matriz experimental, métricas e critérios de saída.
+- README atualizado para apontar para o novo protocolo.
+
+### Validação realizada nesta entrega
+
+| Verificação | Resultado | Limite da evidência |
+|---|---|---|
+| `python -m compileall -q scripts tests` | Aprovado | Executado no ambiente de desenvolvimento desta entrega |
+| `python -m unittest discover -s tests -v` | 5 testes aprovados | Testes do coletor; não cobrem Whisper, alinhamento ou GUI |
+| Execução do coletor e parsing do JSON | Aprovado | Smoke test no ambiente de desenvolvimento; não representa o computador-alvo |
+| Alteração de dependências/modelos | Nenhuma | Nenhuma dependência experimental foi instalada ou promovida |
+
+O ambiente de desenvolvimento usado para validar o script não deve ser confundido com o ambiente-alvo. Os resultados de hardware e versões do computador do usuário ainda precisam ser coletados.
+
+### Atividades pendentes
+
+1. Executar o coletor no computador-alvo e definir o sistema operacional e a versão de Python oficialmente suportados.
+2. Criar amostras curtas próprias/autorizadas em PT-BR e inglês, transcrições de referência e marcações temporais revisadas manualmente.
+3. Testar Whisper em perfis/modelos candidatos e comparar WhisperX para ambos os idiomas.
+4. Avaliar normalização, streams, offsets, chunks e comportamento com números, siglas, música e fala sobreposta.
+5. Avaliar opções de tradução contextual, custo, privacidade, limites e formato estruturado.
+6. Medir qualidade, velocidade e memória; consolidar dependências e critérios antes de solicitar aprovação para a Fase 1.
+
+O protocolo executável e os comandos estão em [docs/FASE_0_PROTOCOLO.md](FASE_0_PROTOCOLO.md).
 
 ### Critério de saída da Fase 0
 
@@ -171,7 +187,8 @@ Reduzir os maiores riscos técnicos antes de estruturar a aplicação nova: qual
 
 | Data | Escopo | Resultado | Evidência |
 |---|---|---|---|
-| 09/11/2026 | Inspeção da árvore e documentação inicial | Plano e estado preparados; ainda não há testes de remodelagem | Verificação da baseline no GitHub |
+| 09/11/2026 | Inspeção da árvore e documentação inicial | Plano e estado preparados; ainda não havia testes de remodelagem | Verificação da baseline no GitHub |
+| 10/11/2026 | Coletor da Fase 0 | `compileall`, 5 testes `unittest`, CLI e JSON smoke test aprovados; sem benchmark de modelos | Branch `phase-0/technical-inventory` |
 
 **Nenhum teste funcional da nova arquitetura foi executado até esta atualização.** Não há ainda evidência de homologação do SRT, WhisperX, tradução, cancelamento ou formatos além dos fluxos atuais da baseline.
 
@@ -199,6 +216,7 @@ Quando testes forem executados, registrar:
 | R-08 | Serviço externo de tradução implica custo e transmissão de texto | Escolher provedor conscientemente e documentar dados enviados |
 | R-09 | Formatos e codecs variam por instalação de FFmpeg | Inspecionar streams e manter matriz de formatos homologados |
 | R-10 | Arquivo LICENSE não estava presente na baseline inspecionada | Recuperar/restaurar aviso MIT apropriado e validar dependências/licenças antes de distribuição |
+| R-11 | Sistema operacional e versão de Python do equipamento-alvo ainda não estão definidos; versões recentes de WhisperX possuem requisitos de runtime/PyTorch diferentes da baseline | Coletar inventário real; resolver dependências em ambiente virtual isolado; não alterar `requirements.txt` por tentativa |
 
 ## 9. Regras de atualização deste documento
 
@@ -220,4 +238,5 @@ Não registrar como concluído somente porque o código foi escrito ou porque um
 
 | Data | Atualização |
 |---|---|
-| 09/11/2026 | Criados o plano mestre de remodelagem e o documento vivo de estado inicial. README conectado à documentação; estrutura proposta revisada. Nenhuma fase de implementação iniciada. |
+| 09/11/2026 | Criados o plano mestre de remodelagem e o documento vivo de estado inicial. README conectado à documentação; estrutura proposta revisada. Nenhuma fase de implementação funcional iniciada. |
+| 10/11/2026 | Iniciada a Fase 0 em branch separada: coletor de ambiente, cinco testes automatizados, protocolo experimental e README atualizados. Nenhuma dependência experimental promovida; POC no equipamento-alvo pendente. |
