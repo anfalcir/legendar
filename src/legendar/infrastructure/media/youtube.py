@@ -112,9 +112,11 @@ class YtDlpDownloader:
             if state == "downloading" and progress is not None:
                 downloaded = status.get("downloaded_bytes")
                 total = status.get("total_bytes") or status.get("total_bytes_estimate")
-                if isinstance(downloaded, (int, float)) and isinstance(
-                    total, (int, float)
-                ) and total > 0:
+                if (
+                    isinstance(downloaded, (int, float))
+                    and isinstance(total, (int, float))
+                    and total > 0
+                ):
                     progress.report(
                         min(0.99, max(0.0, downloaded / total)),
                         "Baixando áudio do YouTube",
