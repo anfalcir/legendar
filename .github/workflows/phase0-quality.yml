@@ -20,12 +20,16 @@ permissions:
 
 jobs:
   dependency-resolution:
-    name: Resolve declared Python dependencies
+    name: Lock and resolve complete runtime profiles
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    permissions:
+      contents: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref_name || github.head_ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,18 +37,47 @@ jobs:
           python-version: "3.12"
 
       - name: Install pinned uv resolver
-        run: python -m pip install --disable-pip-version-check "uv==0.11.6"
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
 
-      - name: Resolve manifest across declared environments
+      - name: Resolve manifest on branch pushes
+        if: github.event_name == 'push'
         run: uv lock --python-preference system --no-progress
 
-      - name: Upload lockfile candidate
+      - name: Require committed lockfile on pull requests
+        if: github.event_name == 'pull_request'
+        run: |
+          test -f uv.lock || {
+            echo "::error::uv.lock is missing. The branch push must generate and commit the lockfile."
+            exit 1
+          }
+          uv lock --check --no-progress
+
+      - name: Verify CPU profile resolution without installing packages
+        run: uv sync --locked --no-dev --extra runtime-cpu --dry-run --no-progress
+
+      - name: Verify CUDA 12.8 profile resolution without installing packages
+        run: uv sync --locked --no-dev --extra runtime-cu128 --dry-run --no-progress
+
+      - name: Commit updated universal lockfile on branch pushes
+        if: github.event_name == 'push'
+        run: |
+          if ! git ls-files --error-unmatch uv.lock >/dev/null 2>&1 || ! git diff --quiet -- uv.lock; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add uv.lock
+            git commit -m "build(deps): update universal dependency lock"
+            git push
+          else
+            echo "uv.lock is already current."
+          fi
+
+      - name: Upload lockfile evidence
         uses: actions/upload-artifact@v4
         with:
-          name: legendar-uv-lock-candidate
+          name: legendar-uv-lock-evidence
           path: uv.lock
           if-no-files-found: error
-          retention-days: 2
+          retention-days: 7
 
   deterministic-checks:
     name: Python ${{ matrix.python-version }} / ${{ matrix.os }}
@@ -77,10 +110,34 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
-      - name: Validate command-line interface
+      - name: Validate inventory command-line interface
         run: python scripts/phase0_inventory.py --help
+
+      - name: Validate media POC command-line interface
+        run: python scripts/phase0_media_poc.py --help
 
       - name: Smoke-test inventory JSON
         run: |
           python scripts/phase0_inventory.py --output "$RUNNER_TEMP/legendar-inventory.json"
           python -c "import json, pathlib; json.loads(pathlib.Path('$RUNNER_TEMP/legendar-inventory.json').read_text())"
+
+  media-timeline-poc:
+    name: FFmpeg normalization and offset preservation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install FFmpeg and ffprobe
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run media timeline proof of concept
+        run: python scripts/phase0_media_poc.py --self-test
