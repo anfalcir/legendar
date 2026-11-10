@@ -44,15 +44,23 @@ class CancellationToken(Protocol):
 class MediaInspector(Protocol):
     """Inspeção de mídia via ffprobe (ou dublê em testes)."""
 
-    def inspect(self, source: MediaSource) -> MediaInfo: ...
+    def inspect(
+        self, source: MediaSource, *, token: CancellationToken | None = None
+    ) -> MediaInfo: ...
 
 
 @runtime_checkable
 class MediaDownloader(Protocol):
     """Aquisição de mídia remota (YouTube), separada da UI."""
 
-    def fetch(self, source: MediaSource, destination_dir: str) -> str:
-        """Baixa e retorna o caminho do arquivo local resultante."""
+    def fetch(
+        self,
+        source: MediaSource,
+        destination_dir: str,
+        *,
+        token: CancellationToken | None = None,
+    ) -> str:
+        """Baixa e retorna o caminho local; verifica o token em checkpoints."""
         ...
 
 
@@ -66,6 +74,7 @@ class AudioPreparer(Protocol):
         *,
         stream: AudioStreamInfo,
         destination_path: str,
+        token: CancellationToken | None = None,
     ) -> AudioAsset: ...
 
 
@@ -79,6 +88,7 @@ class Transcriber(Protocol):
         *,
         language: Language | None,
         progress: ProgressSink,
+        token: CancellationToken | None = None,
     ) -> Transcript: ...
 
 
@@ -92,6 +102,7 @@ class Aligner(Protocol):
         transcript: Transcript,
         *,
         progress: ProgressSink,
+        token: CancellationToken | None = None,
     ) -> AlignmentResult: ...
 
 
@@ -105,6 +116,7 @@ class Translator(Protocol):
         *,
         target_language: Language,
         progress: ProgressSink,
+        token: CancellationToken | None = None,
     ) -> Transcript: ...
 
 
