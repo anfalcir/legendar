@@ -26,9 +26,7 @@ class UiPreferences:
             raise ValueError(f"Tema inválido: {self.theme!r}")
 
 
-def load_preferences(
-    settings: QSettings, default_output_dir: Path
-) -> UiPreferences:
+def load_preferences(settings: QSettings, default_output_dir: Path) -> UiPreferences:
     """Lê preferências com defaults e validação defensiva."""
 
     theme = str(settings.value("ui/theme", "system"))
