@@ -165,12 +165,16 @@ def test_media_without_audio_is_rejected(job_context):
         pipeline.execute(_request(), job_context)
 
 
-def test_cancelled_token_stops_before_publishing(job_context):
-    transcriber = FakeTranscriber(token=job_context.token)
-    pipeline, ports = _pipeline(transcriber=transcriber)
-    job_context.token.cancel("teste")
+def test_processing_port_can_cancel_job_before_publication(job_context):
+    class CancellingTranscriber(FakeTranscriber):
+        def transcribe(self, audio, *, language=None, progress=None, token=None):
+            assert token is job_context.token
+            token.cancel("cancelado durante transcrição")
+            token.raise_if_cancelled()
 
-    with pytest.raises(JobCancelledError):
+    pipeline, ports = _pipeline(transcriber=CancellingTranscriber())
+
+    with pytest.raises(JobCancelledError, match="cancelado durante transcrição"):
         pipeline.execute(_request(), job_context)
     assert ports["publisher"].calls == []
 
