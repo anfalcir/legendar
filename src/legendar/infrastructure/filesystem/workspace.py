@@ -42,13 +42,22 @@ class TempWorkspaceFactory:
     ) -> JobContext:
         self._root.mkdir(parents=True, exist_ok=True)
         work_dir = Path(tempfile.mkdtemp(prefix=f"legendar-{job_id}-", dir=self._root))
-        return JobContext(
-            job_id=job_id,
-            source_label=source_label,
-            work_dir=work_dir,
-            cache_dir=cache_dir,
-            output_path=Path(output_path).expanduser(),
-        )
+        try:
+            return JobContext(
+                job_id=job_id,
+                source_label=source_label,
+                work_dir=work_dir,
+                cache_dir=Path(cache_dir).expanduser(),
+                output_path=Path(output_path).expanduser(),
+            )
+        except Exception:
+            try:
+            shutil.rmtree(work_dir)
+        except FileNotFoundError:
+            # Limpeza repetida é segura; erros de permissão/I/O devem subir
+            # para que a camada de apresentação registre o aviso.
+            pass
+            raise
 
     def cleanup(self, context: JobContext) -> None:
         """Remove apenas ``work_dir``, validando que está sob a raiz."""
