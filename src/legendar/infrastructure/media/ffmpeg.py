@@ -165,10 +165,17 @@ class FfmpegAudioPreparer:
             self._run(command, token)
             if token is not None:
                 token.raise_if_cancelled()
-            asset = self._validate_output(temporary, stream)
+            asset = self._validate_output(temporary, stream, token=token)
             if token is not None:
                 token.raise_if_cancelled()
-            os.replace(temporary, destination)
+            # Hard-link publication is atomic and fails if another process
+            # created the destination after the initial existence check.
+            os.link(temporary, destination)
+            try:
+                temporary.unlink()
+            except OSError:
+                destination.unlink(missing_ok=True)
+                raise
             if progress is not None:
                 progress.report(1.0, "Áudio normalizado e validado")
             return AudioAsset(
@@ -251,13 +258,18 @@ class FfmpegAudioPreparer:
                 )
 
     def _validate_output(
-        self, path: Path, source_stream: AudioStreamInfo
+        self,
+        path: Path,
+        source_stream: AudioStreamInfo,
+        *,
+        token: CancellationToken | None = None,
     ) -> AudioAsset:
         if not path.is_file() or path.stat().st_size <= 44:
             raise MediaToolError("O FFmpeg não produziu um WAV válido.")
 
         info = self._inspector.inspect(
-            MediaSource(kind=MediaKind.LOCAL_FILE, location=str(path))
+            MediaSource(kind=MediaKind.LOCAL_FILE, location=str(path)),
+            token=token,
         )
         if not info.has_audio or info.video_streams_count:
             raise UnsupportedMediaError(
