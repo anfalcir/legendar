@@ -14,9 +14,7 @@ from legendar.presentation.qt.preferences import (
 
 
 def test_preferences_load_with_safe_defaults(tmp_path: Path) -> None:
-    settings = QSettings(
-        str(tmp_path / "settings.ini"), QSettings.Format.IniFormat
-    )
+    settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
 
     preferences = load_preferences(settings, tmp_path / "output")
 
@@ -29,9 +27,7 @@ def test_preferences_load_with_safe_defaults(tmp_path: Path) -> None:
 def test_preferences_round_trip_without_persisting_media_paths(
     tmp_path: Path,
 ) -> None:
-    settings = QSettings(
-        str(tmp_path / "settings.ini"), QSettings.Format.IniFormat
-    )
+    settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
     expected = UiPreferences(
         theme="dark",
         output_dir=tmp_path / "legendas",
@@ -52,9 +48,7 @@ def test_preferences_round_trip_without_persisting_media_paths(
 def test_invalid_persisted_values_fall_back_to_safe_defaults(
     tmp_path: Path,
 ) -> None:
-    settings = QSettings(
-        str(tmp_path / "settings.ini"), QSettings.Format.IniFormat
-    )
+    settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
     settings.setValue("ui/theme", "neon")
     settings.setValue("ui/target_language", "xx")
     settings.setValue("paths/output_dir", "")
