@@ -573,14 +573,17 @@ O repositório Legendar é a fonte de verdade dos requisitos de software. O ambi
 - `requirements.txt` é um snapshot legado da baseline e não deverá continuar sendo mantido manualmente como fonte concorrente. Após a migração, será removido ou gerado a partir do lockfile para compatibilidade com instalações que usam pip.
 - Dependências diretas devem refletir contratos usados pelo próprio Legendar. Dependências transitivas devem ser resolvidas pelo gerenciador e registradas no lockfile, sem duplicação manual desnecessária.
 - Utilizar faixas de versão com limites mínimos testados e limites máximos somente quando houver justificativa de compatibilidade. Fixações exatas ficam no lockfile, não no manifesto de requisitos.
-- Separar dependências obrigatórias, extras opcionais e ferramentas de desenvolvimento/teste/build.
+- Separar dependências-base, perfis completos de runtime, recursos opcionais (como alinhamento) e ferramentas de desenvolvimento/teste/build.
+- Para bibliotecas com variantes de hardware (PyTorch), selecionar explicitamente a origem dos wheels por perfil; não depender da escolha implícita do índice público.
 - Nenhuma instalação ou atualização silenciosa de pacotes globais será feita pelo aplicativo.
 
 ### 11.2. Manifesto e baseline inicial
 
-O `pyproject.toml` foi introduzido na Fase 0 com PySide6, openai-whisper e yt-dlp como dependências diretas iniciais; WhisperX está isolado no extra experimental `alignment-whisperx`. A faixa inicial de Python é `>=3.10,<3.14`, determinada pela compatibilidade declarada pelo candidato WhisperX 3.8.6, e não pela versão instalada no computador-alvo. Essa faixa será ampliada quando a interseção das dependências críticas, os wheels e a CI demonstrarem suporte adicional.
+O `pyproject.toml` foi introduzido na Fase 0 com PySide6 como dependência-base e perfis completos de runtime: `runtime-cpu`, `runtime-cu128` e `runtime-rocm72`. Cada perfil inclui Whisper, yt-dlp e uma variante compatível do stack PyTorch. O perfil MPS/macOS utiliza os wheels PyPI do PyTorch e pode expor MPS no runtime quando o ambiente oferecer suporte. WhisperX está isolado no extra `alignment-whisperx`, combinável com exatamente um perfil runtime.
 
-A matriz, as justificativas, as dependências externas e a política de manutenção estão em [docs/MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md). A presença do manifesto não significa que todas as versões tenham sido instaladas ou homologadas. A resolução completa ainda depende da POC do stack de áudio/alinhamento e dos perfis de plataforma.
+A faixa inicial de Python é `>=3.10,<3.14`, determinada pela compatibilidade declarada pelo candidato WhisperX estável 3.8.6, e não pela versão instalada no computador-alvo. Essa faixa será ampliada quando a interseção das dependências críticas, os wheels e a CI demonstrarem suporte adicional.
+
+A matriz, os comandos de instalação, os perfis, as justificativas, as dependências externas e a política de manutenção estão em [docs/MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md). Uma resolução experimental anterior feita apenas contra PyPI puxou bibliotecas CUDA/NVIDIA por padrão para Linux e foi descartada; a resolução agora usa índices explícitos para não confundir perfil CPU com GPU. A presença do manifesto não significa que todas as versões tenham sido instaladas ou homologadas. O novo lock universal ainda deverá ser validado antes de entrar no repositório.
 
 ### 11.3. Ferramentas externas
 
@@ -588,7 +591,7 @@ FFmpeg e ffprobe são dependências externas obrigatórias do pipeline de mídia
 
 ### 11.4. Perfis de hardware e plataforma
 
-CPU deverá ser uma via de compatibilidade quando suportada pelos componentes. NVIDIA CUDA, AMD ROCm e Apple MPS serão perfis opcionais e independentes, selecionados segundo a compatibilidade oficial do PyTorch, alinhador, drivers e sistema operacional. O projeto não instalará todos os backends indiscriminadamente nem inferirá suporte apenas pela presença de uma GPU.
+CPU deverá ser uma via de compatibilidade quando suportada pelos componentes. CUDA, ROCm e MPS são perfis independentes selecionados segundo a compatibilidade oficial do PyTorch, do alinhador, dos drivers e do sistema operacional. O manifesto disponibiliza perfis CPU, CUDA 12.8 e ROCm 7.2; macOS usa os wheels PyPI do PyTorch e verifica MPS no runtime. Perfis indisponíveis em determinado sistema não serão apresentados como suportados. O projeto não instalará todos os backends indiscriminadamente nem inferirá suporte apenas pela presença de uma GPU.
 
 O inventário do computador-alvo será usado para medir desempenho e validar um perfil concreto. Não poderá reduzir a matriz global do produto. Os sistemas operacionais e arquiteturas oficialmente suportados serão declarados somente depois de integração e CI comprovarem os fluxos GUI, mídia, Whisper e alinhamento.
 
