@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 
 from legendar.application.job.context import JobContext
@@ -69,9 +70,7 @@ class TempWorkspaceFactory:
             )
         if work_dir == context.cache_dir.resolve():
             raise UnsafeWorkspaceError("Diretório de trabalho não pode ser o cache.")
-        try:
+        # A operação é idempotente; outros erros de permissão/I/O sobem para
+        # que a camada de apresentação registre o aviso.
+        with suppress(FileNotFoundError):
             shutil.rmtree(work_dir)
-        except FileNotFoundError:
-            # A operação é idempotente; erros de permissão/I/O devem subir
-            # para que a camada de apresentação registre o aviso.
-            pass
