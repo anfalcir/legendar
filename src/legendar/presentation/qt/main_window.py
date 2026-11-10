@@ -1034,6 +1034,9 @@ class MainWindow(QMainWindow):
         self._render(self._view_model.snapshot)
 
     def _cancel_job(self) -> None:
+        if self._inspection_thread is not None:
+            self._cancel_media_inspection()
+            return
         if (
             self._worker is None
             or self._cancel_pending
@@ -1080,24 +1083,29 @@ class MainWindow(QMainWindow):
     def _render(self, snapshot: JobViewSnapshot) -> None:
         busy = self.is_running
         worker_running = self._thread is not None
-        self.status_label.setText(
-            "Aguardando sua confirmação para iniciar."
-            if self._starting and not worker_running
-            else snapshot.status_text
-        )
-
-        if worker_running and not snapshot.progress_known and not snapshot.is_finished:
+        inspection_running = self._inspection_thread is not None
+        if inspection_running:
+            self.status_label.setText("Inspecionando mídia com ffprobe…")
+            self.progress_meta.setText("Lendo contêineres e faixas")
             self.progress_bar.setRange(0, 0)
-            self.progress_meta.setText("Etapa em andamento · sem percentual medido")
         else:
-            self.progress_bar.setRange(0, 100)
-            self.progress_bar.setValue(snapshot.progress_percent)
-            if snapshot.progress_known:
-                self.progress_meta.setText(f"{snapshot.progress_percent}% concluído")
-            elif snapshot.is_finished:
-                self.progress_meta.setText("Trabalho encerrado")
+            self.status_label.setText(
+                "Aguardando sua confirmação para iniciar."
+                if self._starting and not worker_running
+                else snapshot.status_text
+            )
+            if worker_running and not snapshot.progress_known and not snapshot.is_finished:
+                self.progress_bar.setRange(0, 0)
+                self.progress_meta.setText("Etapa em andamento · sem percentual medido")
             else:
-                self.progress_meta.setText("Pronto para iniciar")
+                self.progress_bar.setRange(0, 100)
+                self.progress_bar.setValue(snapshot.progress_percent)
+                if snapshot.progress_known:
+                    self.progress_meta.setText(f"{snapshot.progress_percent}% concluído")
+                elif snapshot.is_finished:
+                    self.progress_meta.setText("Trabalho encerrado")
+                else:
+                    self.progress_meta.setText("Pronto para iniciar")
 
         scrollbar = self.log_view.verticalScrollBar()
         follow_log = scrollbar.value() >= scrollbar.maximum() - 2
@@ -1106,7 +1114,10 @@ class MainWindow(QMainWindow):
             scrollbar.setValue(scrollbar.maximum())
 
         if not busy:
-            self.generate_button.setEnabled(self._deps.readiness_ok)
+            source_ready = self._deps.readiness_ok and (
+                self._source_kind() is MediaKind.LOCAL_FILE or self._deps.youtube_available
+            )
+            self.generate_button.setEnabled(source_ready)
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelar trabalho")
             self.preferences_button.setEnabled(True)
@@ -1118,7 +1129,7 @@ class MainWindow(QMainWindow):
             )
             self.preferences_button.setEnabled(False)
             self._set_inputs_enabled(False)
-
+        self._sync_source_controls()
         self._update_status_pill(snapshot, busy)
 
     def _update_status_pill(self, snapshot: JobViewSnapshot, busy: bool) -> None:
@@ -1139,18 +1150,41 @@ class MainWindow(QMainWindow):
         self.status_pill.style().unpolish(self.status_pill)
         self.status_pill.style().polish(self.status_pill)
 
+        details = " ".join(self._deps.readiness_details)
         if self._deps.readiness_ok:
             self.readiness_icon.setStyleSheet("color: #16845b;")
-            details = " ".join(self._deps.readiness_details)
-            self.readiness_label.setText(f"Ferramentas externas verificadas. {details}")
+            self.readiness_label.setText(f"FFmpeg e ffprobe verificados. {details}")
         else:
             self.readiness_icon.setStyleSheet("color: #a96712;")
-            details = " ".join(self._deps.readiness_details)
-            self.readiness_label.setText(f"O ambiente precisa de ajustes. {details}")
+            self.readiness_label.setText(
+                f"Entrada local indisponível até instalar FFmpeg e ffprobe. {details}"
+            )
+        if self._source_kind() is MediaKind.YOUTUBE:
+            online_details = " ".join(self._deps.youtube_readiness_details)
+            if self._deps.youtube_available:
+                self.readiness_label.setText(f"YouTube disponível. {online_details}")
+            else:
+                self.readiness_label.setText(
+                    f"YouTube indisponível neste ambiente. {online_details}"
+                )
 
     def _set_inputs_enabled(self, enabled: bool) -> None:
+        self.media_kind_combo.setEnabled(enabled)
         self.file_edit.setEnabled(enabled)
-        self.browse_button.setEnabled(enabled)
+        self.browse_button.setEnabled(
+            enabled and self._source_kind() is MediaKind.LOCAL_FILE
+        )
+        self.inspect_button.setEnabled(
+            enabled
+            and self._source_kind() is MediaKind.LOCAL_FILE
+            and self._deps.media_inspector is not None
+        )
+        self.stream_combo.setEnabled(
+            enabled
+            and self._source_kind() is MediaKind.LOCAL_FILE
+            and self._media_info is not None
+            and bool(self._media_info.audio_streams)
+        )
         self.output_edit.setEnabled(enabled)
         self.output_browse_button.setEnabled(enabled)
         self.source_combo.setEnabled(enabled)
@@ -1175,7 +1209,32 @@ class MainWindow(QMainWindow):
         )
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self._starting and self._thread is None:
+        if (
+            self._starting
+            and self._thread is None
+            and self._inspection_thread is None
+        ):
+            event.ignore()
+            return
+        if self._inspection_thread is not None:
+            if not self._inspection_cancel_pending:
+                if not self._confirm_cancel(closing=True):
+                    event.ignore()
+                    return
+                if self._inspection_worker is not None:
+                    self._inspection_cancel_pending = True
+                    self._inspection_worker.request_cancel()
+            if self._inspection_thread.wait(_CLOSE_WAIT_MS):
+                self._inspection_thread = None
+                self._inspection_worker = None
+                self._save_settings()
+                super().closeEvent(event)
+            else:
+                self.media_info_label.setText(
+                    "A inspeção ainda está encerrando; aguarde para fechar."
+                )
+                event.ignore()
+            return
             event.ignore()
             return
         if self._thread is None:
