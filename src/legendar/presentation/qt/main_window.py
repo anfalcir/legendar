@@ -1238,8 +1238,6 @@ class MainWindow(QMainWindow):
                 )
                 event.ignore()
             return
-            event.ignore()
-            return
         if self._thread is None:
             self._save_settings()
             super().closeEvent(event)
