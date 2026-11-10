@@ -7,9 +7,12 @@ from scripts.phase0_inventory import (
     _parse_linux_meminfo,
     _parse_os_release,
     _probe_executable,
+    _probe_path_executable,
     collect_inventory,
 )
 
+
+from scripts.phase0_media_poc import map_local_interval_to_source
 
 class ParseLinuxMeminfoTests(unittest.TestCase):
     def test_parses_total_and_available_memory_in_bytes(self):
@@ -80,6 +83,36 @@ class ExecutableProbeTests(unittest.TestCase):
         result = _probe_executable("ffmpeg", Path("/nonexistent/project"))
         self.assertFalse(result["available"])
         self.assertEqual(result["error"], "not_found")
+
+
+class JavaScriptRuntimeProbeTests(unittest.TestCase):
+    @patch("scripts.phase0_inventory.shutil.which", return_value=None)
+    def test_missing_javascript_runtime_is_reported(self, _which):
+        result = _probe_path_executable("deno")
+        self.assertFalse(result["available"])
+        self.assertEqual(result["error"], "not_found")
+
+
+class MediaTimelineMappingTests(unittest.TestCase):
+    def test_maps_local_word_times_to_global_source_timeline(self):
+        start, end = map_local_interval_to_source(
+            0.25,
+            0.80,
+            source_offset_seconds=1.25,
+            chunk_offset_seconds=12.0,
+        )
+        self.assertAlmostEqual(start, 13.50)
+        self.assertAlmostEqual(end, 14.05)
+
+    def test_rejects_invalid_word_interval(self):
+        with self.assertRaises(ValueError):
+            map_local_interval_to_source(1.0, 1.0, source_offset_seconds=0.0)
+
+    def test_rejects_non_finite_offsets(self):
+        with self.assertRaises(ValueError):
+            map_local_interval_to_source(
+                0.0, 0.2, source_offset_seconds=float("nan")
+            )
 
 
 class InventoryTests(unittest.TestCase):
