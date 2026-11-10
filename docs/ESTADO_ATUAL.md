@@ -26,7 +26,7 @@ A aplicação existente é uma base legada pequena em Python/PySide6, com integr
 | Repositório | anfalcir/legendar |
 | Visibilidade | Privada, confirmada na API do GitHub em 09/11/2026 |
 | Branch padrão | main |
-| Histórico da main | Um commit raiz na última verificação anterior à documentação |
+| Histórico da main | Um commit raiz de baseline seguido dos commits de documentação; sem branches adicionais ou tags/releases identificadas na última verificação |
 | Diretórios de testes | Ainda não existentes na baseline |
 | Diretório docs | Criado com o plano e este documento |
 | Configuração de projeto | requirements.txt existente; pyproject.toml ainda não existe |
@@ -34,7 +34,7 @@ A aplicação existente é uma base legada pequena em Python/PySide6, com integr
 | Releases/tags | Nenhuma identificada na última inspeção |
 | CI | Não avaliada nesta etapa |
 
-A documentação inicial foi publicada no commit f5101b0f587fd545aadcea93e0cc3d0b96c3e5df. Esta atualização registra esse marco e corrige a representação da estrutura proposta para deixar tests/, docs/ e resources/ na raiz do projeto.
+A documentação inicial foi publicada no commit f5101b0f587fd545aadcea93e0cc3d0b96c3e5df. A revisão estrutural foi publicada em ba8a34a04be899ea22f6fe4779eab76003757769. A estrutura proposta mantém src/legendar como pacote de aplicação e deixa tests/, docs/ e resources/ na raiz do projeto. O README aponta para os dois documentos.
 
 ## 3. Baseline técnica identificada
 
@@ -220,4 +220,4 @@ Não registrar como concluído somente porque o código foi escrito ou porque um
 
 | Data | Atualização |
 |---|---|
-| 09/11/2026 | Criados o plano mestre de remodelagem e o documento vivo de estado inicial. Nenhuma fase de implementação iniciada. |
+| 09/11/2026 | Criados o plano mestre de remodelagem e o documento vivo de estado inicial. README conectado à documentação; estrutura proposta revisada. Nenhuma fase de implementação iniciada. |
