@@ -104,8 +104,6 @@ class FakeAudioPreparer:
             token.raise_if_cancelled()
         if progress is not None:
             progress.report(0.5, "Preparando áudio")
-        if progress is not None:
-            progress.report(0.5, "Preparando áudio")
         if self.asset is not None:
             return self.asset
         return AudioAsset(
@@ -115,7 +113,6 @@ class FakeAudioPreparer:
             sample_format="pcm_s16le",
             duration_seconds=12.0,
         )
-
 
 
 @dataclass
