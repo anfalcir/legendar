@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from legendar.domain.entities.media import MediaKind, MediaSource
 from legendar.application.job.context import CancellationTokenImpl
+from legendar.domain.entities.media import MediaKind, MediaSource
 from legendar.domain.errors.catalog import (
     InvalidInputError,
     JobCancelledError,
@@ -76,7 +76,6 @@ def test_inspect_returns_domain_info(tmp_path: Path) -> None:
     assert info.has_audio
     assert runner.calls[0][0][-1] == str(media)
     assert runner.calls[0][1]["check"] is False
-
 
 
 def test_inspect_terminates_ffprobe_when_job_is_cancelled(tmp_path: Path) -> None:
