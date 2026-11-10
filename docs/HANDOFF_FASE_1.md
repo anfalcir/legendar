@@ -3,18 +3,20 @@
 - **Projeto:** Legendar
 - **Atualização:** 10/11/2026
 - **Fase 0:** concluída, validada e integrada; workflow final #113 aprovado (16/16 jobs), com limitações explicitadas
-- **Fase 1:** concluída tecnicamente; CI Python 3.10–3.13 verde (196 testes por ambiente, 88% cobertura); revisão técnica concluída; PR #2 aguarda integração
+- **Fase 1:** concluída, validada e integrada à `main`; CI Python 3.10–3.13 verde (196 testes por ambiente, 88% cobertura); revisão técnica concluída
 - **Branch de conclusão da Fase 0:** `phase-0/technical-inventory`
-- **PR de integração:** [#1 — Fase 0: inventário, governança de dependências e prova técnica](https://github.com/anfalcir/legendar/pull/1), merged por squash
-- **Commit na main:** `992cb874274e73d0264994e39926113f1461236f`
+- **PRs de integração:** [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1) e [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), ambas merged por squash
+- **Commit da Fase 0 na main:** `992cb874274e73d0264994e39926113f1461236f`
+- **Commit da Fase 1 na main:** `de31dddffc4f8e761692129d4c47a02ca89b8b83`
 - **Regra de governança:** o repositório é a fonte de verdade das dependências e decisões; o computador de homologação não define sozinho os requisitos do produto.
 
-Este documento registra a conclusão técnica da Fase 1. Não reiniciar a arquitetura nem antecipar funcionalidades das fases seguintes. A PR #2 reúne a entrega validada; a Fase 2 permanece bloqueada até aprovação explícita do responsável. Leia-o em conjunto com o [plano mestre](PLANO_REMODELAGEM.md), o [estado atual](ESTADO_ATUAL.md), o [plano operacional da Fase 1](FASE_1_PLANO.md), a [baseline legada](LEGACY_BASELINE.md), a [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e o [protocolo da Fase 0](FASE_0_PROTOCOLO.md).
+Este documento registra a conclusão técnica da Fase 1. Não reiniciar a arquitetura nem antecipar funcionalidades das fases seguintes. A PR #2 está merged e a entrega encontra-se na `main`; a Fase 2 permanece bloqueada até aprovação explícita do responsável. Leia-o em conjunto com o [plano mestre](PLANO_REMODELAGEM.md), o [estado atual](ESTADO_ATUAL.md), o [plano operacional da Fase 1](FASE_1_PLANO.md), a [baseline legada](LEGACY_BASELINE.md), a [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e o [protocolo da Fase 0](FASE_0_PROTOCOLO.md).
 
 ## Checkpoint atual da Fase 1
 
-A branch de trabalho continua sendo `phase-1/architecture`, baseada no commit de integração
-da Fase 0 (`992cb874274e73d0264994e39926113f1461236f`). O trabalho deste checkpoint inclui:
+A implementação foi desenvolvida na branch `phase-1/architecture`, baseada no commit de integração
+da Fase 0 (`992cb874274e73d0264994e39926113f1461236f`) e integrada à `main` pela PR #2 no
+commit `de31dddffc4f8e761692129d4c47a02ca89b8b83`. A árvore atual em `main` contém:
 
 - `src/legendar/domain`: entidades, objetos de valor, erros, eventos e máquina de estados;
 - `application`: protocolos, contexto de job/cancelamento, controlador, progresso e pipeline serial;
@@ -44,7 +46,7 @@ A Fase 0 concluiu as definições que permitem estruturar a aplicação sem mant
 7. Decisões de arquitetura de pipeline, timestamp, tradução, cancelamento, temporários e limites de homologação registradas para a Fase 1.
 8. Evidências finais da CI registradas: workflow #109 com 16/16 jobs aprovados, lock validado, 12 combinações Python/SO aprovadas, instalação CPU/CUDA 12.8, POC FFmpeg/offset e smoke benchmark FLEURS PT-BR/EN publicado.
 
-**Importante:** a conclusão da Fase 0 significa que a direção técnica e os contratos arquiteturais iniciais estão suficientemente definidos e que as provas automatizadas de viabilidade planejadas passaram. Não significa que toda a qualidade de reconhecimento/alinhamento já foi homologada para produção, nem que todos os sistemas operacionais e backends foram validados como suportados. A PR #1 foi integrada e a branch `phase-1/architecture` está pronta; os itens que dependem de anotação humana e do hardware-alvo permanecem como gates das fases de integração, alinhamento e homologação, conforme a seção 7.
+**Importante:** a conclusão da Fase 0 significa que a direção técnica e os contratos arquiteturais iniciais estão suficientemente definidos e que as provas automatizadas de viabilidade planejadas passaram. Não significa que toda a qualidade de reconhecimento/alinhamento já foi homologada para produção, nem que todos os sistemas operacionais e backends foram validados como suportados. As PRs #1 e #2 foram integradas à `main`; os itens que dependem de anotação humana e do hardware-alvo permanecem como gates das fases de integração, alinhamento e homologação, conforme a seção 7.
 
 ## 2. Decisões técnicas consolidadas
 
@@ -275,8 +277,8 @@ Já há evidência local para domínio/fronteiras, máquina de estados, pipeline
 cancelamento/progresso/publicação, temporários/cache, configuração, inicialização offscreen e
 caracterização da baseline legada. A estratégia de convivência, preservação e futura aposentadoria
 está documentada; a política de Ruff e o workflow próprio da Fase 1 também foram implementados.
-Não restam pendências de implementação ou validação atribuídas à Fase 1. A PR #2 aguarda integração;
-a janela continua mínima por decisão de escopo — a interface profissional pertence à Fase 2.
+Não restam pendências de implementação ou validação atribuídas à Fase 1. A entrega já está integrada
+à `main`; a janela continua mínima por decisão de escopo — a interface profissional pertence à Fase 2.
 
 ## 6. Instrução operacional para a próxima IA
 
