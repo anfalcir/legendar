@@ -309,7 +309,9 @@ def test_keyboard_tab_order_and_accessible_names_are_explicit(qtbot, tmp_path) -
 
 
 
-def test_destructive_prompts_use_no_as_the_default_choice(qtbot, tmp_path, monkeypatch) -> None:
+def test_destructive_prompts_use_no_as_the_default_choice(
+    qtbot, tmp_path, monkeypatch
+) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     del window._confirm_cancel
     calls = {}
