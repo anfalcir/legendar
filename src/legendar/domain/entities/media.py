@@ -94,7 +94,12 @@ class AudioStreamInfo:
 
     @property
     def label_pt(self) -> str:
-        parts = [f"Faixa {self.index}", self.codec, f"{self.channels} canais"]
+        parts = [f"Faixa {self.index}"]
+        if self.title:
+            parts.append(self.title)
+        parts.extend(
+            (self.codec, f"{self.channels} canais", f"{self.sample_rate_hz} Hz")
+        )
         if self.language:
             parts.append(self.language)
         return " · ".join(parts)
