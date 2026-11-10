@@ -85,7 +85,11 @@ class JobController:
         """Solicita cancelamento; retorna ``False`` se não há job ativo."""
         with self._lock:
             context = self._context
-            if context is None or self._terminal_emitted:
+            if (
+                context is None
+                or self._terminal_emitted
+                or not self._machine.state.is_cancellable
+            ):
                 return False
             return context.token.cancel("Cancelado pelo usuário.")
 
