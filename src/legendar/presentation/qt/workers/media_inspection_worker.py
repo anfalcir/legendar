@@ -34,9 +34,7 @@ class MediaInspectionWorker(QObject):
     def run(self) -> None:
         try:
             self._token.raise_if_cancelled()
-            info: MediaInfo = self._inspector.inspect(
-                self._source, token=self._token
-            )
+            info: MediaInfo = self._inspector.inspect(self._source, token=self._token)
             self._token.raise_if_cancelled()
         except Exception as exc:  # noqa: BLE001 - fronteira de ferramenta externa
             self.failed.emit(exc)
