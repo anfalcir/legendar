@@ -1,91 +1,75 @@
 # Plano operacional — Fase 3: Entrada e preparação de mídia
 
-- **Status:** implementação desenvolvida; validação final em andamento (não concluída, sem PR/merge)
+- **Status:** implementação concluída e CI de push aprovada; PR para `main` pendente
 - **Branch:** `phase-3/media-ingestion`
-- **Base:** `main` com Fases 0, 1 e 2 integradas (Fase 2: `4129f0a`)
+- **Base:** `main` com Fases 0, 1 e 2 integradas (Fase 2: `4129f0a906a04693502f298b71767605499e3f68`)
 - **Escopo:** aquisição de fonte, inspeção, seleção de faixa, normalização de áudio e isolamento/limpeza dos artefatos de mídia
 - **Limites:** sem Whisper/WhisperX, transcrição, alinhamento, tradução ou publicação SRT final
 
 ## 1. Objetivo
 
-Implementar os fluxos reais de entrada previstos no roadmap: arquivos locais de áudio/vídeo e URLs do YouTube. Inspecionar contêineres e streams com ffprobe, selecionar a faixa de áudio correta, normalizar para WAV PCM signed 16-bit mono/16 kHz com FFmpeg, preservar separadamente o offset da faixa original e manter mídia baixada/áudio normalizado no workspace exclusivo do job.
+Implementar os fluxos reais de entrada previstos no roadmap: arquivos locais de áudio/vídeo e URLs do YouTube. Inspecionar contêineres e streams com ffprobe, selecionar a faixa de áudio correta, normalizar para WAV PCM signed 16-bit mono/16 kHz, preservar separadamente o offset da faixa original e manter mídia baixada/áudio normalizado no workspace exclusivo do job.
 
-A camada GUI deve iniciar inspeções e processamento fora da thread principal, permitir selecionar uma faixa local quando a mídia tiver múltiplas faixas e mostrar erros/preflight de modo honesto. A Fase 3 prepara o áudio; não promete transcrição.
+A GUI inicia inspeções fora da thread principal, permite selecionar uma faixa local quando há múltiplas faixas e apresenta estados de prontidão e erros honestos. A Fase 3 prepara o áudio; não promete transcrição ou SRT.
 
 ## 2. Entregas
 
-1. **Fonte de entrada:** escolha explícita entre arquivo local e URL do YouTube; validação de caminho/URL, domínio, extensão, existência e acesso.
-2. **YouTube:** adaptador yt-dlp usando a dependência do perfil CPU, sem shell interpolation, sem playlists e com cancelamento/progresso por hooks; arquivo adquirido dentro do workspace.
-3. **Inspeção:** ffprobe identifica contêiner, duração quando disponível, streams de áudio/vídeo, codec, canais, taxa de amostragem, idioma, título, marcação default e offset de apresentação.
-4. **Seleção de faixa:** preferir a faixa marcada como default; respeitar seleção explícita pelo índice global; rejeitar índices inexistentes ou não-áudio.
-5. **Normalização:** FFmpeg extrai apenas a faixa selecionada, converte para WAV PCM signed 16-bit, mono, 16 kHz; não altera a fonte; escreve em arquivo intermediário e publica o artefato preparado atomicamente.
-6. **Timeline:** preservar `stream.start_time`; se ausente, derivar `start_pts * time_base`; depois usar `format.start_time` como fallback explicitamente identificado; zero somente quando não houver timestamp disponível. Nunca somar o offset ao conteúdo WAV e novamente ao alinhador.
-7. **Validação:** reabrir o WAV gerado com ffprobe e confirmar codec, sample rate, canais e duração positiva antes de considerá-lo pronto.
-8. **Cancelamento/timeout:** ffprobe, FFmpeg e yt-dlp devem encerrar ou chegar a checkpoints em cancelamento; erros incluem detalhes técnicos limitados sem despejar URLs ou dados sensíveis.
-9. **Workspace:** fonte baixada, arquivos parciais e WAV ficam sob o diretório isolado do job; limpeza idempotente não toca no cache de modelos nem em arquivos do usuário.
-10. **GUI:** seletor local/YouTube; inspeção assíncrona; seleção das faixas de áudio da fonte local; feedback da mídia/áudio preparado; controles bloqueados durante operação; cancelamento cooperativo.
-11. **CI e testes:** unitários sem rede, testes de contrato para yt-dlp com fake, integração sintética real com FFmpeg/ffprobe, matriz Python 3.10–3.13, Ruff/format e verificação de arquitetura.
-12. **Documentação:** README, roadmap, estado atual, plano operacional e handoff atualizados com evidências reais.
+1. **Fontes:** seletor explícito para arquivo local ou URL de vídeo individual do YouTube; validação do caminho, URL, host, credenciais e porta.
+2. **YouTube:** adaptador yt-dlp por API Python, sem shell; rejeita playlists, limita saída ao workspace do job, aplica timeout/retries e hooks de progresso/cancelamento.
+3. **Runtime EJS:** preflight valida yt-dlp e runtime JS compatível; prefere Deno >=2.3 e aceita Node.js >=22 como alternativa. O runtime escolhido e seu caminho são configurados explicitamente no yt-dlp.
+4. **Inspeção:** ffprobe identifica contêiner, duração quando disponível, streams de áudio/vídeo, codec, canais, sample rate, idioma, título, disposição default e offset.
+5. **Seleção de faixa:** prefere a faixa marcada como default; respeita seleção explícita pelo índice global do stream e rejeita índices inexistentes/não-áudio.
+6. **Normalização:** FFmpeg extrai somente a faixa selecionada e gera WAV PCM s16le, mono, 16 kHz. Não altera a fonte.
+7. **Timeline:** preserva `stream.start_time`; se ausente, deriva `start_pts * time_base`; depois usa `format.start_time` como fallback identificado; zero somente quando não há timestamp. A duração relativa do contêiner não é comparada cegamente com um timestamp absoluto do stream.
+8. **Validação/publicação:** reabre o WAV via ffprobe e valida codec, sample rate, canais e duração positiva. A gravação temporária ocorre no mesmo diretório do destino e a publicação por hard-link atômico falha quando o destino já existe.
+9. **Cancelamento/timeout:** ffprobe e FFmpeg são executados sem shell, com timeout e encerramento controlado; yt-dlp verifica o token nos hooks e usa timeout de socket. Falhas/cancelamentos limpam artefatos parciais.
+10. **Workspace:** mídia baixada, WAV e temporários ficam no diretório isolado do job. A limpeza valida a raiz e não remove o cache de modelos nem a mídia de origem.
+11. **GUI:** inspeção prévia em QThread dedicada, seleção das faixas locais, metadados e offset visíveis, cancelamento cooperativo e bloqueios enquanto há trabalho.
+12. **CI/testes:** testes unitários sem rede, contrato yt-dlp com doubles, integração sintética com FFmpeg/ffprobe reais, matriz Python 3.10–3.13 e Ruff/format.
+13. **Documentação:** README, roadmap, estado atual, plano operacional e handoff sincronizados com a implementação e evidências.
 
 ## 3. Fora do escopo (fases posteriores)
 
-- Whisper/WhisperX concretos, download de modelos, transcrição, idioma detectado por modelo e alinhamento por palavra.
-- Segmentação/legendas SRT, tradução e escolha de fornecedor.
-- Integração ponta a ponta de toda a geração de SRT.
-- Prometer que todas as URLs/contêineres/DRMs são suportados. YouTube dependerá dos limites do yt-dlp/EJS e da disponibilidade do conteúdo.
-- Homologação final em hardware/HiDPI e todos os sistemas operacionais (gate global da Fase 8).
+- Whisper/WhisperX concretos, download de modelos, transcrição e detecção automática do idioma.
+- Alinhamento por palavra, VAD e aplicação dos offsets à timeline final.
+- Segmentação de legendas, tradução, geração e publicação SRT.
+- Prometer compatibilidade com toda URL, DRM, contêiner ou codec existente.
+- Homologação final em hardware/HiDPI e em todos os sistemas operacionais (gate global da Fase 8).
 
 ## 4. Critérios de aceite
 
-- [ ] Local e YouTube são fontes distintas e validadas; nenhum comando é executado por shell.
-- [ ] yt-dlp não baixa playlists e grava somente dentro do workspace.
-- [ ] Progresso de download é medido somente com tamanho total disponível; caso contrário não inventar percentual.
-- [ ] ffprobe lista faixas e metadados; a faixa default é escolhida corretamente e índice explícito é respeitado.
-- [ ] Offsets são derivados e a origem do offset é registrada (stream, start_pts/time_base, container ou zero assumido).
-- [ ] FFmpeg gera WAV PCM s16le mono/16 kHz e o resultado é validado novamente por ffprobe.
-- [ ] Arquivo fonte não é alterado; arquivo parcial não fica após sucesso/falha/cancelamento.
-- [ ] Cancelamento e timeout encerram subprocessos ou download em checkpoints; não deixam processos órfãos.
-- [ ] Workspaces permanecem isolados e sua limpeza não toca cache ou arquivos fonte.
-- [ ] GUI inspeciona sem bloquear a thread principal e permite selecionar faixas locais múltiplas.
-- [ ] Testes sem rede; fixtures reais sintéticas para contêineres/codecs/offsets; CI 3.10–3.13 verde.
-- [ ] README, roadmap, estado atual e handoff correspondem à implementação real.
+- [x] Arquivo local e YouTube são fontes distintas e validadas; processos não usam shell.
+- [x] yt-dlp rejeita playlists e restringe os artefatos ao workspace.
+- [x] Progresso do download só é percentual quando o tamanho total está disponível.
+- [x] ffprobe identifica streams e metadados; a faixa default e a escolha explícita são respeitadas.
+- [x] Offset e proveniência são derivados/preservados; timestamp absoluto não é confundido com duração relativa.
+- [x] FFmpeg gera WAV PCM s16le mono/16 kHz e o resultado é revalidado por ffprobe.
+- [x] Fonte original é preservada; temporários são removidos após sucesso, falha ou cancelamento.
+- [x] Cancelamento/timeout encerram processos ou são observados em checkpoints.
+- [x] Workspace isolado; limpeza não remove cache nem fonte.
+- [x] GUI executa inspeção fora da thread principal e permite escolher entre faixas locais.
+- [x] Testes offline e integração sintética real; CI Python 3.10–3.13 aprovada.
+- [x] README, roadmap, estado atual e handoff descrevem a implementação sem prometer funções futuras.
 
-## 5. Sequência de implementação
+## 5. Evidência de validação
 
-1. Completar metadados do domínio e parser ffprobe (default, time_base e origem do offset).
-2. Adaptador FFmpeg com saída intermediária, validação pós-conversão e cancelamento.
-3. Adaptador yt-dlp com validação de origem, workspace, hooks e cancelamento.
-4. Conectar portas ao pipeline e bootstrap; garantir erros explícitos para os motores das Fases 4/5 ainda ausentes.
-5. Adicionar origem YouTube/local e inspeção/seleção assíncrona de faixas na GUI.
-6. Suíte unitária, contrato de downloader e integração sintética real.
-7. CI dedicada, correções, revisão arquitetural, documentação e PR para `main`.
+Workflow push: [#42921552291](https://github.com/anfalcir/legendar/actions/runs/42921552291), no commit validado `d93b268f84573de569f1e08b72ee73d59795288e`.
 
-## 6. Evidências e estado da execução
+| Ambiente | Resultado | Testes | Cobertura | Qualidade |
+|---|---:|---:|---:|---|
+| Python 3.10 / Ubuntu + FFmpeg | aprovado | 249 | 87% | Ruff check e format aprovados |
+| Python 3.11 / Ubuntu + FFmpeg | aprovado | 249 | 87% | Ruff check e format aprovados |
+| Python 3.12 / Ubuntu + FFmpeg | aprovado | 249 | 87% | Ruff check e format aprovados |
+| Python 3.13 / Ubuntu + FFmpeg | aprovado | 249 | 87% | Ruff check e format aprovados |
 
-### Implementação presente na branch
+Cobertura por ambiente: 3.069 instruções, 396 não cobertas. Formatação: 97 arquivos verificados. O workflow compila `src/legendar` e `tests`, roda a suíte integral com Qt offscreen e fixtures sintéticas que executam FFmpeg/ffprobe reais.
 
-- Entidade `AudioStreamInfo` agora registra `is_default` e origem do offset. `MediaInfo.default_stream()` prefere a faixa default; índices globais explícitos continuam respeitados.
-- Parser ffprobe deriva offset por `stream.start_time`, `start_pts × time_base`, fallback de `format.start_time` ou zero assumido, registrando a proveniência.
-- `FfmpegAudioPreparer` usa subprocesso sem shell, timeouts/cancelamento, arquivo parcial exclusivo, validação do WAV por ffprobe e publicação sem sobrescrever um destino concorrente.
-- `YtDlpDownloader` aceita hosts oficiais do YouTube, rejeita playlists e caminhos fora do workspace, usa hooks para progresso/cancelamento e evita expor a URL em mensagens de erro.
-- Bootstrap compõe portas reais de inspeção, preparação e download. Transcrição, alinhamento e publicação final permanecem placeholders explícitos das Fases 4–7.
-- GUI possui seleção local/YouTube, inspeção prévia em QThread, seleção de faixa local e exibição dos metadados da faixa escolhida. Inspeção é repetida no pipeline quando o job inicia.
-- Testes unitários e fixtures sintéticas reais de FFmpeg/ffprobe foram adicionados. Testes de downloader usam doubles; não acessam rede.
+### Limites da evidência
 
-### Validação CI
+- O downloader YouTube usa testes de contrato offline com doubles; não foi realizado download de rede real na CI. A disponibilidade efetiva depende do YouTube, yt-dlp, do pacote yt-dlp-ejs e do runtime EJS no computador.
+- Os testes FFmpeg/ffprobe geram mídia sintética e não equivalem à homologação de todo codec/contêiner presente nos arquivos do usuário.
+- Homologação visual em monitor/HiDPI e plataformas adicionais pertence à Fase 8.
 
-- Workflow dedicado: [phase3-quality.yml](../.github/workflows/phase3-quality.yml).
-- Primeira execução [#42914913047](https://github.com/anfalcir/legendar/actions/runs/42914913047): identificou seis falhas de fixtures/expectativas; corrigidas em commits subsequentes.
-- Execuções seguintes chegaram a **245 testes aprovados** nos ambientes Python 3.10, 3.11 e 3.12. Nessas tentativas o gate de lint passou, mas a formatação ainda falhou; uma execução Python 3.13 sofreu segfault durante o teste de cancelamento Qt.
-- O ciclo de vida do worker de inspeção foi ajustado para autoexclusão na própria thread; os nove arquivos apontados pelo Ruff foram formatados.
-- Último run disparado para o snapshot após essas correções: [#42916191288](https://github.com/anfalcir/legendar/actions/runs/42916191288), ainda sem jobs atribuídos quando este documento foi atualizado. Portanto, não conta como aprovação.
+## 6. Integração
 
-### Bloqueios para conclusão
-
-1. Obter uma execução de CI do snapshot atual com os quatro ambientes Python 3.10–3.13 concluídos, incluindo testes, Ruff e formatação.
-2. Revisar resultados e eventuais correções da CI; confirmar que a correção de ciclo de vida Qt eliminou o segfault no Python 3.13.
-3. Fazer revisão final de segurança/arquitetura e confirmar que a limpeza dos workspaces mantém a origem e o cache intactos.
-4. Completar este documento e os documentos vivos com a evidência final.
-5. Abrir PR para `main`, aguardar CI de PR e revisão, então integrar por squash.
-
-A Fase 3 **não está concluída**. Não marcar os critérios abaixo como aprovados com base apenas em código presente ou testes de uma parte da matriz. Não declarar integração à `main` até existir PR merged e commit confirmado.
+A implementação e a matriz de push estão concluídas. A fase somente será declarada integrada depois de a PR para `main` passar pelos gates de pull request, ser revisada e ter merge squash confirmado. Até lá, não iniciar a Fase 4.

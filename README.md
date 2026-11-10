@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem está em execução por fases. As Fases 0, 1 e 2 foram implementadas, validadas e integradas à `main` pelas PRs #1–#3. A Fase 3 está em desenvolvimento na branch `phase-3/media-ingestion`: entrada local/YouTube, ffprobe, seleção de faixa e normalização FFmpeg já foram implementados, mas a validação final da CI e a integração por PR ainda estão pendentes. A aplicação anterior permanece preservada como baseline. Whisper/WhisperX, tradução e publicação SRT continuam nas fases posteriores.
+A remodelagem está em execução por fases. As Fases 0, 1 e 2 foram implementadas, validadas e integradas à `main` pelas PRs #1–#3. A Fase 3 está implementada e a CI de push passou em Python 3.10–3.13 (249 testes por ambiente, cobertura 87%, Ruff check/format verdes); a integração pela PR para `main` ainda está pendente. A aplicação anterior permanece preservada como baseline. Whisper/WhisperX, tradução e publicação SRT continuam nas fases posteriores.
 
 ## Documentação do projeto
 
@@ -31,7 +31,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–2 integradas. Na branch `phase-3/media-ingestion`, a nova arquitetura já possui adaptadores concretos para ffprobe, FFmpeg e yt-dlp, seleção de faixa local e inspeção assíncrona; essa implementação ainda aguarda CI final e integração por PR. Whisper/WhisperX, alinhamento, tradução e publicação SRT continuam fora do escopo da Fase 3. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_3_PLANO.md](docs/FASE_3_PLANO.md) e [docs/HANDOFF_FASE_3.md](docs/HANDOFF_FASE_3.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–2 integradas. Na branch `phase-3/media-ingestion`, a nova arquitetura possui adaptadores concretos para ffprobe, FFmpeg e yt-dlp, seleção de faixa local, inspeção assíncrona e preflight de runtime EJS. Essa implementação passou na matriz de push; aguarda somente os gates da PR e a integração por squash. Whisper/WhisperX, alinhamento, tradução e publicação SRT continuam fora do escopo da Fase 3. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_3_PLANO.md](docs/FASE_3_PLANO.md) e [docs/HANDOFF_FASE_3.md](docs/HANDOFF_FASE_3.md).
 
 ## Licença
 
