@@ -189,7 +189,7 @@ jobs:
 
       - name: Run public PT-BR and English model smoke benchmark
         run: |
-          uv run --locked python scripts/phase0_model_poc.py \
+          uv run --locked --no-dev --group phase0 --extra runtime-cpu python scripts/phase0_model_poc.py \
             --model tiny \
             --samples-per-language 2 \
             --cache-dir .cache/phase0 \
