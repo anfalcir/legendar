@@ -31,6 +31,7 @@ PACKAGE_DISTRIBUTIONS = {
     "numpy": "numpy",
     "PySide6": "PySide6",
     "yt-dlp": "yt-dlp",
+    "yt-dlp-ejs": "yt-dlp-ejs",
 }
 
 
@@ -244,6 +245,14 @@ def _probe_executable(name: str, project_root: Path) -> dict[str, Any]:
     return _run_command([executable, "-version"])
 
 
+def _probe_path_executable(name: str) -> dict[str, Any]:
+    """Probe an optional runtime executable available on PATH."""
+    executable = shutil.which(name)
+    if not executable:
+        return {"available": False, "version": None, "error": "not_found"}
+    return _run_command([executable, "--version"])
+
+
 def _package_versions() -> dict[str, str | None]:
     versions: dict[str, str | None] = {}
     for label, distribution in PACKAGE_DISTRIBUTIONS.items():
@@ -338,6 +347,8 @@ def collect_inventory(project_root: Path, probe_torch: bool = False) -> dict[str
         "media_tools": {
             "ffmpeg": _probe_executable("ffmpeg", project_root),
             "ffprobe": _probe_executable("ffprobe", project_root),
+            "deno": _probe_path_executable("deno"),
+            "node": _probe_path_executable("node"),
         },
         "nvidia_gpu_probe": gpu_probe,
         "packages": _package_versions(),
