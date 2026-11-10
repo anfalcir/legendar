@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-from legendar.bootstrap.app import build_ui_dependencies
 from legendar.application.pipeline.serial_pipeline import SerialPipeline
+from legendar.bootstrap.app import build_ui_dependencies
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.config.settings import AppSettings
 from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
