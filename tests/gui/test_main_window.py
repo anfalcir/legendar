@@ -278,6 +278,28 @@ def test_progress_is_indeterminate_until_pipeline_reports_a_measurement(
     window._thread = None
 
 
+
+def test_keyboard_tab_order_and_accessible_names_are_explicit(
+    qtbot, tmp_path
+) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+
+    assert window.file_edit.accessibleName() == "Arquivo de mídia"
+    assert window.generate_button.accessibleName()
+    assert window.cancel_button.accessibleName()
+    assert window.log_view.accessibleName() == "Registro de atividade do trabalho"
+    assert window.readiness_label.accessibleName() == (
+        "Estado das ferramentas externas"
+    )
+
+    window.preferences_button.setFocus()
+    qtbot.keyClick(window.preferences_button, Qt.Key.Key_Tab)
+    assert window.file_edit.hasFocus()
+
+    qtbot.keyClick(window.file_edit, Qt.Key.Key_Tab)
+    assert window.browse_button.hasFocus()
+
+
 def test_missing_file_is_reported_without_starting(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
     window.file_edit.setText(str(tmp_path / "nao-existe.mp4"))
