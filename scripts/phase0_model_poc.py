@@ -62,7 +62,7 @@ def _load_reference_rows(
     rows: list[dict[str, str]] = []
     seen_utterances: set[str] = set()
     with Path(tsv_path).open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.reader(handle, delimiter="\\t")
+        reader = csv.reader(handle, delimiter="\t")
         # FLEURS TSVs are headerless. Stable columns begin with id, path,
         # raw_transcription, transcription, normalized_transcription.
         for values in reader:
