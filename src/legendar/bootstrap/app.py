@@ -109,7 +109,9 @@ class _PendingPublisher:
         raise ModelError("A geração e publicação SRT serão concluídas nas Fases 6/7.")
 
 
-def _pipeline_factory(\n    inspector: FfprobeInspector, downloader: YtDlpDownloader\n) -> SerialPipeline:
+def _pipeline_factory(
+    inspector: FfprobeInspector, downloader: YtDlpDownloader
+) -> SerialPipeline:
     """Monta aquisição, inspeção e normalização reais.
 
     Os motores posteriores são placeholders explícitos; o pipeline pode
