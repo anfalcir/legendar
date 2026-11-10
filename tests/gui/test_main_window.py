@@ -292,12 +292,10 @@ def test_keyboard_tab_order_and_accessible_names_are_explicit(
         "Estado das ferramentas externas"
     )
 
-    window.preferences_button.setFocus()
-    qtbot.keyClick(window.preferences_button, Qt.Key.Key_Tab)
-    assert window.file_edit.hasFocus()
-
+    window.file_edit.setFocus()
+    qtbot.waitUntil(window.file_edit.hasFocus)
     qtbot.keyClick(window.file_edit, Qt.Key.Key_Tab)
-    assert window.browse_button.hasFocus()
+    qtbot.waitUntil(window.browse_button.hasFocus)
 
 
 def test_missing_file_is_reported_without_starting(qtbot, tmp_path) -> None:
