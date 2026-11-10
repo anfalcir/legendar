@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem está em execução por fases. As Fases 1 (reestruturação arquitetural) e 2 (interface profissional) foram implementadas e validadas; a Fase 1 está integrada à `main` pela PR #2 e a Fase 2 está pronta para integração pela PR #3. A CI da Fase 2 aprovou Python 3.10–3.13 com 218 testes por ambiente e 88% de cobertura. A aplicação anterior permanece preservada como baseline até que os fluxos substitutos sejam implementados e homologados. A Fase 3 ainda não foi iniciada.
+A remodelagem está em execução por fases. As Fases 1 (reestruturação arquitetural) e 2 (interface profissional) foram implementadas, validadas e integradas à `main` pelas PRs #2 e #3. A CI da Fase 2 aprovou Python 3.10–3.13 com 218 testes por ambiente e 88% de cobertura. A aplicação anterior permanece preservada como baseline até que os fluxos substitutos sejam implementados e homologados. A Fase 3 ainda não foi iniciada.
 
 ## Documentação do projeto
 
