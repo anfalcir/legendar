@@ -579,7 +579,7 @@ O repositório Legendar é a fonte de verdade dos requisitos de software. O ambi
 
 ### 11.2. Manifesto e baseline inicial
 
-O `pyproject.toml` foi introduzido na Fase 0 com PySide6 como dependência-base e perfis completos de runtime: `runtime-cpu`, `runtime-cu128` e `runtime-rocm72`. Cada perfil inclui Whisper, yt-dlp e uma variante compatível do stack PyTorch. O perfil MPS/macOS utiliza os wheels PyPI do PyTorch e pode expor MPS no runtime quando o ambiente oferecer suporte. WhisperX está isolado no extra `alignment-whisperx`, combinável com exatamente um perfil runtime.
+O `pyproject.toml` foi introduzido na Fase 0 com PySide6 como dependência-base e perfis completos de POC: `runtime-cpu` e `runtime-cu128`. Cada perfil inclui Whisper, yt-dlp, a variante correspondente do stack PyTorch e WhisperX, evitando que o alinhador seja instalado sem backend explícito. O macOS utiliza os wheels PyPI do PyTorch no perfil CPU e pode expor MPS no runtime quando o ambiente oferecer suporte. O perfil ROCm 7.2 não é oferecido nesta versão porque a matriz oficial disponível resolve PyTorch a partir de 2.11, incompatível com a faixa exigida pelo WhisperX estável 3.8.6 (`>=2.8,<2.9`).
 
 A faixa inicial de Python é `>=3.10,<3.14`, determinada pela compatibilidade declarada pelo candidato WhisperX estável 3.8.6, e não pela versão instalada no computador-alvo. Essa faixa será ampliada quando a interseção das dependências críticas, os wheels e a CI demonstrarem suporte adicional.
 
