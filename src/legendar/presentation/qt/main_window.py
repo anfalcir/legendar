@@ -471,6 +471,7 @@ class MainWindow(QMainWindow):
         self.media_kind_combo.currentIndexChanged.connect(self._on_media_kind_changed)
         self.output_edit.textEdited.connect(self._on_output_edited)
         self.file_edit.textEdited.connect(self._on_file_edited)
+        self.stream_combo.currentIndexChanged.connect(self._on_stream_selection_changed)
         self.source_combo.currentIndexChanged.connect(self._on_language_changed)
         self.target_combo.currentIndexChanged.connect(self._on_language_changed)
         self.translate_check.toggled.connect(self._on_translate_toggled)
@@ -660,26 +661,45 @@ class MainWindow(QMainWindow):
             suffix = " · padrão" if stream.is_default else ""
             self.stream_combo.addItem(f"{stream.label_pt}{suffix}", stream.index)
         if info.audio_streams:
+            default = info.default_stream()
+            default_index = self.stream_combo.findData(default.index)
+            if default_index >= 0:
+                self.stream_combo.setCurrentIndex(default_index)
+            self._on_stream_selection_changed(self.stream_combo.currentIndex())
+        else:
             duration = (
                 f"{info.duration_seconds:.2f} s"
                 if info.duration_seconds is not None
                 else "duração não informada"
             )
-            default = info.default_stream()
             self.media_info_label.setText(
-                f"{info.container} · {duration} · {len(info.audio_streams)} "
-                f"faixa(s) de áudio. Padrão: faixa {default.index} "
-                f"({default.codec}, {default.channels} canais, "
-                f"{default.sample_rate_hz} Hz; offset {default.start_time_seconds:.3f} s)."
-            )
-            default_index = self.stream_combo.findData(default.index)
-            if default_index >= 0:
-                self.stream_combo.setCurrentIndex(default_index)
-        else:
-            self.media_info_label.setText(
-                "A mídia foi aberta, mas não contém nenhuma faixa de áudio."
+                f"{info.container} · {duration} · mídia sem faixa de áudio."
             )
         self._sync_source_controls()
+
+    @Slot(int)
+    def _on_stream_selection_changed(self, _index: int) -> None:
+        if self._media_info is None or not self._media_info.audio_streams:
+            return
+        selected = self.stream_combo.currentData()
+        stream = (
+            self._media_info.default_stream()
+            if selected is None
+            else self._media_info.stream_by_index(int(selected))
+        )
+        duration = (
+            f"{self._media_info.duration_seconds:.2f} s"
+            if self._media_info.duration_seconds is not None
+            else "duração não informada"
+        )
+        selection = "Faixa padrão" if selected is None else "Faixa escolhida"
+        title = f" · {stream.title}" if stream.title else ""
+        self.media_info_label.setText(
+            f"{self._media_info.container} · {duration} · {selection}: "
+            f"faixa {stream.index}{title} ({stream.codec}, "
+            f"{stream.channels} canais, {stream.sample_rate_hz} Hz; "
+            f"offset {stream.start_time_seconds:.3f} s via {stream.offset_source})."
+        )
 
     @Slot(object)
     def _on_media_inspection_failed(self, error: Exception) -> None:
