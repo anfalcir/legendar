@@ -6,7 +6,11 @@ import pytest
 
 from legendar.application.job.context import CancellationTokenImpl
 from legendar.domain.entities.media import MediaKind, MediaSource
-from legendar.domain.errors.catalog import DownloadError, InvalidInputError, JobCancelledError
+from legendar.domain.errors.catalog import (
+    DownloadError,
+    InvalidInputError,
+    JobCancelledError,
+)
 from legendar.infrastructure.media.youtube import YtDlpDownloader
 
 
