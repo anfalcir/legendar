@@ -42,6 +42,7 @@ trabalho é delegado a subclasses de `QThread`; o resultado é texto simples UTF
 | YouTube | `yt_dlp` seleciona `bestaudio/best`, usa o caminho de FFmpeg resolvido pelo helper e extrai MP3 em qualidade 192 | `test_legacy_youtube_download_uses_audio_extraction_and_bundled_ffmpeg` |
 | Nome de saída | Arquivos existentes recebem sufixos incrementais (`nome_1.txt`, `nome_2.txt` etc.) | `test_legacy_worker_allocates_non_colliding_text_output_paths` |
 | Worker local | Emite logs e o caminho final por sinal; falhas são enviadas pelo sinal de erro | `test_legacy_local_worker_emits_the_text_file_path` |
+| Colisão de áudio YouTube | Ao selecionar um sufixo temporário alternativo, o caminho MP3 passado à transcrição acompanha o novo nome | `test_legacy_youtube_worker_updates_mp3_path_after_a_collision` |
 | Instagram | A função cria o objeto Instaloader e termina com `NotImplementedError`; não há download funcional | `test_legacy_instagram_integration_is_explicitly_unimplemented` |
 | Compatibilidade de sintaxe | Os arquivos Python de `main.py`, `core/` e `gui/` precisam continuar parseáveis em toda a faixa declarada | `test_legacy_python_sources_remain_parseable_on_supported_python` |
 
@@ -78,7 +79,7 @@ A expressão foi reescrita sem sintaxe dependente do Python 3.12.
 
 Também foi corrigido o caminho do MP3 após colisão de nome no worker do YouTube: quando um
 arquivo temporário já existe, o caminho de entrada da transcrição agora acompanha o nome
-alternativo escolhido. Essa correção é coberta indiretamente pela suíte de caracterização e
+alternativo escolhido. Essa correção é coberta diretamente por teste de regressão e
 permite que o módulo legado seja importado na faixa de Python suportada.
 
 Nenhuma integração real, dependência de runtime ou fluxo de produto novo foi introduzido.
