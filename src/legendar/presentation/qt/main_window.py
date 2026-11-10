@@ -238,27 +238,64 @@ class MainWindow(QMainWindow):
     def _build_input_panel(self) -> QFrame:
         panel, layout = self._panel("Origem da mídia")
         description = QLabel(
-            "Selecione um arquivo local de áudio ou vídeo para preparar o trabalho.",
+            "Use um arquivo local ou informe a URL de um único vídeo do YouTube.",
             panel,
         )
         description.setObjectName("sectionSubtitle")
         description.setWordWrap(True)
         layout.addWidget(description)
 
+        self.media_kind_combo = QComboBox(panel)
+        self.media_kind_combo.setObjectName("mediaKindCombo")
+        self.media_kind_combo.addItem("Arquivo local", MediaKind.LOCAL_FILE.value)
+        self.media_kind_combo.addItem("YouTube", MediaKind.YOUTUBE.value)
+        self.media_kind_combo.setAccessibleName("Tipo de origem da mídia")
+
         self.file_edit = QLineEdit(panel)
         self.file_edit.setObjectName("fileEdit")
-        self.file_edit.setPlaceholderText("Nenhum arquivo selecionado")
+        self.file_edit.setPlaceholderText("Caminho do arquivo de áudio ou vídeo")
         self.file_edit.setClearButtonEnabled(True)
-        self.file_edit.setAccessibleName("Arquivo de mídia")
+        self.file_edit.setAccessibleName("Arquivo ou URL da mídia")
         self.browse_button = QPushButton("Selecionar arquivo…", panel)
         self.browse_button.setObjectName("browseButton")
         self.browse_button.setAccessibleName("Selecionar arquivo de mídia")
 
-        row = QHBoxLayout()
-        row.setSpacing(10)
-        row.addWidget(self.file_edit, stretch=1)
-        row.addWidget(self.browse_button)
-        layout.addLayout(row)
+        source_row = QHBoxLayout()
+        source_row.setSpacing(10)
+        source_row.addWidget(self.media_kind_combo)
+        source_row.addWidget(self.file_edit, stretch=1)
+        source_row.addWidget(self.browse_button)
+        layout.addLayout(source_row)
+
+        inspection_row = QHBoxLayout()
+        self.inspect_button = QPushButton("Inspecionar faixas", panel)
+        self.inspect_button.setObjectName("inspectMediaButton")
+        self.inspect_button.setAccessibleName("Inspecionar faixas de áudio")
+        self.inspect_cancel_button = QPushButton("Cancelar inspeção", panel)
+        self.inspect_cancel_button.setObjectName("cancelInspectionButton")
+        self.inspect_cancel_button.setProperty("variant", "danger")
+        self.inspect_cancel_button.setVisible(False)
+        self.inspect_cancel_button.setEnabled(False)
+
+        self.stream_combo = QComboBox(panel)
+        self.stream_combo.setObjectName("audioStreamCombo")
+        self.stream_combo.addItem("Usar faixa padrão da mídia", None)
+        self.stream_combo.setAccessibleName("Faixa de áudio selecionada")
+        self.stream_combo.setEnabled(False)
+
+        inspection_row.addWidget(self.inspect_button)
+        inspection_row.addWidget(self.stream_combo, stretch=1)
+        inspection_row.addWidget(self.inspect_cancel_button)
+        layout.addLayout(inspection_row)
+
+        self.media_info_label = QLabel(
+            "A faixa padrão será usada automaticamente. Inspecione para escolher outra.",
+            panel,
+        )
+        self.media_info_label.setObjectName("sectionSubtitle")
+        self.media_info_label.setWordWrap(True)
+        layout.addWidget(self.media_info_label)
+        self._sync_source_controls()
         return panel
 
     def _build_language_panel(self) -> QFrame:
@@ -429,6 +466,9 @@ class MainWindow(QMainWindow):
         self.browse_button.clicked.connect(self._choose_file)
         self.output_browse_button.clicked.connect(self._choose_output)
         self.preferences_button.clicked.connect(self._open_preferences)
+        self.inspect_button.clicked.connect(self._start_media_inspection)
+        self.inspect_cancel_button.clicked.connect(self._cancel_media_inspection)
+        self.media_kind_combo.currentIndexChanged.connect(self._on_media_kind_changed)
         self.output_edit.textEdited.connect(self._on_output_edited)
         self.file_edit.textEdited.connect(self._on_file_edited)
         self.source_combo.currentIndexChanged.connect(self._on_language_changed)
@@ -439,9 +479,12 @@ class MainWindow(QMainWindow):
         self.cancel_button.clicked.connect(self._cancel_job)
 
         # Ordem explícita e previsível para navegação sem mouse.
-        self.setTabOrder(self.preferences_button, self.file_edit)
+        self.setTabOrder(self.preferences_button, self.media_kind_combo)
+        self.setTabOrder(self.media_kind_combo, self.file_edit)
         self.setTabOrder(self.file_edit, self.browse_button)
-        self.setTabOrder(self.browse_button, self.source_combo)
+        self.setTabOrder(self.browse_button, self.inspect_button)
+        self.setTabOrder(self.inspect_button, self.stream_combo)
+        self.setTabOrder(self.stream_combo, self.source_combo)
         self.setTabOrder(self.source_combo, self.target_combo)
         self.setTabOrder(self.target_combo, self.translate_check)
         self.setTabOrder(self.translate_check, self.output_edit)
