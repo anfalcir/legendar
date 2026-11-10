@@ -31,7 +31,7 @@ O inventário de uma máquina identifica o perfil daquele ambiente. Não deve, i
 | `requirements.txt` | Snapshot de instalação da baseline anterior | Legado transitório; não editar manualmente nem tratar como autoridade; remover ou substituir por exportação gerada quando a migração for concluída |
 | `docs/MATRIZ_DEPENDENCIAS.md` | Justificativas, categorias, compatibilidade, políticas e estado da homologação | Documenta decisões; não substitui os manifestos executáveis |
 
-O `pyproject.toml` registra PySide6 como dependência-base e oferece dois perfis completos de runtime atualmente resolvíveis com o alinhador estável candidato: `runtime-cpu` e `runtime-cu128`. Cada perfil reúne Whisper, yt-dlp e o conjunto de pacotes PyTorch correspondente; deve-se instalar exatamente um perfil. O extra `alignment-whisperx` acrescenta o alinhador candidato e pode ser combinado com qualquer um desses perfis.
+O `pyproject.toml` registra PySide6 como dependência-base e oferece dois perfis completos de POC: `runtime-cpu` e `runtime-cu128`. Cada perfil reúne Whisper, yt-dlp, PyTorch, torchvision, torchaudio e WhisperX. Deve-se instalar exatamente um perfil. Essa composição evita que uma instalação do alinhador ocorra sem a variante PyTorch explicitamente selecionada.
 
 A primeira resolução experimental feita apenas contra PyPI foi **rejeitada e não foi commitada**: o pacote `torch` selecionado puxava bibliotecas CUDA/NVIDIA mesmo sem o projeto ter escolhido um perfil CUDA. Isso demonstrou que um lock universal sem seleção explícita da origem PyTorch não é suficiente. Uma segunda tentativa avaliou índices explícitos para CPU, CUDA e ROCm e encontrou uma incompatibilidade real: o índice ROCm 7.2 disponível começa em PyTorch 2.11, enquanto o WhisperX estável 3.8.6 exige PyTorch `>=2.8,<2.9`. Por isso, ROCm permanece como possibilidade arquitetural futura, mas não é oferecido como perfil completo instalável nesta matriz. Não vamos usar uma versão pré-release do WhisperX para mascarar esse conflito.
 
@@ -46,10 +46,10 @@ A escolha de `uv` é uma decisão de gerenciamento de projeto, não uma dependê
 | PySide6 | Runtime-base | `>=6.9,<7` | Framework GUI; faixa minor ampla, com limite major para exigir revisão de compatibilidade |
 | openai-whisper | Runtime nos perfis `runtime-*` | `>=20250625` | Motor de reconhecimento central; declarado como requisito em todos os perfis completos |
 | yt-dlp | Runtime nos perfis `runtime-*` | `>=2025.4.30` | Entrada YouTube; declarado como requisito em todos os perfis completos |
-| PyTorch / torchvision / torchaudio (CPU) | Perfil completo `runtime-cpu` | `torch>=2.8,<2.9`; `torchvision>=0.23,<0.24`; `torchaudio>=2.8,<2.9` | Rota sem GPU dedicada; usa índice CPU explícito em Linux/Windows e wheels PyPI em macOS |
-| PyTorch / torchvision / torchaudio (CUDA 12.8) | Perfil completo `runtime-cu128` | Mesmas faixas PyTorch do perfil CPU | Perfil opcional para Linux/Windows com CUDA 12.8 compatível; utiliza índice oficial cu128 |
+| Stack completo Whisper + WhisperX + PyTorch (CPU) | Perfil de POC `runtime-cpu` | WhisperX `>=3.8.6,<3.9`; Torch `>=2.8,<2.9`; torchvision `>=0.23,<0.24`; torchaudio `>=2.8,<2.9` | Usa índice CPU explícito em Linux/Windows e wheels PyPI em macOS |
+| Stack completo Whisper + WhisperX + PyTorch (CUDA 12.8) | Perfil de POC `runtime-cu128` | Mesmas faixas do perfil CPU | Perfil opcional para Linux/Windows com CUDA 12.8 compatível; utiliza índice oficial cu128 |
 | PyTorch ROCm 7.2 | Futuro perfil; não declarado como runtime instalável | Índice oficial disponível resolve PyTorch `>=2.11`, incompatível com WhisperX estável 3.8.6 (`>=2.8,<2.9`) | Bloqueado pela interseção atual do stack; reavaliar quando upstream estável for compatível ou outro alinhador for homologado |
-| WhisperX | Extra `alignment-whisperx` | `>=3.8.6,<4` | Candidato de alinhamento; deve ser combinado com exatamente um perfil `runtime-*`; só será promovido após POC PT-BR/EN |
+| WhisperX | Incluído nos perfis `runtime-*` da POC | `>=3.8.6,<3.9` | Alinhador candidato; incluído junto da variante PyTorch para que a resolução sempre tenha um backend explícito; sua qualidade PT-BR/EN ainda precisa ser homologada |
 | pytest / pytest-qt / pytest-cov | Desenvolvimento e testes | Declarados no grupo `test` | Testes unitários, integração e GUI; não são dependências do usuário final |
 | Ruff | Desenvolvimento | Declarado no grupo `lint` | Lint e formatação; não é dependência do usuário final |
 | PyInstaller | Empacotamento | Declarado no grupo `build` | Ferramenta de build; não é dependência de runtime |
@@ -74,8 +74,8 @@ uv sync --no-dev --extra runtime-cu128
 # No macOS, runtime-cpu usa wheels PyPI; MPS pode ficar disponível no runtime.
 uv sync --no-dev --extra runtime-cpu
 
-# Acrescentar forced alignment para a POC
-uv sync --no-dev --extra runtime-cpu --extra alignment-whisperx
+# WhisperX já vem no perfil completo da POC; não precisa de extra adicional
+uv sync --no-dev --extra runtime-cpu
 ```
 
 Não combinar mais de um extra `runtime-*`. O próprio `uv` declara os perfis disponíveis como conflitantes para impedir a resolução acidental de variantes PyTorch incompatíveis. O perfil CUDA é destinado a Linux/Windows compatíveis; no macOS, usar `runtime-cpu`, que recorre aos wheels PyPI e pode disponibilizar MPS em Apple Silicon. ROCm 7.2 não está exposto como extra runtime porque sua versão atual de PyTorch não cruza a faixa exigida pelo WhisperX estável.
