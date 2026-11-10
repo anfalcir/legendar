@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem está em execução por fases. As Fases 1 (reestruturação arquitetural) e 2 (interface profissional) foram implementadas, validadas e integradas à `main` pelas PRs #2 e #3. A CI da Fase 2 aprovou Python 3.10–3.13 com 218 testes por ambiente e 88% de cobertura. A aplicação anterior permanece preservada como baseline até que os fluxos substitutos sejam implementados e homologados. A Fase 3 ainda não foi iniciada.
+A remodelagem está em execução por fases. As Fases 0, 1 e 2 foram implementadas, validadas e integradas à `main` pelas PRs #1–#3. A Fase 3 está implementada e a CI de push passou em Python 3.10–3.13 (249 testes por ambiente, cobertura 87%, Ruff check/format verdes); a integração pela PR para `main` ainda está pendente. A aplicação anterior permanece preservada como baseline. Whisper/WhisperX, tradução e publicação SRT continuam nas fases posteriores.
 
 ## Documentação do projeto
 
@@ -15,6 +15,8 @@ A remodelagem está em execução por fases. As Fases 1 (reestruturação arquit
 - [Handoff da Fase 1](docs/HANDOFF_FASE_1.md) — arquitetura, critérios e decisões de migração.
 - [Plano operacional da Fase 2](docs/FASE_2_PLANO.md) — identidade visual, UX, confirmações, preferências e critérios de validação da interface profissional.
 - [Handoff da Fase 2](docs/HANDOFF_FASE_2.md) — implementação, evidências de CI, limitações e próximos gates.
+- [Plano operacional da Fase 3](docs/FASE_3_PLANO.md) — escopo, decisões de mídia, critérios de aceite e gates de CI.
+- [Handoff da Fase 3](docs/HANDOFF_FASE_3.md) — arquitetura implementada, evidências, riscos e próximos passos.
 
 ## Direção do produto
 
@@ -29,7 +31,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A nova arquitetura em `src/legendar/` possui camadas, pipeline, máquina de estados, cancelamento cooperativo, publicação SRT atômica e uma interface profissional com temas, confirmações, preferências, progresso e log. Ela ainda não processa mídia real: integração FFmpeg/YouTube, Whisper/WhisperX e tradução pertencem às fases seguintes. O andamento e as evidências estão em [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–2 integradas. Na branch `phase-3/media-ingestion`, a nova arquitetura possui adaptadores concretos para ffprobe, FFmpeg e yt-dlp, seleção de faixa local, inspeção assíncrona e preflight de runtime EJS. Essa implementação passou na matriz de push; aguarda somente os gates da PR e a integração por squash. Whisper/WhisperX, alinhamento, tradução e publicação SRT continuam fora do escopo da Fase 3. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_3_PLANO.md](docs/FASE_3_PLANO.md) e [docs/HANDOFF_FASE_3.md](docs/HANDOFF_FASE_3.md).
 
 ## Licença
 

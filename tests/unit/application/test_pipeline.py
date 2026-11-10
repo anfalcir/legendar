@@ -6,6 +6,7 @@ import pytest
 from tests.helpers.fakes import (
     FakeAligner,
     FakeAudioPreparer,
+    FakeDownloader,
     FakeInspector,
     FakePublisher,
     FakeTranscriber,
@@ -75,6 +76,57 @@ def test_happy_path_publishes_and_reports_states(job_context):
         JobState.VALIDATING_SRT,
         JobState.PUBLISHING,
     ]
+
+
+def test_youtube_source_is_downloaded_before_local_inspection(job_context, tmp_path):
+    downloaded = str(tmp_path / "workspace" / "legendar-youtube-id.webm")
+    downloader = FakeDownloader(path=downloaded)
+    inspector = FakeInspector()
+    preparer = FakeAudioPreparer()
+    pipeline, ports = _pipeline(
+        downloader=downloader,
+        inspector=inspector,
+        audio_preparer=preparer,
+    )
+    request = _request(
+        source=MediaSource(
+            kind=MediaKind.YOUTUBE,
+            location="https://youtu.be/video123",
+        )
+    )
+
+    result = pipeline.execute(request, job_context)
+
+    assert result.output_path == str(job_context.output_path)
+    assert downloader.calls[0][0] == request.source
+    assert inspector.calls[0].kind is MediaKind.LOCAL_FILE
+    assert inspector.calls[0].location == downloaded
+    assert preparer.calls[0][0] == downloaded
+
+
+def test_explicit_audio_stream_index_is_forwarded_to_preparer(job_context):
+    from dataclasses import replace
+
+    info = make_media_info()
+    second_stream = type(info.audio_streams[0])(
+        index=4,
+        codec="opus",
+        channels=2,
+        sample_rate_hz=48_000,
+    )
+    multi_stream_info = replace(
+        info,
+        audio_streams=(info.audio_streams[0], second_stream),
+    )
+    preparer = FakeAudioPreparer()
+    pipeline, _ = _pipeline(
+        inspector=FakeInspector(info=multi_stream_info),
+        audio_preparer=preparer,
+    )
+
+    pipeline.execute(_request(stream_index=4), job_context)
+
+    assert preparer.calls[0][1].index == 4
 
 
 def test_translation_preserves_cue_timings(job_context):

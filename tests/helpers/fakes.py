@@ -97,11 +97,13 @@ class FakeAudioPreparer:
     calls: list = field(default_factory=list)
 
     def prepare(
-        self, media_path, *, stream, destination_path, token=None
+        self, media_path, *, stream, destination_path, token=None, progress=None
     ) -> AudioAsset:
         self.calls.append((media_path, stream, destination_path))
         if token is not None:
             token.raise_if_cancelled()
+        if progress is not None:
+            progress.report(0.5, "Preparando áudio")
         if self.asset is not None:
             return self.asset
         return AudioAsset(
@@ -111,6 +113,22 @@ class FakeAudioPreparer:
             sample_format="pcm_s16le",
             duration_seconds=12.0,
         )
+
+
+@dataclass
+class FakeDownloader:
+    path: str | None = None
+    calls: list = field(default_factory=list)
+
+    def fetch(self, source, destination_dir, *, token=None, progress=None) -> str:
+        self.calls.append((source, destination_dir))
+        if token is not None:
+            token.raise_if_cancelled()
+        if progress is not None:
+            progress.report(0.5, "Baixando mídia")
+        if self.path is None:
+            raise FileNotFoundError("arquivo de teste não configurado")
+        return self.path
 
 
 @dataclass

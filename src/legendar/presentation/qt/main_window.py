@@ -32,10 +32,10 @@ from PySide6.QtWidgets import (
 
 from legendar.application.job.context import JobContext
 from legendar.application.pipeline.serial_pipeline import JobRequest, SerialPipeline
-from legendar.application.ports.protocols import WorkspaceFactory
-from legendar.domain.entities.media import MediaKind, MediaSource
+from legendar.application.ports.protocols import MediaInspector, WorkspaceFactory
+from legendar.domain.entities.media import MediaInfo, MediaKind, MediaSource
 from legendar.domain.errors.base import DomainError
-from legendar.domain.errors.catalog import InvalidInputError
+from legendar.domain.errors.catalog import InvalidInputError, JobCancelledError
 from legendar.domain.events.job_events import JobCompleted, JobEvent, JobFailed
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
@@ -54,6 +54,9 @@ from legendar.presentation.qt.view_model.job_view_model import (
     JobViewSnapshot,
 )
 from legendar.presentation.qt.workers.job_worker import JobWorker
+from legendar.presentation.qt.workers.media_inspection_worker import (
+    MediaInspectionWorker,
+)
 
 PipelineFactory = Callable[[], SerialPipeline]
 OutputPathFactory = Callable[[str, Language], Path]
@@ -79,6 +82,9 @@ class UiDependencies:
     readiness_ok: bool = True
     readiness_details: tuple[str, ...] = ()
     app_version: str = ""
+    media_inspector: MediaInspector | None = None
+    youtube_available: bool = False
+    youtube_readiness_details: tuple[str, ...] = ()
 
 
 class MainWindow(QMainWindow):
@@ -98,6 +104,10 @@ class MainWindow(QMainWindow):
         self._view_model = JobViewModel()
         self._thread = None
         self._worker: JobWorker | None = None
+        self._inspection_thread = None
+        self._inspection_worker: MediaInspectionWorker | None = None
+        self._media_info: MediaInfo | None = None
+        self._inspection_cancel_pending = False
         self._context: JobContext | None = None
         self._output_touched = False
         self._starting = False
@@ -119,7 +129,11 @@ class MainWindow(QMainWindow):
     @property
     def is_running(self) -> bool:
         """True durante confirmação, inicialização ou execução de um job."""
-        return self._starting or self._thread is not None
+        return (
+            self._starting
+            or self._thread is not None
+            or self._inspection_thread is not None
+        )
 
     @property
     def view_model(self) -> JobViewModel:
@@ -224,27 +238,64 @@ class MainWindow(QMainWindow):
     def _build_input_panel(self) -> QFrame:
         panel, layout = self._panel("Origem da mídia")
         description = QLabel(
-            "Selecione um arquivo local de áudio ou vídeo para preparar o trabalho.",
+            "Use um arquivo local ou informe a URL de um único vídeo do YouTube.",
             panel,
         )
         description.setObjectName("sectionSubtitle")
         description.setWordWrap(True)
         layout.addWidget(description)
 
+        self.media_kind_combo = QComboBox(panel)
+        self.media_kind_combo.setObjectName("mediaKindCombo")
+        self.media_kind_combo.addItem("Arquivo local", MediaKind.LOCAL_FILE.value)
+        self.media_kind_combo.addItem("YouTube", MediaKind.YOUTUBE.value)
+        self.media_kind_combo.setAccessibleName("Tipo de origem da mídia")
+
         self.file_edit = QLineEdit(panel)
         self.file_edit.setObjectName("fileEdit")
-        self.file_edit.setPlaceholderText("Nenhum arquivo selecionado")
+        self.file_edit.setPlaceholderText("Caminho do arquivo de áudio ou vídeo")
         self.file_edit.setClearButtonEnabled(True)
-        self.file_edit.setAccessibleName("Arquivo de mídia")
+        self.file_edit.setAccessibleName("Arquivo ou URL da mídia")
         self.browse_button = QPushButton("Selecionar arquivo…", panel)
         self.browse_button.setObjectName("browseButton")
         self.browse_button.setAccessibleName("Selecionar arquivo de mídia")
 
-        row = QHBoxLayout()
-        row.setSpacing(10)
-        row.addWidget(self.file_edit, stretch=1)
-        row.addWidget(self.browse_button)
-        layout.addLayout(row)
+        source_row = QHBoxLayout()
+        source_row.setSpacing(10)
+        source_row.addWidget(self.media_kind_combo)
+        source_row.addWidget(self.file_edit, stretch=1)
+        source_row.addWidget(self.browse_button)
+        layout.addLayout(source_row)
+
+        inspection_row = QHBoxLayout()
+        self.inspect_button = QPushButton("Inspecionar faixas", panel)
+        self.inspect_button.setObjectName("inspectMediaButton")
+        self.inspect_button.setAccessibleName("Inspecionar faixas de áudio")
+        self.inspect_cancel_button = QPushButton("Cancelar inspeção", panel)
+        self.inspect_cancel_button.setObjectName("cancelInspectionButton")
+        self.inspect_cancel_button.setProperty("variant", "danger")
+        self.inspect_cancel_button.setVisible(False)
+        self.inspect_cancel_button.setEnabled(False)
+
+        self.stream_combo = QComboBox(panel)
+        self.stream_combo.setObjectName("audioStreamCombo")
+        self.stream_combo.addItem("Usar faixa padrão da mídia", None)
+        self.stream_combo.setAccessibleName("Faixa de áudio selecionada")
+        self.stream_combo.setEnabled(False)
+
+        inspection_row.addWidget(self.inspect_button)
+        inspection_row.addWidget(self.stream_combo, stretch=1)
+        inspection_row.addWidget(self.inspect_cancel_button)
+        layout.addLayout(inspection_row)
+
+        self.media_info_label = QLabel(
+            "A faixa padrão será usada automaticamente. Inspecione para escolher outra.",
+            panel,
+        )
+        self.media_info_label.setObjectName("sectionSubtitle")
+        self.media_info_label.setWordWrap(True)
+        layout.addWidget(self.media_info_label)
+        self._sync_source_controls()
         return panel
 
     def _build_language_panel(self) -> QFrame:
@@ -415,8 +466,12 @@ class MainWindow(QMainWindow):
         self.browse_button.clicked.connect(self._choose_file)
         self.output_browse_button.clicked.connect(self._choose_output)
         self.preferences_button.clicked.connect(self._open_preferences)
+        self.inspect_button.clicked.connect(self._start_media_inspection)
+        self.inspect_cancel_button.clicked.connect(self._cancel_media_inspection)
+        self.media_kind_combo.currentIndexChanged.connect(self._on_media_kind_changed)
         self.output_edit.textEdited.connect(self._on_output_edited)
         self.file_edit.textEdited.connect(self._on_file_edited)
+        self.stream_combo.currentIndexChanged.connect(self._on_stream_selection_changed)
         self.source_combo.currentIndexChanged.connect(self._on_language_changed)
         self.target_combo.currentIndexChanged.connect(self._on_language_changed)
         self.translate_check.toggled.connect(self._on_translate_toggled)
@@ -425,9 +480,12 @@ class MainWindow(QMainWindow):
         self.cancel_button.clicked.connect(self._cancel_job)
 
         # Ordem explícita e previsível para navegação sem mouse.
-        self.setTabOrder(self.preferences_button, self.file_edit)
+        self.setTabOrder(self.preferences_button, self.media_kind_combo)
+        self.setTabOrder(self.media_kind_combo, self.file_edit)
         self.setTabOrder(self.file_edit, self.browse_button)
-        self.setTabOrder(self.browse_button, self.source_combo)
+        self.setTabOrder(self.browse_button, self.inspect_button)
+        self.setTabOrder(self.inspect_button, self.stream_combo)
+        self.setTabOrder(self.stream_combo, self.source_combo)
         self.setTabOrder(self.source_combo, self.target_combo)
         self.setTabOrder(self.target_combo, self.translate_check)
         self.setTabOrder(self.translate_check, self.output_edit)
@@ -449,12 +507,70 @@ class MainWindow(QMainWindow):
                 return candidate
             counter += 1
 
+    def _source_kind(self) -> MediaKind:
+        return MediaKind(str(self.media_kind_combo.currentData()))
+
+    def _sync_source_controls(self) -> None:
+        local = self._source_kind() is MediaKind.LOCAL_FILE
+        self.browse_button.setVisible(local)
+        self.browse_button.setEnabled(local and not self.is_running)
+        self.file_edit.setPlaceholderText(
+            "Caminho do arquivo de áudio ou vídeo"
+            if local
+            else "https://www.youtube.com/watch?v=..."
+        )
+        self.inspect_button.setVisible(local)
+        self.inspect_button.setEnabled(
+            local
+            and self._deps.media_inspector is not None
+            and not self.is_running
+            and self._inspection_thread is None
+        )
+        self.inspect_cancel_button.setVisible(self._inspection_thread is not None)
+        self.inspect_cancel_button.setEnabled(
+            self._inspection_thread is not None and not self._inspection_cancel_pending
+        )
+        self.stream_combo.setEnabled(
+            local
+            and self._media_info is not None
+            and bool(self._media_info.audio_streams)
+            and not self.is_running
+        )
+        if not local:
+            self.media_info_label.setText(
+                "O áudio do vídeo será obtido automaticamente. "
+                "A seleção manual de faixa local não se aplica ao download."
+            )
+            self.stream_combo.clear()
+            self.stream_combo.addItem(
+                "Faixa de áudio selecionada automaticamente", None
+            )
+
+    def _invalidate_media_inspection(self) -> None:
+        self._media_info = None
+        self.stream_combo.clear()
+        self.stream_combo.addItem("Usar faixa padrão da mídia", None)
+        self.stream_combo.setEnabled(False)
+        self.media_info_label.setText(
+            "Inspecione a mídia para consultar as faixas de áudio disponíveis."
+        )
+        self._sync_source_controls()
+
+    def _on_media_kind_changed(self, _index: int) -> None:
+        self._invalidate_media_inspection()
+        if self._source_kind() is MediaKind.YOUTUBE:
+            self._output_touched = False
+            self._suggest_output(Path("youtube-media"))
+        elif self.file_edit.text().strip():
+            self._suggest_output(Path(self.file_edit.text().strip()))
+
     def _choose_file(self) -> None:
         selected, _ = QFileDialog.getOpenFileName(
             self, "Selecionar mídia", str(Path.home()), _MEDIA_FILTER
         )
         if selected:
             self.file_edit.setText(selected)
+            self._invalidate_media_inspection()
             self._suggest_output(Path(selected))
 
     def _choose_output(self) -> None:
@@ -467,13 +583,160 @@ class MainWindow(QMainWindow):
             self._output_touched = True
 
     def _on_file_edited(self, text: str) -> None:
-        if text.strip():
+        self._invalidate_media_inspection()
+        if self._source_kind() is MediaKind.LOCAL_FILE and text.strip():
             self._suggest_output(Path(text.strip()))
+        elif self._source_kind() is MediaKind.YOUTUBE and text.strip():
+            self._suggest_output(Path("youtube-media"))
 
     def _suggest_output(self, source_path: Path) -> None:
         if self._output_touched:
             return
         self.output_edit.setText(str(self._default_output_path(source_path.stem)))
+
+    def _start_media_inspection(self) -> None:
+        if (
+            self._inspection_thread is not None
+            or self._thread is not None
+            or self._deps.media_inspector is None
+        ):
+            return
+        source_text = self.file_edit.text().strip()
+        if not source_text:
+            self._render(
+                self._view_model.report_error(
+                    "Selecione um arquivo antes de inspecionar."
+                )
+            )
+            return
+        source_path = Path(source_text).expanduser()
+        try:
+            source = MediaSource(
+                kind=MediaKind.LOCAL_FILE,
+                location=str(source_path),
+            )
+        except DomainError as exc:
+            self._render(self._view_model.report_error(exc.message))
+            return
+        if not source_path.is_file():
+            self._render(
+                self._view_model.report_error(
+                    f"Arquivo de mídia não encontrado: {source_path}"
+                )
+            )
+            return
+
+        self._inspection_cancel_pending = False
+        self._invalidate_media_inspection()
+        thread = MediaInspectionWorker(self._deps.media_inspector, source, self)
+        thread.completed.connect(
+            self._on_media_inspected, Qt.ConnectionType.QueuedConnection
+        )
+        thread.failed.connect(
+            self._on_media_inspection_failed, Qt.ConnectionType.QueuedConnection
+        )
+        thread.finished.connect(
+            self._on_media_inspection_thread_finished,
+            Qt.ConnectionType.QueuedConnection,
+        )
+        thread.finished.connect(thread.deleteLater)
+
+        # A inspeção é uma QThread dedicada: o objeto da thread pertence à GUI,
+        # mas run() e o subprocesso executam fora dela. A finalização volta por
+        # conexão enfileirada, sem destruir QObject worker em thread diferente.
+        self._inspection_worker = thread
+        self._inspection_thread = thread
+        self._sync_source_controls()
+        self._render(self._view_model.snapshot)
+        try:
+            thread.start()
+        except RuntimeError as exc:
+            self._inspection_worker = None
+            self._inspection_thread = None
+            thread.deleteLater()
+            self._sync_source_controls()
+            self._render(self._view_model.report_error(str(exc)))
+
+    @Slot(object)
+    def _on_media_inspected(self, info: MediaInfo) -> None:
+        self._media_info = info
+        self.stream_combo.clear()
+        self.stream_combo.addItem("Usar faixa padrão da mídia", None)
+        for stream in info.audio_streams:
+            suffix = " · padrão" if stream.is_default else ""
+            self.stream_combo.addItem(f"{stream.label_pt}{suffix}", stream.index)
+        if info.audio_streams:
+            default = info.default_stream()
+            default_index = self.stream_combo.findData(default.index)
+            if default_index >= 0:
+                self.stream_combo.setCurrentIndex(default_index)
+            self._on_stream_selection_changed(self.stream_combo.currentIndex())
+        else:
+            duration = (
+                f"{info.duration_seconds:.2f} s"
+                if info.duration_seconds is not None
+                else "duração não informada"
+            )
+            self.media_info_label.setText(
+                f"{info.container} · {duration} · mídia sem faixa de áudio."
+            )
+        self._sync_source_controls()
+
+    @Slot(int)
+    def _on_stream_selection_changed(self, _index: int) -> None:
+        if self._media_info is None or not self._media_info.audio_streams:
+            return
+        selected = self.stream_combo.currentData()
+        stream = (
+            self._media_info.default_stream()
+            if selected is None
+            else self._media_info.stream_by_index(int(selected))
+        )
+        duration = (
+            f"{self._media_info.duration_seconds:.2f} s"
+            if self._media_info.duration_seconds is not None
+            else "duração não informada"
+        )
+        selection = "Faixa padrão" if selected is None else "Faixa escolhida"
+        title = f" · {stream.title}" if stream.title else ""
+        self.media_info_label.setText(
+            f"{self._media_info.container} · {duration} · {selection}: "
+            f"faixa {stream.index}{title} ({stream.codec}, "
+            f"{stream.channels} canais, {stream.sample_rate_hz} Hz; "
+            f"offset {stream.start_time_seconds:.3f} s via {stream.offset_source})."
+        )
+
+    @Slot(object)
+    def _on_media_inspection_failed(self, error: Exception) -> None:
+        if isinstance(error, JobCancelledError):
+            self.media_info_label.setText("Inspeção de mídia cancelada.")
+            return
+        message = (
+            error.message
+            if isinstance(error, DomainError)
+            else f"Não foi possível inspecionar a mídia: {error}"
+        )
+        self.media_info_label.setText(message)
+        self.statusBar().showMessage(message, 10000)
+
+    @Slot()
+    def _on_media_inspection_thread_finished(self) -> None:
+        self._inspection_thread = None
+        self._inspection_worker = None
+        self._inspection_cancel_pending = False
+        self._sync_source_controls()
+        self._render(self._view_model.snapshot)
+
+    def _cancel_media_inspection(self) -> None:
+        if self._inspection_worker is None or self._inspection_cancel_pending:
+            return
+        if not self._confirm_cancel():
+            return
+        self._inspection_cancel_pending = True
+        self.inspect_cancel_button.setEnabled(False)
+        self.inspect_button.setEnabled(False)
+        self._inspection_worker.request_cancel()
+        self.media_info_label.setText("Cancelando a inspeção de mídia…")
 
     def _on_output_edited(self, _text: str) -> None:
         self._output_touched = True
@@ -560,13 +823,37 @@ class MainWindow(QMainWindow):
 
     # -- confirmação e montagem do trabalho -------------------------------
 
-    def _build_job(self) -> tuple[JobRequest, Path, Path]:
+    def _build_job(self) -> tuple[JobRequest, str, Path]:
         media_text = self.file_edit.text().strip()
         if not media_text:
-            raise InvalidInputError("Selecione um arquivo de mídia.")
-        media_path = Path(media_text).expanduser()
-        if not media_path.is_file():
-            raise InvalidInputError(f"Arquivo de mídia não encontrado: {media_path}")
+            raise InvalidInputError("Selecione um arquivo ou informe uma URL.")
+        kind = self._source_kind()
+        source = MediaSource(kind=kind, location=media_text)
+        stream_index = None
+
+        if kind is MediaKind.LOCAL_FILE:
+            media_path = Path(media_text).expanduser()
+            if not media_path.is_file():
+                raise InvalidInputError(
+                    f"Arquivo de mídia não encontrado: {media_path}"
+                )
+            source_label = media_path.name
+            selected_stream = self.stream_combo.currentData()
+            if selected_stream is not None:
+                if self._media_info is None:
+                    raise InvalidInputError(
+                        "Inspecione novamente a mídia antes de escolher uma faixa."
+                    )
+                stream_index = int(selected_stream)
+                self._media_info.stream_by_index(stream_index)
+        else:
+            if not self._deps.youtube_available:
+                details = " ".join(self._deps.youtube_readiness_details)
+                raise InvalidInputError(
+                    "O suporte ao YouTube não está pronto neste ambiente. " + details
+                )
+            source_label = "vídeo do YouTube"
+            media_path = None
 
         output_text = self.output_edit.text().strip()
         if not output_text:
@@ -576,7 +863,7 @@ class MainWindow(QMainWindow):
             output_path = output_path.with_suffix(".srt")
 
         resolved_output = output_path.resolve()
-        if resolved_output == media_path.resolve():
+        if media_path is not None and resolved_output == media_path.resolve():
             raise InvalidInputError(
                 "O destino da legenda não pode sobrescrever o arquivo de mídia."
             )
@@ -588,12 +875,13 @@ class MainWindow(QMainWindow):
 
         source_language, target_language, translate = self._resolved_languages()
         request = JobRequest(
-            source=MediaSource(kind=MediaKind.LOCAL_FILE, location=str(media_path)),
+            source=source,
             output_language=target_language,
             source_language=source_language,
             translate=translate,
+            stream_index=stream_index,
         )
-        return request, media_path, output_path
+        return request, source_label, output_path
 
     def _resolved_languages(self) -> tuple[Language | None, Language, bool]:
         source = self._source_language()
@@ -614,7 +902,7 @@ class MainWindow(QMainWindow):
         return source, target, translate
 
     def _confirm_start(
-        self, request: JobRequest, media_path: Path, output_path: Path
+        self, request: JobRequest, source_label: str, output_path: Path
     ) -> bool:
         source_language = (
             self._source_language().label_pt
@@ -622,7 +910,7 @@ class MainWindow(QMainWindow):
             else "Detectar automaticamente"
         )
         dialog = JobConfirmationDialog(
-            source_label=media_path.name,
+            source_label=source_label,
             source_language=source_language,
             target_language=request.output_language.label_pt,
             output_path=output_path,
@@ -663,19 +951,23 @@ class MainWindow(QMainWindow):
         return response == QMessageBox.StandardButton.Yes
 
     def _start_job(self) -> None:
-        if self._starting or self._thread is not None:
+        if (
+            self._starting
+            or self._thread is not None
+            or self._inspection_thread is not None
+        ):
             return
         self._starting = True
         self._render(self._view_model.snapshot)
         try:
-            request, media_path, output_path = self._build_job()
+            request, source_label, output_path = self._build_job()
         except (DomainError, ValueError) as exc:
             self._starting = False
             message = exc.message if isinstance(exc, DomainError) else str(exc)
             self._render(self._view_model.report_error(message))
             return
 
-        if not self._confirm_start(request, media_path, output_path):
+        if not self._confirm_start(request, source_label, output_path):
             self._starting = False
             self._render(self._view_model.snapshot)
             return
@@ -689,7 +981,7 @@ class MainWindow(QMainWindow):
             output_path.parent.mkdir(parents=True, exist_ok=True)
             context = self._deps.workspace_factory.create(
                 job_id=uuid.uuid4().hex[:12],
-                source_label=media_path.name,
+                source_label=source_label,
                 output_path=output_path,
                 cache_dir=self._deps.cache_dir,
             )
@@ -770,6 +1062,9 @@ class MainWindow(QMainWindow):
         self._render(self._view_model.snapshot)
 
     def _cancel_job(self) -> None:
+        if self._inspection_thread is not None:
+            self._cancel_media_inspection()
+            return
         if (
             self._worker is None
             or self._cancel_pending
@@ -816,24 +1111,35 @@ class MainWindow(QMainWindow):
     def _render(self, snapshot: JobViewSnapshot) -> None:
         busy = self.is_running
         worker_running = self._thread is not None
-        self.status_label.setText(
-            "Aguardando sua confirmação para iniciar."
-            if self._starting and not worker_running
-            else snapshot.status_text
-        )
-
-        if worker_running and not snapshot.progress_known and not snapshot.is_finished:
+        inspection_running = self._inspection_thread is not None
+        if inspection_running:
+            self.status_label.setText("Inspecionando mídia com ffprobe…")
+            self.progress_meta.setText("Lendo contêineres e faixas")
             self.progress_bar.setRange(0, 0)
-            self.progress_meta.setText("Etapa em andamento · sem percentual medido")
         else:
-            self.progress_bar.setRange(0, 100)
-            self.progress_bar.setValue(snapshot.progress_percent)
-            if snapshot.progress_known:
-                self.progress_meta.setText(f"{snapshot.progress_percent}% concluído")
-            elif snapshot.is_finished:
-                self.progress_meta.setText("Trabalho encerrado")
+            self.status_label.setText(
+                "Aguardando sua confirmação para iniciar."
+                if self._starting and not worker_running
+                else snapshot.status_text
+            )
+            if (
+                worker_running
+                and not snapshot.progress_known
+                and not snapshot.is_finished
+            ):
+                self.progress_bar.setRange(0, 0)
+                self.progress_meta.setText("Etapa em andamento · sem percentual medido")
             else:
-                self.progress_meta.setText("Pronto para iniciar")
+                self.progress_bar.setRange(0, 100)
+                self.progress_bar.setValue(snapshot.progress_percent)
+                if snapshot.progress_known:
+                    self.progress_meta.setText(
+                        f"{snapshot.progress_percent}% concluído"
+                    )
+                elif snapshot.is_finished:
+                    self.progress_meta.setText("Trabalho encerrado")
+                else:
+                    self.progress_meta.setText("Pronto para iniciar")
 
         scrollbar = self.log_view.verticalScrollBar()
         follow_log = scrollbar.value() >= scrollbar.maximum() - 2
@@ -842,7 +1148,11 @@ class MainWindow(QMainWindow):
             scrollbar.setValue(scrollbar.maximum())
 
         if not busy:
-            self.generate_button.setEnabled(self._deps.readiness_ok)
+            source_ready = self._deps.readiness_ok and (
+                self._source_kind() is MediaKind.LOCAL_FILE
+                or self._deps.youtube_available
+            )
+            self.generate_button.setEnabled(source_ready)
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelar trabalho")
             self.preferences_button.setEnabled(True)
@@ -854,10 +1164,14 @@ class MainWindow(QMainWindow):
             )
             self.preferences_button.setEnabled(False)
             self._set_inputs_enabled(False)
-
+        self._sync_source_controls()
         self._update_status_pill(snapshot, busy)
 
     def _update_status_pill(self, snapshot: JobViewSnapshot, busy: bool) -> None:
+        local_source = self._source_kind() is MediaKind.LOCAL_FILE
+        source_ready = self._deps.readiness_ok and (
+            local_source or self._deps.youtube_available
+        )
         if snapshot.state is JobState.FAILED:
             label, state = "Atenção necessária", "error"
         elif snapshot.state is JobState.COMPLETED:
@@ -866,7 +1180,7 @@ class MainWindow(QMainWindow):
             label, state = "Cancelado", "warning"
         elif busy:
             label, state = "Em andamento", "running"
-        elif self._deps.readiness_ok:
+        elif source_ready:
             label, state = "Ambiente pronto", "success"
         else:
             label, state = "Verifique o ambiente", "warning"
@@ -875,18 +1189,62 @@ class MainWindow(QMainWindow):
         self.status_pill.style().unpolish(self.status_pill)
         self.status_pill.style().polish(self.status_pill)
 
-        if self._deps.readiness_ok:
+        tool_details = " ".join(self._deps.readiness_details)
+        if local_source:
+            if source_ready:
+                self.readiness_icon.setStyleSheet("color: #16845b;")
+                self.readiness_label.setText(
+                    f"FFmpeg e ffprobe verificados. {tool_details}"
+                )
+            else:
+                self.readiness_icon.setStyleSheet("color: #a96712;")
+                self.readiness_label.setText(
+                    "Entrada local indisponível até instalar FFmpeg e ffprobe. "
+                    f"{tool_details}"
+                )
+            return
+
+        online_details = " ".join(self._deps.youtube_readiness_details)
+        if source_ready:
             self.readiness_icon.setStyleSheet("color: #16845b;")
-            details = " ".join(self._deps.readiness_details)
-            self.readiness_label.setText(f"Ferramentas externas verificadas. {details}")
+            self.readiness_label.setText(
+                "YouTube pronto. FFmpeg e ffprobe verificados. "
+                f"{tool_details} {online_details}"
+            )
         else:
             self.readiness_icon.setStyleSheet("color: #a96712;")
-            details = " ".join(self._deps.readiness_details)
-            self.readiness_label.setText(f"O ambiente precisa de ajustes. {details}")
+            media_requirement = (
+                "FFmpeg e ffprobe precisam estar instalados. "
+                if not self._deps.readiness_ok
+                else ""
+            )
+            youtube_requirement = (
+                ""
+                if self._deps.youtube_available
+                else "yt-dlp e um runtime EJS compatível são necessários. "
+            )
+            self.readiness_label.setText(
+                f"YouTube indisponível. {media_requirement}"
+                f"{youtube_requirement}{tool_details} {online_details}"
+            )
 
     def _set_inputs_enabled(self, enabled: bool) -> None:
+        self.media_kind_combo.setEnabled(enabled)
         self.file_edit.setEnabled(enabled)
-        self.browse_button.setEnabled(enabled)
+        self.browse_button.setEnabled(
+            enabled and self._source_kind() is MediaKind.LOCAL_FILE
+        )
+        self.inspect_button.setEnabled(
+            enabled
+            and self._source_kind() is MediaKind.LOCAL_FILE
+            and self._deps.media_inspector is not None
+        )
+        self.stream_combo.setEnabled(
+            enabled
+            and self._source_kind() is MediaKind.LOCAL_FILE
+            and self._media_info is not None
+            and bool(self._media_info.audio_streams)
+        )
         self.output_edit.setEnabled(enabled)
         self.output_browse_button.setEnabled(enabled)
         self.source_combo.setEnabled(enabled)
@@ -911,8 +1269,27 @@ class MainWindow(QMainWindow):
         )
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self._starting and self._thread is None:
+        if self._starting and self._thread is None and self._inspection_thread is None:
             event.ignore()
+            return
+        if self._inspection_thread is not None:
+            if not self._inspection_cancel_pending:
+                if not self._confirm_cancel(closing=True):
+                    event.ignore()
+                    return
+                if self._inspection_worker is not None:
+                    self._inspection_cancel_pending = True
+                    self._inspection_worker.request_cancel()
+            if self._inspection_thread.wait(_CLOSE_WAIT_MS):
+                self._inspection_thread = None
+                self._inspection_worker = None
+                self._save_settings()
+                super().closeEvent(event)
+            else:
+                self.media_info_label.setText(
+                    "A inspeção ainda está encerrando; aguarde para fechar."
+                )
+                event.ignore()
             return
         if self._thread is None:
             self._save_settings()

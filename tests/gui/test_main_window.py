@@ -11,7 +11,8 @@ from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QMessageBox, QScrollArea
 
 from legendar.application.pipeline.serial_pipeline import PipelinePorts, SerialPipeline
-from legendar.domain.errors.catalog import MediaToolError
+from legendar.domain.entities.media import MediaKind
+from legendar.domain.errors.catalog import InvalidInputError, MediaToolError
 from legendar.domain.events.job_events import (
     JobFailed,
     LogRecorded,
@@ -64,6 +65,9 @@ def _dependencies(
         readiness_ok=True,
         readiness_details=("ffmpeg e ffprobe encontrados.",),
         app_version="0.1.0",
+        media_inspector=FakeInspector(info=make_media_info()),
+        youtube_available=True,
+        youtube_readiness_details=("yt-dlp instalado", "Runtime EJS disponível"),
     )
 
 
@@ -294,7 +298,7 @@ def test_progress_is_indeterminate_until_pipeline_reports_a_measurement(
 def test_keyboard_tab_order_and_accessible_names_are_explicit(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
-    assert window.file_edit.accessibleName() == "Arquivo de mídia"
+    assert window.file_edit.accessibleName() == "Arquivo ou URL da mídia"
     assert window.generate_button.accessibleName()
     assert window.cancel_button.accessibleName()
     assert window.log_view.accessibleName() == "Registro de atividade do trabalho"
@@ -499,6 +503,148 @@ def test_pipeline_failure_is_shown_and_allows_retry(qtbot, tmp_path, media) -> N
     assert window.generate_button.isEnabled()
 
 
+def test_source_selector_switches_between_local_and_youtube(qtbot, tmp_path) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+
+    assert window.media_kind_combo.currentData() == "local_file"
+    assert window.browse_button.isVisible()
+    assert window.inspect_button.isVisible()
+
+    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("youtube"))
+
+    assert not window.browse_button.isVisible()
+    assert not window.inspect_button.isVisible()
+    assert "youtube.com" in window.file_edit.placeholderText()
+    assert not window.stream_combo.isEnabled()
+
+    window.media_kind_combo.setCurrentIndex(
+        window.media_kind_combo.findData("local_file")
+    )
+
+    assert window.browse_button.isVisible()
+    assert window.inspect_button.isVisible()
+
+
+def test_youtube_job_request_uses_remote_source_and_safe_label(qtbot, tmp_path) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("youtube"))
+    window.file_edit.setText("https://www.youtube.com/watch?v=video123")
+    window.output_edit.setText(str(tmp_path / "youtube.srt"))
+
+    request, source_label, output_path = window._build_job()
+
+    assert request.source.kind is MediaKind.YOUTUBE
+    assert request.source.location.endswith("video123")
+    assert request.stream_index is None
+    assert source_label == "vídeo do YouTube"
+    assert output_path == tmp_path / "youtube.srt"
+
+
+def test_youtube_job_is_blocked_when_runtime_or_ejs_is_missing(qtbot, tmp_path) -> None:
+    dependencies = replace(
+        _dependencies(tmp_path),
+        youtube_available=False,
+        youtube_readiness_details=("yt-dlp não instalado",),
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("youtube"))
+    window.file_edit.setText("https://youtu.be/video123")
+
+    with pytest.raises(InvalidInputError, match="suporte ao YouTube"):
+        window._build_job()
+
+
+def test_media_inspection_runs_in_worker_and_exposes_stream_selection(
+    qtbot, tmp_path, media
+) -> None:
+    from legendar.domain.entities.media import AudioStreamInfo
+
+    inspected_threads = []
+    original_info = make_media_info()
+    default_stream = replace(original_info.audio_streams[0], is_default=True)
+    alternate_stream = AudioStreamInfo(
+        index=4,
+        codec="opus",
+        channels=1,
+        sample_rate_hz=48_000,
+        language="eng",
+        title="Comentários",
+    )
+    info = replace(
+        original_info,
+        audio_streams=(default_stream, alternate_stream),
+    )
+
+    class RecordingInspector:
+        def inspect(self, source, *, token=None):
+            inspected_threads.append(threading.current_thread())
+            if token is not None:
+                token.raise_if_cancelled()
+            return info
+
+    dependencies = replace(
+        _dependencies(tmp_path),
+        media_inspector=RecordingInspector(),
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+
+    window._start_media_inspection()
+
+    assert window.is_running
+    qtbot.waitUntil(
+        lambda: window._inspection_thread is None and window._media_info is not None,
+        timeout=5000,
+    )
+
+    assert inspected_threads
+    assert inspected_threads[0] is not threading.current_thread()
+    assert window.stream_combo.count() == 3
+    assert window.stream_combo.currentData() == 0
+    assert "Comentários" in window.stream_combo.itemText(
+        window.stream_combo.findData(4)
+    )
+
+    window.stream_combo.setCurrentIndex(window.stream_combo.findData(4))
+    request, _label, _output = window._build_job()
+    assert request.stream_index == 4
+
+
+def test_media_inspection_can_be_cancelled_without_blocking_the_window(
+    qtbot, tmp_path, media
+) -> None:
+    class BlockingInspector:
+        def __init__(self) -> None:
+            self.started = threading.Event()
+
+        def inspect(self, source, *, token=None):
+            self.started.set()
+            while token is not None and not token.is_cancelled:
+                token.raise_if_cancelled()
+                threading.Event().wait(0.01)
+            token.raise_if_cancelled()
+            raise AssertionError("o cancelamento deveria encerrar a inspeção")
+
+    inspector = BlockingInspector()
+    dependencies = replace(
+        _dependencies(tmp_path),
+        media_inspector=inspector,
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.file_edit.setText(str(media))
+    window._confirm_cancel = lambda **_kwargs: True
+
+    window._start_media_inspection()
+    qtbot.waitUntil(inspector.started.is_set, timeout=5000)
+    window._cancel_media_inspection()
+    qtbot.waitUntil(lambda: window._inspection_thread is None, timeout=5000)
+
+    assert not window.is_running
+    assert window.media_info_label.text() == "Inspeção de mídia cancelada."
+    assert window.file_edit.isEnabled()
+
+
 def test_close_after_thread_wait_cleans_workspace_before_window_exit(
     qtbot, tmp_path, monkeypatch
 ) -> None:
@@ -565,3 +711,19 @@ def test_cancel_stops_a_cooperative_pipeline(qtbot, tmp_path, media) -> None:
     qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
 
     assert window.view_model.snapshot.state is JobState.CANCELLED
+
+
+def test_youtube_readiness_also_requires_ffmpeg_and_ffprobe(qtbot, tmp_path) -> None:
+    dependencies = replace(
+        _dependencies(tmp_path),
+        readiness_ok=False,
+        readiness_details=("ffmpeg: não encontrado", "ffprobe: não encontrado"),
+        youtube_available=True,
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.media_kind_combo.setCurrentIndex(window.media_kind_combo.findData("youtube"))
+    window._render(window.view_model.snapshot)
+
+    assert window.status_pill.text() == "Verifique o ambiente"
+    assert "YouTube indisponível" in window.readiness_label.text()
+    assert "FFmpeg e ffprobe precisam estar instalados" in window.readiness_label.text()
