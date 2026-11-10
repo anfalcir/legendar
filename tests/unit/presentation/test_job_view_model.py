@@ -158,6 +158,22 @@ def test_cancellation_exposes_message() -> None:
     assert snapshot.can_start
 
 
+
+def test_operational_warning_survives_rerender_after_terminal_event() -> None:
+    vm = JobViewModel()
+    vm.apply(_state(1, JobState.IDLE, JobState.VALIDATING_INPUT))
+    vm.apply(JobFailed("job-1", 2, message="falha controlada"))
+
+    snapshot = vm.report_warning("não foi possível limpar o diretório temporário")
+
+    assert snapshot.state is JobState.FAILED
+    assert snapshot.error_message == "falha controlada"
+    assert snapshot.status_text == "Falha: falha controlada"
+    assert snapshot.log_lines[-1] == (
+        "Aviso: não foi possível limpar o diretório temporário"
+    )
+
+
 def test_reset_clears_everything() -> None:
     vm = JobViewModel()
     vm.apply(LogRecorded("job-1", 1, message="oi"))
