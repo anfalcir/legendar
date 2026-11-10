@@ -1,8 +1,8 @@
 # Plano operacional — Fase 3: Entrada e preparação de mídia
 
-- **Status:** implementação concluída e CI de push aprovada; PR para `main` pendente
-- **Branch:** `phase-3/media-ingestion`
-- **Base:** `main` com Fases 0, 1 e 2 integradas (Fase 2: `4129f0a906a04693502f298b71767605499e3f68`)
+- **Status:** concluída, validada e integrada à `main` pela PR #4 (squash)
+- **Branch de implementação:** `phase-3/media-ingestion` (integrada)
+- **Base de implementação:** `main` pós-Fase 2, commit `4129f0a906a04693502f298b71767605499e3f68`
 - **Escopo:** aquisição de fonte, inspeção, seleção de faixa, normalização de áudio e isolamento/limpeza dos artefatos de mídia
 - **Limites:** sem Whisper/WhisperX, transcrição, alinhamento, tradução ou publicação SRT final
 
@@ -70,6 +70,12 @@ Cobertura por ambiente: 3.069 instruções, 396 não cobertas. Formatação: 97 
 - Os testes FFmpeg/ffprobe geram mídia sintética e não equivalem à homologação de todo codec/contêiner presente nos arquivos do usuário.
 - Homologação visual em monitor/HiDPI e plataformas adicionais pertence à Fase 8.
 
-## 6. Integração
+## 6. Integração concluída
 
-A implementação e a matriz de push estão concluídas. A fase somente será declarada integrada depois de a PR para `main` passar pelos gates de pull request, ser revisada e ter merge squash confirmado. Até lá, não iniciar a Fase 4.
+- **PR:** [#4 — feat(phase-3): implement media ingestion and audio preparation](https://github.com/anfalcir/legendar/pull/4)
+- **Estado:** closed / merged por squash em 10/11/2026.
+- **Commit de integração:** `dfa440b39e7623356388c774834e23ee53fc1d09`.
+- **CI da PR:** Fase 3 [#42921987927](https://github.com/anfalcir/legendar/actions/runs/42921987927) — 4/4; Fase 1 [#42921987910](https://github.com/anfalcir/legendar/actions/runs/42921987910) — 4/4; Fase 0 [#42921987820](https://github.com/anfalcir/legendar/actions/runs/42921987820) — todos os 14 jobs executados aprovados, com benchmark WhisperX e smoke CUDA pulados por serem exclusivos de push.
+- **CI de push da Fase 3:** [#42921980451](https://github.com/anfalcir/legendar/actions/runs/42921980451) — 4/4; matriz anterior [#42921552291](https://github.com/anfalcir/legendar/actions/runs/42921552291) também 4/4.
+
+A Fase 3 está concluída e integrada à `main`. A Fase 4 não foi iniciada; seu início exige checkpoint explícito do usuário.

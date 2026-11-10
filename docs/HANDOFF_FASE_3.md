@@ -1,9 +1,11 @@
 # Handoff técnico — Fase 3: entrada e preparação de mídia
 
-- **Status:** implementação concluída; CI de push aprovada; integração por PR pendente
+- **Status:** concluída, validada e integrada à `main` pela PR #4 (squash)
 - **Branch:** `phase-3/media-ingestion`
 - **Base:** `main` pós-Fase 2, commit `4129f0a906a04693502f298b71767605499e3f68`
-- **Commit com CI verde:** `d93b268f84573de569f1e08b72ee73d59795288e`
+- **Commit validado antes da sincronização documental:** `d93b268f84573de569f1e08b72ee73d59795288e`
+- **PR integrada:** [#4](https://github.com/anfalcir/legendar/pull/4)
+- **Commit de integração na `main`:** `dfa440b39e7623356388c774834e23ee53fc1d09`
 - **Workflow:** [#42921552291](https://github.com/anfalcir/legendar/actions/runs/42921552291)
 - **Limite:** esta fase prepara/inspeciona mídia; não implementa Whisper, alinhamento, tradução ou publicação SRT
 
@@ -87,12 +89,8 @@ Também houve falha nativa no ciclo de vida Qt quando um QObject worker era dest
 - Fixtures sintéticas comprovam FFmpeg/ffprobe no runner, não todos os formatos de mídia do computador-alvo.
 - Homologação de GUI física/HiDPI, outros sistemas e arquivos representativos do usuário segue na Fase 8.
 
-## 4. Próximos passos
+## 4. Encerramento e próximo checkpoint
 
-1. Abrir PR para `main`.
-2. Aguardar a matriz de pull request e revisar o diff/checks.
-3. Integrar por squash e confirmar o commit na `main`.
-4. Atualizar o estado vivo com o SHA de merge.
-5. Não iniciar a Fase 4 sem novo checkpoint explícito.
+A PR #4 foi integrada por squash. A revisão final confirmou 26 arquivos alterados, sem cópia duplicada do worker na raiz; os arquivos de implementação permanecem sob `src/legendar/`. Os gates de PR da Fase 3 e Fase 1 aprovaram 4/4 ambientes; os 14 jobs executados da Fase 0 também passaram, com os dois jobs exclusivos de push pulados por configuração.
 
-**A implementação está validada por CI de push, mas a Fase 3 só estará concluída/integrada depois do merge da PR.**
+A Fase 3 está concluída e integrada à `main`. A próxima etapa prevista no roadmap é a Fase 4 (reconhecimento Whisper), mas ela não foi iniciada neste trabalho e depende de aprovação explícita.

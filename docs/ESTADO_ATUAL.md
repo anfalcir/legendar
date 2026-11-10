@@ -2,24 +2,26 @@
 
 - **Última atualização:** 10/11/2026
 - **Repositório:** anfalcir/legendar
-- **Branch atual deste trabalho:** `phase-3/media-ingestion`
+- **Branch de referência do trabalho:** `main`
 - **Branch padrão / base de integração:** `main`
 - **Branch de implementação da Fase 1:** `phase-1/architecture` (integrada)
 - **Branch de implementação da Fase 2:** `phase-2/professional-ui` (integrada)
-- **Branch de implementação da Fase 3:** `phase-3/media-ingestion` (implementação e CI de push concluídas; PR/merge pendentes)
+- **Branch de implementação da Fase 3:** `phase-3/media-ingestion` (integrada pela PR #4)
 - **Branch padrão:** `main`
-- **Fases concluídas:** Fase 0 — Definições e prova técnica; Fase 1 — Reestruturação arquitetural; Fase 2 — Interface profissional
-- **Fase em execução:** Fase 3 — Entrada e preparação de mídia (CI de push verde; integração pela PR pendente)
-- **Fase concluída mais recente:** Fase 2 — Interface profissional, implementada, validada e integrada à `main`
+- **Fases concluídas:** Fase 0 — Definições e prova técnica; Fase 1 — Reestruturação arquitetural; Fase 2 — Interface profissional; Fase 3 — Entrada e preparação de mídia
+- **Fase em execução:** nenhuma; Fase 4 aguarda aprovação explícita
+- **Fase concluída mais recente:** Fase 3 — Entrada e preparação de mídia, implementada, validada e integrada à `main`
 - **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), integrada por squash
 - **PR da Fase 1:** [#2](https://github.com/anfalcir/legendar/pull/2), merged por squash em 10/11/2026
 - **PR da Fase 2:** [#3](https://github.com/anfalcir/legendar/pull/3), merged por squash em 10/11/2026
+- **PR da Fase 3:** [#4](https://github.com/anfalcir/legendar/pull/4), merged por squash em 10/11/2026
 - **Commit de integração da Fase 0:** `992cb874274e73d0264994e39926113f1461236f`
 - **Commit de integração da Fase 1:** `de31dddffc4f8e761692129d4c47a02ca89b8b83`
 - **Commit de integração da Fase 2:** `4129f0a906a04693502f298b71767605499e3f68`
+- **Commit de integração da Fase 3:** `dfa440b39e7623356388c774834e23ee53fc1d09`
 - **Documentos de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md) e [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md)
 
-> A `main` continua com as Fases 0, 1 e 2 concluídas e integradas. A implementação da Fase 3 está concluída na branch `phase-3/media-ingestion`; o workflow push [#42921552291](https://github.com/anfalcir/legendar/actions/runs/42921552291) aprovou Python 3.10–3.13, com 249 testes por ambiente, 87% de cobertura e Ruff/format verdes. A PR e o merge squash ainda são necessários para considerar a fase integrada à `main`.
+> As Fases 0–3 estão concluídas, validadas e integradas à `main`. A Fase 3 foi integrada pela PR [#4](https://github.com/anfalcir/legendar/pull/4), commit `dfa440b39e7623356388c774834e23ee53fc1d09`. Sua CI de push e PR aprovou Python 3.10–3.13 (249 testes por ambiente, cobertura 87%, Ruff/format verdes); os gates herdados da Fase 1 e Fase 0 também passaram, exceto jobs exclusivos de push que foram pulados no evento pull_request conforme a configuração.
 
 ---
 
@@ -29,7 +31,7 @@ A aplicação nova já tem camadas `domain`, `application`, `infrastructure`, `p
 
 A Fase 0 estabeleceu e documentou a direção técnica: governança de dependências, perfis de runtime, coletor de ambiente, prova sintética de mídia/offset, script de POC PT-BR/EN e contrato arquitetural. O plano operacional e o handoff da Fase 1 foram atualizados para registrar o checkpoint, as evidências e as pendências.
 
-**Estado:** Fase 0 concluída e integrada. O workflow push #113 terminou com 16/16 jobs aprovados e a PR workflow #114 concluiu com sucesso; os jobs exclusivos de push (benchmark completo e instalação CUDA) foram pulados no evento PR por configuração. A PR #1 foi integrada por squash no commit `992cb874274e73d0264994e39926113f1461236f`. Na Fase 1, os workflows [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) e [#127](https://github.com/anfalcir/legendar/actions/runs/42905799938) aprovaram Python 3.10–3.13 (196 testes, cobertura 88%, Ruff/format verdes); a Fase 1 foi integrada à `main` pela PR #2, commit `de31ddd`. Na Fase 2, o workflow push [#42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434) e o workflow da PR [#42912335753](https://github.com/anfalcir/legendar/actions/runs/42912335753) aprovaram 4/4 ambientes, 218 testes por ambiente, cobertura 88%, Ruff check/format. A CI da Fase 0 na PR [#42912336061](https://github.com/anfalcir/legendar/actions/runs/42912336061) também aprovou a matriz multiplataforma, lock/perfis e prova FFmpeg/offset; CUDA e benchmark WhisperX foram pulados nesse evento conforme a configuração. A Fase 2 foi integrada à `main` pela PR #3, commit `4129f0a`. A Fase 3 foi autorizada; sua implementação e CI de push foram concluídas na branch `phase-3/media-ingestion`. A integração pela PR permanece pendente.
+**Estado:** Fase 0 concluída e integrada. O workflow push #113 terminou com 16/16 jobs aprovados e a PR workflow #114 concluiu com sucesso; os jobs exclusivos de push (benchmark completo e instalação CUDA) foram pulados no evento PR por configuração. A PR #1 foi integrada por squash no commit `992cb874274e73d0264994e39926113f1461236f`. Na Fase 1, os workflows [#116](https://github.com/anfalcir/legendar/actions/runs/42905199857) e [#127](https://github.com/anfalcir/legendar/actions/runs/42905799938) aprovaram Python 3.10–3.13 (196 testes, cobertura 88%, Ruff/format verdes); a Fase 1 foi integrada à `main` pela PR #2, commit `de31ddd`. Na Fase 2, o workflow push [#42911438434](https://github.com/anfalcir/legendar/actions/runs/42911438434) e o workflow da PR [#42912335753](https://github.com/anfalcir/legendar/actions/runs/42912335753) aprovaram 4/4 ambientes, 218 testes por ambiente, cobertura 88%, Ruff check/format. A CI da Fase 0 na PR [#42912336061](https://github.com/anfalcir/legendar/actions/runs/42912336061) também aprovou a matriz multiplataforma, lock/perfis e prova FFmpeg/offset; CUDA e benchmark WhisperX foram pulados nesse evento conforme a configuração. A Fase 2 foi integrada à `main` pela PR #3, commit `4129f0a`. A Fase 3 foi autorizada, implementada e integrada à `main` pela PR #4, commit `dfa440b39e7623356388c774834e23ee53fc1d09`.
 
 ## 2. Situação do repositório
 
@@ -40,8 +42,8 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | Branch de conclusão da Fase 0 | `phase-0/technical-inventory` |
 | Branch de implementação da Fase 1 | `phase-1/architecture`, integrada na `main` pela PR #2 |
 | Branch de implementação da Fase 2 | `phase-2/professional-ui`, integrada na `main` pela PR #3 |
-| Branch de implementação da Fase 3 | `phase-3/media-ingestion`, implementação/CI de push aprovadas; PR/merge pendentes |
-| `main` | Contém as entregas integrais das Fases 0, 1 e 2; HEAD inclui o merge squash `4129f0a` |
+| Branch de implementação da Fase 3 | `phase-3/media-ingestion`, integrada na main pela PR #4 |
+| `main` | Contém as entregas integrais das Fases 0–3; HEAD inclui o merge squash `dfa440b` |
 | Fonte de dependências | `pyproject.toml` |
 | Lock | `uv.lock` regenerado pela CI e integrado à `main`; invariantes, fontes e exports CPU/CUDA aprovados no workflow #113 |
 | Coletor | `scripts/phase0_inventory.py` |
@@ -49,9 +51,9 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | POC de modelos | `scripts/phase0_model_poc.py` |
 | Validador do lock | `scripts/phase0_validate_lock.py` |
 | Documentação técnica | plano mestre, estado vivo, protocolo, matriz de dependências, planos operacionais e handoffs das Fases 1, 2 e 3 |
-| CI | `.github/workflows/phase0-quality.yml`, `phase1-quality.yml` e `phase3-quality.yml`; a CI push da Fase 3 passou em Python 3.10–3.13 + FFmpeg (249 testes por ambiente) |
+| CI | `.github/workflows/phase0-quality.yml`, `phase1-quality.yml` e `phase3-quality.yml`; a CI da Fase 3 passou em push e PR, Python 3.10–3.13 + FFmpeg (249 testes por ambiente); PR #4 merged |
 
-As PRs #1, #2 e #3 foram revisadas e integradas. A `main` contém as entregas integrais das Fases 0, 1 e 2; as branches `phase-1/architecture` e `phase-2/professional-ui` preservam o histórico. A branch `phase-3/media-ingestion` contém a implementação validada por CI; aguarda integração.
+As PRs #1, #2 e #3 foram revisadas e integradas. A `main` contém as entregas integrais das Fases 0, 1 e 2; as branches `phase-1/architecture` e `phase-2/professional-ui` preservam o histórico. A branch `phase-3/media-ingestion` contém a implementação integrada; ver PR #4.
 
 ### 2.1. Checkpoint atual da Fase 1
 
