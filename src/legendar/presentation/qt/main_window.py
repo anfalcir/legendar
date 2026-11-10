@@ -35,7 +35,7 @@ from legendar.application.pipeline.serial_pipeline import JobRequest, SerialPipe
 from legendar.application.ports.protocols import MediaInspector, WorkspaceFactory
 from legendar.domain.entities.media import MediaInfo, MediaKind, MediaSource
 from legendar.domain.errors.base import DomainError
-from legendar.domain.errors.catalog import InvalidInputError
+from legendar.domain.errors.catalog import InvalidInputError, JobCancelledError
 from legendar.domain.events.job_events import JobCompleted, JobEvent, JobFailed
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
@@ -623,7 +623,7 @@ class MainWindow(QMainWindow):
             return
 
         self._inspection_cancel_pending = False
-        self._media_info = None
+        self._invalidate_media_inspection()
         thread = QThread(self)
         worker = MediaInspectionWorker(self._deps.media_inspector, source)
         worker.moveToThread(thread)
@@ -683,6 +683,9 @@ class MainWindow(QMainWindow):
 
     @Slot(object)
     def _on_media_inspection_failed(self, error: Exception) -> None:
+        if isinstance(error, JobCancelledError):
+            self.media_info_label.setText("Inspeção de mídia cancelada.")
+            return
         message = (
             error.message
             if isinstance(error, DomainError)
