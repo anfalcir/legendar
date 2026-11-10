@@ -211,9 +211,7 @@ class SerialPipeline:
         # 6. Tradução opcional (preserva tempos)
         track = segmentation.track
         if request.translate:
-            track = self._translate(
-                request, alignment, track, enter, warnings, token
-            )
+            track = self._translate(request, alignment, track, enter, warnings, token)
 
         # 7. Validação estrutural do trilho final
         self._validate(track, enter)
