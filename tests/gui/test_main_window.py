@@ -308,7 +308,6 @@ def test_keyboard_tab_order_and_accessible_names_are_explicit(qtbot, tmp_path) -
     qtbot.waitUntil(window.browse_button.hasFocus)
 
 
-
 def test_destructive_prompts_use_no_as_the_default_choice(
     qtbot, tmp_path, monkeypatch
 ) -> None:
