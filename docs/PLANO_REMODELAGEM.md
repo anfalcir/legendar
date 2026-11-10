@@ -201,7 +201,7 @@ Forced alignment localiza no áudio um texto fornecido; não corrige por si só 
 
 **Candidato primário:** WhisperX, condicionado à prova técnica de compatibilidade, instalação, licença, suporte de idioma e qualidade.
 
-**Alternativa em avaliação:** stable-ts. Não será introduzido como dependência redundante nem como fallback automático antes de uma comparação objetiva. A Fase 0 deverá decidir se ele agrega valor e em quais situações.
+**Alternativa não selecionada na Fase 0:** stable-ts. Ela não foi adicionada ao manifesto nem definida como fallback automático. Reconsiderar somente se a avaliação com timestamps humanos da Fase 5 identificar limitações relevantes no alinhador primário; nesse caso, comparar ambos no mesmo corpus anotado, idiomas e condições. Essa eventual comparação é uma decisão de produto da Fase 5, não uma pendência da Fase 0.
 
 O alinhador deverá ser selecionado por idioma. Deve existir matriz explícita de suporte e de homologação. Quando não houver alinhador compatível ou a qualidade for insuficiente, o sistema deverá informar a limitação e evitar apresentar o resultado como plenamente sincronizado.
 
@@ -340,6 +340,8 @@ A arquitetura deverá separar regras de negócio, orquestração, infraestrutura
     docs/
       PLANO_REMODELAGEM.md
       ESTADO_ATUAL.md
+      FASE_0_PROTOCOLO.md
+      MATRIZ_DEPENDENCIAS.md
     resources/
       icons/
     README.md
@@ -367,7 +369,7 @@ A arquitetura deverá separar regras de negócio, orquestração, infraestrutura
 - Cancelamento deverá atravessar as etapas por mecanismo cooperativo e explícito.
 - Dependências externas deverão ser encapsuladas por serviços/adaptadores.
 - O pipeline deverá receber dependências de forma testável, permitindo mocks nos testes.
-- A aplicação deverá suportar CPU e detectar aceleração disponível, sem exigir GPU.
+- O produto deverá oferecer um caminho de execução em CPU quando suportado pelos componentes e tratar aceleração por hardware como perfil opcional. O hardware de uma máquina de desenvolvimento não poderá, sozinho, determinar o conjunto de dependências, a arquitetura ou os sistemas suportados.
 - Persistência de preferências poderá utilizar QSettings; banco de dados não é necessário no escopo inicial.
 - Empacotamento deverá ser tratado depois de estabilizada a aplicação.
 
@@ -486,7 +488,7 @@ Avaliar:
 
 ### 9.4. Metas iniciais de sincronização
 
-Para áudios controlados e casos homologados, metas iniciais a validar na Fase 0:
+Para áudios controlados e casos homologados, metas de referência provisórias a validar na Fase 5, usando timestamps de palavras anotados manualmente:
 
 - Erro mediano de início/fim de palavra: até 150 ms.
 - Percentil 95 de erro: até 350 ms.
@@ -562,32 +564,60 @@ A interface deverá receber atualizações sem polling agressivo. O log deverá 
 
 ## 11. Dependências, instalação e distribuição
 
-- Consolidar dependências e versões compatíveis após a prova técnica.
-- Documentar requisitos de Python, PyTorch, Whisper, WhisperX, FFmpeg e modelos.
-- Evitar versões soltas em ambiente de produção.
-- Definir instalação reproduzível em ambiente limpo.
-- Separar dependências de execução, desenvolvimento e testes.
-- Avaliar distribuição/empacotamento somente após a homologação funcional.
-- Documentar diferenças de CPU/GPU, drivers e sistemas operacionais efetivamente suportados.
+O repositório Legendar é a fonte de verdade dos requisitos de software. O ambiente local é um perfil de execução/homologação; não define sozinho quais bibliotecas, versões ou backends o produto pode suportar.
 
-Links técnicos de referência:
+### 11.1. Governança
 
+- `pyproject.toml` é o manifesto canônico das dependências diretas, faixas de versão, extras e grupos de desenvolvimento.
+- `uv.lock` é o registro versionado da resolução universal exata de dependências transitivas, variantes PyTorch e marcadores de plataforma; toda instalação de validação deve usar `uv sync --locked`.
+- `requirements.txt` é um snapshot legado da baseline e não deverá continuar sendo mantido manualmente como fonte concorrente. Após a migração, será removido ou gerado a partir do lockfile para compatibilidade com instalações que usam pip.
+- Dependências diretas devem refletir contratos usados pelo próprio Legendar. Dependências transitivas devem ser resolvidas pelo gerenciador e registradas no lockfile, sem duplicação manual desnecessária.
+- Utilizar faixas de versão com limites mínimos testados e limites máximos somente quando houver justificativa de compatibilidade. Fixações exatas ficam no lockfile, não no manifesto de requisitos.
+- Separar dependências-base, perfis completos de runtime, recursos opcionais (como alinhamento) e ferramentas de desenvolvimento/teste/build.
+- Para bibliotecas com variantes de hardware (PyTorch), selecionar explicitamente a origem dos wheels por perfil; não depender da escolha implícita do índice público.
+- Nenhuma instalação ou atualização silenciosa de pacotes globais será feita pelo aplicativo.
+
+### 11.2. Manifesto e baseline inicial
+
+O `pyproject.toml` foi introduzido na Fase 0 com PySide6 como dependência-base e perfis completos de POC: `runtime-cpu` e `runtime-cu128`. Cada perfil inclui Whisper, yt-dlp, a variante correspondente do stack PyTorch e WhisperX, evitando que o alinhador seja instalado sem backend explícito. O macOS utiliza os wheels PyPI do PyTorch no perfil CPU e pode expor MPS no runtime quando o ambiente oferecer suporte. O perfil ROCm 7.2 não é oferecido nesta versão porque a matriz oficial disponível resolve PyTorch a partir de 2.11, incompatível com a faixa exigida pelo WhisperX estável 3.8.6 (`>=2.8,<2.9`).
+
+A faixa inicial de Python é `>=3.10,<3.14`, determinada pela compatibilidade declarada pelo candidato WhisperX estável 3.8.6, e não pela versão instalada no computador-alvo. Essa faixa será ampliada quando a interseção das dependências críticas, os wheels e a CI demonstrarem suporte adicional.
+
+A matriz, os comandos de instalação, os perfis, as justificativas, as dependências externas e a política de manutenção estão em [docs/MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md). Uma resolução experimental anterior feita apenas contra PyPI puxou bibliotecas CUDA/NVIDIA por padrão para Linux e foi descartada; a resolução agora usa índices explícitos para não confundir perfil CPU com GPU. O lock universal está versionado e validado por resolução. A CI executa instalação real/importação do perfil CPU e CUDA 12.8, além de uma POC de modelo PT-BR/EN; isso é evidência de compatibilidade inicial, não homologação completa do produto em todos os sistemas e hardwares.
+
+### 11.3. Ferramentas externas
+
+FFmpeg e ffprobe são dependências externas obrigatórias do pipeline de mídia, não pacotes Python. O instalador/preflight deverá localizá-los, validar suas versões e informar como instalá-los. O fluxo YouTube declara `yt-dlp-ejs` e requer um runtime JavaScript compatível; Deno é o runtime preferencial a identificar no preflight, com Node avaliado somente conforme suporte da versão do yt-dlp.
+
+### 11.4. Perfis de hardware e plataforma
+
+CPU deverá ser uma via de compatibilidade quando suportada pelos componentes. CUDA e MPS são perfis independentes selecionados segundo a compatibilidade oficial do PyTorch, do alinhador, dos drivers e do sistema operacional. O manifesto disponibiliza atualmente perfis CPU e CUDA 12.8; macOS usa os wheels PyPI do PyTorch e verifica MPS no runtime. ROCm permanece como possibilidade arquitetural, mas o perfil ROCm 7.2 não é declarado instalável enquanto o PyTorch disponível nesse índice (>=2.11) for incompatível com a faixa exigida pelo WhisperX estável 3.8.6 (>=2.8,<2.9). Perfis indisponíveis ou incompatíveis não serão apresentados como suportados. O projeto não instalará todos os backends indiscriminadamente nem inferirá suporte apenas pela presença de uma GPU.
+
+O inventário do computador-alvo será usado para medir desempenho e validar um perfil concreto. Não poderá reduzir a matriz global do produto. Os sistemas operacionais e arquiteturas oficialmente suportados serão declarados somente depois de integração e CI comprovarem os fluxos GUI, mídia, Whisper e alinhamento.
+
+### 11.5. Reprodutibilidade e qualidade
+
+A Fase 0 gerou e validou a resolução lockada em ambiente isolado, confirmou a compatibilidade inicial dos wheels e executou a matriz do coletor/CLI em Python 3.10–3.13 × Ubuntu/Windows/macOS. O workflow #109 também instalou/importou os perfis CPU e CUDA 12.8, executou a prova FFmpeg/offset e o smoke benchmark WhisperX PT-BR/EN. Isso demonstra reprodutibilidade e compatibilidade inicial dos componentes avaliados; não equivale à homologação completa das dependências e fluxos do produto em todos os sistemas e hardwares. A fase de integração deverá separar testes com lockfile (reprodutibilidade) e testes de compatibilidade/atualização (faixas de versão).
+
+Referências técnicas:
+
+- Python Packaging User Guide: https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+- Dependency Groups: https://packaging.python.org/en/latest/specifications/dependency-groups/
+- uv universal resolution: https://docs.astral.sh/uv/concepts/resolution/
+- PyTorch: https://docs.pytorch.org/get-started/locally/
 - Whisper: https://github.com/openai/whisper
 - WhisperX: https://github.com/m-bain/whisperX
-- stable-ts: https://github.com/jianfch/stable-ts
 - FFmpeg: https://ffmpeg.org/documentation.html
 - yt-dlp: https://github.com/yt-dlp/yt-dlp
 - PySide6: https://doc.qt.io/qtforpython/
-- pytest-qt: https://pytest-qt.readthedocs.io/
-- pytest: https://docs.pytest.org/
 
-Essas referências são pontos de partida. Versões, licenças, compatibilidade de modelos, requisitos de hardware e disponibilidade de alinhadores deverão ser novamente conferidos na Fase 0 e fixados na implementação.
+Versões, licenças, wheels, modelos, requisitos de runtime e combinações de backend deverão ser conferidos e testados antes de serem declarados suportados.
 
 ## 12. Roadmap de execução
 
 | Fase | Nome | Entregáveis principais | Critério de saída |
 |---|---|---|---|
-| 0 | Definições e prova técnica | Matriz de modelos, POC PT-BR/EN, comparação de alinhadores, escolha de tradução e parâmetros de mídia | Qualidade e compatibilidade demonstradas; decisões registradas |
+| 0 | Definições e prova técnica | Inventário, governança/lock, perfis CPU/CUDA, prova de mídia/offset, POC smoke PT-BR/EN e decisões de tradução/modelos | Direção técnica e contratos suficientes para iniciar Fase 1; limitações e validações humanas encaminhadas explicitamente às Fases 4, 5, 6 e 8 |
 | 1 | Reestruturação arquitetural | Camadas, modelos de domínio, pipeline, estados, configurações e tratamento de erros | Aplicação executável com testes básicos e dependências organizadas |
 | 2 | Interface profissional | Janela, identidade visual, diálogos, máquina de estados, workers simulados, progresso e log | Todos os estados e proteções demonstrados sem processamento real |
 | 3 | Entrada e preparação de mídia | YouTube, áudio/vídeo local, ffprobe, FFmpeg, faixas, normalização e temporários | Fixtures e formatos candidatos processados com metadados corretos |
@@ -628,18 +658,20 @@ O projeto remodelado somente será considerado pronto quando:
 - Documentação estiver completa e corresponder ao comportamento real.
 - Dependências, modelos, licenças e dados transmitidos a serviços externos estiverem documentados.
 
-## 14. Decisões pendentes da Fase 0
+## 14. Decisões consolidadas e validações encaminhadas
 
-| Tema | Direção atual | O que falta decidir |
+| Tema | Decisão de saída da Fase 0 | Validação ou decisão restante |
 |---|---|---|
-| Alinhador primário | WhisperX | Confirmar suporte, compatibilidade, qualidade e instalação no ambiente-alvo |
-| Alternativa | stable-ts em avaliação | Demonstrar ganho real antes de adotar |
-| Tradução | Um serviço contextual isolado por adapter | Escolher provedor, custo, privacidade e política de falha |
-| Modelo Whisper | Manter Whisper | Comparar modelos e perfis de desempenho/precisão |
-| Normalização | WAV PCM, mono, 16 kHz como hipótese | Validar qualidade e compatibilidade dos modelos |
-| Idiomas de alinhamento | Prioridade PT-BR e EN | Confirmar modelos disponíveis e critérios de homologação |
-| Parâmetros SRT | Valores iniciais na seção 5.6 | Calibrar por amostras e leitura real |
-| Distribuição | Avaliar depois | Definir sistemas operacionais e empacotamento após estabilização |
+| Alinhador primário | WhisperX estável 3.8.6 é o primeiro candidato/adaptador; compatibilidade de instalação e POC smoke PT-BR/EN passaram | Precisão temporal, cobertura e tolerância a casos difíceis serão avaliadas na Fase 5 contra timestamps humanos |
+| Alternativa | stable-ts não foi incluído como dependência nem como fallback automático | Reconsiderar na Fase 5 somente se houver evidência mensurável de limitação do alinhador primário |
+| Tradução | Porta/adaptador independente; preservar original e não enviar áudio ao fornecedor | Selecionar provedor e aprovar preço, privacidade, retenção, limites e falhas antes da Fase 6 |
+| Modelo Whisper | Whisper multilingue é o motor candidato; `tiny` foi usado apenas para smoke benchmark de compatibilidade | Comparar modelos e perfis com corpus PT-BR/EN representativo e no computador-alvo nas Fases 4/8 |
+| Normalização | WAV PCM signed 16-bit, mono, 16 kHz; conversão sintética e preservação de offset foram aprovadas | Homologar codecs, contêineres, streams, qualidade de áudio e fixtures reais na Fase 3 |
+| Idiomas | PT-BR e EN passaram pela POC pública mínima | Não declarar qualidade ou suporte de alinhamento homologado antes das Fases 4/5/8 |
+| Parâmetros SRT | Regras e faixas iniciais documentadas na seção 5.6 | Calibrar com leitura real, segmentação e critérios de aceite nas Fases 6/8 |
+| Distribuição | Perfis CPU e CUDA 12.8 estão declarados; macOS usa wheels PyPI do perfil CPU e pode expor MPS conforme runtime | Definir plataformas/backends oficialmente suportados somente após homologação da aplicação integrada na Fase 8 |
+
+A Fase 0 encerra as decisões estruturais necessárias para começar a arquitetura. Os itens da terceira coluna são validações de produto, dependem de evidências ou decisões de fornecedor e permanecem atribuídos às fases que os consomem; não são critérios ocultos para reabrir esta fase.
 
 ## 15. Política de manutenção da documentação
 

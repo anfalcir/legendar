@@ -1,0 +1,268 @@
+name: Phase 0 quality
+
+on:
+  push:
+    branches:
+      - phase-0/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "docs/FASE_0_PROTOCOLO.md"
+      - "docs/MATRIZ_DEPENDENCIAS.md"
+      - ".github/workflows/phase0-quality.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-resolution:
+    name: Lock and resolve complete runtime profiles
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref_name || github.head_ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned uv resolver
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
+
+      - name: Resolve manifest on branch pushes
+        if: github.event_name == 'push'
+        run: uv lock --python-preference system --no-progress
+
+      - name: Require committed lockfile on pull requests
+        if: github.event_name == 'pull_request'
+        run: |
+          test -f uv.lock || {
+            echo "::error::uv.lock is missing. The branch push must generate and commit the lockfile."
+            exit 1
+          }
+          uv lock --check --no-progress
+
+      - name: Verify CPU profile resolution without installing packages
+        run: uv sync --locked --no-dev --extra runtime-cpu --dry-run --no-progress
+
+      - name: Verify CUDA 12.8 profile resolution without installing packages
+        run: uv sync --locked --no-dev --extra runtime-cu128 --dry-run --no-progress
+
+      - name: Commit updated universal lockfile on branch pushes
+        if: github.event_name == 'push'
+        run: |
+          if ! git ls-files --error-unmatch uv.lock >/dev/null 2>&1 || ! git diff --quiet -- uv.lock; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add uv.lock
+            git commit -m "build(deps): update universal dependency lock"
+            git push
+          else
+            echo "uv.lock is already current."
+          fi
+
+      - name: Validate critical lockfile invariants
+        run: python scripts/phase0_validate_lock.py
+
+      - name: Ensure CPU export does not pull NVIDIA/CUDA packages
+        shell: bash
+        run: |
+          uv export --locked --no-dev --extra runtime-cpu --no-emit-project > "$RUNNER_TEMP/legendar-cpu-requirements.txt"
+          if grep -Eiq '^nvidia[-_]' "$RUNNER_TEMP/legendar-cpu-requirements.txt"; then
+            echo "::error::CPU profile unexpectedly includes NVIDIA packages."
+            grep -Ein '^nvidia[-_]' "$RUNNER_TEMP/legendar-cpu-requirements.txt"
+            exit 1
+          fi
+
+      - name: Verify CUDA export contains CUDA runtime packages
+        shell: bash
+        run: |
+          uv export --locked --no-dev --extra runtime-cu128 --no-emit-project > "$RUNNER_TEMP/legendar-cu128-requirements.txt"
+          if ! grep -Eiq '^nvidia[-_]' "$RUNNER_TEMP/legendar-cu128-requirements.txt"; then
+            echo "::error::CUDA 12.8 profile did not resolve NVIDIA runtime packages."
+            exit 1
+          fi
+
+      - name: Upload lockfile evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendar-uv-lock-evidence
+          path: uv.lock
+          if-no-files-found: error
+          retention-days: 7
+
+  deterministic-checks:
+    name: Python ${{ matrix.python-version }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Compile Python sources
+        run: python -m compileall -q scripts tests
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate inventory command-line interface
+        run: python scripts/phase0_inventory.py --help
+
+      - name: Validate media POC command-line interface
+        run: python scripts/phase0_media_poc.py --help
+
+      - name: Validate lock-checker command-line interface
+        run: python scripts/phase0_validate_lock.py --help
+
+      - name: Smoke-test inventory JSON
+        run: |
+          python scripts/phase0_inventory.py --output "$RUNNER_TEMP/legendar-inventory.json"
+          python -c "import json, pathlib; json.loads(pathlib.Path('$RUNNER_TEMP/legendar-inventory.json').read_text())"
+
+
+  model-language-poc:
+    name: WhisperX smoke benchmark / PT-BR and English
+    if: github.event_name == 'push'
+    needs:
+      - dependency-resolution
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DISABLE_PROGRESS_BARS: "1"
+      TOKENIZERS_PARALLELISM: "false"
+    steps:
+      - name: Check out latest branch head (includes generated lock)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned uv
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
+
+      - name: Cache model and dataset files
+        uses: actions/cache@v4
+        with:
+          path: .cache/phase0
+          key: phase0-whisperx-tiny-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            phase0-whisperx-tiny-
+
+      - name: Install locked CPU runtime and evaluation group
+        run: uv sync --locked --no-dev --group phase0 --extra runtime-cpu --no-progress
+
+      - name: Run public PT-BR and English model smoke benchmark
+        run: |
+          uv run --locked --no-dev --group phase0 --extra runtime-cpu python scripts/phase0_model_poc.py \
+            --model tiny \
+            --samples-per-language 2 \
+            --cache-dir .cache/phase0 \
+            --output phase0-model-poc.json
+
+      - name: Upload model benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendar-phase0-model-poc
+          path: phase0-model-poc.json
+          if-no-files-found: error
+          retention-days: 90
+
+
+  cuda-wheel-install:
+    name: PyTorch CUDA 12.8 wheel installation smoke test
+    if: github.event_name == 'push'
+    needs:
+      - dependency-resolution
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out latest branch head (includes generated lock)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned uv
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
+
+      - name: Install locked CUDA 12.8 runtime profile
+        run: uv sync --locked --no-dev --extra runtime-cu128 --no-progress
+
+      - name: Import PyTorch and multimedia packages
+        run: |
+          uv run --locked python - <<'PY'
+          import torch
+          import torchaudio
+          import torchvision
+          assert torch.version.cuda is not None, "CUDA wheel did not expose a CUDA runtime"
+          assert torch.version.cuda.startswith("12.8"), torch.version.cuda
+          print({
+              "torch": torch.__version__,
+              "torch_cuda_runtime": torch.version.cuda,
+              "torchaudio": torchaudio.__version__,
+              "torchvision": torchvision.__version__,
+              "gpu_available": torch.cuda.is_available(),
+              "note": "GitHub runner has no guaranteed NVIDIA GPU; wheel import is the tested contract."
+          })
+          PY
+
+  media-timeline-poc:
+    name: FFmpeg normalization and offset preservation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install FFmpeg and ffprobe
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Run media timeline proof of concept
+        run: python scripts/phase0_media_poc.py --self-test

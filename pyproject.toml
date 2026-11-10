@@ -1,0 +1,87 @@
+[project]
+name = "legendar"
+version = "0.1.0"
+description = "Aplicação desktop para transcrição, alinhamento e geração de legendas SRT."
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "PySide6>=6.9,<7",
+]
+
+[project.optional-dependencies]
+# Cada perfil representa uma instalação completa para a POC e o produto.
+# O perfil seleciona explicitamente a variante PyTorch; não combinar perfis.
+runtime-cpu = [
+    "openai-whisper>=20250625",
+    "yt-dlp>=2025.4.30",
+    "yt-dlp-ejs>=0.8,<1",
+    "torch>=2.8,<2.9",
+    "torchvision>=0.23,<0.24",
+    "torchaudio>=2.8,<2.9",
+    "whisperx>=3.8.6,<3.8.7",
+]
+runtime-cu128 = [
+    "openai-whisper>=20250625; sys_platform == 'linux' or sys_platform == 'win32'",
+    "yt-dlp>=2025.4.30; sys_platform == 'linux' or sys_platform == 'win32'",
+    "yt-dlp-ejs>=0.8,<1; sys_platform == 'linux' or sys_platform == 'win32'",
+    "torch>=2.8,<2.9; sys_platform == 'linux' or sys_platform == 'win32'",
+    "torchvision>=0.23,<0.24; sys_platform == 'linux' or sys_platform == 'win32'",
+    "torchaudio>=2.8,<2.9; sys_platform == 'linux' or sys_platform == 'win32'",
+    "whisperx>=3.8.6,<3.8.7; sys_platform == 'linux' or sys_platform == 'win32'",
+]
+
+[dependency-groups]
+test = [
+    "pytest>=8,<10",
+    "pytest-qt>=4.4,<5",
+    "pytest-cov>=6,<8",
+]
+lint = [
+    "ruff>=0.11,<1",
+]
+build = [
+    "pyinstaller>=6.13,<7",
+]
+phase0 = [
+    "huggingface-hub>=0.30,<1",
+    "jiwer>=4,<5",
+    "soundfile>=0.13,<1",
+]
+dev = [
+    { include-group = "test" },
+    { include-group = "lint" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { index = "pytorch-cu128", extra = "runtime-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+    { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { index = "pytorch-cu128", extra = "runtime-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchaudio = [
+    { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { index = "pytorch-cu128", extra = "runtime-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[tool.uv]
+# O Legendar é um aplicativo desktop em layout flat neste estágio; uv gerencia
+# o ambiente sem tentar instalar o projeto como uma biblioteca Python.
+package = false
+conflicts = [
+    [
+        { extra = "runtime-cpu" },
+        { extra = "runtime-cu128" },
+    ],
+]
