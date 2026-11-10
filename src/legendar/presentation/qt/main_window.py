@@ -465,6 +465,12 @@ class MainWindow(QMainWindow):
 
     def _on_language_changed(self, _index: int) -> None:
         self._sync_translation_controls()
+        self._preferences = UiPreferences(
+            theme=self._preferences.theme,
+            output_dir=self._preferences.output_dir,
+            target_language=self._target_language(),
+            log_expanded=self._preferences.log_expanded,
+        )
 
     def _on_translate_toggled(self, _checked: bool) -> None:
         self._sync_translation_controls()
