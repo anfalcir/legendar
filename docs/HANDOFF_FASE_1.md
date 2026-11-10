@@ -1,15 +1,38 @@
-# Handoff técnico — encerramento da Fase 0 e entrada na Fase 1
+# Handoff técnico — checkpoint em andamento da Fase 1
 
 - **Projeto:** Legendar
 - **Atualização:** 10/11/2026
 - **Fase 0:** concluída, validada e integrada; workflow final #113 aprovado (16/16 jobs), com limitações explicitadas
-- **Fase 1:** pronta para começar; branch `phase-1/architecture` já criada a partir da main pós-merge, sem implementação iniciada
+- **Fase 1:** em execução; arquitetura inicial implementada e validada localmente, mas fase ainda não concluída
 - **Branch de conclusão da Fase 0:** `phase-0/technical-inventory`
 - **PR de integração:** [#1 — Fase 0: inventário, governança de dependências e prova técnica](https://github.com/anfalcir/legendar/pull/1), merged por squash
 - **Commit na main:** `992cb874274e73d0264994e39926113f1461236f`
 - **Regra de governança:** o repositório é a fonte de verdade das dependências e decisões; o computador de homologação não define sozinho os requisitos do produto.
 
-Este documento é a passagem de contexto para a IA que executará a Fase 1 na IDE. Leia-o em conjunto com o [plano mestre](PLANO_REMODELAGEM.md), o [estado atual](ESTADO_ATUAL.md), a [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e o [protocolo da Fase 0](FASE_0_PROTOCOLO.md).
+Este documento é a passagem de contexto para a próxima IA continuar a Fase 1, não para reiniciá-la nem avançar à Fase 2. Leia-o em conjunto com o [plano mestre](PLANO_REMODELAGEM.md), o [estado atual](ESTADO_ATUAL.md), o [plano operacional da Fase 1](FASE_1_PLANO.md), a [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e o [protocolo da Fase 0](FASE_0_PROTOCOLO.md).
+
+## Checkpoint atual da Fase 1
+
+A branch de trabalho continua sendo `phase-1/architecture`, baseada no commit de integração
+da Fase 0 (`992cb874274e73d0264994e39926113f1461236f`). O trabalho deste checkpoint inclui:
+
+- `src/legendar/domain`: entidades, objetos de valor, erros, eventos e máquina de estados;
+- `application`: protocolos, contexto de job/cancelamento, controlador, progresso e pipeline serial;
+- `infrastructure`: parser de metadados ffprobe, descoberta de ferramentas, cache somente leitura
+  de modelos, workspaces isolados, publicação SRT validada/atômica, configuração e logging;
+- `presentation/qt`: view model, janela mínima e worker com eventos por sinais Qt;
+- `bootstrap` e `python -m legendar`, além de testes unitários, de integração e GUI com fakes.
+
+**Evidência local:** `uv run --locked pytest -q` passou com 175 testes. Ruff check e format
+passaram nos arquivos novos da arquitetura/testes. A janela foi iniciada com
+`PYTHONPATH=src QT_QPA_PLATFORM=offscreen uv run --locked python -m legendar` e permaneceu
+aberta até ser encerrada pelo timeout de smoke test.
+
+**Não está feito:** caracterização automatizada de `core/` e `gui/`; CI da Fase 1 (o workflow
+existente é de qualidade da Fase 0); revisão final e fechamento dos critérios. O pipeline do
+bootstrap é deliberadamente pendente até a Fase 3: não há processamento real de mídia,
+Whisper/WhisperX ou tradução. O legado `main.py`, `core/` e `gui/` segue preservado. Não
+declarar a Fase 1 concluída nem iniciar a Fase 2 com base apenas nos testes locais.
 
 ---
 
@@ -252,32 +275,27 @@ Falha -> FAILED
 
 ## 5. Critérios de aceite da Fase 1
 
-A Fase 1 estará concluída somente quando:
+Status detalhado por critério, com pendências marcadas, está no [plano da Fase 1](FASE_1_PLANO.md).
+Já há evidência local para domínio/fronteiras, máquina de estados, pipeline com fakes,
+cancelamento/progresso/publicação, temporários/cache, configuração e inicialização offscreen.
+Ainda bloqueiam a conclusão: caracterização e estratégia para o legado, CI de Fase 1 e revisão
+final aprovada. A janela atual é mínima, não a interface profissional da Fase 2.
 
-- [ ] árvore de pacotes e dependências entre camadas estiver documentada;
-- [ ] imports do domínio estiverem livres de Qt e de implementações externas;
-- [ ] entidades/objetos de valor principais e suas invariantes tiverem testes;
-- [ ] máquina de estados tiver transições válidas/invalidas testadas;
-- [ ] pipeline serial tiver contratos e fake implementations testados;
-- [ ] cancelamento, progresso, falha e publicação forem representados sem iniciar inferência real;
-- [ ] diretórios temporários e cache compartilhado tiverem políticas separadas;
-- [ ] configuração e inicialização estiverem centralizadas e reproduzíveis;
-- [ ] a aplicação ainda iniciar em modo de desenvolvimento;
-- [ ] CI, documentação e árvore do repositório estiverem consistentes;
-- [ ] decisões abertas e riscos estiverem registrados no estado atual;
-- [ ] revisão final aprovada antes da Fase 2.
+## 6. Instrução operacional para a próxima IA
 
-## 6. Instrução operacional para a IA da IDE
-
-Antes de editar:
-
-1. Ler `README.md`, `docs/PLANO_REMODELAGEM.md`, `docs/ESTADO_ATUAL.md`, `docs/MATRIZ_DEPENDENCIAS.md`, `docs/FASE_0_PROTOCOLO.md` e este handoff.
-2. Confirmar que a PR #1 está merged na `main` (merge por squash no commit `992cb874274e73d0264994e39926113f1461236f`).
-3. Confirmar que a branch de trabalho é `phase-1/architecture` e que sua base é o commit de integração da Fase 0.
-4. Inspecionar a árvore e os módulos reais da baseline; não presumir que o texto documental substitua a leitura do código.
-5. Registrar o plano de execução da Fase 1 antes de grandes refatorações e usar commits pequenos, testáveis e reversíveis.
-6. Ao concluir cada etapa, executar CI, revisar diffs e atualizar `ESTADO_ATUAL.md` e o handoff.
-7. Não iniciar a Fase 2 sem aprovação explícita do responsável.
+1. Confirme a branch e leia o estado, este handoff e o [plano da Fase 1](FASE_1_PLANO.md).
+   O trabalho existente é o checkpoint a continuar; não recrie os pacotes já presentes.
+2. Execute `uv run --locked pytest -q` e confira a árvore/diff antes de alterar.
+3. Crie testes de caracterização dos módulos legados antes de removê-los ou adaptá-los. Preserve
+   `main.py`, `core/` e `gui/` enquanto a compatibilidade deles não estiver documentada.
+4. Defina uma política de Ruff que permita verificar o escopo do projeto sem reformatação
+   incidental do legado e dos artefatos históricos da Fase 0.
+5. Adicione CI da Fase 1 para instalação lockada, Ruff, pytest e GUI offscreen; não substitua nem
+   enfraqueça os gates da Fase 0.
+6. Revise falhas/decisões abertas e atualize `ESTADO_ATUAL.md`, este handoff e o plano
+   operacional junto com a implementação.
+7. Só propor a conclusão da Fase 1 depois de todos os critérios de aceite e da revisão final.
+   A Fase 2 depende de aprovação explícita do responsável.
 
 **Mensagem de orientação:** a Fase 0 não autorizou a implementação de todas as funcionalidades. Ela autorizou construir a estrutura arquitetural que mantém essas funcionalidades isoladas, testáveis e substituíveis. Preserve decisões e gates acima; quando houver evidência nova que contradiga uma decisão, documente a evidência e proponha alteração, não faça mudança silenciosa.
 
