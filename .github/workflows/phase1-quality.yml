@@ -69,11 +69,11 @@ jobs:
         run: python -m compileall -q src/legendar tests/legacy
 
       - name: Run the complete test suite, including Qt offscreen tests
-        run: uv run --locked pytest -q --cov=legendar --cov-report=term-missing
+        run: uv run --locked --no-sync pytest -q --cov=legendar --cov-report=term-missing
 
       - name: Lint the maintained architecture and test scope
         run: >-
-          uv run --locked ruff check
+          uv run --locked --no-sync ruff check
           src/legendar
           tests/unit
           tests/integration
@@ -86,7 +86,7 @@ jobs:
 
       - name: Verify formatting in the maintained architecture and test scope
         run: >-
-          uv run --locked ruff format --check
+          uv run --locked --no-sync ruff format --check
           src/legendar
           tests/unit
           tests/integration
