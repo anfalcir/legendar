@@ -114,7 +114,11 @@ A CI da Fase 0 separa:
 4. Instalação real e importação de Torch, torchvision e torchaudio no perfil CUDA 12.8; o runner não precisa ter GPU física, portanto `torch.cuda.is_available() == False` é esperado e não é falha do teste de wheel.
 5. Prova FFmpeg/ffprobe de normalização e mapeamento de offsets.
 
-Os 12 cenários de coletor não equivalem a suporte funcional completo do aplicativo em todos os sistemas operacionais. A POC FLEURS é um smoke benchmark pequeno; WER mede reconhecimento lexical, não precisão temporal. A precisão de alinhamento deve ser medida com timestamps humanos anotados e amostras representativas do uso final.
+Os 12 cenários de coletor não equivalem a suporte funcional completo do aplicativo em todos os sistemas operacionais. A POC FLEURS é um smoke benchmark pequeno; WER mede reconhecimento lexical, não precisão temporal. No workflow #109, com WhisperX 3.8.6 / tiny / CPU-int8 e duas amostras por idioma, PT-BR apresentou WER médio 0,275 e RTF médio 0,372 (26 palavras com timestamps válidos); EN apresentou WER médio 0,209559 e RTF médio 0,163 (30 palavras com timestamps válidos). Não houve palavra com timestamp ausente/inválido nas quatro amostras. O processo levou 62,131 s e o pico de RSS foi 3.456.839.680 bytes (~3,22 GiB) no runner GitHub. O artefato `legendar-phase0-model-poc` contém os detalhes por amostra.
+
+O log registrou um aviso não bloqueante de TorchCodec/pyannote: as bibliotecas FFmpeg compartilhadas não foram carregadas para o backend de I/O. A POC faz preload do áudio e passa o waveform diretamente ao WhisperX/alinhador, portanto o teste concluiu com sucesso; a decodificação via TorchCodec não foi validada por esse benchmark. A prova independente com FFmpeg/ffprobe passou no mesmo workflow. Se o produto vier a usar o caminho de I/O do TorchCodec, verificar a compatibilidade de bibliotecas e versões explicitamente.
+
+A precisão de alinhamento deve ser medida com timestamps humanos anotados e amostras representativas do uso final.
 
 ### POC de idioma
 

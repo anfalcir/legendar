@@ -2,8 +2,8 @@
 
 - **Projeto:** Legendar
 - **Atualização:** 10/11/2026
-- **Fase 0:** concluída como definição técnica e prova de viabilidade inicial, com limitações explicitadas
-- **Próxima fase autorizada:** Fase 1 — Reestruturação arquitetural
+- **Fase 0:** tecnicamente concluída; workflow final #109 aprovado (16/16 jobs), com limitações explicitadas
+- **Próxima fase:** Fase 1 — Reestruturação arquitetural, após revisão e integração da PR #1
 - **Branch de conclusão da Fase 0:** `phase-0/technical-inventory`
 - **PR de integração:** [#1 — Fase 0: inventário, governança de dependências e prova técnica](https://github.com/anfalcir/legendar/pull/1)
 - **Regra de governança:** o repositório é a fonte de verdade das dependências e decisões; o computador de homologação não define sozinho os requisitos do produto.
@@ -23,8 +23,9 @@ A Fase 0 concluiu as definições que permitem estruturar a aplicação sem mant
 5. Prova determinística de normalização mono/16 kHz e preservação de offsets da mídia.
 6. POC automatizada de transcrição e alinhamento PT-BR/EN com um conjunto público pequeno e métricas reproduzíveis.
 7. Decisões de arquitetura de pipeline, timestamp, tradução, cancelamento, temporários e limites de homologação registradas para a Fase 1.
+8. Evidências finais da CI registradas: workflow #109 com 16/16 jobs aprovados, lock validado, 12 combinações Python/SO aprovadas, instalação CPU/CUDA 12.8, POC FFmpeg/offset e smoke benchmark FLEURS PT-BR/EN publicado.
 
-**Importante:** conclusão da Fase 0 significa que a direção técnica e os contratos arquiteturais iniciais estão suficientemente definidos para a Fase 1. Não significa que toda a qualidade de reconhecimento/alinhamento já foi homologada para produção, nem que todos os sistemas operacionais e backends foram validados como suportados. Os itens que dependem de anotação humana e do hardware-alvo permanecem como gates das fases de integração, alinhamento e homologação, conforme a seção 7.
+**Importante:** a conclusão técnica da Fase 0 significa que a direção técnica e os contratos arquiteturais iniciais estão suficientemente definidos e que as provas automatizadas de viabilidade planejadas passaram. Não significa que toda a qualidade de reconhecimento/alinhamento já foi homologada para produção, nem que todos os sistemas operacionais e backends foram validados como suportados. A PR #1 ainda precisa ser revisada e integrada antes da criação da branch da Fase 1. Os itens que dependem de anotação humana e do hardware-alvo permanecem como gates das fases de integração, alinhamento e homologação, conforme a seção 7.
 
 ## 2. Decisões técnicas consolidadas
 

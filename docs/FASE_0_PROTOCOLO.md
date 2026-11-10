@@ -2,7 +2,7 @@
 
 - **Projeto:** Legendar
 - **Fase:** 0 — Definições e prova técnica
-- **Status:** definição técnica e pacote de POC concluídos; validação operacional final do lock/POC depende dos workflows atuais
+- **Status:** tecnicamente concluída; workflow final #109 aprovado (16/16 jobs), PR #1 aguardando revisão/integração
 - **Data:** 10/11/2026
 - **Branch:** `phase-0/technical-inventory`
 - **Plano mestre:** [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md)
@@ -27,7 +27,7 @@ A fase é considerada tecnicamente concluída quando:
 
 **A conclusão da Fase 0 não equivale à homologação de precisão temporal do produto.** As provas de timestamp com referências humanas permanecem no gate da Fase 5; a validação de qualidade/performance no computador-alvo permanece nas Fases 4, 5 e 8; a seleção de fornecedor de tradução permanece antes da Fase 6. Isso evita tanto iniciar a arquitetura sem contratos quanto afirmar uma qualidade que ainda não foi medida.
 
-No momento desta atualização, as implementações e o pacote de documentação estão na branch isolada. Os workflows finais referentes ao HEAD atual ainda estão na fila do GitHub Actions; consulte `docs/ESTADO_ATUAL.md` e o PR #1 para o resultado mais recente. Não converter “queued” em “passed”.
+A validação final do código foi concluída no workflow push [#109](https://github.com/anfalcir/legendar/actions/runs/42858694179), commit `febc0b30b5fbea382d2670291059c69bb084b850`: 16/16 jobs aprovados. O lock foi regenerado e validado; a matriz Python/SO, as instalações CPU e CUDA 12.8, a POC FFmpeg/offset e o benchmark WhisperX PT-BR/EN passaram. A branch permanece isolada e a PR #1 aguarda revisão/integração. Os resultados e limitações estão discriminados na seção 9.
 
 ## 2. Inventário de ambiente
 
@@ -259,21 +259,22 @@ Metas temporais de 150 ms mediana e 350 ms P95 permanecem alvos provisórios do 
 | 10/11/2026 — primeiras execuções | Coletor, 7 testes, CLI, JSON e matriz Python/SO | 12 combinações anteriores passaram; era validação do coletor |
 | 10/11/2026 — workflows #65/#66/#67 | Lock inicial, 12 combinações e POC FFmpeg/offset | POC de mídia e matriz passaram; o lock/manifesto foram posteriormente refinados |
 | 10/11/2026 — workflow #69 | Primeiro benchmark com `datasets` | Falhou por incompatibilidade de dependências `datasets` 5.2 / Hugging Face Hub / WhisperX 3.8.6; dependência removida |
-| 10/11/2026 — lock estável | Restrições e validador de lock | WhisperX restringido para versão estável 3.8.6; lock deve ser regenerado e validado depois da última revisão do manifesto |
-| HEAD atual | Lock, instalação CPU/CUDA, FLEURS e docs de handoff | Verificar status de execução em [PR #1](https://github.com/anfalcir/legendar/pull/1) e [Actions](https://github.com/anfalcir/legendar/actions); registrar somente resultados concluídos |
+| 10/11/2026 — lock estável | Restrições e validador de lock | WhisperX restringido para versão estável 3.8.6; grupo `datasets` removido por conflito; lock final regenerado e validado no workflow #109 |
+| 10/11/2026 — workflow [#109](https://github.com/anfalcir/legendar/actions/runs/42858694179) | Lock/perfis, matriz Python/SO, FFmpeg/offset, WhisperX e CUDA 12.8 | 16/16 jobs aprovados; execução CPU e benchmark PT-BR/EN concluídos; artefato `legendar-phase0-model-poc` publicado |
 
 ## 10. Critério de passagem à Fase 1
 
 A Fase 1 poderá começar depois de:
 - [ ] PR #1 ser revisada e integrada à `main`;
-- [ ] workflow do HEAD integrado estar verde;
-- [ ] `uv.lock` corresponder ao manifesto e passar pelo validador;
-- [ ] os dois perfis principais passarem instalação/importação CI;
-- [ ] a POC smoke PT-BR/EN ter resultado publicado (sucesso ou falha diagnosticada, com limitação explícita);
-- [ ] prova sintética FFmpeg/offset estar verde;
-- [ ] `ESTADO_ATUAL.md`, `MATRIZ_DEPENDENCIAS.md`, plano e handoff estarem coerentes.
+- [ ] PR #1 ser revisada e integrada à `main`;
+- [x] workflow da branch da Fase 0 estar verde (workflow #109, 16/16 jobs); executar novamente no HEAD integrado se a integração alterar a árvore;
+- [x] `uv.lock` corresponder ao manifesto e passar pelo validador, incluindo exports CPU/CUDA;
+- [x] perfis CPU e CUDA 12.8 passarem instalação/importação CI;
+- [x] POC smoke PT-BR/EN ter resultado publicado com métricas e limitações;
+- [x] prova sintética FFmpeg/offset estar verde;
+- [x] `ESTADO_ATUAL.md`, `MATRIZ_DEPENDENCIAS.md`, plano e handoff estarem coerentes.
 
-O gate de POC exige que seja possível executar o pipeline básico nos dois idiomas e que os resultados/limitações estejam disponíveis. Não exige aceitar o WhisperX como alinhador de produção sem avaliação humana: essa aprovação é da Fase 5.
+O gate de POC exige que seja possível executar o pipeline básico nos dois idiomas e que os resultados/limitações estejam disponíveis. O workflow #109 satisfez esse gate: 2 áudios PT-BR (WER médio 0,275; RTF 0,372; 26 palavras alinhadas válidas) e 2 áudios EN (WER médio 0,209559; RTF 0,163; 30 palavras alinhadas válidas), sem palavras com timestamp ausente/inválido no smoke test. Não exige aceitar o WhisperX como alinhador de produção sem avaliação humana: essa aprovação é da Fase 5.
 
 ---
 
