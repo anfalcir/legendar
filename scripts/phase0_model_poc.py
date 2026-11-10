@@ -9,7 +9,6 @@ public dataset revision and is not uploaded with the JSON report.
 from __future__ import annotations
 
 import argparse
-import csv
 import gc
 import io
 import json
@@ -31,6 +30,8 @@ import torch
 import whisperx
 from huggingface_hub import hf_hub_download
 from jiwer import wer
+
+from scripts.phase0_fleurs import parse_reference_rows
 
 
 DATASET = "google/fleurs"
@@ -59,33 +60,8 @@ def _load_reference_rows(
         revision=DATASET_REVISION,
         cache_dir=str(cache_dir),
     )
-    rows: list[dict[str, str]] = []
-    seen_utterances: set[str] = set()
     with Path(tsv_path).open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.reader(handle, delimiter="\t")
-        # FLEURS TSVs are headerless. Stable columns begin with id, path,
-        # raw_transcription, transcription, normalized_transcription.
-        for values in reader:
-            if len(values) < 3:
-                continue
-            utterance_id = str(values[0]).strip()
-            filename = str(values[1]).strip()
-            reference = str(values[2]).strip()
-            if not utterance_id or not filename or not reference:
-                continue
-            if utterance_id in seen_utterances:
-                continue
-            seen_utterances.add(utterance_id)
-            rows.append(
-                {
-                    "id": utterance_id,
-                    "filename": Path(filename).name,
-                    "reference": reference,
-                }
-            )
-            if len(rows) >= samples_per_language:
-                break
-
+        rows = parse_reference_rows(handle, samples_per_language)
     if len(rows) < samples_per_language:
         raise RuntimeError(
             f"FLEURS {config} provided only {len(rows)} valid rows; "
