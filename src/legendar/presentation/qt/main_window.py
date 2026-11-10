@@ -789,7 +789,7 @@ class MainWindow(QMainWindow):
             else snapshot.status_text
         )
 
-        if worker_running and not snapshot.progress_known:
+        if worker_running and not snapshot.progress_known and not snapshot.is_finished:
             self.progress_bar.setRange(0, 0)
             self.progress_meta.setText("Etapa em andamento · sem percentual medido")
         else:
