@@ -188,6 +188,37 @@ def test_cancel_declined_keeps_the_job_running(qtbot, tmp_path, media) -> None:
     assert window.view_model.snapshot.state is JobState.COMPLETED
 
 
+
+def test_cancel_rejection_is_reported_when_pipeline_has_entered_publication(
+    qtbot, tmp_path
+) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    window._thread = object()
+    window._view_model.apply(
+        StateChanged(
+            "job-1", 1, previous=JobState.IDLE, current=JobState.TRANSCRIBING
+        )
+    )
+
+    class PublishingWorker:
+        def request_cancel(self) -> bool:
+            return False
+
+    window._worker = PublishingWorker()
+    window._confirm_cancel = lambda **_kwargs: True
+
+    window._cancel_job()
+
+    assert window._cancel_pending
+    assert not window.cancel_button.isEnabled()
+    assert window.cancel_button.text() == "Etapa finalizando…"
+    assert "não pode ser cancelada" in window.status_label.text()
+
+    window._worker = None
+    window._thread = None
+    window._cancel_pending = False
+
+
 def test_repeated_cancel_requests_are_ignored_after_first_acceptance(
     qtbot, tmp_path, media
 ) -> None:
