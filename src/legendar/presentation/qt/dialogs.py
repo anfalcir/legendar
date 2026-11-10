@@ -104,8 +104,7 @@ class JobConfirmationDialog(QDialog):
             root.addWidget(warning)
 
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Cancel
-            | QDialogButtonBox.StandardButton.Ok,
+            QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok,
             parent=self,
         )
         self.back_button = buttons.button(QDialogButtonBox.StandardButton.Cancel)
@@ -187,9 +186,7 @@ class PreferencesDialog(QDialog):
         output_container = QWidget(self)
         output_container.setLayout(output_row)
 
-        self.log_expanded_check = QCheckBox(
-            "Manter painel de detalhes expandido", self
-        )
+        self.log_expanded_check = QCheckBox("Manter painel de detalhes expandido", self)
         self.log_expanded_check.setObjectName("logExpandedPreference")
         self.log_expanded_check.setChecked(preferences.log_expanded)
 
@@ -222,9 +219,7 @@ class PreferencesDialog(QDialog):
         """Retorna os valores validados após o usuário salvar."""
         output_text = self.output_dir_edit.text().strip()
         output_dir = (
-            Path(output_text).expanduser()
-            if output_text
-            else self._initial.output_dir
+            Path(output_text).expanduser() if output_text else self._initial.output_dir
         )
         return UiPreferences(
             theme=str(self.theme_combo.currentData()),
