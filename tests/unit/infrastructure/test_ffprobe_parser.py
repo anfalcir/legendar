@@ -47,8 +47,87 @@ def test_parses_video_with_audio_and_ignores_subtitles() -> None:
     assert stream.channels == 2
     assert stream.sample_rate_hz == 48_000
     assert stream.start_time_seconds == pytest.approx(0.021333)
+    assert stream.offset_source == "stream.start_time"
+    assert not stream.is_default
     assert stream.language == "por"
     assert stream.title == "Principal"
+
+
+
+def test_default_stream_is_preferred_and_pts_offset_is_derived() -> None:
+    payload = {
+        "streams": [
+            {
+                "index": 1,
+                "codec_type": "audio",
+                "codec_name": "aac",
+                "channels": 2,
+                "sample_rate": "48000",
+                "start_pts": "120000",
+                "time_base": "1/48000",
+                "disposition": {"default": 0},
+            },
+            {
+                "index": 2,
+                "codec_type": "audio",
+                "codec_name": "opus",
+                "channels": 2,
+                "sample_rate": "48000",
+                "start_time": "1.5",
+                "disposition": {"default": 1},
+            },
+        ],
+        "format": {"format_name": "matroska,webm", "duration": "12"},
+    }
+
+    info = parse_ffprobe_payload(payload)
+
+    assert info.default_stream().index == 2
+    assert info.audio_streams[0].start_time_seconds == pytest.approx(2.5)
+    assert info.audio_streams[0].offset_source == "stream.start_pts*time_base"
+    assert info.audio_streams[1].is_default
+
+
+def test_container_start_time_is_an_explicit_offset_fallback() -> None:
+    payload = {
+        "streams": [
+            {
+                "index": 0,
+                "codec_type": "audio",
+                "codec_name": "aac",
+                "channels": 2,
+                "sample_rate": "48000",
+            }
+        ],
+        "format": {"format_name": "mp4", "duration": "10", "start_time": "1.25"},
+    }
+
+    stream = parse_ffprobe_payload(payload).default_stream()
+
+    assert stream.start_time_seconds == pytest.approx(1.25)
+    assert stream.offset_source == "format.start_time_fallback"
+
+
+def test_invalid_pts_time_base_falls_back_to_assumed_zero() -> None:
+    payload = {
+        "streams": [
+            {
+                "index": 0,
+                "codec_type": "audio",
+                "codec_name": "aac",
+                "channels": 2,
+                "sample_rate": "48000",
+                "start_pts": "500",
+                "time_base": "0/0",
+            }
+        ],
+        "format": {"duration": "10"},
+    }
+
+    stream = parse_ffprobe_payload(payload).default_stream()
+
+    assert stream.start_time_seconds == 0.0
+    assert stream.offset_source == "assumed_zero_missing_source_timestamp"
 
 
 def test_audio_only_source_is_classified_as_audio() -> None:
