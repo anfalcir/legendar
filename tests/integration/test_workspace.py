@@ -58,7 +58,6 @@ def test_cleanup_removes_only_job_workspace(tmp_path: Path):
     assert model_file.exists()
 
 
-
 def test_cleanup_surfaces_filesystem_errors_for_ui_diagnostics(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
