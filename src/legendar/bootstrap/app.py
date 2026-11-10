@@ -138,8 +138,6 @@ def build_ui_dependencies(
     statuses = tool_locator(("ffmpeg", "ffprobe", "deno", "node"))
     ffmpeg = statuses.get("ffmpeg", ToolStatus(name="ffmpeg"))
     ffprobe = statuses.get("ffprobe", ToolStatus(name="ffprobe"))
-    deno = statuses.get("deno", ToolStatus(name="deno"))
-    node = statuses.get("node", ToolStatus(name="node"))
     readiness_details = (ffmpeg.label_pt, ffprobe.label_pt)
     readiness_ok = ffmpeg.available and ffprobe.available
 
