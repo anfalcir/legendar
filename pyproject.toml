@@ -13,31 +13,22 @@ dependencies = [
 runtime-cpu = [
     "openai-whisper>=20250625",
     "yt-dlp>=2025.4.30",
-    "torch>=2.8,<3",
-    "torchvision>=0.23,<1",
-    "torchaudio>=2.8,<3",
+    "torch>=2.8,<2.9",
+    "torchvision>=0.23,<0.24",
+    "torchaudio>=2.8,<2.9",
 ]
 runtime-cu128 = [
     "openai-whisper>=20250625",
     "yt-dlp>=2025.4.30",
-    "torch>=2.8,<3",
-    "torchvision>=0.23,<1",
-    "torchaudio>=2.8,<3",
-]
-runtime-rocm72 = [
-    "openai-whisper>=20250625",
-    "yt-dlp>=2025.4.30",
-    "torch>=2.8,<3; sys_platform == 'linux'",
-    "torchvision>=0.23,<1; sys_platform == 'linux'",
-    "torchaudio>=2.8,<3; sys_platform == 'linux'",
-    "pytorch-triton-rocm>=3.5.1; sys_platform == 'linux'",
-    "triton-rocm>=3.6.0; sys_platform == 'linux'",
+    "torch>=2.8,<2.9",
+    "torchvision>=0.23,<0.24",
+    "torchaudio>=2.8,<2.9",
 ]
 
 # Alinhamento é um recurso opcional até que a POC PT-BR/EN seja aprovada.
 # Deve ser combinado com exatamente um dos perfis runtime-* acima.
 alignment-whisperx = [
-    "whisperx>=3.8.6,<4",
+    "whisperx>=3.8.6,<3.9",
 ]
 
 [dependency-groups]
@@ -67,32 +58,18 @@ name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
-[[tool.uv.index]]
-name = "pytorch-rocm72"
-url = "https://download.pytorch.org/whl/rocm7.2"
-explicit = true
-
 [tool.uv.sources]
 torch = [
     { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform != 'darwin'" },
     { index = "pytorch-cu128", extra = "runtime-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { index = "pytorch-rocm72", extra = "runtime-rocm72", marker = "sys_platform == 'linux'" },
 ]
 torchvision = [
     { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform != 'darwin'" },
     { index = "pytorch-cu128", extra = "runtime-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { index = "pytorch-rocm72", extra = "runtime-rocm72", marker = "sys_platform == 'linux'" },
 ]
 torchaudio = [
     { index = "pytorch-cpu", extra = "runtime-cpu", marker = "sys_platform != 'darwin'" },
     { index = "pytorch-cu128", extra = "runtime-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { index = "pytorch-rocm72", extra = "runtime-rocm72", marker = "sys_platform == 'linux'" },
-]
-pytorch-triton-rocm = [
-    { index = "pytorch-rocm72", extra = "runtime-rocm72", marker = "sys_platform == 'linux'" },
-]
-triton-rocm = [
-    { index = "pytorch-rocm72", extra = "runtime-rocm72", marker = "sys_platform == 'linux'" },
 ]
 
 [tool.uv]
@@ -103,13 +80,5 @@ conflicts = [
     [
         { extra = "runtime-cpu" },
         { extra = "runtime-cu128" },
-    ],
-    [
-        { extra = "runtime-cpu" },
-        { extra = "runtime-rocm72" },
-    ],
-    [
-        { extra = "runtime-cu128" },
-        { extra = "runtime-rocm72" },
     ],
 ]
