@@ -57,7 +57,7 @@ A implementação atual da branch de Fase 2:
 
 A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes. A homologação audiovisual real continua sendo gate posterior.
 
-## 3. Estado da Fase 3 — em andamento\n\nA branch `phase-3/global-segmentation` introduz fluxo global de palavras alinhadas, consolidação entre segmentos contíguos do Whisper, rastreabilidade `source_segments`, rejeição de cronologia inválida e extensão de cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). Testes unitários cobrem os novos contratos. A avaliação audiovisual real e a validação quantitativa de legibilidade permanecem pendentes; portanto, a fase não está concluída.\n\n## 4. Estado do repositório
+## 3. Estado da Fase 3 — em andamento\n\nA branch `phase-3/global-segmentation` introduz fluxo global de palavras alinhadas, consolidação entre segmentos contíguos do Whisper, rastreabilidade `source_segments`, rejeição de cronologia inválida, respeito a fronteiras de frase significativas e extensão de cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). Testes unitários cobrem esses contratos. A avaliação audiovisual real, o resultado de CI e a validação quantitativa de legibilidade permanecem pendentes; portanto, a fase não está concluída.\n\n## 4. Estado do repositório
 
 | Área | Estado |
 |---|---|
@@ -99,9 +99,7 @@ Esses achados descrevem o código e os testes; não identificam, por si sós, a 
 
 ## 6. Desempenho: baseline disponível e limitações
 
-**Relato operacional inicial:** aproximadamente 60 minutos para processar uma mídia de 37 minutos, ou RTF global aproximado de 1,62.
-
-Essa medição é informada pelo usuário, não reproduzida nesta auditoria. Não há ainda tempos confiáveis e persistidos por estágio, portanto não se deve atribuir uma fração exata do total à transcrição ou à tradução.
+**Baseline operacional consolidado em 11/11/2026:** uma execução fria e três quentes da mídia de referência de 37min10s. A mediana quente foi aproximadamente 23min21s (RTF ~0,63). A tradução NLLB foi o maior estágio, em torno de 14 minutos por execução quente. Os relatórios sanitizados estão preservados em `logs/`; não é necessário reabrir o relato histórico de aproximadamente uma hora.
 
 Configuração atual relevante:
 
