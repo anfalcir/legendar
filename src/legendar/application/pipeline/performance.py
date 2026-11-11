@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -66,8 +67,6 @@ class PipelinePerformanceSession:
         resource_provider: ResourceProvider | None = None,
         adapter_metrics_before: Mapping[str, Mapping[str, Any]] | None = None,
     ) -> None:
-        import time
-
         self.job_id = job_id
         self._resource_provider = resource_provider
         self._started = time.perf_counter()
@@ -82,8 +81,6 @@ class PipelinePerformanceSession:
     @contextmanager
     def measure(self, name: str) -> Iterator[None]:
         """Mede tempo de parede, CPU do processo e recursos antes/depois."""
-        import time
-
         resources_before = _safe_snapshot(self._resource_provider)
         wall_started = time.perf_counter()
         cpu_started = time.process_time()
@@ -119,8 +116,6 @@ class PipelinePerformanceSession:
         adapter_metrics_after: Mapping[str, Mapping[str, Any]] | None = None,
         error_type: str | None = None,
     ) -> dict[str, Any]:
-        import time
-
         adapters_after = adapter_metrics_after or {}
         adapters: dict[str, Any] = {}
         for name in sorted(set(self._adapter_metrics_before) | set(adapters_after)):
