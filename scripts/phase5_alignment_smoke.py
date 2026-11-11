@@ -192,9 +192,7 @@ def run_smoke(
     started = time.perf_counter()
     samples = _load_samples(cache_dir / "dataset", samples_per_language)
     transcriber_class = (
-        FasterWhisperTranscriber
-        if backend == "faster-whisper"
-        else WhisperTranscriber
+        FasterWhisperTranscriber if backend == "faster-whisper" else WhisperTranscriber
     )
     transcriber = transcriber_class(
         cache_dir,
