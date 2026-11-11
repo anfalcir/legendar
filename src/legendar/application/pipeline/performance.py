@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from time import perf_counter, process_time
 from typing import Any
 
 
@@ -69,8 +69,8 @@ class PipelinePerformanceSession:
     ) -> None:
         self.job_id = job_id
         self._resource_provider = resource_provider
-        self._started = time.perf_counter()
-        self._process_started = time.process_time()
+        self._started = perf_counter()
+        self._process_started = process_time()
         self._stages: list[dict[str, Any]] = []
         self._counts: dict[str, int | float] = {}
         self._metadata: dict[str, Any] = {}
