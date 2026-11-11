@@ -316,9 +316,14 @@ def _prefers_break_after(
 ) -> bool:
     """Prefere encerrar a cue em fim de frase quando ela já tem massa de texto."""
     text = _text_of(group)
-    if len(text) < policy.sentence_break_ratio * policy.max_chars_per_cue:
+    if not text.endswith(_SENTENCE_ENDINGS):
         return False
-    return text.endswith(_SENTENCE_ENDINGS)
+    duration = group[-1][1].end - group[0][1].start
+    meaningful_text = len(text) >= max(
+        20,
+        policy.sentence_break_ratio * policy.max_chars_per_cue,
+    )
+    return meaningful_text or duration >= policy.min_cue_duration
 
 
 def _refine_for_reading_speed(
