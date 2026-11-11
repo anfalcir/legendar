@@ -138,6 +138,7 @@ def segment_alignment(
     short: list[int] = []
     overflow: list[int] = []
     words: list[tuple[TranscriptWord, TimeRange, int]] = []
+    previous_segment_start: float | None = None
 
     for position, segment in enumerate(alignment.transcript.segments):
         aligned = [
@@ -145,6 +146,20 @@ def segment_alignment(
             for word in segment.words
             if word.range is not None
         ]
+        segment_start = (
+            aligned[0][1].start if aligned else segment.range.start
+            if segment.range is not None
+            else None
+        )
+        if segment_start is not None:
+            if (
+                previous_segment_start is not None
+                and segment_start < previous_segment_start
+            ):
+                raise SrtValidationError(
+                    "Segmentos da transcrição fora da ordem cronológica."
+                )
+            previous_segment_start = segment_start
         if aligned:
             words.extend(aligned)
             continue
