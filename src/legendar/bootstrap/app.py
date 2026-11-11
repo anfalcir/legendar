@@ -30,6 +30,7 @@ from legendar.infrastructure.transcription.faster_whisper import (
     FasterWhisperTranscriber,
 )
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
+from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.presentation.qt.branding import app_icon
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
@@ -233,30 +234,69 @@ def build_ui_dependencies(
         )
     alignment_available = whisperx_installed and alignment_configuration_ok
 
-    try:
-        transformers_installed = importlib.util.find_spec("transformers") is not None
-    except (ImportError, ValueError):
-        transformers_installed = False
-
+    translation_backend = os.environ.get(
+        "LEGENDAR_TRANSLATION_BACKEND", "nllb"
+    ).strip().casefold()
     translation_configuration_ok = True
-    try:
-        translator = NllbTranslator.from_environment(settings.models_dir)
-    except ValueError as exc:
-        translator = NllbTranslator(settings.models_dir)
-        translation_configuration_ok = False
-        translation_details = (f"Configuração NLLB inválida: {exc}",)
-    else:
-        translation_details = (
-            f"NLLB-200 distilled · modelo {translator.model_name}",
-            f"Dispositivo de tradução: {translator.requested_device}",
-            f"Pesos no cache local: {translator.download_root}",
-        )
 
-    if not transformers_installed:
-        translation_details = (
-            "transformers não instalado; sincronize runtime-cpu ou runtime-cu128.",
+    if translation_backend == "gemini":
+        try:
+            translator = GeminiTranslator.from_environment(settings.models_dir)
+        except ValueError as exc:
+            translator = GeminiTranslator()
+            translation_configuration_ok = False
+            translation_details = (f"Configuração Gemini inválida: {exc}",)
+        else:
+            translation_details = (
+                f"Gemini API · modelo {translator.model}",
+                f"Lote: {translator.batch_size} cues · timeout: "
+                f"{translator.timeout_seconds:g}s · retries: {translator.max_retries}",
+                (
+                    "Grounding Google Search habilitado."
+                    if translator.grounding
+                    else "Grounding Google Search desabilitado."
+                ),
+                (
+                    "GEMINI_API_KEY configurada no ambiente."
+                    if translator.is_configured
+                    else "GEMINI_API_KEY ausente; configure a chave para traduzir."
+                ),
+            )
+        translation_available = (
+            translation_configuration_ok and translator.is_configured
         )
-    translation_available = transformers_installed and translation_configuration_ok
+    elif translation_backend == "nllb":
+        try:
+            transformers_installed = (
+                importlib.util.find_spec("transformers") is not None
+            )
+        except (ImportError, ValueError):
+            transformers_installed = False
+
+        try:
+            translator = NllbTranslator.from_environment(settings.models_dir)
+        except ValueError as exc:
+            translator = NllbTranslator(settings.models_dir)
+            translation_configuration_ok = False
+            translation_details = (f"Configuração NLLB inválida: {exc}",)
+        else:
+            translation_details = (
+                f"NLLB-200 distilled · modelo {translator.model_name}",
+                f"Dispositivo de tradução: {translator.requested_device}",
+                f"Pesos no cache local: {translator.download_root}",
+            )
+
+        if not transformers_installed:
+            translation_details = (
+                "transformers não instalado; sincronize runtime-cpu ou runtime-cu128.",
+            )
+        translation_available = transformers_installed and translation_configuration_ok
+    else:
+        translator = NllbTranslator(settings.models_dir)
+        translation_available = False
+        translation_details = (
+            "LEGENDAR_TRANSLATION_BACKEND inválido; use nllb ou gemini.",
+        )
 
     inspector = FfprobeInspector()
     downloader = YtDlpDownloader(
