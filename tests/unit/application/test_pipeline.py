@@ -29,6 +29,7 @@ from legendar.domain.entities.transcript import (
     TranscriptWord,
 )
 from legendar.domain.errors.catalog import (
+    AlignmentInsufficientError,
     InvalidInputError,
     JobCancelledError,
     PublicationError,
@@ -348,6 +349,25 @@ def test_publish_failure_propagates_as_domain_error(job_context):
     pipeline, _ = _pipeline(publisher=FailingPublisher())
     with pytest.raises(PublicationError):
         pipeline.execute(_request(), job_context)
+
+
+def test_unmatched_alignment_words_block_publication(job_context):
+    transcript = make_transcript(language=Language.PORTUGUESE)
+    alignment = AlignmentResult(
+        transcript=transcript,
+        diagnostics=AlignmentDiagnostics(
+            aligned_words=1,
+            unmatched_words=(TranscriptWord("mundo"),),
+            issues=("unmatched_word",),
+        ),
+        model_name="whisperx-test",
+    )
+    pipeline, ports = _pipeline(aligner=FakeAligner(alignment=alignment))
+
+    with pytest.raises(AlignmentInsufficientError, match="evidência temporal confiável"):
+        pipeline.execute(_request(), job_context)
+
+    assert ports["publisher"].calls == []
 
 
 def test_alignment_diagnostics_are_propagated_as_pipeline_warnings(
