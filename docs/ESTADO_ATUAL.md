@@ -21,7 +21,7 @@ O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliz
 
 A arquitetura e a base de engenharia das Fases 0–10 estão integradas. Uma auditoria estática posterior identificou lacunas no caminho de qualidade final: ausência de consolidação editorial entre segmentos consecutivos do Whisper, subdivisão de textos com CPS alto sem resolver a falta de tempo de leitura, aceitação de cues curtas como simples aviso, possível perda de palavras sem alinhamento na segmentação e ausência de um gate editorial bloqueante.
 
-A prioridade agora é corrigir a integridade e a legibilidade do resultado antes de trocar motores ou reduzir configurações de qualidade. Em paralelo, o novo plano estabelece instrumentação para localizar os gargalos de desempenho e testar otimizações com comparação pareada.
+As Fases 1 e 2 estão concluídas. A Fase 3 está em implementação para consolidar globalmente as palavras alinhadas e melhorar a legibilidade. O baseline real de 37min10s é ~23min21s; NLLB consome ~14min e será o foco da Fase 6, quando será avaliado Gemini com credencial fornecida pelo usuário via secret do GitHub.
 
 ## 2. Estado da Fase 1 — concluída
 
@@ -57,7 +57,7 @@ A implementação atual da branch de Fase 2:
 
 A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes. A homologação audiovisual real continua sendo gate posterior.
 
-## 3. Estado do repositório
+## 3. Estado da Fase 3 — em andamento\n\nA branch `phase-3/global-segmentation` introduz fluxo global de palavras alinhadas, consolidação entre segmentos contíguos do Whisper, rastreabilidade `source_segments`, rejeição de cronologia inválida e extensão de cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). Testes unitários cobrem os novos contratos. A avaliação audiovisual real e a validação quantitativa de legibilidade permanecem pendentes; portanto, a fase não está concluída.\n\n## 4. Estado do repositório
 
 | Área | Estado |
 |---|---|
@@ -65,15 +65,15 @@ A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes.
 | UI, worker e pipeline real | Implementados |
 | Reconhecimento | OpenAI Whisper local; padrão declarado `base` |
 | Alinhamento | WhisperX 3.8.6; forced alignment por segmento |
-| Segmentação | Algoritmo determinístico atual; correções planejadas |
+| Segmentação | Fluxo global cronológico em implementação; consolida limites do Whisper e preserva rastreabilidade de origem |
 | Tradução | NLLB-200 distilled 600M via Transformers/PyTorch |
 | Publicação | SRT com round-trip e gravação atômica |
 | Gate editorial | Insuficiente: riscos de leitura podem continuar como avisos |
 | Benchmark por etapa | Instrumentação integrada; baseline real consolidado em 11/11/2026 |
-| Otimização de motores | Próxima frente: Fase 5–7; Gemini é candidato de tradução a ser avaliado, sem adoção ainda |
+| Otimização de motores | Fases 5–7 planejadas; Gemini é candidato para a Fase 6, sem adoção ainda |
 | Homologação audiovisual final | Pendente |
 
-## 4. Evidências de qualidade e lacunas conhecidas
+## 5. Evidências de qualidade e lacunas conhecidas
 
 Os módulos auditados incluem:
 
@@ -97,7 +97,7 @@ Achados estáticos confirmados:
 
 Esses achados descrevem o código; não identificam, por si sós, a origem de cada erro textual ou temporal de uma mídia específica. A correlação com áudio de referência exige homologação.
 
-## 4. Desempenho: baseline disponível e limitações
+## 6. Desempenho: baseline disponível e limitações
 
 **Relato operacional inicial:** aproximadamente 60 minutos para processar uma mídia de 37 minutos, ou RTF global aproximado de 1,62.
 
@@ -114,7 +114,7 @@ O inventário da Fase 0 registrou um perfil de referência com Ryzen 3 2200G, qu
 
 O plano vigente exige instrumentação de tempo de cada etapa, CPU, memória e configuração dos modelos; benchmark frio/quente; e comparação com a mesma mídia e hardware. A meta inicial é reduzir o tempo global em pelo menos 20% sem degradação mensurável de qualidade; 30% é uma meta aspiracional, não uma garantia.
 
-## 5. Plano de execução vigente
+## 7. Plano de execução vigente
 
 A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
 
@@ -123,7 +123,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 0 | Auditoria, organização documental e plano | Documentada nesta entrega |
 | 1 | Instrumentação e baseline por etapa | **Concluída** |
 | 2 | Integridade textual e alinhamento recuperável | **Concluída e integrada à `main`** |
-| 3 | Segmentação global e legibilidade | Planejada |
+| 3 | Segmentação global e legibilidade | **Em andamento na branch `phase-3/global-segmentation`** |
 | 4 | Gate editorial e diagnóstico textual | Planejada |
 | 5 | Benchmark e aceleração da transcrição | Planejada |
 | 6 | Benchmark e aceleração da tradução | Planejada |
@@ -132,7 +132,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 
 Nenhuma dessas fases de código é declarada concluída por existir apenas no plano.
 
-## 6. Critérios que não podem ser sacrificados
+## 8. Critérios que não podem ser sacrificados
 
 - Nenhuma palavra reconhecida pode desaparecer silenciosamente.
 - Nenhum timestamp pode ser inventado para encobrir falha de alinhamento.
@@ -141,7 +141,7 @@ Nenhuma dessas fases de código é declarada concluída por existir apenas no pl
 - Uma otimização de motor só será adotada após avaliação de WER/CER, cobertura, alinhamento e revisão humana da tradução.
 - A publicação continua atômica e só ocorre após os gates definidos.
 
-## 7. Próximas ações
+## 9. Próximas ações
 
 1. Integrar a reorganização e o plano documental.
 2. Executar a Fase 1, criando a medição de baseline sem alterar os motores.
@@ -150,6 +150,6 @@ Nenhuma dessas fases de código é declarada concluída por existir apenas no pl
 5. Medir candidatos de aceleração em comparação pareada; atualizar a matriz de dependências somente quando um candidato for aprovado.
 6. Fazer a homologação final no hardware-alvo e registrar evidências sanitizadas.
 
-## 8. Histórico documental
+## 10. Histórico documental
 
 Os protocolos, planos, handoffs e relatórios concluídos da remodelação anterior estão preservados em [archive/README.md](archive/README.md). Eles servem como registro histórico; este arquivo e o plano vigente representam o estado atual.
