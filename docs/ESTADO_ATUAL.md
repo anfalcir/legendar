@@ -41,7 +41,9 @@ completos, hardware do usuário e julgamento editorial, listada na seção 6.
 | Fase 6 | Branch `phase-6/translation-segmentation-srt`; squash `d600283`; CI de push 5/5 jobs ([#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587)) |
 | Fase 7 | Branch `phase-7/gui-pipeline-integration`; squash `9ccab33` |
 | Fase 8 | Branch `phase-8/validation`; squash `e9e2a18` |
-| Fase 9 | Branch `phase-9/documentation`; squash local |
+| Fase 9 | Branch `phase-9/documentation`; squash local `8f82e83` (fast-forward à `main`) |
+| CI da fase 8/9 | `phase8-quality.yml` roda em pushes para `main`, `phase-8/**` e `phase-9/**` e em PRs para `main`; commit de CI `ad8383f` |
+| `main` (HEAD local e `origin/main`) | `ad8383f4abebb9b0069b456c32b45d2e322e61b7` |
 | Motivo do squash local (6–9) | criação de PR indisponível no ambiente de execução (sem `gh` e sem token) |
 | Manifestos | `pyproject.toml` (canônico) + `uv.lock` (198 pacotes resolvidos) |
 | Lockfile | validado com `uv lock --check` |
