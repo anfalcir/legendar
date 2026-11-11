@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fase 1 concluída com instrumentação integrada à `main` e baseline real consolidado; Fase 2 em execução na branch `phase-2/alignment-integrity`.
+- **Status:** Fases 1 e 2 concluídas e integradas à `main`; Fase 3 em implementação na branch `phase-3/global-segmentation`.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -13,7 +13,7 @@ Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITET
 
 ## 1. Resumo executivo
 
-Uma execução recente reportada pelo usuário levou aproximadamente **1 hora para processar 37 minutos de áudio**. Os pontos percebidos como mais lentos foram transcrição e tradução. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
+O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e é o principal alvo da futura Fase 6. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
 
 O trabalho será conduzido em duas frentes coordenadas:
 
@@ -36,7 +36,7 @@ Não se pretende substituir toda a arquitetura nem trocar todos os modelos de um
 | Tempo de tradução | ainda não medido isoladamente | Pendente de instrumentação |
 | Perfil exato de hardware/execução dessa rodada | precisa ser reconfirmado | Pendente |
 
-O tempo total não deve ser repartido por suposição. A Fase 1 medirá as etapas individualmente, distinguindo carregamento de modelos, inferência e trabalho de preparação.
+A decomposição da Fase 1 já mediu as etapas individualmente, distinguindo carregamento de modelos, inferência e preparação. Não é necessário reabrir a discrepância histórica de aproximadamente uma hora.
 
 ### 2.2. Perfil de hardware conhecido
 
@@ -297,6 +297,17 @@ Entregas:
 9. Recalcular o layout após tradução, pois o comprimento no idioma final muda.
 
 **Critério de conclusão:** corpus de teste comprova redução de fragmentação, estabilidade temporal, conservação do texto e melhoria das métricas de leitura. Não basta diminuir a contagem de cues.
+
+**Implementação em andamento (11/11/2026):**
+
+- A segmentação passou a construir um fluxo global cronológico de palavras alinhadas, em vez de reiniciar o agrupamento em cada segmento do Whisper.
+- As cues podem atravessar limites artificiais do ASR quando há continuidade temporal e textual; pausas, pontuação, limite de caracteres e duração continuam determinando fronteiras.
+- Cada cue preserva os índices de todos os segmentos de origem em `source_segments`.
+- A entrada fora de ordem cronológica é rejeitada explicitamente; o sistema não reordena silenciosamente palavras e não altera o texto falado.
+- Cues curtas podem ganhar tempo de exibição somente dentro do silêncio anterior à próxima cue, com margem de segurança de 80 ms. A última cue não é estendida sem evidência do fim da mídia.
+- Testes foram adicionados para consolidação entre segmentos, pausas, rastreabilidade, cronologia inválida e extensão segura.
+
+**Ainda pendente:** avaliação do corpus audiovisual real, otimização editorial das fronteiras com pontuação/sintaxe e comprovação quantitativa de redução de fragmentação sem piorar CPS, cobertura ou sincronização. A Fase 3 não está concluída.
 
 ### Fase 4 — Gate editorial e diagnóstico de texto
 
@@ -632,7 +643,7 @@ Fase 7 — memória, threads e perfis
 Fase 8 — regressão e homologação final
 ```
 
-**Próxima execução autorizada pelo plano:** Fase 1 — instrumentação e baseline de desempenho. Não alterar Whisper, WhisperX ou NLLB antes de obter a medição reproduzível.
+**Próxima execução:** concluir a Fase 3, depois implementar o gate editorial da Fase 4. O experimento Gemini pertence à Fase 6 (tradução): antes de executar chamadas reais, solicitar ao usuário que cadastre a chave como secret no GitHub Actions. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos de configuração versionados.
 
 ### Definition of Done de cada fase
 
