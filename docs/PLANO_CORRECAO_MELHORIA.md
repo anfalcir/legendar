@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** instrumentação da Fase 1 integrada à `main` pela PR [#8](https://github.com/anfalcir/legendar/pull/8), squash `12e3f40db5fe9b849f1a51715802eea7dba0449e`; baseline real ainda pendente no equipamento de homologação.
+- **Status:** Fase 1 concluída com instrumentação integrada à `main` e baseline real consolidado; Fase 2 em execução na branch `phase-2/alignment-integrity`.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -243,14 +243,15 @@ Entregas:
 
 **Integração e validação de código:** concluídas pela PR [#8](https://github.com/anfalcir/legendar/pull/8), squash `12e3f40db5fe9b849f1a51715802eea7dba0449e`. CI aprovada com 492 testes, cobertura de 85,46%, E2E FFmpeg/Qt em Python 3.10–3.13, smoke Whisper PT-BR/EN, smoke NLLB real em CPU, matriz multiplataforma e validação documental.
 
-**Pendências para concluir a Fase 1:**
+**Conclusão da Fase 1 (11/11/2026):**
 
-1. Executar `scripts/phase0_inventory.py --probe-torch` no equipamento real de homologação e revisar o inventário atualizado.
-2. Processar a mídia real de 37 minutos com a mesma configuração da execução reportada, capturando uma execução fria e pelo menos três execuções quentes.
-3. Repetir o protocolo com uma amostra menor representativa e conferir se a soma das etapas explica o tempo total, considerando overhead residual.
-4. Consolidar mediana/dispersão, RTF, pico RSS, throughput e etapa dominante; registrar a baseline real em `docs/ESTADO_ATUAL.md`.
+1. Inventário atualizado do equipamento de homologação registrado junto aos relatórios.
+2. Uma execução fria e três execuções quentes da mídia real de 37min10s foram capturadas.
+3. A mediana das execuções quentes ficou em aproximadamente 23min21s (RTF ~0,63).
+4. A tradução NLLB foi confirmada como estágio dominante, com aproximadamente 14 minutos por execução quente.
+5. Os relatórios sanitizados e o inventário foram preservados em `logs/` no repositório para rastreabilidade.
 
-**Critério de conclusão:** baseline reproduzível com a decomposição temporal de todos os estágios, sem mudar a qualidade ou o motor do produto. A instrumentação no código, isoladamente, não conclui a Fase 1 nem substitui a medição da mídia real.
+**Critério de conclusão atendido:** baseline reproduzível com decomposição temporal dos estágios, sem alterar os motores ou parâmetros de qualidade. A Fase 1 está encerrada; novas otimizações de performance passam a ser tratadas nas fases específicas de aceleração.
 
 ### Fase 2 — Integridade textual e robustez do alinhamento
 
@@ -267,6 +268,17 @@ Entregas:
 7. Testes para palavras repetidas, pontuação, contrações, omissão de token, nomes próprios, sobreposição, offset e fim de mídia.
 
 **Critério de conclusão:** nenhum token reconhecido desaparece silenciosamente; toda palavra sem âncora termina alinhada por método validado ou exige revisão. A timeline global continua correta.
+
+**Implementação da Fase 2 (11/11/2026):**
+
+- O domínio já preservava palavras não alinhadas; a segmentação passou a carregar explicitamente `unmatched_words` e a considerar o resultado não lossless quando houver conteúdo sem âncora temporal.
+- O pipeline deixou de transformar palavras sem alinhamento em simples aviso: `AlignmentInsufficientError` bloqueia a publicação antes da segmentação/publicação quando existe qualquer palavra reconhecida sem evidência temporal confiável.
+- O adaptador WhisperX ganhou uma segunda tentativa controlada somente para segmentos com palavras não alinhadas. A janela é ampliada em até 0,75 s por lado, limitada pela duração do áudio e pelo máximo configurado, e a resposta passa pelo mesmo casamento textual, validação temporal e score. Se a segunda tentativa não melhorar a cobertura, o primeiro resultado é preservado.
+- A recuperação não interpola timestamps, não copia janelas aproximadas para palavras e não desloca palavras seguintes para preencher lacunas.
+- Foram adicionadas métricas sanitizadas de tentativas, tempo de recuperação e palavras recuperadas ao snapshot de performance.
+- Testes cobrem perda explícita, bloqueio de publicação e recuperação com janela ampliada.
+
+**Critério de conclusão da implementação:** nenhuma palavra reconhecida sem âncora temporal pode chegar à publicação; recuperação somente com evidência produzida pelo alinhador. A homologação audiovisual de precisão continua sendo gate posterior.
 
 ### Fase 3 — Segmentação global e legibilidade
 
