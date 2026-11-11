@@ -225,7 +225,6 @@ def test_notice_is_cleared_when_a_job_starts_and_set_on_failure() -> None:
     assert restarted.notice_level == ""
 
 
-
 def test_completion_exposes_editorial_review_notice() -> None:
     vm = JobViewModel()
     vm.apply(_state(1, JobState.IDLE, JobState.VALIDATING_INPUT))
