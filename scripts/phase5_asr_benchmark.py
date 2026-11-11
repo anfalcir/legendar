@@ -182,7 +182,8 @@ def run_benchmark(
                         "cer": round(float(cer(reference, hypothesis)), 6),
                         "transcription_wall_seconds": round(elapsed, 3),
                         "real_time_factor": round(elapsed / max(duration, 0.001), 4),
-                        "first_sample_includes_cold_model_load": len(model_records) == 0,
+                        "first_sample_includes_cold_model_load": len(model_records)
+                        == 0,
                     }
                     model_records.append(record)
                     reports.append(record)
@@ -212,7 +213,9 @@ def run_benchmark(
                                 4,
                             ),
                             "mean_transcription_wall_seconds": round(
-                                sum(item["transcription_wall_seconds"] for item in items)
+                                sum(
+                                    item["transcription_wall_seconds"] for item in items
+                                )
                                 / len(items),
                                 3,
                             ),
@@ -224,7 +227,10 @@ def run_benchmark(
                     ],
                     "warm_mean_wall_seconds": (
                         round(
-                            sum(item["transcription_wall_seconds"] for item in model_records[1:])
+                            sum(
+                                item["transcription_wall_seconds"]
+                                for item in model_records[1:]
+                            )
                             / len(model_records[1:]),
                             3,
                         )
@@ -347,12 +353,18 @@ def main() -> int:
     parser.add_argument("--cpu-threads", type=int, default=4)
     parser.add_argument("--beam-size", type=int, default=5)
     parser.add_argument("--manifest", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("phase5-asr-benchmark.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("phase5-asr-benchmark.json")
+    )
     args = parser.parse_args()
     try:
         report = run_benchmark(
-            backends=tuple(item.strip() for item in args.backends.split(",") if item.strip()),
-            models=tuple(item.strip().lower() for item in args.models.split(",") if item.strip()),
+            backends=tuple(
+                item.strip() for item in args.backends.split(",") if item.strip()
+            ),
+            models=tuple(
+                item.strip().lower() for item in args.models.split(",") if item.strip()
+            ),
             samples_per_language=args.samples_per_language,
             cache_dir=args.cache_dir,
             device=args.device,
