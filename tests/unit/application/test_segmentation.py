@@ -250,7 +250,6 @@ def test_cues_never_exceed_the_character_limit_per_cue():
     assert all(len(cue.text) <= 84 for cue in result.track.cues)
 
 
-
 def test_continuous_speech_merges_across_asr_segment_boundaries():
     first = _segment(_word("esta", 0.0, 0.3), _word("é", 0.31, 0.45))
     second = _segment(_word("uma", 0.46, 0.7), _word("frase.", 0.71, 1.1))
@@ -286,10 +285,12 @@ def test_global_stream_preserves_all_source_segments_when_split():
     assert " ".join(cue.text for cue in result.track.cues) == (
         "palavra palavra palavra palavra"
     )
-    assert set(source for cue in result.track.cues for source in cue.source_segments) == {
-        0,
-        1,
+    source_segments = {
+        source
+        for cue in result.track.cues
+        for source in cue.source_segments
     }
+    assert source_segments == {0, 1}
 
 
 def test_global_stream_rejects_non_chronological_aligned_words():
