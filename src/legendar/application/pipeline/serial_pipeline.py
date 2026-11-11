@@ -26,7 +26,10 @@ from legendar.application.pipeline.translation import (
     apply_translation,
     build_translation_units,
 )
-from legendar.application.pipeline.validation import validate_track
+from legendar.application.pipeline.validation import (
+    TrackValidationReport,
+    validate_track,
+)
 from legendar.application.ports.protocols import (
     Aligner,
     AudioPreparer,
@@ -48,6 +51,7 @@ from legendar.domain.errors.catalog import (
     JobCancelledError,
     ModelError,
     TranslationError,
+    SrtValidationError,
     UnsupportedLanguageError,
 )
 from legendar.domain.state.machine import JobState
@@ -122,6 +126,7 @@ class PipelineResult:
     source_language: Language
     final_language: Language
     warnings: tuple[str, ...] = field(default_factory=tuple)
+    quality_report: TrackValidationReport | None = None
 
 
 class SerialPipeline:
@@ -316,7 +321,8 @@ class SerialPipeline:
             )
 
         # 6. Tradução opcional (preserva tempos)
-        track = segmentation.track
+        source_track = segmentation.track
+        track = source_track
         if request.translate:
             performance.set_count("translation_units", len(track.cues))
             with performance.measure("translation"):
@@ -326,13 +332,18 @@ class SerialPipeline:
 
         # 7. Validação estrutural do trilho final
         with performance.measure("srt_validation"):
-            self._validate(track, media_info, enter, warnings)
+            quality_report = self._validate(
+                track, media_info, enter, warnings, segmentation,
+                source_track if request.translate else None,
+            )
         performance.set_count("warning_count", len(warnings))
+        performance.set_count("editorial_issue_count", len(quality_report.issues))
+        performance.set_metadata(editorial_quality_status=quality_report.status.value)
 
         # 8. Publicação atômica (ponto de não retorno)
         with performance.measure("srt_publication"):
             return self._publish(
-                context, track, alignment, segmentation, warnings, enter
+                context, track, alignment, segmentation, warnings, quality_report, enter
             )
 
     # -- etapas auxiliares -------------------------------------------------
@@ -406,11 +417,25 @@ class SerialPipeline:
         media_info: MediaInfo,
         enter: Callable[[JobState], ScaledProgress],
         warnings: list[str],
-    ) -> None:
+        segmentation: SegmentationResult,
+        source_track: SubtitleTrack | None,
+    ) -> TrackValidationReport:
         stage = enter(JobState.VALIDATING_SRT)
-        report = validate_track(track, media_duration=media_info.duration_seconds)
+        report = validate_track(
+            track,
+            media_duration=media_info.duration_seconds,
+            content_loss_count=len(segmentation.dropped_segments),
+            source_track=source_track,
+        )
         warnings.extend(report.warnings)
-        stage.report(1.0, "Legendas validadas")
+        if report.is_blocked:
+            raise SrtValidationError(report.summary)
+        stage.report(
+            1.0,
+            "Revisão editorial necessária" if report.review_required
+            else "Qualidade editorial aprovada",
+        )
+        return report
 
     def _publish(
         self,
@@ -419,6 +444,7 @@ class SerialPipeline:
         alignment: AlignmentResult,
         segmentation: SegmentationResult,
         warnings: list[str],
+        quality_report: TrackValidationReport,
         enter: Callable[[JobState], ScaledProgress],
     ) -> PipelineResult:
         # Publicação não consulta cancelamento: é o ponto de não retorno.
@@ -432,6 +458,7 @@ class SerialPipeline:
             source_language=alignment.transcript.language,
             final_language=track.language,
             warnings=tuple(warnings),
+            quality_report=quality_report,
         )
 
 
