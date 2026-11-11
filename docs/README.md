@@ -7,6 +7,7 @@ Este diretório mantém na raiz somente documentos que orientam a operação atu
 - [Estado atual](ESTADO_ATUAL.md) — o que está implementado, validado, pendente e em risco.
 - [Plano de correção, qualidade e desempenho](PLANO_CORRECAO_MELHORIA.md) — plano mestre de trabalho para corrigir a qualidade do SRT e reduzir o tempo de execução sem perda de qualidade.
 - [Plano operacional da Fase 5](FASE_5_PLANO.md) — configuração do faster-whisper, benchmark pareado e critérios de aceite do ASR.
+- [Plano operacional da Fase 6](FASE_6_PLANO.md) — Gemini API, tradução contextual, benchmark pareado com NLLB e critérios de aceite.
 
 ## Referência técnica e operacional
 
