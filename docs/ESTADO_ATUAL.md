@@ -145,12 +145,12 @@ Nenhuma dessas fases de código é declarada concluída por existir apenas no pl
 
 ## 9. Próximas ações
 
-1. Integrar a reorganização e o plano documental.
-2. Executar a Fase 1, criando a medição de baseline sem alterar os motores.
-3. Usar a mesma mídia de 37 minutos para separar transcrição, alinhamento, segmentação, tradução e publicação.
-4. Executar as fases de correção de integridade e legibilidade.
-5. Medir candidatos de aceleração em comparação pareada; atualizar a matriz de dependências somente quando um candidato for aprovado.
-6. Fazer a homologação final no hardware-alvo e registrar evidências sanitizadas.
+1. Concluir a Fase 3 com CI verde, regressão determinística e homologação audiovisual.
+2. Executar a Fase 4 para tornar CPS, duração, fragmentação e integridade critérios editoriais auditáveis.
+3. Executar a Fase 5 isoladamente, se o benchmark confirmar oportunidade de aceleração de ASR.
+4. Na Fase 6, comparar Gemini API com NLLB usando o mesmo corpus e revisão humana. Antes das chamadas reais, solicitar o cadastro de `GEMINI_API_KEY` como secret no GitHub.
+5. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
+6. Consolidar a Fase 8 com comparação do pipeline completo, homologação no hardware-alvo e evidências sanitizadas.
 
 ## 10. Histórico documental
 
