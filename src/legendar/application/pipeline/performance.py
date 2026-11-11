@@ -81,18 +81,20 @@ class PipelinePerformanceSession:
     @contextmanager
     def measure(self, name: str) -> Iterator[None]:
         """Mede tempo de parede, CPU do processo e recursos antes/depois."""
+        resources_before = _safe_snapshot(self._resource_provider)
         wall_started = time.perf_counter()
         cpu_started = time.process_time()
-        resources_before = _safe_snapshot(self._resource_provider)
         try:
             yield
         finally:
+            wall_seconds = max(0.0, time.perf_counter() - wall_started)
+            cpu_seconds = max(0.0, time.process_time() - cpu_started)
             resources_after = _safe_snapshot(self._resource_provider)
             self._stages.append(
                 {
                     "name": name,
-                    "wall_seconds": max(0.0, time.perf_counter() - wall_started),
-                    "process_cpu_seconds": max(0.0, time.process_time() - cpu_started),
+                    "wall_seconds": wall_seconds,
+                    "process_cpu_seconds": cpu_seconds,
                     "resources_before": resources_before,
                     "resources_after": resources_after,
                 }
