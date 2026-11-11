@@ -269,7 +269,7 @@ Entregas:
 
 **Critério de conclusão:** nenhum token reconhecido desaparece silenciosamente; toda palavra sem âncora termina alinhada por método validado ou exige revisão. A timeline global continua correta.
 
-**Implementação da Fase 2 (11/11/2026):**
+**Implementação e conclusão da Fase 2 (11/11/2026):**
 
 - O domínio já preservava palavras não alinhadas; a segmentação passou a carregar explicitamente `unmatched_words` e a considerar o resultado não lossless quando houver conteúdo sem âncora temporal.
 - O pipeline deixou de transformar palavras sem alinhamento em simples aviso: `AlignmentInsufficientError` bloqueia a publicação antes da segmentação/publicação quando existe qualquer palavra reconhecida sem evidência temporal confiável.
@@ -278,7 +278,7 @@ Entregas:
 - Foram adicionadas métricas sanitizadas de tentativas, tempo de recuperação e palavras recuperadas ao snapshot de performance.
 - Testes cobrem perda explícita, bloqueio de publicação e recuperação com janela ampliada.
 
-**Critério de conclusão da implementação:** nenhuma palavra reconhecida sem âncora temporal pode chegar à publicação; recuperação somente com evidência produzida pelo alinhador. A homologação audiovisual de precisão continua sendo gate posterior.
+**Critério de conclusão atendido:** nenhuma palavra reconhecida sem âncora temporal chega à publicação; a recuperação usa somente evidência produzida pelo alinhador. CI verde e merge na `main` concluídos pela PR #9. A homologação audiovisual de precisão continua sendo gate posterior.
 
 ### Fase 3 — Segmentação global e legibilidade
 
