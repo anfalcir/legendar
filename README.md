@@ -1,49 +1,101 @@
 # Legendar
 
-Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
+Aplicação desktop para transcrever áudio, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução local opcional para inglês ou português brasileiro.
 
-A remodelagem é executada por fases. As Fases 0–8 estão implementadas, validadas por CI e integradas à `main`. A Fase 6 entregou a segmentação editorial de duas linhas, a tradução local por cue com NLLB-200 distilled 600M, a validação do trilho e a publicação SRT atômica com roundtrip; seu CI de push passou 5/5 jobs. A Fase 7 conectou a janela ao pipeline real: o botão de geração dispara o trabalho em `QThread`, com progresso honesto, cancelamento cooperativo, log recolhível, recuperação de erro e abertura da pasta do SRT publicado. A Fase 8 consolidou a matriz de testes — quatro pares de idioma, modos de falha, cancelamento e mídia real em seis formatos — com 443 testes aprovados e 86% de cobertura no ambiente com FFmpeg. A precisão temporal e a qualidade tradutória em pregações, no computador-alvo, continuam como gates de homologação do produto. A aplicação anterior permanece preservada como baseline.
+- **Estado:** Fases 0–9 concluídas, validadas e integradas à `main`. O que resta é a homologação do usuário com mídia real e hardware próprio.
+- **Suíte:** 451 testes aprovados e 86% de cobertura no ambiente com FFmpeg (441 aprovados e 10 skips explícitos sem FFmpeg).
+- **Licença:** MIT, em [LICENSE](LICENSE).
 
-## Documentação do projeto
+## O que a aplicação faz
 
-- [Plano mestre de remodelagem](docs/PLANO_REMODELAGEM.md) — visão do produto, requisitos, arquitetura, pipeline de sincronização, fases e critérios de aceite.
-- [Estado atual](docs/ESTADO_ATUAL.md) — documento vivo com o que existe, o que está em andamento, decisões, testes, riscos e próximos passos.
-- [Protocolo da Fase 0](docs/FASE_0_PROTOCOLO.md) — inventário do ambiente, experimentos, métricas, evidências e critérios para a prova técnica.
-- [Matriz de dependências](docs/MATRIZ_DEPENDENCIAS.md) — fonte canônica, faixas de versões, dependências externas, perfis de hardware e política de compatibilidade.
-- [Plano operacional da Fase 1](docs/FASE_1_PLANO.md) — etapas, evidências e critérios de conclusão da reestruturação.
-- [Baseline legada](docs/LEGACY_BASELINE.md) — contratos caracterizados, limitações e política de migração da aplicação anterior.
-- [Handoff da Fase 1](docs/HANDOFF_FASE_1.md) — arquitetura, critérios e decisões de migração.
-- [Plano operacional da Fase 2](docs/FASE_2_PLANO.md) — identidade visual, UX, confirmações, preferências e critérios de validação da interface profissional.
-- [Handoff da Fase 2](docs/HANDOFF_FASE_2.md) — implementação, evidências de CI, limitações e próximos gates.
-- [Plano operacional da Fase 3](docs/FASE_3_PLANO.md) — escopo, decisões de mídia, critérios de aceite e gates de CI.
-- [Handoff da Fase 3](docs/HANDOFF_FASE_3.md) — arquitetura implementada, evidências, riscos e próximos passos.
-- [Plano operacional da Fase 4](docs/FASE_4_PLANO.md) — reconhecimento local, perfis Whisper, cache, métricas e critérios de aceite.
-- [Handoff da Fase 4](docs/HANDOFF_FASE_4.md) — arquitetura implementada, testes, benchmark e gates de homologação.
-- [Plano operacional da Fase 5](docs/FASE_5_PLANO.md) — WhisperX, janelas, offsets, métricas e avaliação temporal.
-- [Handoff da Fase 5](docs/HANDOFF_FASE_5.md) — adaptador, cache, diagnósticos, testes e homologação.
-- [Plano operacional da Fase 6](docs/FASE_6_PLANO.md) — segmentação editorial, tradução por cue, validação e publicação SRT.
-- [Handoff da Fase 6](docs/HANDOFF_FASE_6.md) — contratos, regras congeladas, runtime NLLB, testes e limites conhecidos.
-- [Plano operacional da Fase 7](docs/FASE_7_PLANO.md) — integração da GUI ao pipeline, progresso, cancelamento, log e recuperação.
-- [Handoff da Fase 7](docs/HANDOFF_FASE_7.md) — modelo de threads, estados, encerramento seguro, resultado publicado e testes.
-- [Plano operacional da Fase 8](docs/FASE_8_PLANO.md) — matriz de testes, E2E, mídia real, falhas e gates de CI.
-- [Handoff da Fase 8](docs/HANDOFF_FASE_8.md) — contratos de teste, comandos e limites da homologação automatizada.
-- [Relatório da Fase 8](docs/RELATORIO_FASE_8.md) — evidências medidas, cobertura, riscos residuais e pendências humanas.
+1. Recebe um arquivo local (áudio ou vídeo) ou uma URL do YouTube.
+2. Inspeciona a mídia com ffprobe, permite escolher a faixa de áudio e normaliza para WAV PCM mono 16 kHz preservando o offset temporal.
+3. Transcreve com Whisper no idioma de origem.
+4. Alinha por palavra com WhisperX e sinaliza palavras sem âncora confiável.
+5. Segmenta em cues de até duas linhas de 42 caracteres, respeitando pausas e tempo de leitura.
+6. Traduz por cue com NLLB-200 distilled 600M **local**, preservando os tempos originais.
+7. Valida o trilho, reparseia o arquivo e publica o SRT por troca atômica.
+8. Mostra etapa, progresso honesto, log recolhível e permite cancelamento cooperativo em ponto seguro.
 
-## Direção do produto
+## Requisitos
 
-- Entrada por URL do YouTube ou arquivos locais de áudio e vídeo.
-- Whisper como motor central de reconhecimento de fala.
-- Alinhamento temporal refinado por palavra.
-- Segmentação e tradução contextual para inglês ou português brasileiro.
-- Exportação de legendas SRT.
-- Interface desktop em PySide6, com processamento em segundo plano, progresso, logs e cancelamento controlado.
+- Python 3.10–3.13 e [uv](https://docs.astral.sh/uv/)
+- FFmpeg e ffprobe no `PATH`
+- Para YouTube: `yt-dlp-ejs` (já instalado pelo perfil) e Deno ≥ 2.3 ou Node ≥ 22
+- Espaço em disco para os modelos (≈ 6 GB)
 
-Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir funcionalidades planejadas das que já foram implementadas.
+## Instalação e execução
 
-## Estado da implementação atual
+```bash
+git clone https://github.com/anfalcir/legendar.git
+cd legendar
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–7 integradas. O fluxo atual cobre entrada local/YouTube, inspeção e normalização de mídia, transcrição Whisper, alinhamento WhisperX por palavra, segmentação de duas linhas, tradução local PT↔EN por cue, validação do trilho e publicação SRT atômica — tudo disparado pela janela com progresso, cancelamento e recuperação controlados. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md) para o estado vivo e [docs/FASE_7_PLANO.md](docs/FASE_7_PLANO.md) para a integração da interface.
+uv lock --check
+uv sync --locked --group dev --group phase0 --extra runtime-cpu
+# GPU NVIDIA com CUDA 12.8: use --extra runtime-cu128 no lugar de runtime-cpu
+
+PYTHONPATH=src uv run --locked --no-sync python -m legendar
+```
+
+Detalhes por sistema operacional, perfis de hardware, variáveis de ambiente e
+desinstalação estão em [docs/INSTALACAO.md](docs/INSTALACAO.md).
+
+
+## Testes
+
+```bash
+# Suíte determinística (sem rede, sem modelos)
+QT_QPA_PLATFORM=offscreen uv run --locked --no-sync pytest -q
+
+# Somente end-to-end (matriz de idiomas, falhas e mídia real)
+QT_QPA_PLATFORM=offscreen uv run --locked --no-sync pytest -q -m e2e
+
+# Qualidade estática e documentação
+uv run --locked --no-sync ruff check src/legendar tests scripts
+uv run --locked --no-sync ruff format --check src/legendar tests
+uv run --locked --no-sync python scripts/check_doc_links.py
+```
+
+A CI da Fase 8 instala FFmpeg e roda a matriz Python 3.10–3.13 com gate de
+cobertura de 85% (`.github/workflows/phase8-quality.yml`).
+
+## Documentação
+
+**Porta de entrada técnica**
+
+- [Arquitetura](docs/ARQUITETURA.md) — camadas, módulos, portas, estados, threads e publicação.
+- [Operação](docs/OPERACAO.md) — uso da janela, estados, cancelamento, arquivos, erros e diagnóstico.
+- [Instalação](docs/INSTALACAO.md) — requisitos, perfis, execução, verificação e desinstalação.
+- [Decisões](docs/DECISOES.md) — decisões consolidadas e decisões abertas.
+- [Plano mestre de remodelagem](docs/PLANO_REMODELAGEM.md) — visão do produto, requisitos e critérios de aceite.
+- [Estado atual](docs/ESTADO_ATUAL.md) — estado real, evidências, riscos e pendências.
+- [Matriz de dependências](docs/MATRIZ_DEPENDENCIAS.md) — governança, faixas de versão, perfis e compatibilidade.
+- [Baseline legada](docs/LEGACY_BASELINE.md) — contratos caracterizados e política da aplicação anterior.
+
+**Planos e handoffs por fase**
+
+| Fase | Plano | Handoff |
+|---|---|---|
+| 0 | [Protocolo](docs/FASE_0_PROTOCOLO.md) | — |
+| 1 | [Plano](docs/FASE_1_PLANO.md) | [Handoff](docs/HANDOFF_FASE_1.md) |
+| 2 | [Plano](docs/FASE_2_PLANO.md) | [Handoff](docs/HANDOFF_FASE_2.md) |
+| 3 | [Plano](docs/FASE_3_PLANO.md) | [Handoff](docs/HANDOFF_FASE_3.md) |
+| 4 | [Plano](docs/FASE_4_PLANO.md) | [Handoff](docs/HANDOFF_FASE_4.md) |
+| 5 | [Plano](docs/FASE_5_PLANO.md) | [Handoff](docs/HANDOFF_FASE_5.md) |
+| 6 | [Plano](docs/FASE_6_PLANO.md) | [Handoff](docs/HANDOFF_FASE_6.md) |
+| 7 | [Plano](docs/FASE_7_PLANO.md) | [Handoff](docs/HANDOFF_FASE_7.md) |
+| 8 | [Plano](docs/FASE_8_PLANO.md) | [Handoff](docs/HANDOFF_FASE_8.md) e [relatório](docs/RELATORIO_FASE_8.md) |
+| 9 | [Plano](docs/FASE_9_PLANO.md) | [Handoff final](docs/HANDOFF_FASE_9.md) |
+
+## Limites conhecidos
+
+- A precisão temporal e a qualidade tradutória dependem de homologação humana com corpus autorizado e o computador-alvo.
+- O cancelamento é cooperativo: uma inferência em andamento termina antes de o job encerrar.
+- A publicação (`PUBLISHING`) é ponto de não retorno e não aceita cancelamento.
+- Empacotamento distribuível (PyInstaller) ainda não é um fluxo homologado.
+- Sistemas operacionais oficialmente suportados serão declarados após a homologação integrada; a CI cobre Ubuntu com Python 3.10–3.13.
+- O repositório preserva a aplicação anterior (`main.py`, `core/`, `gui/`) como baseline caracterizada.
 
 ## Licença
 
-O projeto é tratado como MIT. Consulte o arquivo LICENSE e preserve os avisos de copyright e licença aplicáveis.
+MIT. Consulte [LICENSE](LICENSE).

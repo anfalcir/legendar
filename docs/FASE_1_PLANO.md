@@ -29,7 +29,7 @@ funcionalidades isoladas, testáveis e substituíveis — não a implementação
 - Temporários isolados por job; cache de modelos separado e nunca apagado para cancelar job.
 - Regra temporal: `timestamp_global = source_stream_offset + chunk_offset + timestamp_local`.
 - Tradução atrás de porta; nenhum fornecedor escolhido nesta fase.
-- Não editar lockfile manualmente; não usar `requirements.txt` como fonte.
+- Não editar lockfile manualmente; o `requirements.txt` legado foi removido na Fase 9 e não deve ser recriado como manifesto concorrente.
 - Decisões abertas e riscos vão para o estado atual, não para mudanças silenciosas.
 
 ## 3. Sequência de execução (commits pequenos e reversíveis)

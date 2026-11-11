@@ -1,10 +1,10 @@
 # Matriz e política de dependências do Legendar
 
-- **Status:** política de dependências consolidada na Fase 0; Fase 6 adiciona as dependências de tradução local (`transformers`, `sentencepiece`). Compatibilidade completa do produto permanece condicionada à integração/homologação.
+- **Status:** política de dependências consolidada na Fase 0; Fase 6 adiciona as dependências de tradução local (`transformers`, `sentencepiece`); Fase 9 retira o snapshot legado `requirements.txt`. Compatibilidade completa do produto permanece condicionada à homologação.
 - **Fonte canônica de requisitos diretos:** `pyproject.toml`.
 - **Fonte canônica de resolução exata:** `uv.lock`, versionado no repositório.
 - **Gerenciador:** `uv`, ferramenta de desenvolvimento/instalação; não é dependência de runtime.
-- **Snapshot legado:** `requirements.txt`, não autoritativo e não deve ser atualizado manualmente.
+- **Snapshot legado:** `requirements.txt` foi removido na Fase 9; para `pip`, use `uv export` conforme [INSTALACAO.md](INSTALACAO.md).
 
 ---
 
@@ -22,7 +22,7 @@ Nenhuma instalação/update global deve ser executada silenciosamente pelo aplic
 |---|---|---|
 | `pyproject.toml` | Dependências diretas, intervalos, extras e grupos de desenvolvimento/avaliação | Fonte canônica; toda alteração começa aqui |
 | `uv.lock` | Resolução exata, dependências transitivas, marcadores e origens dos wheels | Versionar e atualizar com o manifesto; instalar com `--locked` |
-| `requirements.txt` | Snapshot da baseline antiga | Legado transitório; não editar manualmente; remover ou gerar exportação somente após migração |
+| `requirements.txt` | — | Removido na Fase 9; exportação para pip é gerada por `uv export` e nunca versionada |
 | `docs/MATRIZ_DEPENDENCIAS.md` | Justificativas, categorias, compatibilidade, políticas e evidências | Documentação; não substitui artefatos executáveis |
 
 Dependências transitivas não devem ser copiadas para o manifesto só porque constam de `pip freeze`. Declarar diretamente bibliotecas importadas como contrato pelo código Legendar ou necessárias para uma decisão explícita de compatibilidade.
@@ -179,13 +179,16 @@ Relatório CI: artefato `legendar-phase0-model-poc`, quando a execução do job 
 
 ## 8. Migração do legado
 
-Manter `requirements.txt` apenas até que:
-1. `pyproject.toml` e `uv.lock` estejam validados.
-2. Instalações limpas dos perfis sejam reproduzíveis.
-3. Fluxos essenciais estejam homologados.
-4. Migração do aplicativo e documentação estejam coerentes.
+O snapshot `requirements.txt` foi removido na Fase 9, depois de:
 
-Depois, remover o snapshot ou gerar exportação automaticamente para consumidores que ainda precisem de pip. Nunca manter dois manifestos editados manualmente.
+1. `pyproject.toml` e `uv.lock` estarem validados (`uv lock --check`).
+2. Instalações limpas dos perfis serem reproduzíveis com `uv sync --locked`.
+3. Os fluxos essenciais estarem cobertos pela suíte determinística e pela CI.
+4. A documentação de instalação descrever a exportação para `pip`.
+
+Consumidores que ainda precisem de `pip` geram a lista a partir do lockfile
+(`uv export --locked ... -o requirements-export.txt`), sem versionar um segundo
+manifesto editado à mão. Nunca manter dois manifestos concorrentes.
 
 ## 9. Manutenção e atualização
 

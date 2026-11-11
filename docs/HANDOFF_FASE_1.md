@@ -57,7 +57,7 @@ A Fase 0 concluiu as definições que permitem estruturar a aplicação sem mant
 - Ferramenta de gerenciamento: `uv`; não é dependência de runtime do aplicativo.
 - Python declarado: `>=3.10,<3.14`.
 - A faixa superior existe por compatibilidade declarada pelo WhisperX estável adotado; não foi escolhida com base no Python instalado no computador-alvo.
-- `requirements.txt` continua identificado como snapshot legado. Não atualizá-lo manualmente nem usá-lo como uma segunda fonte de verdade. Remover ou gerar exportação depois da migração do produto, mediante teste.
+- `requirements.txt` era um snapshot legado e foi **removido na Fase 9**; não recriá-lo como segunda fonte de verdade. Consumidores de pip usam `uv export`, conforme [INSTALACAO.md](INSTALACAO.md).
 - Instalações deverão ocorrer em ambientes isolados e com `uv sync --locked`. Não instalar, atualizar ou remover dependências globalmente no computador do usuário.
 
 ### 2.2. Perfis completos de runtime

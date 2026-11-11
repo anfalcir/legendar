@@ -15,8 +15,13 @@ from check_doc_links import check_repository, markdown_files  # noqa: E402
 
 REQUIRED_DOCUMENTS = (
     "README.md",
+    "LICENSE",
     "docs/PLANO_REMODELAGEM.md",
     "docs/ESTADO_ATUAL.md",
+    "docs/ARQUITETURA.md",
+    "docs/OPERACAO.md",
+    "docs/INSTALACAO.md",
+    "docs/DECISOES.md",
     "docs/MATRIZ_DEPENDENCIAS.md",
     "docs/FASE_0_PROTOCOLO.md",
     "docs/FASE_1_PLANO.md",
@@ -27,6 +32,7 @@ REQUIRED_DOCUMENTS = (
     "docs/FASE_6_PLANO.md",
     "docs/FASE_7_PLANO.md",
     "docs/FASE_8_PLANO.md",
+    "docs/FASE_9_PLANO.md",
     "docs/HANDOFF_FASE_1.md",
     "docs/HANDOFF_FASE_2.md",
     "docs/HANDOFF_FASE_3.md",
@@ -35,9 +41,16 @@ REQUIRED_DOCUMENTS = (
     "docs/HANDOFF_FASE_6.md",
     "docs/HANDOFF_FASE_7.md",
     "docs/HANDOFF_FASE_8.md",
+    "docs/HANDOFF_FASE_9.md",
     "docs/RELATORIO_FASE_8.md",
     "docs/LEGACY_BASELINE.md",
 )
+
+
+def test_legacy_requirements_snapshot_was_retired() -> None:
+    assert not (REPOSITORY_ROOT / "requirements.txt").exists()
+    assert (REPOSITORY_ROOT / "pyproject.toml").is_file()
+    assert (REPOSITORY_ROOT / "uv.lock").is_file()
 
 
 def test_repository_has_no_broken_relative_links() -> None:

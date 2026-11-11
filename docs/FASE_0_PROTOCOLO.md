@@ -66,7 +66,7 @@ Esse é um perfil de homologação CPU, não a definição dos requisitos globai
 - `pyproject.toml`: requisitos diretos, faixas, extras e grupos.
 - `uv.lock`: resolução exata, dependências transitivas, marcadores e fontes de wheels.
 - `docs/MATRIZ_DEPENDENCIAS.md`: política e justificativas.
-- `requirements.txt`: snapshot legado, nunca atualizar manualmente como segundo manifesto.
+- `requirements.txt`: snapshot legado, nunca atualizar manualmente como segundo manifesto. **Removido na Fase 9**; o item permanece como registro histórico.
 
 A máquina local não é fonte de verdade de dependências. Toda instalação de verificação usa ambiente isolado, perfil explícito e lockfile.
 
