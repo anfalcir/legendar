@@ -174,6 +174,14 @@ class JobController:
                     sequence=self._next_sequence(),
                     output_path=result.output_path,
                     cue_count=len(result.track.cues),
+                    quality_status=(
+                        result.quality_report.status.value
+                        if result.quality_report is not None else "APPROVED"
+                    ),
+                    quality_summary=(
+                        result.quality_report.summary
+                        if result.quality_report is not None else ""
+                    ),
                 )
             )
             self._terminal_emitted = True
