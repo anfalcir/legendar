@@ -159,7 +159,7 @@ def build_ui_dependencies(
                     settings.models_dir
                 )
             except ValueError as exc:
-                transcriber = WhisperTranscriber.from_environment(settings.models_dir)
+                transcriber = WhisperTranscriber(models_dir=settings.models_dir)
                 transcription_configuration_ok = False
                 transcription_details = (
                     f"Configuração faster-whisper inválida: {exc}",
@@ -172,7 +172,7 @@ def build_ui_dependencies(
                     f"CPU threads: {transcriber.cpu_threads} · beam: {transcriber.beam_size}",
                 )
         else:
-            transcriber = WhisperTranscriber.from_environment(settings.models_dir)
+            transcriber = WhisperTranscriber(models_dir=settings.models_dir)
             transcription_configuration_ok = False
             transcription_details = (
                 "faster-whisper não instalado; sincronize runtime-cpu ou runtime-cu128.",
@@ -190,7 +190,7 @@ def build_ui_dependencies(
                 f"Dispositivo: {transcriber.requested_device} · pesos no cache local",
             )
     else:
-        transcriber = WhisperTranscriber.from_environment(settings.models_dir)
+        transcriber = WhisperTranscriber(models_dir=settings.models_dir)
         transcription_configuration_ok = False
         transcription_details = (
             "LEGENDAR_ASR_BACKEND inválido; use whisper ou faster-whisper.",
