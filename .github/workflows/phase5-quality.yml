@@ -84,6 +84,7 @@ jobs:
           tests/__init__.py
           scripts/phase5_alignment_smoke.py
           scripts/phase5_alignment_evaluation.py
+          scripts/phase5_asr_benchmark.py
 
       - name: Verify formatting
         run: >-
@@ -99,6 +100,7 @@ jobs:
           tests/__init__.py
           scripts/phase5_alignment_smoke.py
           scripts/phase5_alignment_evaluation.py
+          scripts/phase5_asr_benchmark.py
 
   whisperx-cpu-smoke:
     name: Whisper + WhisperX / PT-BR and English CPU smoke
@@ -141,8 +143,10 @@ jobs:
           uv run --locked --group dev --group phase0 --extra runtime-cpu pytest -q \
             tests/unit/infrastructure/test_whisperx_aligner.py \
             tests/unit/infrastructure/test_whisper_transcriber.py \
+            tests/unit/infrastructure/test_faster_whisper_transcriber.py \
             tests/unit/test_phase5_alignment_evaluation.py \
-            tests/unit/test_phase5_alignment_smoke.py
+            tests/unit/test_phase5_alignment_smoke.py \
+            tests/unit/test_phase5_asr_benchmark.py
 
       - name: Run real multilingual Whisper + WhisperX alignment smoke
         env:
