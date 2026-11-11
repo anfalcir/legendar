@@ -195,9 +195,7 @@ class GeminiTranslator:
                 os.environ.get("LEGENDAR_GEMINI_BATCH_SIZE", DEFAULT_BATCH_SIZE)
             )
             timeout = float(
-                os.environ.get(
-                    "LEGENDAR_GEMINI_TIMEOUT", DEFAULT_TIMEOUT_SECONDS
-                )
+                os.environ.get("LEGENDAR_GEMINI_TIMEOUT", DEFAULT_TIMEOUT_SECONDS)
             )
             retries = int(
                 os.environ.get("LEGENDAR_GEMINI_MAX_RETRIES", DEFAULT_MAX_RETRIES)
@@ -448,9 +446,7 @@ class GeminiTranslator:
                 "o lote foi rejeitado."
             )
         empty = [
-            cue_id
-            for cue_id, text in zip(actual, outputs, strict=True)
-            if not text
+            cue_id for cue_id, text in zip(actual, outputs, strict=True) if not text
         ]
         if empty:
             raise TranslationError(
