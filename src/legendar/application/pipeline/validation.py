@@ -94,6 +94,7 @@ class TrackValidationReport:
     duplicate_cues: tuple[int, ...] = ()
     suspicious_cues: tuple[int, ...] = ()
     fragmented_cues: tuple[int, ...] = ()
+    flicker_cues: tuple[int, ...] = ()
     issues: tuple[QualityIssue, ...] = ()
     status: QualityStatus = QualityStatus.APPROVED
     cue_count: int = 0
@@ -161,6 +162,7 @@ def validate_track(
     suspicious: list[int] = []
     fragmented: list[int] = []
     cps_values: list[float] = []
+    flicker = _find_flicker_cues(track)
     issues: list[QualityIssue] = []
     warnings: list[str] = []
 
@@ -254,6 +256,13 @@ def validate_track(
         fragmented,
         "Cue anterior termina em conectivo/preposição; revisar a quebra",
     )
+    _append_issue(
+        issues,
+        warnings,
+        "FLICKER",
+        flicker,
+        "Sequência de cues muito curtas e rápidas; revisar possível flicker",
+    )
 
     if source_track is not None:
         missing = _missing_invariants(source_track, track)
@@ -301,6 +310,7 @@ def validate_track(
         duplicate_cues=tuple(duplicates),
         suspicious_cues=tuple(suspicious),
         fragmented_cues=tuple(fragmented),
+        flicker_cues=flicker,
         issues=tuple(issues),
         status=status,
         cue_count=len(track.cues),
@@ -308,6 +318,29 @@ def validate_track(
         p95_cps=ordered_cps[p95_index] if ordered_cps else 0.0,
         blocked_reasons=blocked_reasons,
     )
+
+
+
+def _find_flicker_cues(track: SubtitleTrack) -> tuple[int, ...]:
+    """Marca sequências de três ou mais flashes curtos em intervalos próximos."""
+    marked: list[int] = []
+    run: list[int] = []
+    previous_end: float | None = None
+    for cue in track.cues:
+        is_fast = cue.range.duration <= 0.6
+        is_contiguous = (
+            previous_end is None or cue.range.start - previous_end <= 0.15
+        )
+        if is_fast and is_contiguous:
+            run.append(cue.index)
+        else:
+            if len(run) >= 3:
+                marked.extend(run)
+            run = [cue.index] if is_fast else []
+        previous_end = cue.range.end
+    if len(run) >= 3:
+        marked.extend(run)
+    return tuple(marked)
 
 
 def _append_issue(
