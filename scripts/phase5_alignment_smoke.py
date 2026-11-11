@@ -112,40 +112,46 @@ def _load_samples(
 
 
 def _write_audio(audio_bytes: bytes, destination: Path) -> AudioAsset:
-    with wave.open(io.BytesIO(audio_bytes), "rb") as source:
-        channels = source.getnchannels()
-        sample_rate = source.getframerate()
-        sample_width = source.getsampwidth()
-        compression = source.getcomptype()
-        frames = source.getnframes()
-        payload = source.readframes(frames)
+    """Decode FLEURS WAV (PCM or IEEE float) and normalize to product PCM s16le."""
+    import numpy as np
+    import soundfile as sf
 
-    if (
-        channels != 1
-        or sample_rate != 16_000
-        or sample_width != 2
-        or compression != "NONE"
-        or frames < 1
-        or len(payload) != frames * 2
-    ):
-        raise RuntimeError(
-            "A amostra FLEURS não corresponde ao contrato WAV PCM s16le "
-            "mono/16 kHz exigido pelo produto."
+    try:
+        waveform, sample_rate = sf.read(
+            io.BytesIO(audio_bytes),
+            dtype="float32",
+            always_2d=True,
         )
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise RuntimeError("Não foi possível decodificar a amostra FLEURS.") from exc
+
+    if sample_rate != 16_000:
+        raise RuntimeError(
+            f"Esperado áudio FLEURS em 16 kHz; recebido {sample_rate} Hz."
+        )
+    if waveform.ndim != 2 or waveform.shape[0] < 1 or waveform.shape[1] < 1:
+        raise RuntimeError("A amostra FLEURS não contém frames/canais válidos.")
+    if not np.isfinite(waveform).all():
+        raise RuntimeError("A amostra FLEURS contém valores não finitos.")
+
+    # O contrato da Fase 3 é mono. Downmix determinístico antes de quantizar.
+    mono = waveform.mean(axis=1, dtype=np.float32)
+    clipped = np.clip(mono, -1.0, 32767.0 / 32768.0)
+    pcm = np.rint(clipped * 32768.0).astype("<i2")
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(destination), "wb") as target:
         target.setnchannels(1)
         target.setsampwidth(2)
         target.setframerate(16_000)
-        target.writeframes(payload)
+        target.writeframes(pcm.tobytes())
 
     return AudioAsset(
         path=str(destination),
         sample_rate_hz=16_000,
         channels=1,
         sample_format="pcm_s16le",
-        duration_seconds=frames / 16_000,
+        duration_seconds=pcm.size / 16_000,
         timeline_start_seconds=0.0,
         timeline_offset_source="fleurs_reference_wave_starts_at_zero",
     )
@@ -153,7 +159,8 @@ def _write_audio(audio_bytes: bytes, destination: Path) -> AudioAsset:
 
 def _peak_rss_bytes() -> int | None:
     try:
-        
+        import resource
+
         peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     except (ImportError, AttributeError, OSError):
         return None
