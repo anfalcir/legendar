@@ -32,10 +32,10 @@ _PACKAGE_NAMES = (
 )
 
 
-def _linux_memory() -> dict[str, int | None]:
+def _linux_memory(meminfo_path: Path = Path("/proc/meminfo")) -> dict[str, int | None]:
     values: dict[str, int] = {}
     try:
-        lines = Path("/proc/meminfo").read_text(encoding="ascii").splitlines()
+        lines = meminfo_path.read_text(encoding="ascii").splitlines()
     except OSError:
         return {"total_bytes": None, "available_bytes": None}
     for line in lines:
@@ -135,10 +135,10 @@ def _process_peak_rss_bytes() -> int | None:
     return value * 1024 if sys.platform.startswith("linux") else value
 
 
-def _cpu_model() -> str | None:
+def _cpu_model(cpuinfo_path: Path = Path("/proc/cpuinfo")) -> str | None:
     if sys.platform.startswith("linux"):
         try:
-            for line in Path("/proc/cpuinfo").read_text(
+            for line in cpuinfo_path.read_text(
                 encoding="utf-8", errors="replace"
             ).splitlines():
                 key, separator, value = line.partition(":")
@@ -149,14 +149,14 @@ def _cpu_model() -> str | None:
     return platform.processor() or None
 
 
-def _physical_cpu_count() -> int | None:
+def _physical_cpu_count(cpuinfo_path: Path = Path("/proc/cpuinfo")) -> int | None:
     if not sys.platform.startswith("linux"):
         return None
     pairs: set[tuple[str, str]] = set()
     physical_id: str | None = None
     core_id: str | None = None
     try:
-        lines = Path("/proc/cpuinfo").read_text(
+        lines = cpuinfo_path.read_text(
             encoding="ascii", errors="replace"
         ).splitlines()
     except OSError:
@@ -229,10 +229,9 @@ def _nvidia_devices() -> list[str]:
     return [line.strip()[:240] for line in result.stdout.splitlines() if line.strip()]
 
 
-def _graphics_adapters() -> list[dict[str, str | None]]:
+def _graphics_adapters(devices: Path = Path("/sys/bus/pci/devices")) -> list[dict[str, str | None]]:
     if not sys.platform.startswith("linux"):
         return []
-    devices = Path("/sys/bus/pci/devices")
     vendor_names = {"0x1002": "AMD", "0x10de": "NVIDIA", "0x8086": "Intel"}
     adapters: list[dict[str, str | None]] = []
     if not devices.is_dir():
