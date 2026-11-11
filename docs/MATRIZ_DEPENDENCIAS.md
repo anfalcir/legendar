@@ -90,6 +90,21 @@ O model card do `facebook/nllb-200-distilled-600M` informa CC-BY-NC-4.0 e descre
 
 Referência: [NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-distilled-600M).
 
+### 5.4. Gemini Developer API para tradução contextual
+
+O adaptador `GeminiTranslator` usa HTTPS via biblioteca padrão `urllib`; não adiciona SDK ou dependência Python ao runtime. A chamada exige `GEMINI_API_KEY` no ambiente e envia texto das cues à API externa. O backend continua opt-in e o NLLB local permanece padrão.
+
+Avaliar:
+- disponibilidade e estabilidade do modelo configurado (padrão atual `gemini-3.8-flash`);
+- latência, tokens, retries, throughput e limites de requisição;
+- qualidade PT-BR, nomes próprios, termos de universo e consistência entre cues;
+- privacidade e política de tratamento de conteúdo no provedor;
+- grounding Google Search opcional, com custo/latência medidos separadamente.
+
+A chave nunca entra no repositório, URL, logs ou artefatos. O uso da API não torna a tradução local: o texto-fonte é transmitido ao provedor. Só selecionar Gemini quando o usuário configurar explicitamente o backend e fornecer a chave. Não há fallback automático entre Gemini e NLLB.
+
+Referências: [Gemini Generate Content](https://ai.google.dev/gemini-api/docs/generate-content), [modelos](https://ai.google.dev/gemini-api/docs/models), [structured output](https://ai.google.dev/gemini-api/docs/structured-output).
+
 ## 6. Política de atualização
 
 1. Criar experimento isolado e reproduzível.
