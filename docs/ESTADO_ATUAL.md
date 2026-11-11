@@ -10,11 +10,12 @@
 - **Branch de implementação da Fase 5:** `phase-5/temporal-alignment` (integrada)
 - **Branch de implementação da Fase 6:** `phase-6/translation-segmentation-srt` (integrada à `main` por squash)
 - **Branch de implementação da Fase 7:** `phase-7/gui-pipeline-integration` (integrada à `main` por squash)
+- **Branch de implementação da Fase 8:** `phase-8/validation` (integrada à `main` por squash)
 - **Branch padrão:** `main`
-- **Fases concluídas e integradas:** Fases 0–7
-- **Fase em execução:** Fase 8 — testes, end-to-end e homologação
-- **Fase concluída mais recente integrada:** Fase 7 — GUI conectada ao pipeline completo
-- **Implementação mais recente:** janela dispara o `SerialPipeline` real com progresso, cancelamento cooperativo, log recolhível, recuperação de erro e abertura da pasta do SRT publicado
+- **Fases concluídas e integradas:** Fases 0–8
+- **Fase em execução:** Fase 9 — documentação e finalização
+- **Fase concluída mais recente integrada:** Fase 8 — testes, E2E e homologação automatizada
+- **Implementação mais recente:** matriz end-to-end de idiomas e formatos, modos de falha, mídia real com FFmpeg, gate de cobertura de 85% e verificador de links da documentação
 - **Última integração na `main`:** PR [#6](https://github.com/anfalcir/legendar/pull/6), squash em `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`
 - **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), integrada por squash
 - **PR da Fase 1:** [#2](https://github.com/anfalcir/legendar/pull/2), merged por squash em 10/11/2026
@@ -28,9 +29,9 @@
 - **Commit de integração da Fase 3:** `dfa440b39e7623356388c774834e23ee53fc1d09`
 - **Commit de integração da Fase 4:** `2f9751139616591e31a0ec73902265b38b040d41`
 - **Commit de integração da Fase 5:** `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`
-- **Documentos de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md), [HANDOFF_FASE_4.md](HANDOFF_FASE_4.md), [HANDOFF_FASE_5.md](HANDOFF_FASE_5.md), [HANDOFF_FASE_6.md](HANDOFF_FASE_6.md) e [HANDOFF_FASE_7.md](HANDOFF_FASE_7.md)
+- **Documentos de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md), [HANDOFF_FASE_4.md](HANDOFF_FASE_4.md), [HANDOFF_FASE_5.md](HANDOFF_FASE_5.md), [HANDOFF_FASE_6.md](HANDOFF_FASE_6.md), [HANDOFF_FASE_7.md](HANDOFF_FASE_7.md) e [HANDOFF_FASE_8.md](HANDOFF_FASE_8.md)
 
-> As Fases 0–7 estão concluídas e integradas à `main`. As Fases 1–5 foram integradas por PRs squash (#2 a #6). As Fases 6 e 7 foram integradas por squash local, porque a criação de pull request não estava disponível no ambiente de execução (sem `gh` e sem token); o histórico detalhado de cada fase permanece nas branches `phase-6/translation-segmentation-srt` e `phase-7/gui-pipeline-integration`. A Fase 6 entregou segmentação de duas linhas, tradução local por cue com NLLB-200 distilled 600M, validação do trilho e publicação SRT atômica; o CI de push da branch passou 5/5 jobs ([#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587)). A Fase 7 conectou a janela ao pipeline real, com progresso, cancelamento cooperativo, log, recuperação e abertura da pasta publicada. A precisão temporal, a qualidade tradutória e a leitura em mídia real continuam como homologação de produto atribuída à Fase 8 e ao usuário, não como bloqueio de engenharia.
+> As Fases 0–8 estão concluídas e integradas à `main`. As Fases 1–5 foram integradas por PRs squash (#2 a #6). As Fases 6, 7 e 8 foram integradas por squash local, porque a criação de pull request não estava disponível no ambiente de execução (sem `gh` e sem token); o histórico detalhado de cada fase permanece nas branches `phase-6/translation-segmentation-srt`, `phase-7/gui-pipeline-integration` e `phase-8/validation`. A Fase 6 entregou segmentação de duas linhas, tradução local por cue com NLLB-200 distilled 600M, validação do trilho e publicação SRT atômica; o CI de push da branch passou 5/5 jobs ([#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587)). A Fase 7 conectou a janela ao pipeline real, com progresso, cancelamento cooperativo, log, recuperação e abertura da pasta publicada. A Fase 8 acrescentou a matriz end-to-end dos quatro pares de idioma, os modos de falha e cancelamento, a execução com mídia real em seis formatos, um gate de cobertura de 85% e um verificador de links da documentação: a suíte completa aprovou 443 testes com 86% de cobertura no ambiente de desenvolvimento com FFmpeg, e 433 testes com 10 skips explícitos sem FFmpeg. A precisão temporal, a qualidade tradutória e a leitura em mídia real continuam como homologação de produto atribuída ao usuário.
 
 ---
 
@@ -47,7 +48,7 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | Item | Estado |
 |---|---|
 | Repositório | `anfalcir/legendar` |
-| PRs de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1), [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), [#3 — Fase 2](https://github.com/anfalcir/legendar/pull/3), [#4 — Fase 3](https://github.com/anfalcir/legendar/pull/4), [#5 — Fase 4](https://github.com/anfalcir/legendar/pull/5) e [#6 — Fase 5](https://github.com/anfalcir/legendar/pull/6); todas integradas por squash. As Fases 6 e 7 foram integradas por squash local porque a criação de PR não estava disponível no ambiente de execução |
+| PRs de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1), [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), [#3 — Fase 2](https://github.com/anfalcir/legendar/pull/3), [#4 — Fase 3](https://github.com/anfalcir/legendar/pull/4), [#5 — Fase 4](https://github.com/anfalcir/legendar/pull/5) e [#6 — Fase 5](https://github.com/anfalcir/legendar/pull/6); todas integradas por squash. As Fases 6, 7 e 8 foram integradas por squash local porque a criação de PR não estava disponível no ambiente de execução |
 | Branch de conclusão da Fase 0 | `phase-0/technical-inventory` |
 | Branch de implementação da Fase 1 | `phase-1/architecture`, integrada na `main` pela PR #2 |
 | Branch de implementação da Fase 2 | `phase-2/professional-ui`, integrada na `main` pela PR #3 |
@@ -56,7 +57,8 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | Branch de implementação da Fase 5 | `phase-5/temporal-alignment`, integrada à `main` pela PR #6 |
 | Branch de implementação da Fase 6 | `phase-6/translation-segmentation-srt`, integrada à `main` por squash; CI push [#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587) verde |
 | Branch de implementação da Fase 7 | `phase-7/gui-pipeline-integration`, integrada à `main` por squash |
-| `main` | Contém as entregas integrais das Fases 0–7; o histórico detalhado de cada fase permanece nas branches correspondentes |
+| Branch de implementação da Fase 8 | `phase-8/validation`, integrada à `main` por squash |
+| `main` | Contém as entregas integrais das Fases 0–8; o histórico detalhado de cada fase permanece nas branches correspondentes |
 | Fonte de dependências | `pyproject.toml` |
 | Lock | `uv.lock` regenerado pela CI e integrado à `main`; invariantes, fontes e exports CPU/CUDA aprovados no workflow #113 |
 | Coletor | `scripts/phase0_inventory.py` |

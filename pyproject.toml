@@ -99,6 +99,7 @@ addopts = "-ra --strict-markers"
 markers = [
     "integration: tests that need external tools or real I/O (may be skipped when unavailable)",
     "gui: tests that require a Qt platform (run offscreen in CI)",
+    "e2e: end-to-end tests that run the real controller, pipeline and SRT publication",
 ]
 filterwarnings = [
     "error::DeprecationWarning:legendar.*",

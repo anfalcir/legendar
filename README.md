@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem é executada por fases. As Fases 0–7 estão implementadas, validadas por CI e integradas à `main`. A Fase 6 entregou a segmentação editorial de duas linhas, a tradução local por cue com NLLB-200 distilled 600M, a validação do trilho e a publicação SRT atômica com roundtrip; seu CI de push passou 5/5 jobs. A Fase 7 conectou a janela ao pipeline real: o botão de geração dispara o trabalho em `QThread`, com progresso honesto, cancelamento cooperativo, log recolhível, recuperação de erro e abertura da pasta do SRT publicado. A Fase 8 (matriz de testes, E2E e homologação) é a fronteira atual. A precisão temporal e a qualidade tradutória em pregações, no computador-alvo, continuam como gates de homologação do produto. A aplicação anterior permanece preservada como baseline.
+A remodelagem é executada por fases. As Fases 0–8 estão implementadas, validadas por CI e integradas à `main`. A Fase 6 entregou a segmentação editorial de duas linhas, a tradução local por cue com NLLB-200 distilled 600M, a validação do trilho e a publicação SRT atômica com roundtrip; seu CI de push passou 5/5 jobs. A Fase 7 conectou a janela ao pipeline real: o botão de geração dispara o trabalho em `QThread`, com progresso honesto, cancelamento cooperativo, log recolhível, recuperação de erro e abertura da pasta do SRT publicado. A Fase 8 consolidou a matriz de testes — quatro pares de idioma, modos de falha, cancelamento e mídia real em seis formatos — com 443 testes aprovados e 86% de cobertura no ambiente com FFmpeg. A precisão temporal e a qualidade tradutória em pregações, no computador-alvo, continuam como gates de homologação do produto. A aplicação anterior permanece preservada como baseline.
 
 ## Documentação do projeto
 
@@ -25,6 +25,9 @@ A remodelagem é executada por fases. As Fases 0–7 estão implementadas, valid
 - [Handoff da Fase 6](docs/HANDOFF_FASE_6.md) — contratos, regras congeladas, runtime NLLB, testes e limites conhecidos.
 - [Plano operacional da Fase 7](docs/FASE_7_PLANO.md) — integração da GUI ao pipeline, progresso, cancelamento, log e recuperação.
 - [Handoff da Fase 7](docs/HANDOFF_FASE_7.md) — modelo de threads, estados, encerramento seguro, resultado publicado e testes.
+- [Plano operacional da Fase 8](docs/FASE_8_PLANO.md) — matriz de testes, E2E, mídia real, falhas e gates de CI.
+- [Handoff da Fase 8](docs/HANDOFF_FASE_8.md) — contratos de teste, comandos e limites da homologação automatizada.
+- [Relatório da Fase 8](docs/RELATORIO_FASE_8.md) — evidências medidas, cobertura, riscos residuais e pendências humanas.
 
 ## Direção do produto
 

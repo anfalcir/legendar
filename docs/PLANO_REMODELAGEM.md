@@ -625,17 +625,18 @@ Versões, licenças, wheels, modelos, requisitos de runtime e combinações de b
 | 5 | Alinhamento temporal | WhisperX, janelas de busca, offsets, chunks, validação de palavra, diagnósticos e avaliação com fronteiras humanas | **Implementada e integrada pela PR #6** (squash `5c9a2ba`): alinhamento PT/EN, palavras não alinhadas explícitas, offsets globais, avaliador temporal, CI e smoke real aprovados. A precisão contra fronteiras humanas no computador-alvo continua gate de homologação do produto |
 | 6 | Tradução, segmentação e SRT | Tradução, vínculo temporal, regras de leitura, writer e validator | **Concluída e integrada à `main` por squash (`d600283`):** segmentação de duas linhas de 42 caracteres, tradução local por cue com NLLB-200 distilled 600M, validação do trilho e publicação SRT atômica com roundtrip; 387 testes locais verdes e workflow `phase6-quality.yml` com matriz Python 3.10–3.13, 5/5 jobs verdes no push [#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587). Qualidade tradutória e leitura em mídia real seguem como homologação de produto |
 | 7 | Integração de ponta a ponta | GUI conectada ao pipeline, progresso real, cancelamento, logs e recuperação | **Concluída e integrada à `main` por squash:** a janela dispara o `SerialPipeline` real em `QThread`, consome eventos, bloqueia campos, cancela em ponto seguro, limpa o workspace e abre a pasta do SRT publicado; 39 testes de GUI offscreen verdes, suíte determinística completa verde e Ruff limpo. Critérios do [plano operacional da Fase 7](FASE_7_PLANO.md) atendidos |
-| 8 | Testes e homologação | Unitários, integração, GUI, E2E, regressão e relatório | Critérios de aceite atendidos e falhas críticas resolvidas |
+| 8 | Testes e homologação | Unitários, integração, GUI, E2E, regressão e relatório | **Concluída e integrada à `main` por squash:** matriz E2E PT→PT, PT→EN, EN→PT e EN→EN, modos de falha e cancelamento, mídia real em seis formatos com FFmpeg, gate de cobertura de 85% e verificador de links; **443 testes aprovados e 86% de cobertura** no ambiente com FFmpeg (433 aprovados e 10 skips explícitos sem FFmpeg). Evidências e pendências humanas em [RELATORIO_FASE_8.md](RELATORIO_FASE_8.md) |
 | 9 | Documentação e finalização | Guias, arquitetura, operação, instalação, decisões e revisão final | Documentação coerente com código e instalação reproduzível |
 
-A execução e as evidências das Fases 1–7 estão registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md),
+A execução e as evidências das Fases 1–8 estão registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md),
 [FASE_1_PLANO.md](FASE_1_PLANO.md), [FASE_2_PLANO.md](FASE_2_PLANO.md), [FASE_3_PLANO.md](FASE_3_PLANO.md),
-[FASE_4_PLANO.md](FASE_4_PLANO.md), [FASE_5_PLANO.md](FASE_5_PLANO.md), [FASE_6_PLANO.md](FASE_6_PLANO.md)
-e [FASE_7_PLANO.md](FASE_7_PLANO.md), com os handoffs correspondentes em
+[FASE_4_PLANO.md](FASE_4_PLANO.md), [FASE_5_PLANO.md](FASE_5_PLANO.md), [FASE_6_PLANO.md](FASE_6_PLANO.md),
+[FASE_7_PLANO.md](FASE_7_PLANO.md) e [FASE_8_PLANO.md](FASE_8_PLANO.md), com os handoffs correspondentes em
 [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md),
-[HANDOFF_FASE_4.md](HANDOFF_FASE_4.md), [HANDOFF_FASE_5.md](HANDOFF_FASE_5.md), [HANDOFF_FASE_6.md](HANDOFF_FASE_6.md)
-e [HANDOFF_FASE_7.md](HANDOFF_FASE_7.md).
-As Fases 0–7 estão concluídas e integradas à `main`; a Fase 8 (testes, E2E e homologação) é a próxima fronteira.
+[HANDOFF_FASE_4.md](HANDOFF_FASE_4.md), [HANDOFF_FASE_5.md](HANDOFF_FASE_5.md), [HANDOFF_FASE_6.md](HANDOFF_FASE_6.md),
+[HANDOFF_FASE_7.md](HANDOFF_FASE_7.md) e [HANDOFF_FASE_8.md](HANDOFF_FASE_8.md), além do
+[relatório de testes e homologação](RELATORIO_FASE_8.md).
+As Fases 0–8 estão concluídas e integradas à `main`; a Fase 9 (documentação e finalização) é a fronteira atual.
 
 ### 12.1. Regras de execução das fases
 

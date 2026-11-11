@@ -1,0 +1,131 @@
+name: Phase 8 quality
+
+on:
+  push:
+    branches:
+      - "phase-8/**"
+      - "phase-9/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "docs/**"
+      - "README.md"
+      - ".github/workflows/phase8-quality.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: phase-8-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  full-suite:
+    name: Python ${{ matrix.python-version }} / FFmpeg + Qt + E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install FFmpeg and Qt system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            ffmpeg libegl1 libgl1 libxkbcommon-x11-0
+
+      - name: Confirm the external media tools
+        run: |
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
+      - name: Install pinned uv
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
+
+      - name: Verify lockfile
+        run: uv lock --check --no-progress
+
+      - name: Install deterministic test dependencies
+        run: uv sync --locked --group dev --group phase0 --no-progress
+
+      - name: Compile source, tests and scripts
+        run: python -m compileall -q src/legendar tests scripts
+
+      - name: Run the complete suite with a coverage gate
+        run: |
+          uv run --locked --no-sync pytest -q \
+            --cov=legendar --cov-report=term-missing --cov-fail-under=85
+
+      - name: Run the end-to-end suite alone
+        run: uv run --locked --no-sync pytest -q -m e2e
+
+      - name: Lint maintained architecture, tests and scripts
+        run: >-
+          uv run --locked --no-sync ruff check
+          src/legendar
+          tests
+          scripts
+
+      - name: Verify formatting
+        run: >-
+          uv run --locked --no-sync ruff format --check
+          src/legendar
+          tests/unit
+          tests/integration
+          tests/gui
+          tests/helpers
+          tests/e2e
+          tests/legacy
+          tests/test_architecture.py
+          tests/conftest.py
+          tests/__init__.py
+
+  docs-consistency:
+    name: Documentation links and status
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned uv
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
+
+      - name: Install deterministic test dependencies
+        run: uv sync --locked --group dev --no-progress
+
+      - name: Verify markdown links
+        run: uv run --locked --no-sync python scripts/check_doc_links.py
+
+      - name: Verify documentation tests
+        run: uv run --locked --no-sync pytest -q tests/test_documentation.py
