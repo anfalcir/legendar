@@ -22,4 +22,3 @@ from scripts.phase5_asr_benchmark import run_benchmark
 def test_benchmark_rejects_invalid_configuration(kwargs, message) -> None:
     with pytest.raises(ValueError, match=message):
         run_benchmark(**kwargs)
-
