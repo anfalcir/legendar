@@ -39,9 +39,10 @@ def main() -> int:
     if len(result.texts) != 2 or any(not text.strip() for text in result.texts):
         print("Gemini API smoke violou a correspondência 1:1.", file=sys.stderr)
         return 1
+    counters = translator.performance_snapshot()["counters"]
     print(
         "Gemini API smoke aprovado: 2 cues, "
-        f"modelo={translator.model}, métricas={translator.performance_snapshot()['counters']}"
+        f"modelo={translator.model}, métricas={counters}"
     )
     return 0
 
