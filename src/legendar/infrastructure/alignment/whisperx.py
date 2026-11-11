@@ -706,6 +706,8 @@ class WhisperXAligner:
                         "text": source_segment.text,
                     }
                     try:
+                        self._record_metric("alignment_calls", 1)
+                        self._record_metric("input_segments", 1)
                         with self._inference_lock:
                             if token is not None:
                                 token.raise_if_cancelled()
