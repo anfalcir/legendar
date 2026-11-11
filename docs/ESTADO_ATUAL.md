@@ -21,7 +21,7 @@ O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliz
 
 A arquitetura e a base de engenharia das Fases 0–10 estão integradas. Uma auditoria estática posterior identificou lacunas no caminho de qualidade final: ausência de consolidação editorial entre segmentos consecutivos do Whisper, subdivisão de textos com CPS alto sem resolver a falta de tempo de leitura, aceitação de cues curtas como simples aviso, possível perda de palavras sem alinhamento na segmentação e ausência de um gate editorial bloqueante.
 
-A prioridade agora é corrigir a integridade e a legibilidade do resultado antes de trocar motores ou reduzir configurações de qualidade. Em paralelo, o novo plano estabelece instrumentação para localizar os gargalos de desempenho e testar otimizações com comparação pareada.
+As Fases 1 e 2 estão concluídas. A Fase 3 está em implementação para consolidar globalmente as palavras alinhadas e melhorar a legibilidade. O baseline real de 37min10s é ~23min21s; NLLB consome ~14min e será o foco da Fase 6, quando será avaliado Gemini com credencial fornecida pelo usuário via secret do GitHub.
 
 ## 2. Estado da Fase 1 — concluída
 
@@ -57,7 +57,11 @@ A implementação atual da branch de Fase 2:
 
 A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes. A homologação audiovisual real continua sendo gate posterior.
 
-## 3. Estado do repositório
+## 3. Estado da Fase 3 — em andamento
+
+A branch `phase-3/global-segmentation` implementa fluxo global de palavras alinhadas, consolidação entre segmentos contíguos do Whisper, barreiras para segmentos fallback, rastreabilidade `source_segments`, rejeição de cronologia inválida, respeito a fronteiras de frase significativas e extensão de cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). O corpus determinístico cobre continuidade, pausas, pontuação, CPS, extensão segura, fallback intercalado e layout final de duas linhas. A CI da Fase 3 está em validação final; a homologação audiovisual com a mídia real fica na Fase 8.
+
+## 4. Estado do repositório
 
 | Área | Estado |
 |---|---|
@@ -65,15 +69,15 @@ A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes.
 | UI, worker e pipeline real | Implementados |
 | Reconhecimento | OpenAI Whisper local; padrão declarado `base` |
 | Alinhamento | WhisperX 3.8.6; forced alignment por segmento |
-| Segmentação | Algoritmo determinístico atual; correções planejadas |
+| Segmentação | Fluxo global cronológico em implementação; consolida limites do Whisper e preserva rastreabilidade de origem |
 | Tradução | NLLB-200 distilled 600M via Transformers/PyTorch |
 | Publicação | SRT com round-trip e gravação atômica |
 | Gate editorial | Insuficiente: riscos de leitura podem continuar como avisos |
 | Benchmark por etapa | Instrumentação integrada; baseline real consolidado em 11/11/2026 |
-| Otimização de motores | Próxima frente: Fase 5–7; Gemini é candidato de tradução a ser avaliado, sem adoção ainda |
+| Otimização de motores | Fases 5–7 planejadas; Gemini é candidato para a Fase 6, sem adoção ainda |
 | Homologação audiovisual final | Pendente |
 
-## 4. Evidências de qualidade e lacunas conhecidas
+## 5. Evidências de qualidade e lacunas conhecidas
 
 Os módulos auditados incluem:
 
@@ -85,23 +89,21 @@ Os módulos auditados incluem:
 - `src/legendar/infrastructure/translation/nllb.py`
 - `src/legendar/infrastructure/filesystem/srt.py`
 
-Achados estáticos confirmados:
+Achados da auditoria original e tratamento atual:
 
-1. A segmentação percorre cada segmento original da transcrição separadamente; não há consolidação explícita de palavras entre segmentos consecutivos.
-2. Grupos acima da velocidade de leitura podem ser subdivididos em cues menores, cujos tempos continuam limitados aos intervalos reais das palavras.
-3. Cues abaixo de 1 segundo são diagnosticadas, mas não recebem tratamento editorial que assegure conforto de leitura.
-4. Quando um segmento contém palavras alinhadas e não alinhadas, o caminho principal da segmentação considera somente as palavras com intervalo. Isso pode omitir texto no SRT.
-5. A validação estrutural bloqueia falhas graves de formato, mas duração curta, CPS e outros riscos de legibilidade são avisos e não impedem a publicação.
-6. Os testes E2E de mídia usam transcritor e alinhador falsos. Eles validam integração e publicação, não a qualidade real dos modelos em fala contínua.
-7. O alinhador real chama WhisperX por segmento. O custo acumulado precisa ser medido antes de qualquer mudança de lote.
+1. A segmentação isolada por segmento foi substituída na branch da Fase 3 pelo fluxo global de palavras alinhadas; aguarda CI e homologação.
+2. A subdivisão por velocidade de leitura continua limitada a timestamps reais. A Fase 3 adiciona extensão apenas em silêncio seguro antes da próxima cue.
+3. Cues curtas sem silêncio posterior seguro continuam explícitas para avaliação; não recebem duração inventada.
+4. A Fase 2 bloqueia a publicação quando há palavras reconhecidas sem âncora temporal confiável, impedindo a perda silenciosa observada na auditoria original.
+5. A validação estrutural ainda não é um gate editorial completo; a Fase 4 tratará CPS, duração, fragmentação e exceções.
+6. Os testes E2E determinísticos continuam usando dublês; a homologação com áudio real permanece necessária para avaliar modelos e qualidade audiovisual.
+7. O alinhador real ainda chama WhisperX por segmento. O baseline instrumentado está disponível; otimizações de alinhamento não fazem parte do escopo atual.
 
-Esses achados descrevem o código; não identificam, por si sós, a origem de cada erro textual ou temporal de uma mídia específica. A correlação com áudio de referência exige homologação.
+Esses achados descrevem o código e os testes; não identificam, por si sós, a origem de cada erro textual ou temporal de uma mídia específica. A correlação com áudio de referência exige homologação.
 
-## 4. Desempenho: baseline disponível e limitações
+## 6. Desempenho: baseline disponível e limitações
 
-**Relato operacional inicial:** aproximadamente 60 minutos para processar uma mídia de 37 minutos, ou RTF global aproximado de 1,62.
-
-Essa medição é informada pelo usuário, não reproduzida nesta auditoria. Não há ainda tempos confiáveis e persistidos por estágio, portanto não se deve atribuir uma fração exata do total à transcrição ou à tradução.
+**Baseline operacional consolidado em 11/11/2026:** uma execução fria e três quentes da mídia de referência de 37min10s. A mediana quente foi aproximadamente 23min21s (RTF ~0,63). A tradução NLLB foi o maior estágio, em torno de 14 minutos por execução quente. Os relatórios sanitizados estão preservados em `logs/`; não é necessário reabrir o relato histórico de aproximadamente uma hora.
 
 Configuração atual relevante:
 
@@ -114,7 +116,7 @@ O inventário da Fase 0 registrou um perfil de referência com Ryzen 3 2200G, qu
 
 O plano vigente exige instrumentação de tempo de cada etapa, CPU, memória e configuração dos modelos; benchmark frio/quente; e comparação com a mesma mídia e hardware. A meta inicial é reduzir o tempo global em pelo menos 20% sem degradação mensurável de qualidade; 30% é uma meta aspiracional, não uma garantia.
 
-## 5. Plano de execução vigente
+## 7. Plano de execução vigente
 
 A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
 
@@ -123,7 +125,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 0 | Auditoria, organização documental e plano | Documentada nesta entrega |
 | 1 | Instrumentação e baseline por etapa | **Concluída** |
 | 2 | Integridade textual e alinhamento recuperável | **Concluída e integrada à `main`** |
-| 3 | Segmentação global e legibilidade | Planejada |
+| 3 | Segmentação global e legibilidade | **Em andamento na branch `phase-3/global-segmentation`** |
 | 4 | Gate editorial e diagnóstico textual | Planejada |
 | 5 | Benchmark e aceleração da transcrição | Planejada |
 | 6 | Benchmark e aceleração da tradução | Planejada |
@@ -132,7 +134,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 
 Nenhuma dessas fases de código é declarada concluída por existir apenas no plano.
 
-## 6. Critérios que não podem ser sacrificados
+## 8. Critérios que não podem ser sacrificados
 
 - Nenhuma palavra reconhecida pode desaparecer silenciosamente.
 - Nenhum timestamp pode ser inventado para encobrir falha de alinhamento.
@@ -141,15 +143,15 @@ Nenhuma dessas fases de código é declarada concluída por existir apenas no pl
 - Uma otimização de motor só será adotada após avaliação de WER/CER, cobertura, alinhamento e revisão humana da tradução.
 - A publicação continua atômica e só ocorre após os gates definidos.
 
-## 7. Próximas ações
+## 9. Próximas ações
 
-1. Integrar a reorganização e o plano documental.
-2. Executar a Fase 1, criando a medição de baseline sem alterar os motores.
-3. Usar a mesma mídia de 37 minutos para separar transcrição, alinhamento, segmentação, tradução e publicação.
-4. Executar as fases de correção de integridade e legibilidade.
-5. Medir candidatos de aceleração em comparação pareada; atualizar a matriz de dependências somente quando um candidato for aprovado.
-6. Fazer a homologação final no hardware-alvo e registrar evidências sanitizadas.
+1. Concluir a Fase 3 com CI verde, regressão determinística e homologação audiovisual.
+2. Executar a Fase 4 para tornar CPS, duração, fragmentação e integridade critérios editoriais auditáveis.
+3. Executar a Fase 5 isoladamente, se o benchmark confirmar oportunidade de aceleração de ASR.
+4. Na Fase 6, comparar Gemini API com NLLB usando o mesmo corpus e revisão humana. Antes das chamadas reais, solicitar o cadastro de `GEMINI_API_KEY` como secret no GitHub.
+5. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
+6. Consolidar a Fase 8 com comparação do pipeline completo, homologação no hardware-alvo e evidências sanitizadas.
 
-## 8. Histórico documental
+## 10. Histórico documental
 
 Os protocolos, planos, handoffs e relatórios concluídos da remodelação anterior estão preservados em [archive/README.md](archive/README.md). Eles servem como registro histórico; este arquivo e o plano vigente representam o estado atual.

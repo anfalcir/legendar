@@ -19,7 +19,6 @@ from dataclasses import dataclass, field
 from legendar.domain.entities.subtitle import SubtitleCue, SubtitleTrack
 from legendar.domain.entities.transcript import (
     AlignmentResult,
-    TranscriptSegment,
     TranscriptWord,
 )
 from legendar.domain.errors.catalog import SrtValidationError
@@ -36,6 +35,7 @@ CHARS_PER_SECOND = 17.0
 SENTENCE_BREAK_RATIO = 0.5
 MIN_WORDS_PER_SPLIT_PART = 2
 MAX_SPLIT_DEPTH = 6
+DISPLAY_SAFETY_MARGIN_SECONDS = 0.08
 _MIN_WINDOW_SECONDS = 1e-3
 _SENTENCE_ENDINGS = (".", "!", "?", "…")
 _CLAUSE_ENDINGS = (*_SENTENCE_ENDINGS, ",", ";", ":", "—", "-")
@@ -127,37 +127,115 @@ def segment_alignment(
     *,
     policy: SegmentationPolicy | None = None,
 ) -> SegmentationResult:
-    """Converte um ``AlignmentResult`` em ``SubtitleTrack`` ordenado."""
+    """Segmenta um fluxo global de palavras, inclusive entre limites do ASR.
+
+    A origem de cada palavra é mantida para que cada cue continue rastreável.
+    Segmentos sem word timestamps continuam usando apenas seu próprio range.
+    """
     policy = policy or SegmentationPolicy()
-    cues: list[SubtitleCue] = []
+    events: list[tuple[TimeRange, str, tuple[int, ...]]] = []
     dropped: list[int] = []
     short: list[int] = []
     overflow: list[int] = []
+    words: list[tuple[TranscriptWord, TimeRange, int]] = []
+    word_runs: list[list[tuple[TranscriptWord, TimeRange, int]]] = []
+    current_run: list[tuple[TranscriptWord, TimeRange, int]] = []
+    previous_segment_start: float | None = None
 
-    last_end = 0.0
-    split_applied = False
     for position, segment in enumerate(alignment.transcript.segments):
-        windows, refined = _groups_for_segment(segment, policy, dropped, position)
-        split_applied = split_applied or refined
-        for window, text in windows:
-            window = _clip_to_previous(window, last_end)
-            if window is None:
-                dropped.append(position)
-                continue
-            last_end = window.end
-            cue = SubtitleCue(
-                index=len(cues) + 1,
-                text=text,
-                range=window,
-                language=alignment.transcript.language,
-                source_segments=(position,),
+        aligned = [
+            (word, word.range, position)
+            for word in segment.words
+            if word.range is not None
+        ]
+        if aligned:
+            segment_start = aligned[0][1].start
+        elif segment.range is not None:
+            segment_start = segment.range.start
+        else:
+            segment_start = None
+        if segment_start is not None:
+            if (
+                previous_segment_start is not None
+                and segment_start < previous_segment_start
+            ):
+                raise SrtValidationError(
+                    "Segmentos da transcrição fora da ordem cronológica."
+                )
+            previous_segment_start = segment_start
+        if aligned:
+            words.extend(aligned)
+            current_run.extend(aligned)
+            continue
+        if current_run:
+            word_runs.append(current_run)
+            current_run = []
+        text = " ".join(segment.text.split())
+        if segment.range is None or not text:
+            dropped.append(position)
+            continue
+        events.append((segment.range, text, (position,)))
+
+    if current_run:
+        word_runs.append(current_run)
+
+    # A sequência global deve respeitar a cronologia. Ordenar silenciosamente
+    # poderia alterar a ordem falada; portanto, inconsistência é erro explícito.
+    for previous, current in zip(words, words[1:], strict=False):
+        if current[1].start < previous[1].start:
+            raise SrtValidationError(
+                "Palavras alinhadas fora da ordem cronológica da transcrição."
             )
-            cues.append(cue)
-            if window.duration < policy.min_cue_duration:
-                short.append(cue.index)
-            # Overflows: texto que não cabe no tempo de leitura da janela.
-            if window.duration < policy.reading_time(text):
-                overflow.append(cue.index)
+
+    split_applied = False
+    source_by_identity = {id(word): source for word, _, source in words}
+
+    for run in word_runs:
+        plain_words = [(word, time_range) for word, time_range, _ in run]
+        groups = _split_words(plain_words, policy)
+        refined = _refine_for_reading_speed(groups, policy)
+        split_applied = split_applied or len(refined) > len(groups)
+        for group in refined:
+            window = TimeRange(start=group[0][1].start, end=group[-1][1].end)
+            text = _text_of(group)
+            sources = tuple(sorted({source_by_identity[id(word)] for word, _ in group}))
+            events.append((window, text, sources))
+
+    # Eventos de segmentos sem timestamps por palavra coexistem com as cues
+    # globais, mas a publicação permanece cronológica e sem sobreposição.
+    events.sort(key=lambda item: (item[0].start, item[0].end))
+    cues: list[SubtitleCue] = []
+    last_end = 0.0
+    for event_index, (window, text, sources) in enumerate(events):
+        clipped = _clip_to_previous(window, last_end)
+        if clipped is None:
+            dropped.extend(sources)
+            continue
+        next_start = (
+            events[event_index + 1][0].start if event_index + 1 < len(events) else None
+        )
+        clipped = _extend_into_safe_silence(
+            clipped,
+            next_start=next_start,
+            policy=policy,
+            required_duration=max(
+                policy.min_cue_duration,
+                policy.reading_time(text),
+            ),
+        )
+        last_end = clipped.end
+        cue = SubtitleCue(
+            index=len(cues) + 1,
+            text=text,
+            range=clipped,
+            language=alignment.transcript.language,
+            source_segments=sources,
+        )
+        cues.append(cue)
+        if clipped.duration < policy.min_cue_duration:
+            short.append(cue.index)
+        if clipped.duration < policy.reading_time(text):
+            overflow.append(cue.index)
 
     diagnostics: list[str] = []
     unmatched_words = alignment.diagnostics.unmatched_words
@@ -171,6 +249,8 @@ def segment_alignment(
         diagnostics.append("reading_speed_overflow")
     if split_applied:
         diagnostics.append("reading_speed_split")
+    if any(len(cue.source_segments) > 1 for cue in cues):
+        diagnostics.append("cross_segment_merge")
 
     return SegmentationResult(
         track=SubtitleTrack(language=alignment.transcript.language, cues=tuple(cues)),
@@ -181,6 +261,34 @@ def segment_alignment(
         unmatched_words=tuple(unmatched_words),
         diagnostics=tuple(dict.fromkeys(diagnostics)),
     )
+
+
+def _extend_into_safe_silence(
+    window: TimeRange,
+    *,
+    next_start: float | None,
+    policy: SegmentationPolicy,
+    required_duration: float,
+) -> TimeRange:
+    """Estende cue curta somente no silêncio antes da próxima fala/cue.
+
+    A margem de segurança impede que a exibição invada a próxima palavra.
+    A última cue não é estendida porque a segmentação não conhece o fim real
+    da mídia nem dispõe de evidência de silêncio após a última palavra.
+    """
+    if next_start is None or window.duration >= required_duration:
+        return window
+    safe_end = min(
+        next_start - DISPLAY_SAFETY_MARGIN_SECONDS,
+        window.start + policy.max_cue_duration,
+    )
+    target_end = min(
+        safe_end,
+        window.start + min(required_duration, policy.max_cue_duration),
+    )
+    if target_end <= window.end:
+        return window
+    return TimeRange(start=window.start, end=target_end)
 
 
 def _clip_to_previous(window: TimeRange, last_end: float) -> TimeRange | None:
@@ -194,44 +302,6 @@ def _clip_to_previous(window: TimeRange, last_end: float) -> TimeRange | None:
     if window.start < last_end:
         return TimeRange(start=last_end, end=window.end)
     return window
-
-
-def _groups_for_segment(
-    segment: TranscriptSegment,
-    policy: SegmentationPolicy,
-    dropped: list[int],
-    position: int,
-) -> tuple[list[tuple[TimeRange, str]], bool]:
-    """Agrupa o segmento em janelas temporais com texto final.
-
-    Cada item retornado é ``(janela, texto)``; a janela vem sempre de dados
-    temporais reais (palavras alinhadas ou intervalo do segmento). O segundo
-    elemento do retorno indica se houve subdivisão por velocidade de leitura.
-    """
-    aligned: list[tuple[TranscriptWord, TimeRange]] = [
-        (word, word.range) for word in segment.words if word.range is not None
-    ]
-    if aligned:
-        groups = _split_words(aligned, policy)
-        refined = _refine_for_reading_speed(groups, policy)
-        windows = [
-            (TimeRange(start=group[0][1].start, end=group[-1][1].end), _text_of(group))
-            for group in refined
-        ]
-        return windows, len(refined) > len(groups)
-
-    if segment.range is None:
-        dropped.append(position)
-        return [], False
-
-    text = " ".join(segment.text.split())
-    if not text:
-        dropped.append(position)
-        return [], False
-
-    # Sem palavras alinhadas: usa o intervalo do próprio segmento, preservando
-    # o texto original. Nenhum tempo novo é inventado.
-    return [(segment.range, text)], False
 
 
 def _split_words(
@@ -267,11 +337,16 @@ def _prefers_break_after(
     group: list[tuple[TranscriptWord, TimeRange]],
     policy: SegmentationPolicy,
 ) -> bool:
-    """Prefere encerrar a cue em fim de frase quando ela já tem massa de texto."""
+    """Prefere encerrar em fim de frase quando há texto ou duração suficientes."""
     text = _text_of(group)
-    if len(text) < policy.sentence_break_ratio * policy.max_chars_per_cue:
+    if not text.endswith(_SENTENCE_ENDINGS):
         return False
-    return text.endswith(_SENTENCE_ENDINGS)
+    duration = group[-1][1].end - group[0][1].start
+    meaningful_text = len(text) >= max(
+        20,
+        policy.sentence_break_ratio * policy.max_chars_per_cue,
+    )
+    return meaningful_text or duration >= policy.min_cue_duration
 
 
 def _refine_for_reading_speed(

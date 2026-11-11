@@ -68,7 +68,7 @@ jobs:
         run: python -m compileall -q src/legendar tests
 
       - name: Run complete suite with real FFmpeg integration fixtures
-        run: uv run --locked --no-sync pytest -q --cov=legendar --cov-report=term-missing
+        run: uv run --locked --no-sync pytest -q --cov=src/legendar --cov-report=term-missing
 
       - name: Lint maintained architecture and tests
         run: >-
