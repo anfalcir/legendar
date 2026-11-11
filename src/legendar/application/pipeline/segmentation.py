@@ -314,7 +314,7 @@ def _prefers_break_after(
     group: list[tuple[TranscriptWord, TimeRange]],
     policy: SegmentationPolicy,
 ) -> bool:
-    """Prefere encerrar a cue em fim de frase quando ela já tem massa de texto."""
+    """Prefere encerrar em fim de frase quando há texto ou duração suficientes."""
     text = _text_of(group)
     if not text.endswith(_SENTENCE_ENDINGS):
         return False
