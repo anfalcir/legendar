@@ -329,7 +329,6 @@ class FasterWhisperTranscriber:
                     task="transcribe",
                     language=requested_language,
                     beam_size=self.beam_size,
-                    best_of=5,
                     temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
                     compression_ratio_threshold=2.4,
                     log_prob_threshold=-1.0,
