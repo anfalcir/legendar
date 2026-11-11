@@ -115,10 +115,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install FFmpeg runtime libraries
+      - name: Install Qt and FFmpeg runtime libraries
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends ffmpeg
+          sudo apt-get install --yes --no-install-recommends \
+            ffmpeg libegl1 libgl1 libxkbcommon-x11-0
 
       - name: Install pinned uv
         run: python -m pip install --disable-pip-version-check "uv==0.13.7"

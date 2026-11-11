@@ -80,20 +80,6 @@ def _js_runtime_details(
     return tuple(details)
 
 
-class _PendingTranscriber:
-    """Motor de fala reservado à Fase 4."""
-
-    def transcribe(
-        self, audio: AudioAsset, *, language: Language | None, progress, token=None
-    ) -> Transcript:
-        if token is not None:
-            token.raise_if_cancelled()
-        raise ModelError(
-            "A entrada e a preparação do áudio foram concluídas. "
-            "O reconhecimento Whisper será conectado na Fase 4."
-        )
-
-
 class _PendingAligner:
     """Motor de alinhamento reservado à Fase 5."""
 
@@ -109,19 +95,20 @@ class _PendingPublisher:
 
 
 def _pipeline_factory(
-    inspector: FfprobeInspector, downloader: YtDlpDownloader
+    inspector: FfprobeInspector,
+    downloader: YtDlpDownloader,
+    transcriber: Transcriber,
 ) -> SerialPipeline:
-    """Monta aquisição, inspeção e normalização reais.
+    """Monta aquisição de mídia e reconhecimento locais reais.
 
-    Os motores posteriores são placeholders explícitos; o pipeline pode
-    completar a Fase 3, mas nunca finge transcrição ou alinhamento.
+    Forced alignment e publicação SRT permanecem como etapas futuras explícitas.
     """
 
     return SerialPipeline(
         PipelinePorts(
             inspector=inspector,
             audio_preparer=FfmpegAudioPreparer(inspector=inspector),
-            transcriber=_PendingTranscriber(),
+            transcriber=transcriber,
             aligner=_PendingAligner(),
             publisher=_PendingPublisher(),
             downloader=downloader,
@@ -159,6 +146,31 @@ def build_ui_dependencies(
         *runtime_details,
     )
 
+    try:
+        whisper_installed = importlib.util.find_spec("whisper") is not None
+    except (ImportError, ValueError):
+        whisper_installed = False
+
+    transcription_configuration_ok = True
+    try:
+        transcriber = WhisperTranscriber.from_environment(settings.models_dir)
+    except ValueError as exc:
+        # Uma configuração inválida não deve impedir a GUI de abrir.
+        transcriber = WhisperTranscriber(models_dir=settings.models_dir)
+        transcription_configuration_ok = False
+        transcription_details = (f"Configuração Whisper inválida: {exc}",)
+    else:
+        transcription_details = (
+            f"OpenAI Whisper instalado · modelo {transcriber.model_name}",
+            f"Dispositivo: {transcriber.requested_device} · pesos no cache local",
+        )
+
+    if not whisper_installed:
+        transcription_details = (
+            "openai-whisper não instalado; sincronize runtime-cpu ou runtime-cu128.",
+        )
+    transcription_available = whisper_installed and transcription_configuration_ok
+
     inspector = FfprobeInspector()
     downloader = YtDlpDownloader(
         js_runtime=selected_runtime[0] if selected_runtime else None,
@@ -168,7 +180,7 @@ def build_ui_dependencies(
         output_dir=settings.output_dir,
         cache_dir=settings.models_dir,
         workspace_factory=TempWorkspaceFactory(settings.temp_dir),
-        pipeline_factory=lambda: _pipeline_factory(inspector, downloader),
+        pipeline_factory=lambda: _pipeline_factory(inspector, downloader, transcriber),
         output_path_factory=lambda stem, _language: suggest_output_path(settings, stem),
         translate_available=False,
         readiness_ok=readiness_ok,
@@ -177,6 +189,8 @@ def build_ui_dependencies(
         media_inspector=inspector,
         youtube_available=youtube_available,
         youtube_readiness_details=youtube_details,
+        transcription_available=transcription_available,
+        transcription_readiness_details=transcription_details,
     )
 
 
