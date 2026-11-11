@@ -339,7 +339,11 @@ class SerialPipeline:
         # 7. Validação estrutural do trilho final
         with performance.measure("srt_validation"):
             quality_report = self._validate(
-                track, media_info, enter, warnings, dropped_content_count,
+                track,
+                media_info,
+                enter,
+                warnings,
+                dropped_content_count,
                 source_track if request.translate else None,
             )
         performance.set_count("warning_count", len(warnings))
@@ -438,7 +442,8 @@ class SerialPipeline:
             raise SrtValidationError(report.summary)
         stage.report(
             1.0,
-            "Revisão editorial necessária" if report.review_required
+            "Revisão editorial necessária"
+            if report.review_required
             else "Qualidade editorial aprovada",
         )
         return report
