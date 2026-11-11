@@ -57,7 +57,11 @@ A implementação atual da branch de Fase 2:
 
 A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes. A homologação audiovisual real continua sendo gate posterior.
 
-## 3. Estado da Fase 3 — em andamento\n\nA branch `phase-3/global-segmentation` introduz fluxo global de palavras alinhadas, consolidação entre segmentos contíguos do Whisper, rastreabilidade `source_segments`, rejeição de cronologia inválida, respeito a fronteiras de frase significativas e extensão de cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). Testes unitários cobrem esses contratos. A avaliação audiovisual real, o resultado de CI e a validação quantitativa de legibilidade permanecem pendentes; portanto, a fase não está concluída.\n\n## 4. Estado do repositório
+## 3. Estado da Fase 3 — em andamento
+
+A branch `phase-3/global-segmentation` introduz fluxo global de palavras alinhadas, consolidação entre segmentos contíguos do Whisper, rastreabilidade `source_segments`, rejeição de cronologia inválida, respeito a fronteiras de frase significativas e extensão de cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). Testes unitários cobrem esses contratos. A avaliação audiovisual real, o resultado de CI e a validação quantitativa de legibilidade permanecem pendentes; portanto, a fase não está concluída.
+
+## 4. Estado do repositório
 
 | Área | Estado |
 |---|---|
