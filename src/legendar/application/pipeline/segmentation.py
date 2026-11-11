@@ -146,11 +146,12 @@ def segment_alignment(
             for word in segment.words
             if word.range is not None
         ]
-        segment_start = (
-            aligned[0][1].start if aligned else segment.range.start
-            if segment.range is not None
-            else None
-        )
+        if aligned:
+            segment_start = aligned[0][1].start
+        elif segment.range is not None:
+            segment_start = segment.range.start
+        else:
+            segment_start = None
         if segment_start is not None:
             if (
                 previous_segment_start is not None
@@ -186,9 +187,7 @@ def segment_alignment(
     for group in refined:
         window = TimeRange(start=group[0][1].start, end=group[-1][1].end)
         text = _text_of(group)
-        sources = tuple(
-            sorted({source_by_identity[id(word)] for word, _ in group})
-        )
+        sources = tuple(sorted({source_by_identity[id(word)] for word, _ in group}))
         events.append((window, text, sources))
 
     # Eventos de segmentos sem timestamps por palavra coexistem com as cues
@@ -202,9 +201,7 @@ def segment_alignment(
             dropped.extend(sources)
             continue
         next_start = (
-            events[event_index + 1][0].start
-            if event_index + 1 < len(events)
-            else None
+            events[event_index + 1][0].start if event_index + 1 < len(events) else None
         )
         clipped = _extend_into_safe_silence(
             clipped,
