@@ -287,8 +287,10 @@ class SerialPipeline:
                 "Nenhuma palavra pôde ser alinhada ao áudio."
             )
         if alignment.diagnostics.has_unmatched:
-            warnings.append(
-                f"{len(alignment.diagnostics.unmatched_words)} palavra(s) sem alinhamento."
+            raise AlignmentInsufficientError(
+                "O alinhamento deixou "
+                f"{len(alignment.diagnostics.unmatched_words)} palavra(s) sem "
+                "evidência temporal confiável; a publicação foi bloqueada."
             )
         additional_issues = tuple(
             issue for issue in alignment.diagnostics.issues if issue != "unmatched_word"
