@@ -31,7 +31,9 @@ from legendar.infrastructure.diagnostics.performance import (
 )
 from legendar.infrastructure.media.waveform import load_pcm_waveform
 
-SUPPORTED_MODELS = frozenset({"tiny", "base", "small", "medium", "large", "large-v3", "turbo"})
+SUPPORTED_MODELS = frozenset(
+    {"tiny", "base", "small", "medium", "large", "large-v3", "turbo"}
+)
 SUPPORTED_DEVICES = frozenset({"auto", "cpu", "cuda"})
 SUPPORTED_COMPUTE_TYPES = frozenset(
     {"default", "auto", "int8", "int8_float16", "int8_float32", "float16", "float32"}
@@ -122,14 +124,25 @@ class FasterWhisperTranscriber:
                 f"Dispositivo faster-whisper inválido: {device!r}. "
                 "Opções: auto, cpu, cuda."
             )
-        if normalized_compute is not None and normalized_compute not in SUPPORTED_COMPUTE_TYPES:
+        if (
+            normalized_compute is not None
+            and normalized_compute not in SUPPORTED_COMPUTE_TYPES
+        ):
             raise ValueError(
                 f"compute_type inválido: {compute_type!r}. "
                 f"Opções: {', '.join(sorted(SUPPORTED_COMPUTE_TYPES))}."
             )
-        if isinstance(cpu_threads, bool) or not isinstance(cpu_threads, int) or cpu_threads < 1:
+        if (
+            isinstance(cpu_threads, bool)
+            or not isinstance(cpu_threads, int)
+            or cpu_threads < 1
+        ):
             raise ValueError("cpu_threads deve ser inteiro positivo.")
-        if isinstance(beam_size, bool) or not isinstance(beam_size, int) or not 1 <= beam_size <= 10:
+        if (
+            isinstance(beam_size, bool)
+            or not isinstance(beam_size, int)
+            or not 1 <= beam_size <= 10
+        ):
             raise ValueError("beam_size deve ficar entre 1 e 10.")
         if not isinstance(vad_filter, bool):
             raise ValueError("vad_filter deve ser booleano.")
@@ -258,9 +271,7 @@ class FasterWhisperTranscriber:
                     f"Não foi possível carregar faster-whisper {self.model_name!r}: {exc}"
                 ) from exc
             finally:
-                self._record_metric(
-                    "model_load_seconds", time.perf_counter() - started
-                )
+                self._record_metric("model_load_seconds", time.perf_counter() - started)
             self._record_metric("model_load_successes", 1)
             self._model = model
             self._device = device
@@ -290,7 +301,9 @@ class FasterWhisperTranscriber:
         except Exception as exc:
             raise ModelError(f"Falha ao carregar o áudio normalizado: {exc}") from exc
         finally:
-            self._record_metric("audio_load_seconds", time.perf_counter() - audio_started)
+            self._record_metric(
+                "audio_load_seconds", time.perf_counter() - audio_started
+            )
 
         waveform_size = getattr(waveform, "size", None)
         if waveform_size is None:
