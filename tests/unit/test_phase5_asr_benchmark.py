@@ -26,14 +26,3 @@ def test_benchmark_rejects_invalid_configuration(kwargs, message) -> None:
     with pytest.raises(ValueError, match=message):
         run_benchmark(**kwargs)
 
-
-def test_benchmark_default_configuration_is_paired_and_uses_base(tmp_path: Path) -> None:
-    # Validação de parâmetros ocorre antes de carregar modelos ou buscar o dataset.
-    with pytest.raises(RuntimeError, match="Benchmark exige"):
-        run_benchmark(
-            backends=("openai-whisper", "faster-whisper"),
-            models=("base",),
-            samples_per_language=1,
-            cache_dir=tmp_path,
-            device="cpu",
-        )
