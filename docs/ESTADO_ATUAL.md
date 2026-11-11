@@ -85,17 +85,17 @@ Os módulos auditados incluem:
 - `src/legendar/infrastructure/translation/nllb.py`
 - `src/legendar/infrastructure/filesystem/srt.py`
 
-Achados estáticos confirmados:
+Achados da auditoria original e tratamento atual:
 
-1. A segmentação percorre cada segmento original da transcrição separadamente; não há consolidação explícita de palavras entre segmentos consecutivos.
-2. Grupos acima da velocidade de leitura podem ser subdivididos em cues menores, cujos tempos continuam limitados aos intervalos reais das palavras.
-3. Cues abaixo de 1 segundo são diagnosticadas, mas não recebem tratamento editorial que assegure conforto de leitura.
-4. Quando um segmento contém palavras alinhadas e não alinhadas, o caminho principal da segmentação considera somente as palavras com intervalo. Isso pode omitir texto no SRT.
-5. A validação estrutural bloqueia falhas graves de formato, mas duração curta, CPS e outros riscos de legibilidade são avisos e não impedem a publicação.
-6. Os testes E2E de mídia usam transcritor e alinhador falsos. Eles validam integração e publicação, não a qualidade real dos modelos em fala contínua.
-7. O alinhador real chama WhisperX por segmento. O custo acumulado precisa ser medido antes de qualquer mudança de lote.
+1. A segmentação isolada por segmento foi substituída na branch da Fase 3 pelo fluxo global de palavras alinhadas; aguarda CI e homologação.
+2. A subdivisão por velocidade de leitura continua limitada a timestamps reais. A Fase 3 adiciona extensão apenas em silêncio seguro antes da próxima cue.
+3. Cues curtas sem silêncio posterior seguro continuam explícitas para avaliação; não recebem duração inventada.
+4. A Fase 2 bloqueia a publicação quando há palavras reconhecidas sem âncora temporal confiável, impedindo a perda silenciosa observada na auditoria original.
+5. A validação estrutural ainda não é um gate editorial completo; a Fase 4 tratará CPS, duração, fragmentação e exceções.
+6. Os testes E2E determinísticos continuam usando dublês; a homologação com áudio real permanece necessária para avaliar modelos e qualidade audiovisual.
+7. O alinhador real ainda chama WhisperX por segmento. O baseline instrumentado está disponível; otimizações de alinhamento não fazem parte do escopo atual.
 
-Esses achados descrevem o código; não identificam, por si sós, a origem de cada erro textual ou temporal de uma mídia específica. A correlação com áudio de referência exige homologação.
+Esses achados descrevem o código e os testes; não identificam, por si sós, a origem de cada erro textual ou temporal de uma mídia específica. A correlação com áudio de referência exige homologação.
 
 ## 6. Desempenho: baseline disponível e limitações
 
