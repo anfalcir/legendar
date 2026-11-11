@@ -736,15 +736,13 @@ class WhisperXAligner:
                             previous_global_end=previous_global_end,
                         )
                         if len(recovered_unmatched) < len(selected_unmatched):
+                            recovered_count = len(selected_unmatched) - len(recovered_unmatched)
                             selected_segment = recovered_segment
                             selected_unmatched = recovered_unmatched
                             selected_issues = recovered_issues
                             selected_aligned_count = recovered_aligned_count
                             selected_previous_end = recovered_previous_end
-                            self._record_metric(
-                                "recovered_words",
-                                len(selected_unmatched) - len(recovered_unmatched),
-                            )
+                            self._record_metric("recovered_words", recovered_count)
                             selected_issues = (*selected_issues, "alignment_recovered")
                         else:
                             selected_issues = (*selected_issues, "alignment_recovery_no_improvement")
