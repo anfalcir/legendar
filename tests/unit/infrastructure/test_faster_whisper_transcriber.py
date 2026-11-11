@@ -49,6 +49,7 @@ class FakeModel:
 
 
 def make_audio(tmp_path: Path) -> AudioAsset:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     path = tmp_path / "audio.wav"
     path.write_bytes(b"test fixture; the audio loader is injected")
     return AudioAsset(
