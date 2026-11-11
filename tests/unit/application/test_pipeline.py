@@ -469,7 +469,6 @@ def test_pipeline_reports_failure_without_exception_message(job_context):
     assert "exception_message" not in report
 
 
-
 def test_pipeline_blocks_publication_when_segmentation_drops_source_content(
     job_context,
 ):
@@ -485,7 +484,9 @@ def test_pipeline_blocks_publication_when_segmentation_drops_source_content(
         diagnostics=AlignmentDiagnostics(aligned_words=2),
     )
     publisher = FakePublisher()
-    pipeline, _ = _pipeline(aligner=FakeAligner(alignment=alignment), publisher=publisher)
+    pipeline, _ = _pipeline(
+        aligner=FakeAligner(alignment=alignment), publisher=publisher
+    )
 
     with pytest.raises(SrtValidationError, match="Publicação bloqueada"):
         pipeline.execute(_request(), job_context)
