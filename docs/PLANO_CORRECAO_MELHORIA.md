@@ -28,13 +28,12 @@ Não se pretende substituir toda a arquitetura nem trocar todos os modelos de um
 
 | Indicador | Valor inicial | Natureza |
 |---|---:|---|
-| Duração da mídia | 37 min | Relato do usuário |
-| Tempo total de processamento | aproximadamente 60 min | Relato do usuário |
-| RTF global aproximado | 1,62 | Calculado a partir dos dois valores acima |
-| Tempo de transcrição | ainda não medido isoladamente | Pendente de instrumentação |
-| Tempo de alinhamento | ainda não medido isoladamente | Pendente de instrumentação |
-| Tempo de tradução | ainda não medido isoladamente | Pendente de instrumentação |
-| Perfil exato de hardware/execução dessa rodada | precisa ser reconfirmado | Pendente |
+| Duração da mídia | 37min10s | Mídia de referência |
+| Tempo total (mediana quente) | aproximadamente 23min21s | Baseline medido na Fase 1 |
+| RTF global aproximado | 0,63 | Calculado a partir da mediana quente |
+| Tempo de tradução NLLB | aproximadamente 14 min | Maior estágio medido |
+| Tempo dos demais estágios | disponível nos relatórios sanitizados em `logs/` | Instrumentação da Fase 1 |
+| Perfil de hardware/execução | registrado no inventário da Fase 1 | Reexecutar antes de benchmarks futuros |
 
 A decomposição da Fase 1 já mediu as etapas individualmente, distinguindo carregamento de modelos, inferência e preparação. Não é necessário reabrir a discrepância histórica de aproximadamente uma hora.
 
@@ -58,7 +57,7 @@ A estratégia precisa funcionar bem em CPU. CUDA, MPS ou outros backends compat�
 |---|---|---|
 | Reconhecimento | `WhisperTranscriber` / OpenAI Whisper | Padrão `base`, PyTorch; execução atual não usa word timestamps |
 | Alinhamento | `WhisperXAligner` | WhisperX 3.8.6; chama `whisperx.align` por segmento original |
-| Segmentação | `segment_alignment` | Processa cada segmento independentemente; subdivide grupos com excesso de CPS |
+| Segmentação | `segment_alignment` | Fase 3 substitui processamento isolado por fluxo global de palavras, com rastreabilidade de origem |
 | Tradução | `NllbTranslator` | NLLB-200 distilled 600M via Transformers/PyTorch |
 | Parâmetros da tradução | `batch_size=16`, `num_beams=4` | Já existe batching; há oportunidades para otimizar sua composição e a geração |
 | Publicação | `SrtPublisher` | Round-trip e gravação atômica |
@@ -376,7 +375,25 @@ A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, t
 
 ### Fase 6 — Benchmark e aceleração da tradução
 
-**Objetivo:** reduzir o custo do NLLB sem degradar o sentido, a terminologia ou a consistência.
+**Objetivo:** reduzir o custo do NLLB sem degradar o sentido, a terminologia ou a consistência. O Gemini será avaliado como candidato de tradução via API, sem pressupor que será automaticamente superior ao NLLB.
+
+**Diretriz obrigatória de tradução contextual (requisito do usuário, 11/11/2026):**
+
+O prompt de sistema/instruções do tradutor Gemini deverá:
+
+1. Produzir **português brasileiro (PT-BR)** natural, contemporâneo e idiomático, respeitando concordância, regência, pontuação e registro oral do contexto.
+2. Traduzir o significado e a intenção da fala, não fazer substituição literal palavra por palavra. Interpretar a frase com apoio das cues vizinhas e do contexto fornecido, preservando sujeito, negação, tempo verbal, tom e relações entre ideias.
+3. **Preservar nomes próprios e entidades nomeadas**, incluindo pessoas, personagens, cidades, lugares, povos, raças, clãs, famílias, facções, organizações, títulos próprios e nomes de obras/universos ficcionais. Não traduzir, adaptar foneticamente nem normalizar esses nomes, salvo quando houver forma PT-BR consagrada e inequívoca ou glossário explícito que determine o contrário.
+4. Preservar termos de universo (fantasia, ficção, jogos, história, religião e cultura) quando funcionarem como nomes ou conceitos específicos. Não converter nomes de raças/clãs/povos em substantivos genéricos nem traduzir automaticamente uma palavra ambígua sem identificar seu uso no contexto.
+5. Usar contexto e pesquisa/grounding quando habilitados e pertinentes para identificar referências, personagens, locais, terminologia e sentido de expressões. Pesquisa deve apoiar a interpretação, não autorizar a inclusão de fatos ausentes da fala. Na ausência de evidência suficiente, preservar o termo original em vez de inventar uma tradução.
+6. Manter consistência terminológica ao longo de toda a mídia, usando glossário/contexto acumulado e registrando decisões de termos recorrentes.
+7. Não acrescentar explicações, notas, informações externas ou conteúdo que não tenha sido pronunciado. Retornar somente o texto traduzido por unidade, preservando a correspondência 1:1 e a ordem das cues.
+8. Preservar números, datas, siglas, referências, nomes de usuário e elementos estruturados; não alterar timestamps.
+9. Adaptar contrações, expressões idiomáticas e construções pouco naturais para PT-BR fluente, sem resumir, suavizar, censurar ou alterar a intenção do falante.
+
+A avaliação humana deverá incluir nomes próprios, cidades, raças/clãs/povos, termos ambíguos, expressões idiomáticas, referências culturais, negações, números e contexto entre cues. Uma tradução literal correta isoladamente, mas incoerente com o universo ou com o discurso, deverá ser considerada regressão.
+
+A capacidade de pesquisa do modelo não será presumida como disponível por padrão: o experimento deverá documentar o modelo Gemini, ferramentas de grounding habilitadas, fontes consultadas e latência/custo adicional. Se grounding não estiver disponível, o prompt deverá instruir o modelo a usar apenas o contexto recebido e a preservar termos incertos.
 
 Baseline atual:
 - `facebook/nllb-200-distilled-600M`;
