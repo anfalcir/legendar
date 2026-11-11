@@ -142,7 +142,6 @@ def test_suggested_output_stays_under_the_configured_directory(tmp_path) -> None
     assert suggestion == tmp_path / "fora" / "aula.srt"
 
 
-
 def test_missing_whisper_is_reported_without_crashing_application(
     tmp_path, monkeypatch
 ) -> None:
@@ -159,7 +158,10 @@ def test_missing_whisper_is_reported_without_crashing_application(
 
     assert dependencies.readiness_ok
     assert not dependencies.transcription_available
-    assert "openai-whisper não instalado" in dependencies.transcription_readiness_details[0]
+    assert (
+        "openai-whisper não instalado"
+        in dependencies.transcription_readiness_details[0]
+    )
     assert isinstance(
         dependencies.pipeline_factory()._ports.transcriber, WhisperTranscriber
     )

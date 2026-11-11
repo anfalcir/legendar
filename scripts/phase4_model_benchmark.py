@@ -159,9 +159,7 @@ def _load_fleurs_rows(
                     break
         missing = wanted.difference(found)
         if missing:
-            raise RuntimeError(
-                f"Áudios FLEURS ausentes em {config}: {sorted(missing)}"
-            )
+            raise RuntimeError(f"Áudios FLEURS ausentes em {config}: {sorted(missing)}")
         for row in rows:
             samples.append(
                 {
@@ -213,6 +211,7 @@ def _resolve_device(torch, requested: str) -> str:
 def _peak_rss_bytes() -> int | None:
     try:
         import resource
+
         peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     except (ImportError, AttributeError, OSError):
         return None
@@ -403,12 +402,18 @@ def main() -> int:
     parser.add_argument("--models", default="tiny,base,small")
     parser.add_argument("--samples-per-language", type=int, default=10)
     parser.add_argument("--cache-dir", type=Path, default=Path(".cache/phase4"))
-    parser.add_argument("--device", choices=("auto", "cpu", "cuda", "mps"), default="auto")
+    parser.add_argument(
+        "--device", choices=("auto", "cpu", "cuda", "mps"), default="auto"
+    )
     parser.add_argument("--manifest", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("phase4-model-benchmark.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("phase4-model-benchmark.json")
+    )
     args = parser.parse_args()
     try:
-        models = tuple(item.strip().lower() for item in args.models.split(",") if item.strip())
+        models = tuple(
+            item.strip().lower() for item in args.models.split(",") if item.strip()
+        )
         report = run_benchmark(
             models=models,
             samples_per_language=args.samples_per_language,

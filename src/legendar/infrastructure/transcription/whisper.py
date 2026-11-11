@@ -67,7 +67,9 @@ def _resolve_device(requested: str) -> str:
     if requested == "mps":
         mps = getattr(getattr(torch.backends, "mps", None), "is_available", None)
         if not callable(mps) or not mps():
-            raise ModelError("O dispositivo MPS foi solicitado, mas não está disponível.")
+            raise ModelError(
+                "O dispositivo MPS foi solicitado, mas não está disponível."
+            )
     return requested
 
 
