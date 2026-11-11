@@ -219,6 +219,18 @@ def run_benchmark(
                         }
                         for language, items in sorted(by_language.items())
                     },
+                    "cold_first_sample_wall_seconds": model_records[0][
+                        "transcription_wall_seconds"
+                    ],
+                    "warm_mean_wall_seconds": (
+                        round(
+                            sum(item["transcription_wall_seconds"] for item in model_records[1:])
+                            / len(model_records[1:]),
+                            3,
+                        )
+                        if len(model_records) > 1
+                        else None
+                    ),
                     "model_load_seconds": round(
                         float(counters.get("model_load_seconds", 0.0)), 3
                     ),
@@ -232,6 +244,41 @@ def run_benchmark(
                 }
                 del transcriber
                 gc.collect()
+
+    comparison: dict[str, Any] = {}
+    for model_name in models:
+        baseline_key = f"openai-whisper:{model_name}"
+        candidate_key = f"faster-whisper:{model_name}"
+        if baseline_key not in summaries or candidate_key not in summaries:
+            continue
+        baseline_languages = summaries[baseline_key]["languages"]
+        candidate_languages = summaries[candidate_key]["languages"]
+        language_comparison: dict[str, Any] = {}
+        for language in sorted(set(baseline_languages) & set(candidate_languages)):
+            baseline = baseline_languages[language]
+            candidate = candidate_languages[language]
+            baseline_rtf = baseline["mean_real_time_factor"]
+            candidate_rtf = candidate["mean_real_time_factor"]
+            language_comparison[language] = {
+                "baseline_mean_wer": baseline["mean_wer"],
+                "candidate_mean_wer": candidate["mean_wer"],
+                "wer_delta_absolute": round(
+                    candidate["mean_wer"] - baseline["mean_wer"], 6
+                ),
+                "baseline_mean_cer": baseline["mean_cer"],
+                "candidate_mean_cer": candidate["mean_cer"],
+                "cer_delta_absolute": round(
+                    candidate["mean_cer"] - baseline["mean_cer"], 6
+                ),
+                "baseline_mean_rtf": baseline_rtf,
+                "candidate_mean_rtf": candidate_rtf,
+                "speedup_percent": (
+                    round((1.0 - candidate_rtf / baseline_rtf) * 100.0, 2)
+                    if baseline_rtf > 0
+                    else None
+                ),
+            }
+        comparison[model_name] = language_comparison
 
     return {
         "schema_version": 1,
@@ -271,6 +318,7 @@ def run_benchmark(
         "backends": list(backends),
         "models": list(models),
         "summary": summaries,
+        "comparison": comparison,
         "samples": reports,
         "limitations": [
             "FLEURS é fala lida; não representa sermões, fala espontânea, música, ruído ou sobreposição.",
