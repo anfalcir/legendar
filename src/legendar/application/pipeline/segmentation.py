@@ -198,9 +198,7 @@ def segment_alignment(
         for group in refined:
             window = TimeRange(start=group[0][1].start, end=group[-1][1].end)
             text = _text_of(group)
-            sources = tuple(
-                sorted({source_by_identity[id(word)] for word, _ in group})
-            )
+            sources = tuple(sorted({source_by_identity[id(word)] for word, _ in group}))
             events.append((window, text, sources))
 
     # Eventos de segmentos sem timestamps por palavra coexistem com as cues
