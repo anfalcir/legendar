@@ -243,7 +243,8 @@ def _append_issue(
         code, "warning", f"{description}: {_cue_list(indexes)}", tuple(indexes)
     ))
     warnings.append(
-        f"{len(indexes)} cue(s). {description}: {_cue_list(indexes)}."
+        f"{len(indexes)} {_noun(len(indexes))} "
+        f"{description[0].lower() + description[1:]}: {_cue_list(indexes)}."
     )
 
 
