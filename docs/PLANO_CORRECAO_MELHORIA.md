@@ -299,7 +299,7 @@ Entregas:
 
 **Implementação em andamento (11/11/2026):**
 
-- A segmentação passou a construir um fluxo global cronológico de palavras alinhadas, em vez de reiniciar o agrupamento em cada segmento do Whisper.
+- A segmentação passou a construir um fluxo global cronológico de palavras alinhadas, em vez de reiniciar o agrupamento em cada segmento do Whisper. Segmentos sem timestamps por palavra são preservados em sua própria janela e funcionam como barreiras, impedindo que cues alinhadas de antes/depois os absorvam.
 - As cues podem atravessar limites artificiais do ASR quando há continuidade temporal e textual; pausas, pontuação, limite de caracteres e duração continuam determinando fronteiras.
 - Cada cue preserva os índices de todos os segmentos de origem em `source_segments`.
 - A entrada fora de ordem cronológica — inclusive segmentos sem word timestamps — é rejeitada explicitamente; o sistema não reordena silenciosamente palavras e não altera o texto falado.
@@ -307,7 +307,7 @@ Entregas:
 - Cues curtas podem ganhar tempo de exibição até a duração mínima ou o tempo de leitura calculado, somente dentro do silêncio anterior à próxima cue e com margem de segurança de 80 ms. A última cue não é estendida sem evidência do fim da mídia.
 - O SRT aplica quebra de linha pelo layout de domínio já existente (até duas linhas de 42 caracteres); a segmentação mantém texto normalizado e o round-trip valida o conteúdo sem alterar palavras.
 - O alinhador atual não oferece diarização confiável de falantes. A Fase 3 não infere mudança de interlocutor: usa cronologia, pausas e pontuação, mantendo essa limitação documentada.
-- Testes foram adicionados para consolidação entre segmentos, pausas, rastreabilidade, cronologia inválida em segmentos alinhados e fallback, fronteira de frase e extensão segura.
+- Testes foram adicionados para consolidação entre segmentos, pausas, rastreabilidade, cronologia inválida em segmentos alinhados e fallback, preservação de segmentos fallback intercalados, fronteira de frase e extensão segura.
 
 **Ainda pendente:** avaliação do corpus audiovisual real, otimização editorial das fronteiras com pontuação/sintaxe e comprovação quantitativa de redução de fragmentação sem piorar CPS, cobertura ou sincronização. A Fase 3 não está concluída.
 
