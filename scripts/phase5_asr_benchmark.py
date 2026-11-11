@@ -20,13 +20,22 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
-from scripts.phase4_model_benchmark import (
-    _load_fleurs_rows,
-    _load_manifest_rows,
-    _normalize_text,
-    _peak_rss_bytes,
-    _read_audio,
-)
+try:
+    from scripts.phase4_model_benchmark import (
+        _load_fleurs_rows,
+        _load_manifest_rows,
+        _normalize_text,
+        _peak_rss_bytes,
+        _read_audio,
+    )
+except ModuleNotFoundError:
+    from phase4_model_benchmark import (
+        _load_fleurs_rows,
+        _load_manifest_rows,
+        _normalize_text,
+        _peak_rss_bytes,
+        _read_audio,
+    )
 
 BACKENDS = ("openai-whisper", "faster-whisper")
 MODEL_PROFILES = ("tiny", "base", "small", "medium", "large-v3", "turbo")
