@@ -206,14 +206,14 @@ def test_environment_configuration_is_read_without_logging_secret(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "private-key")
-    monkeypatch.setenv("LEGENDAR_GEMINI_MODEL", "gemini-custom")
+    monkeypatch.setenv("LEGENDAR_GEMINI_MODEL", "gemini-3.5-flash-lite")
     monkeypatch.setenv("LEGENDAR_GEMINI_BATCH_SIZE", "24")
     monkeypatch.setenv("LEGENDAR_GEMINI_GROUNDING", "true")
 
     translator = GeminiTranslator.from_environment(tmp_path)
 
     snapshot = translator.performance_snapshot()
-    assert translator.model == "gemini-custom"
+    assert translator.model == "gemini-3.5-flash-lite"
     assert translator.batch_size == 24
     assert translator.grounding
     assert snapshot["configuration"]["api_key_configured"]
