@@ -59,6 +59,21 @@ pt-BR	./amostra-pt.wav	Transcrição humana revisada.
 en-US	./sample-en.wav	Reviewed human reference.
 ```
 
+A coluna `reference` é opcional ou pode ficar vazia para benchmark de desempenho sem pontuação lexical. Para a gravação de 37min10s, exporte o áudio para WAV mono/16 kHz e use:
+
+```bash
+ffmpeg -i gravacao.mp4 -vn -ac 1 -ar 16000 -c:a pcm_s16le gravacao-16k.wav
+```
+
+Manifesto de performance-only:
+
+```tsv
+language	audio	reference
+pt-BR	./gravacao-16k.wav	
+```
+
+Nesse modo, o relatório mantém tempo, RTF, carga fria/quente e memória, mas WER/CER aparecem como `null`. Isso mede velocidade no hardware real, não comprova qualidade lexical; para aceite de qualidade, use referências humanas revisadas.
+
 Execução recomendada no computador de referência:
 
 ```bash
