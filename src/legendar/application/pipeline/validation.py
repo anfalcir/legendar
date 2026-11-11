@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from enum import StrEnum
+from enum import Enum
 
 from legendar.application.pipeline.segmentation import SegmentationPolicy
 from legendar.domain.entities.subtitle import SubtitleTrack
@@ -30,7 +30,7 @@ _ACRONYM_RE = re.compile(r"\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{2,}\b")
 _WORD_RE = re.compile(r"\b[^\W\d_][\w'’-]*\b", re.UNICODE)
 
 
-class QualityStatus(StrEnum):
+class QualityStatus(str, Enum):
     APPROVED = "APPROVED"
     REVIEW_REQUIRED = "REVIEW_REQUIRED"
     BLOCKED = "BLOCKED"
@@ -146,7 +146,6 @@ def validate_track(
                 and cue.range.start - previous.range.end <= 1.0
             ):
                 duplicates.append(cue.index)
-            previous_last = previous.normalized_text.rstrip()[-1:]
             first = text[:1]
             if (
                 previous.normalized_text.split()[-1].casefold().strip(".,;:!?")
