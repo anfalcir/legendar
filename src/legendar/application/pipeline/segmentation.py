@@ -113,6 +113,7 @@ class SegmentationResult:
         """Indica conteúdo reconhecido que ainda não possui âncora temporal."""
         return bool(self.unmatched_words)
 
+    @property
     def coverage_ratio(self) -> float:
         """Fração de segmentos que geraram ao menos uma cue."""
         if not self.source_segment_count:
