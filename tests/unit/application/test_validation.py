@@ -119,7 +119,6 @@ def test_custom_policy_changes_the_thresholds() -> None:
     assert report.short_cues == (1,)
 
 
-
 def test_quality_report_is_structured_and_includes_cps_metrics() -> None:
     track = _track(_cue(1, "bom dia", 0.0, 2.0), _cue(2, "até logo", 2.5, 4.5))
 
@@ -196,6 +195,8 @@ def test_translation_invariant_numbers_and_acronyms_are_checked() -> None:
     report = validate_track(target, source_track=source)
 
     assert report.status.value == "REVIEW_REQUIRED"
-    issue = next(issue for issue in report.issues if issue.code == "TRANSLATION_INVARIANT")
+    issue = next(
+        issue for issue in report.issues if issue.code == "TRANSLATION_INVARIANT"
+    )
     assert "número 3" in issue.message
     assert "sigla NASA" in issue.message
