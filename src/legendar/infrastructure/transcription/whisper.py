@@ -164,7 +164,7 @@ class WhisperTranscriber:
 
     @classmethod
     def from_environment(cls, models_dir: Path) -> WhisperTranscriber:
-        """Lê apenas os dois ajustes operacionais documentados do runtime."""
+        """Lê os ajustes operacionais documentados do runtime."""
         try:
             beam_size = int(os.environ.get("LEGENDAR_WHISPER_BEAM_SIZE", "5"))
         except ValueError as exc:
