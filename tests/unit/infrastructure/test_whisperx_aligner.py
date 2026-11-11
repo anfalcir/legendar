@@ -71,7 +71,7 @@ def make_aligner(
     loader_calls: list | None = None,
     model_error: Exception | None = None,
     waveform: FakeWaveform | None = None,
-    align_function_override=None,
+    result_sequence: list[dict] | None = None,
     **kwargs,
 ) -> WhisperXAligner:
     model_calls = loader_calls if loader_calls is not None else []
@@ -91,6 +91,8 @@ def make_aligner(
         align_calls.append((segments, model, metadata, audio, device))
         if progress_callback is not None:
             progress_callback(50.0)
+        if result_sequence:
+            return result_sequence.pop(0)
         return result or {
             "word_segments": [
                 {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.95},
@@ -175,27 +177,22 @@ def test_unaligned_word_is_not_interpolated_or_given_a_timestamp(
 
 def test_unmatched_word_gets_one_controlled_wider_window_recovery(tmp_path: Path):
     calls: list = []
-
-    def recoverable_align(
-        segments, model, metadata, audio, device, *, progress_callback=None
-    ):
-        calls.append(segments)
-        if len(calls) == 1:
-            return {
-                "word_segments": [
-                    {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.9},
-                ]
-            }
-        return {
-            "word_segments": [
-                {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.9},
-                {"word": "mundo", "start": 0.55, "end": 0.8, "score": 0.9},
-            ]
-        }
+    first_result = {
+        "word_segments": [
+            {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.9},
+        ]
+    }
+    second_result = {
+        "word_segments": [
+            {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.9},
+            {"word": "mundo", "start": 0.55, "end": 0.8, "score": 0.9},
+        ]
+    }
 
     aligner = make_aligner(
         tmp_path,
-        align_function_override=recoverable_align,
+        calls=calls,
+        result_sequence=[first_result, second_result],
         recovery_padding_seconds=0.75,
     )
 
