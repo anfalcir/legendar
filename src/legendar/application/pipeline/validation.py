@@ -22,7 +22,7 @@ _CONNECTORS = {
     "a", "ao", "aos", "as", "com", "da", "das", "de", "do", "dos",
     "e", "em", "na", "nas", "no", "nos", "ou", "para", "pela",
     "pelas", "pelo", "pelos", "por", "que", "se", "sem", "sob",
-    "sobre", "the", "a", "an", "and", "as", "at", "by", "for",
+    "sobre", "the", "an", "and", "at", "by", "for",
     "from", "in", "into", "of", "on", "or", "to", "with",
 }
 _NUMBER_RE = re.compile(r"(?<!\w)\d+(?:[.,:/-]\d+)*(?!\w)")
@@ -259,7 +259,7 @@ def _has_suspicious_text(text: str) -> bool:
             return True
     words = [word.casefold() for word in _WORD_RE.findall(text)]
     run = 1
-    for previous, current in zip(words, words[1:]):
+    for previous, current in zip(words, words[1:], strict=False):
         run = run + 1 if current == previous else 1
         if run >= _REPEATED_WORD_LIMIT:
             return True
