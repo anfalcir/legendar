@@ -350,9 +350,11 @@ def _append_issue(
 ) -> None:
     if not indexes:
         return
-    issues.append(QualityIssue(
-        code, "warning", f"{description}: {_cue_list(indexes)}", tuple(indexes)
-    ))
+    issues.append(
+        QualityIssue(
+            code, "warning", f"{description}: {_cue_list(indexes)}", tuple(indexes)
+        )
+    )
     warnings.append(
         f"{len(indexes)} {_noun(len(indexes))} "
         f"{description[0].lower() + description[1:]}: {_cue_list(indexes)}."
@@ -366,7 +368,16 @@ def _has_suspicious_text(text: str) -> bool:
         category = unicodedata.category(char)
         if category in {"Cc", "Cs"}:
             return True
-        if char in {"\u202a", "\u202b", "\u202d", "\u202e", "\u2066", "\u2067", "\u2068", "\u2069"}:
+        if char in {
+            "\u202a",
+            "\u202b",
+            "\u202d",
+            "\u202e",
+            "\u2066",
+            "\u2067",
+            "\u2068",
+            "\u2069",
+        }:
             return True
     words = [word.casefold() for word in _WORD_RE.findall(text)]
     run = 1
