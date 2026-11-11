@@ -223,3 +223,26 @@ def test_notice_is_cleared_when_a_job_starts_and_set_on_failure() -> None:
     assert reset.notice_message == ""
     assert restarted.notice_message == ""
     assert restarted.notice_level == ""
+
+
+
+def test_completion_exposes_editorial_review_notice() -> None:
+    vm = JobViewModel()
+    vm.apply(_state(1, JobState.IDLE, JobState.VALIDATING_INPUT))
+    vm.apply(_state(2, JobState.VALIDATING_INPUT, JobState.PUBLISHING))
+
+    snapshot = vm.apply(
+        JobCompleted(
+            "job-1",
+            3,
+            output_path="/tmp/aula.srt",
+            cue_count=12,
+            quality_status="REVIEW_REQUIRED",
+            quality_summary="Revisão editorial necessária: 2 ocorrência(s) em 12 cues.",
+        )
+    )
+
+    assert snapshot.state is JobState.COMPLETED
+    assert snapshot.output_path == "/tmp/aula.srt"
+    assert snapshot.notice_level == "warning"
+    assert snapshot.notice_message.startswith("Revisão editorial necessária")
