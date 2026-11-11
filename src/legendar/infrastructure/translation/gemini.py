@@ -34,6 +34,8 @@ DEFAULT_BATCH_SIZE = 32
 DEFAULT_TIMEOUT_SECONDS = 120
 DEFAULT_MAX_RETRIES = 3
 SUPPORTED_LANGUAGES = frozenset({Language.PORTUGUESE, Language.ENGLISH})
+# Gemini 3.8 Flash currently does not expose Google Search grounding.
+GROUNDING_SUPPORTED_MODELS = frozenset({"gemini-3.5-flash-lite"})
 SYSTEM_INSTRUCTION = """Você é um tradutor profissional de legendas.
 Traduza para o idioma de destino solicitado, preservando integralmente o
 significado, a intenção, a negação, o sujeito, o tempo verbal, o tom e o
@@ -160,6 +162,11 @@ class GeminiTranslator:
             raise ValueError("O timeout Gemini deve ser positivo.")
         if max_retries < 0 or max_retries > 8:
             raise ValueError("O número de retries Gemini deve estar entre 0 e 8.")
+        if grounding and normalized_model not in GROUNDING_SUPPORTED_MODELS:
+            raise ValueError(
+                "Google Search grounding não está disponível para este modelo; "
+                "use gemini-3.5-flash-lite ou desative LEGENDAR_GEMINI_GROUNDING."
+            )
         self.api_key = (api_key or "").strip() or None
         self.model = normalized_model
         self.batch_size = batch_size
