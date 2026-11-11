@@ -153,6 +153,26 @@ def main(argv: list[str] | None = None) -> int:
     for report in selected:
         _print_report(report)
     _print_medians(selected)
+    print("\nThroughput de cues e cobertura:")
+    for report in selected:
+        counts = report.get("counts", {})
+        counts = counts if isinstance(counts, dict) else {}
+        stages = _stage_times(report)
+        cues = counts.get("subtitle_cues")
+        segmentation_seconds = stages.get("segmentation", 0.0)
+        recognized = counts.get("recognized_words")
+        aligned = counts.get("aligned_words")
+        if cues and segmentation_seconds > 0:
+            print(
+                f"  {report.get('job_id', 'unknown')}: "
+                f"{float(cues) / segmentation_seconds:.2f} cues/s"
+            )
+        if isinstance(recognized, (int, float)) and recognized > 0:
+            coverage = float(aligned or 0) / float(recognized) * 100
+            print(
+                f"  {report.get('job_id', 'unknown')}: "
+                f"{coverage:.2f}% palavras reconhecidas alinhadas"
+            )
     print("\nThroughput de fala/alinhamento:")
     for report in selected:
         counts = report.get("counts", {})

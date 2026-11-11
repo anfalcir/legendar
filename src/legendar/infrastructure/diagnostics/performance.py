@@ -284,6 +284,39 @@ def collect_performance_environment() -> dict[str, Any]:
     }
 
 
+def _gpu_runtime_resources() -> dict[str, int | None]:
+    binary = shutil.which("nvidia-smi")
+    if not binary:
+        return {}
+    try:
+        result = subprocess.run(
+            [
+                binary,
+                "--query-gpu=memory.used,utilization.gpu",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=2,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    values: dict[str, int | None] = {}
+    for index, line in enumerate(result.stdout.splitlines()):
+        fields = [field.strip() for field in line.split(",")]
+        if len(fields) != 2:
+            continue
+        for suffix, raw in zip(("memory_used_mib", "utilization_percent"), fields):
+            try:
+                values[f"gpu{index}_{suffix}"] = int(raw)
+            except ValueError:
+                values[f"gpu{index}_{suffix}"] = None
+    return values
+
+
 class JsonPerformanceReporter:
     """Grava um JSON privado por job no subdiretório performance dos logs."""
 
@@ -298,6 +331,7 @@ class JsonPerformanceReporter:
             "process_peak_rss_bytes": _process_peak_rss_bytes(),
             "system_memory_available_bytes": memory["available_bytes"],
             "system_memory_total_bytes": memory["total_bytes"],
+            **_gpu_runtime_resources(),
         }
 
     def write_report(self, report: Mapping[str, Any]) -> Path:

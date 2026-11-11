@@ -25,6 +25,7 @@ from legendar.domain.errors.catalog import (
 )
 from legendar.domain.value_objects.language import Language
 from legendar.domain.value_objects.time import TemporalError, TimeRange
+from legendar.infrastructure.diagnostics.performance import collect_torch_thread_settings
 from legendar.infrastructure.media.waveform import load_pcm_waveform
 
 SUPPORTED_MODELS = frozenset({"tiny", "base", "small", "medium", "large", "turbo"})
@@ -186,6 +187,7 @@ class WhisperTranscriber:
                 "loaded_device": self._device,
                 "fp16": self._device not in (None, "cpu"),
                 "word_timestamps": False,
+                **collect_torch_thread_settings(),
             },
             "counters": counters,
         }
