@@ -139,9 +139,7 @@ def build_ui_dependencies(
         *runtime_details,
     )
 
-    asr_backend = os.environ.get(
-        "LEGENDAR_ASR_BACKEND", "whisper"
-    ).strip().casefold()
+    asr_backend = os.environ.get("LEGENDAR_ASR_BACKEND", "whisper").strip().casefold()
     transcription_configuration_ok = asr_backend in {"whisper", "faster-whisper"}
     try:
         whisper_installed = importlib.util.find_spec("whisper") is not None
@@ -204,13 +202,10 @@ def build_ui_dependencies(
         )
     if asr_backend == "faster-whisper" and not faster_whisper_installed:
         transcription_configuration_ok = False
-    transcription_available = (
-        transcription_configuration_ok
-        and (
-            faster_whisper_installed
-            if asr_backend == "faster-whisper"
-            else whisper_installed
-        )
+    transcription_available = transcription_configuration_ok and (
+        faster_whisper_installed
+        if asr_backend == "faster-whisper"
+        else whisper_installed
     )
 
     try:
