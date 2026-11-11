@@ -195,6 +195,10 @@ def segment_alignment(
             clipped,
             next_start=next_start,
             policy=policy,
+            required_duration=max(
+                policy.min_cue_duration,
+                policy.reading_time(text),
+            ),
         )
         last_end = clipped.end
         cue = SubtitleCue(
@@ -241,6 +245,7 @@ def _extend_into_safe_silence(
     *,
     next_start: float | None,
     policy: SegmentationPolicy,
+    required_duration: float,
 ) -> TimeRange:
     """Estende cue curta somente no silêncio antes da próxima fala/cue.
 
@@ -256,7 +261,7 @@ def _extend_into_safe_silence(
     )
     target_end = min(
         safe_end,
-        window.start + policy.min_cue_duration,
+        window.start + min(required_duration, policy.max_cue_duration),
     )
     if target_end <= window.end:
         return window
