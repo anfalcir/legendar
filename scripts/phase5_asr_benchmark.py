@@ -379,14 +379,13 @@ def main() -> int:
             "status": "failed",
             "classification": "asr_comparison_not_product_acceptance",
             "error_type": type(exc).__name__,
-            "error": str(exc),
         }
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
             json.dumps(failure, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-        print(json.dumps(failure, ensure_ascii=False, indent=2), file=sys.stderr)
+        print(f"{type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
