@@ -368,8 +368,8 @@ def test_global_stream_rejects_out_of_order_fallback_segment_ranges():
 
 def test_fallback_segment_is_preserved_and_blocks_cross_segment_grouping():
     first = _segment(_word("antes", 0.0, 0.3))
-    fallback = TranscriptSegment(text="intermediário", range=TimeRange(0.5, 0.8))
-    last = _segment(_word("depois", 1.0, 1.3))
+    fallback = TranscriptSegment(text="intermediário", range=TimeRange(1.0, 2.0))
+    last = _segment(_word("depois", 3.0, 4.0))
 
     result = segment_alignment(_alignment(first, fallback, last))
 
