@@ -31,7 +31,7 @@ def test_local_manifest_supports_performance_only_audio(tmp_path: Path) -> None:
     audio.write_bytes(b"placeholder")
     manifest = tmp_path / "manifest.tsv"
     manifest.write_text(
-        "language\\taudio\\treference\\npt-BR\\tsermon.wav\\t\\n",
+        "language\taudio\treference\npt-BR\tsermon.wav\t\n",
         encoding="utf-8",
     )
 
@@ -52,7 +52,7 @@ def test_local_manifest_preserves_optional_human_reference(tmp_path: Path) -> No
     audio.write_bytes(b"placeholder")
     manifest = tmp_path / "manifest.tsv"
     manifest.write_text(
-        "language\\taudio\\treference\\npt-BR\\tsermon.wav\\tTexto revisado.\\n",
+        "language\taudio\treference\npt-BR\tsermon.wav\tTexto revisado.\n",
         encoding="utf-8",
     )
 
@@ -63,7 +63,7 @@ def test_local_manifest_preserves_optional_human_reference(tmp_path: Path) -> No
 
 def test_local_manifest_requires_language_and_audio_columns(tmp_path: Path) -> None:
     manifest = tmp_path / "manifest.tsv"
-    manifest.write_text("language\\treference\\npt-BR\\tTexto.\\n", encoding="utf-8")
+    manifest.write_text("language\treference\npt-BR\tTexto.\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="colunas language e audio"):
         _load_local_manifest(manifest)
