@@ -71,6 +71,7 @@ def make_aligner(
     loader_calls: list | None = None,
     model_error: Exception | None = None,
     waveform: FakeWaveform | None = None,
+    align_function_override=None,
     **kwargs,
 ) -> WhisperXAligner:
     model_calls = loader_calls if loader_calls is not None else []
@@ -84,7 +85,7 @@ def make_aligner(
             raise model_error
         return fake_model, fake_metadata
 
-    def align_function(
+    def default_align_function(
         segments, model, metadata, audio, device, *, progress_callback=None
     ):
         align_calls.append((segments, model, metadata, audio, device))
@@ -101,7 +102,7 @@ def make_aligner(
         tmp_path / "models",
         device="cpu",
         model_loader=loader,
-        align_function=align_function,
+        align_function=align_function_override or default_align_function,
         device_resolver=lambda requested: requested,
         audio_loader=lambda _audio: waveform or FakeWaveform(),
         version_provider=lambda: "3.8.6",
@@ -194,7 +195,7 @@ def test_unmatched_word_gets_one_controlled_wider_window_recovery(tmp_path: Path
 
     aligner = make_aligner(
         tmp_path,
-        align_function=recoverable_align,
+        align_function_override=recoverable_align,
         recovery_padding_seconds=0.75,
     )
 
