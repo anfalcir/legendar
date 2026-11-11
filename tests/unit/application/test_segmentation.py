@@ -384,3 +384,4 @@ def test_fallback_segment_is_preserved_and_blocks_cross_segment_grouping():
         (2,),
     ]
     assert result.dropped_segments == ()
+    assert result.is_lossless
