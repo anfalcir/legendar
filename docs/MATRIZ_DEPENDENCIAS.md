@@ -96,6 +96,7 @@ O adaptador `GeminiTranslator` usa HTTPS via biblioteca padrão `urllib`; não a
 
 Avaliar:
 - disponibilidade e estabilidade do modelo configurado (padrão atual `gemini-3.8-flash`);
+- grounding Google Search não está disponível no `gemini-3.8-flash`; a opção é limitada no adaptador ao `gemini-3.5-flash-lite`;
 - latência, tokens, retries, throughput e limites de requisição;
 - qualidade PT-BR, nomes próprios, termos de universo e consistência entre cues;
 - privacidade e política de tratamento de conteúdo no provedor;
