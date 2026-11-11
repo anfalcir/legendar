@@ -248,3 +248,55 @@ def test_cues_never_exceed_the_character_limit_per_cue():
     result = segment_alignment(_alignment(segment))
 
     assert all(len(cue.text) <= 84 for cue in result.track.cues)
+
+
+
+def test_continuous_speech_merges_across_asr_segment_boundaries():
+    first = _segment(_word("esta", 0.0, 0.3), _word("é", 0.31, 0.45))
+    second = _segment(_word("uma", 0.46, 0.7), _word("frase.", 0.71, 1.1))
+
+    result = segment_alignment(_alignment(first, second))
+
+    assert result.cue_count == 1
+    cue = result.track.cues[0]
+    assert cue.text == "esta é uma frase."
+    assert cue.source_segments == (0, 1)
+    assert "cross_segment_merge" in result.diagnostics
+
+
+def test_global_stream_keeps_pause_as_boundary_across_segments():
+    first = _segment(_word("primeira", 0.0, 0.4), _word("parte.", 0.41, 0.8))
+    second = _segment(_word("segunda", 2.0, 2.4), _word("parte.", 2.41, 2.8))
+
+    result = segment_alignment(_alignment(first, second))
+
+    assert [cue.text for cue in result.track.cues] == [
+        "primeira parte.",
+        "segunda parte.",
+    ]
+    assert [cue.source_segments for cue in result.track.cues] == [(0,), (1,)]
+
+
+def test_global_stream_preserves_all_source_segments_when_split():
+    first = _segment(_word("palavra", 0.0, 0.25), _word("palavra", 0.3, 0.55))
+    second = _segment(_word("palavra", 0.6, 0.85), _word("palavra", 0.9, 1.15))
+
+    result = segment_alignment(_alignment(first, second))
+
+    assert " ".join(cue.text for cue in result.track.cues) == (
+        "palavra palavra palavra palavra"
+    )
+    assert set(source for cue in result.track.cues for source in cue.source_segments) == {
+        0,
+        1,
+    }
+
+
+def test_global_stream_rejects_non_chronological_aligned_words():
+    first = _segment(_word("primeiro", 1.0, 1.3))
+    second = _segment(_word("segundo", 0.5, 0.8))
+
+    from legendar.domain.errors.catalog import SrtValidationError
+
+    with pytest.raises(SrtValidationError, match="ordem cronológica"):
+        segment_alignment(_alignment(first, second))
