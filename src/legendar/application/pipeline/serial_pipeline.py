@@ -315,9 +315,15 @@ class SerialPipeline:
         stage.report(1.0, "Legendas segmentadas")
         if segmentation.track.is_empty:
             raise AlignmentInsufficientError("Não foi possível gerar legendas.")
-        if segmentation.has_dropped_segments:
+        dropped_content_count = sum(
+            1
+            for index in segmentation.dropped_segments
+            if index < len(alignment.transcript.segments)
+            and alignment.transcript.segments[index].text.strip()
+        )
+        if dropped_content_count:
             warnings.append(
-                f"{len(segmentation.dropped_segments)} segmento(s) sem tempo descartado(s)."
+                f"{dropped_content_count} segmento(s) com conteúdo sem tempo foram descartados."
             )
 
         # 6. Tradução opcional (preserva tempos)
@@ -333,7 +339,7 @@ class SerialPipeline:
         # 7. Validação estrutural do trilho final
         with performance.measure("srt_validation"):
             quality_report = self._validate(
-                track, media_info, enter, warnings, segmentation,
+                track, media_info, enter, warnings, dropped_content_count,
                 source_track if request.translate else None,
             )
         performance.set_count("warning_count", len(warnings))
@@ -417,14 +423,14 @@ class SerialPipeline:
         media_info: MediaInfo,
         enter: Callable[[JobState], ScaledProgress],
         warnings: list[str],
-        segmentation: SegmentationResult,
+        content_loss_count: int,
         source_track: SubtitleTrack | None,
     ) -> TrackValidationReport:
         stage = enter(JobState.VALIDATING_SRT)
         report = validate_track(
             track,
             media_duration=media_info.duration_seconds,
-            content_loss_count=len(segmentation.dropped_segments),
+            content_loss_count=content_loss_count,
             source_track=source_track,
         )
         warnings.extend(report.warnings)
