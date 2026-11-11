@@ -110,6 +110,9 @@ jobs:
     timeout-minutes: 10
     env:
       QT_QPA_PLATFORM: offscreen
+      # Documentation tests do not exercise the GUI; avoid importing Qt via
+      # pytest-qt auto-discovery and requiring native display libraries here.
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
