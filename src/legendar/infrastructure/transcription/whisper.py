@@ -9,7 +9,6 @@ from __future__ import annotations
 import math
 import os
 import threading
-import wave
 from collections.abc import Callable, Mapping
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path

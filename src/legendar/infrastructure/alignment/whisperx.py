@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import math
 import os
-from numbers import Real
 import threading
 from collections.abc import Callable, Mapping, Sequence
 from importlib.metadata import PackageNotFoundError, version
+from numbers import Real
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +30,7 @@ from legendar.domain.errors.catalog import (
     ModelError,
     UnsupportedLanguageError,
 )
-from legendar.domain.value_objects.time import TemporalError, TimeRange, TimelineMapping
+from legendar.domain.value_objects.time import TemporalError, TimelineMapping, TimeRange
 from legendar.infrastructure.transcription.whisper import load_pcm_waveform
 
 SUPPORTED_DEVICES = frozenset({"auto", "cpu", "cuda"})
@@ -420,7 +420,11 @@ class WhisperXAligner:
                 "text": source_segment.text,
             }
 
-            def on_alignment_progress(percent: float) -> None:
+            def on_alignment_progress(
+                percent: float,
+                *,
+                current_segment_index: int = segment_index,
+            ) -> None:
                 measured = _finite_number(percent)
                 fraction = (
                     min(1.0, max(0.0, measured / 100.0))
@@ -428,8 +432,8 @@ class WhisperXAligner:
                     else 0.0
                 )
                 progress.report(
-                    (segment_index + fraction) / total_segments,
-                    f"Alinhando segmento {segment_index + 1}/{total_segments}",
+                    (current_segment_index + fraction) / total_segments,
+                    f"Alinhando segmento {current_segment_index + 1}/{total_segments}",
                 )
 
             try:

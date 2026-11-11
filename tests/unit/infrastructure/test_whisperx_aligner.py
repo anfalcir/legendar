@@ -13,6 +13,9 @@ from legendar.domain.value_objects.time import TimeRange
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 
 
+DEFAULT_ALIGNMENT_WINDOW = TimeRange(0.0, 2.0)
+
+
 class FakeWaveform:
     def __init__(self, sample_count: int = 48_000) -> None:
         self.size = sample_count
@@ -46,7 +49,7 @@ def make_transcript(
     *,
     language: Language = Language.PORTUGUESE,
     text: str = "Olá mundo",
-    window: TimeRange | None = TimeRange(0.0, 2.0),
+    window: TimeRange | None = DEFAULT_ALIGNMENT_WINDOW,
 ) -> Transcript:
     return Transcript(
         segments=(

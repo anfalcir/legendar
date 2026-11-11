@@ -490,7 +490,8 @@ def main() -> int:
 
 def _peak_rss_bytes() -> int | None:
     try:
-        
+        import resource
+
         peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     except (ImportError, AttributeError, OSError):
         return None

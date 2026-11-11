@@ -6,12 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from legendar.domain.value_objects.language import LanguageError
 from scripts.phase5_alignment_evaluation import (
     _error_summary,
     _percentile,
     _read_manifest,
 )
+
+from legendar.domain.value_objects.language import LanguageError
 
 
 def _make_wave(path: Path) -> None:

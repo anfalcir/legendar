@@ -7,12 +7,12 @@ from pathlib import Path
 from legendar.application.pipeline.serial_pipeline import SerialPipeline
 from legendar.bootstrap.app import build_ui_dependencies
 from legendar.domain.value_objects.language import Language
+from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.settings import AppSettings
 from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus
 from legendar.infrastructure.media.youtube import YtDlpDownloader
-from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 
 
