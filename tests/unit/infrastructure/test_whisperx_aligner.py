@@ -172,6 +172,53 @@ def test_unaligned_word_is_not_interpolated_or_given_a_timestamp(
     assert not result.is_complete
 
 
+def test_unmatched_word_gets_one_controlled_wider_window_recovery(tmp_path: Path):
+    calls: list = []
+
+    def recoverable_align(
+        segments, model, metadata, audio, device, *, progress_callback=None
+    ):
+        calls.append(segments)
+        if len(calls) == 1:
+            return {
+                "word_segments": [
+                    {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.9},
+                ]
+            }
+        return {
+            "word_segments": [
+                {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.9},
+                {"word": "mundo", "start": 0.55, "end": 0.8, "score": 0.9},
+            ]
+        }
+
+    aligner = make_aligner(
+        tmp_path,
+        align_function=recoverable_align,
+        recovery_padding_seconds=0.75,
+    )
+
+    result = aligner.align(
+        make_audio(),
+        make_transcript(),
+        progress=ProgressRecorder(),
+    )
+
+    words = result.transcript.segments[0].words
+    assert [word.text for word in words] == ["Olá", "mundo"]
+    assert all(word.is_aligned for word in words)
+    assert result.diagnostics.unmatched_words == ()
+    assert "alignment_recovered" in result.diagnostics.issues
+    assert len(calls) == 2
+    assert calls[0][0]["start"] == pytest.approx(0.0)
+    assert calls[0][0]["end"] == pytest.approx(2.0)
+    assert calls[1][0]["start"] == pytest.approx(0.0)
+    assert calls[1][0]["end"] == pytest.approx(2.0)
+    snapshot = aligner.performance_snapshot()
+    assert snapshot["counters"]["recovery_attempts"] == 1
+    assert snapshot["counters"]["recovered_words"] == 1
+
+
 def test_missing_search_window_does_not_load_or_call_alignment_model(
     tmp_path: Path,
 ) -> None:
