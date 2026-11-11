@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from scripts import phase6_translation_benchmark as benchmark
 
 from legendar.application.pipeline.translation import TranslationResult, TranslationUnit
