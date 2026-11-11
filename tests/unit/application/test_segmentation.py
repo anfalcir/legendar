@@ -286,9 +286,7 @@ def test_global_stream_preserves_all_source_segments_when_split():
         "palavra palavra palavra palavra"
     )
     source_segments = {
-        source
-        for cue in result.track.cues
-        for source in cue.source_segments
+        source for cue in result.track.cues for source in cue.source_segments
     }
     assert source_segments == {0, 1}
 
