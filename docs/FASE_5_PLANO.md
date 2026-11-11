@@ -1,6 +1,6 @@
 # Fase 5 — Benchmark e aceleração da transcrição (ASR)
 
-**Status:** implementação inicial em validação na branch `phase-5/asr-performance`.
+**Status:** implementação técnica concluída e integrada à `main` pela PR #12 (`57f68985f1156b1d0c693f4b7d80e6aea145a8d0`). A homologação operacional no hardware-alvo permanece pendente da Fase 8.
 **Objetivo:** reduzir o tempo de reconhecimento sem perda lexical nem quebra do contrato temporal consumido pelo WhisperX.
 
 ## 1. Estratégia
@@ -118,3 +118,12 @@ Smoke CI com poucas amostras comprova integração e não substitui o corpus hum
 - Smoke Whisper + WhisperX: `phase5-alignment-smoke.json`.
 - Smoke faster-whisper + WhisperX: `phase5-faster-whisper-alignment-smoke.json`.
 - Relatórios sanitizados não incluem áudio, texto reconhecido, referências, URLs ou caminhos de mídia.
+
+
+## 8. Fechamento de implementação
+
+- PR [#12](https://github.com/anfalcir/legendar/pull/12) integrada à `main` por squash em `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`.
+- Workflow específico Phase 5 quality aprovado no head da PR.
+- Adaptador faster-whisper, benchmark pareado, smoke WhisperX, testes determinísticos e documentação estão integrados.
+- OpenAI Whisper continua sendo o padrão. A presença de faster-whisper não provoca seleção automática.
+- A medição comparativa no computador de referência com áudio real e referências humanas não foi executada por CI; permanece como aceite operacional na Fase 8.
