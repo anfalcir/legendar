@@ -355,3 +355,13 @@ def test_meaningful_short_sentence_boundary_is_not_merged_with_next_sentence():
         "Isso é muito bom.",
         "Agora vamos seguir.",
     ]
+
+
+def test_global_stream_rejects_out_of_order_fallback_segment_ranges():
+    aligned = _segment(_word("primeiro", 2.0, 2.3))
+    fallback = TranscriptSegment(text="segundo", range=TimeRange(1.0, 1.5))
+
+    from legendar.domain.errors.catalog import SrtValidationError
+
+    with pytest.raises(SrtValidationError, match="Segmentos.*ordem cronológica"):
+        segment_alignment(_alignment(aligned, fallback))
