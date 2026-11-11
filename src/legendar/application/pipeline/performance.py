@@ -82,13 +82,13 @@ class PipelinePerformanceSession:
     def measure(self, name: str) -> Iterator[None]:
         """Mede tempo de parede, CPU do processo e recursos antes/depois."""
         resources_before = _safe_snapshot(self._resource_provider)
-        wall_started = time.perf_counter()
-        cpu_started = time.process_time()
+        wall_started = perf_counter()
+        cpu_started = process_time()
         try:
             yield
         finally:
-            wall_seconds = max(0.0, time.perf_counter() - wall_started)
-            cpu_seconds = max(0.0, time.process_time() - cpu_started)
+            wall_seconds = max(0.0, perf_counter() - wall_started)
+            cpu_seconds = max(0.0, process_time() - cpu_started)
             resources_after = _safe_snapshot(self._resource_provider)
             self._stages.append(
                 {
@@ -140,9 +140,9 @@ class PipelinePerformanceSession:
             "job_id": self.job_id,
             "generated_at_utc": datetime.now(timezone.utc).isoformat(),
             "status": status,
-            "total_wall_seconds": max(0.0, time.perf_counter() - self._started),
+            "total_wall_seconds": max(0.0, perf_counter() - self._started),
             "total_process_cpu_seconds": max(
-                0.0, time.process_time() - self._process_started
+                0.0, process_time() - self._process_started
             ),
             "metadata": self._metadata,
             "counts": self._counts,
