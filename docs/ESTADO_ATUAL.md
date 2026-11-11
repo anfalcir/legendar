@@ -4,10 +4,11 @@
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
 - **Branch de integração:** `main`
 - **Base de início da Fase 1:** `d3530490df466aa6eeff4728b63d7e8dc22f056e`
+- **Fase 1 — instrumentação integrada à `main`:** PR [#8](https://github.com/anfalcir/legendar/pull/8), squash `12e3f40db5fe9b849f1a51715802eea7dba0449e`.
 - **Integração da organização documental e do plano vigente:** PR [#7](https://github.com/anfalcir/legendar/pull/7), squash `a62f4459b76b07aa86f00d22acf663a8f95b7368`, integrada à `main`.
-- **CI da integração:** o job de documentação da PR #7 passou; parte da matriz da PR não chegou a executar testes porque os runners não resolveram os espelhos Ubuntu durante `apt-get`. A nova execução pós-merge da Fase 8 está em andamento ([run #43055692640](https://github.com/anfalcir/legendar/actions/runs/43055692640)). Não considerar a matriz completa aprovada até os jobs terminarem.
+- **CI da Fase 1 (PR #8):** aprovada. Incluiu 492 testes, cobertura de 85,46%, E2E com FFmpeg/Qt em Python 3.10–3.13, smoke OpenAI Whisper PT-BR/EN, smoke NLLB real com Transformers em CPU, matriz multiplataforma, validação documental e os workflows determinísticos relacionados. Os checks de WhisperX benchmark/CUDA foram marcados como skipped pelos critérios do runner, não como falha.
 - **Remodelação arquitetural anterior:** Fases 0–10 integradas à `main`.
-- **Nova frente:** Fase 1 de instrumentação de desempenho em implementação na branch `phase-1/performance-instrumentation`; medição da mídia real ainda pendente.
+- **Nova frente:** instrumentação da Fase 1 integrada à `main`; baseline de desempenho com a mídia real de 37 minutos ainda pendente no equipamento de homologação.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
@@ -21,9 +22,9 @@ A arquitetura e a base de engenharia das Fases 0–10 estão integradas. Uma aud
 
 A prioridade agora é corrigir a integridade e a legibilidade do resultado antes de trocar motores ou reduzir configurações de qualidade. Em paralelo, o novo plano estabelece instrumentação para localizar os gargalos de desempenho e testar otimizações com comparação pareada.
 
-## 2. Estado da Fase 1 — instrumentação
+## 2. Estado da Fase 1 — instrumentação integrada
 
-A implementação em andamento cria medições por etapa no pipeline e métricas internas dos adaptadores, sem trocar Whisper, WhisperX, NLLB, beam, batch, dtype ou política de alinhamento.
+A instrumentação está integrada à `main` (PR #8, squash `12e3f40db5fe9b849f1a51715802eea7dba0449e`). Ela mede cada etapa do pipeline e expõe métricas internas dos adaptadores. Nenhum modelo ou parâmetro de qualidade foi trocado: Whisper, WhisperX, NLLB, beam, batch, dtype e política de alinhamento permanecem iguais.
 
 **Etapas instrumentadas:** aquisição, inspeção, preparação do áudio, transcrição, alinhamento, segmentação, tradução opcional, validação e publicação.
 
@@ -39,7 +40,9 @@ A implementação em andamento cria medições por etapa no pipeline e métricas
 uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
 ```
 
-**Estado da evidência:** testes automatizados de instrumentação estão sendo acrescentados; baseline no equipamento real não foi coletada. O tempo inicial de 60 minutos para 37 minutos continua sendo relato do usuário, não uma medição decomposta. Fase 1 só será considerada concluída quando o inventário atual do equipamento e as rodadas fria/quentes com a mesma mídia/configuração estiverem registrados.
+**Validação automatizada:** 492 testes aprovados; cobertura global de 85,46%; E2E em quatro versões de Python; smoke de reconhecimento Whisper PT-BR/EN; smoke NLLB real em CPU; CI multiplataforma e documentação aprovadas.
+
+**Estado da evidência operacional:** a instrumentação está concluída e integrada, mas a baseline no equipamento real ainda não foi coletada. O tempo inicial de aproximadamente 60 minutos para 37 minutos de áudio continua sendo relato do usuário, não uma medição decomposta. Fase 1 só será considerada concluída após executar o inventário atualizado e as rodadas fria/quentes com a mesma mídia/configuração.
 ## 3. Estado do repositório
 
 | Área | Estado |
@@ -52,11 +55,11 @@ uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
 | Tradução | NLLB-200 distilled 600M via Transformers/PyTorch |
 | Publicação | SRT com round-trip e gravação atômica |
 | Gate editorial | Insuficiente: riscos de leitura podem continuar como avisos |
-| Benchmark por etapa | Ainda não há baseline estruturada e comparável por estágio |
+| Benchmark por etapa | Instrumentação integrada; baseline real comparável ainda pendente |
 | Otimização de motores | Candidatos em avaliação; nenhum motor alternativo adotado |
 | Homologação audiovisual final | Pendente |
 
-## 3. Evidências de qualidade e lacunas conhecidas
+## 4. Evidências de qualidade e lacunas conhecidas
 
 Os módulos auditados incluem:
 

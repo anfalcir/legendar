@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fase 1 em implementação; instrumentação e testes em branch dedicada; baseline real ainda pendente no equipamento de homologação.
+- **Status:** instrumentação da Fase 1 integrada à `main` pela PR [#8](https://github.com/anfalcir/legendar/pull/8), squash `12e3f40db5fe9b849f1a51715802eea7dba0449e`; baseline real ainda pendente no equipamento de homologação.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -241,13 +241,14 @@ Entregas:
 - A instrumentação é best-effort: falha ao escrever o relatório é registrada no log e não altera o resultado do job.
 - Testes unitários cobrem medição, delta de contadores, anonimização, permissões e integração com o pipeline.
 
+**Integração e validação de código:** concluídas pela PR [#8](https://github.com/anfalcir/legendar/pull/8), squash `12e3f40db5fe9b849f1a51715802eea7dba0449e`. CI aprovada com 492 testes, cobertura de 85,46%, E2E FFmpeg/Qt em Python 3.10–3.13, smoke Whisper PT-BR/EN, smoke NLLB real em CPU, matriz multiplataforma e validação documental.
+
 **Pendências para concluir a Fase 1:**
 
-1. Integrar a implementação à `main` após a suíte completa passar.
-2. Executar `scripts/phase0_inventory.py --probe-torch` no equipamento real de homologação e revisar o inventário atualizado.
-3. Processar a mídia real de 37 minutos com a mesma configuração da execução reportada, capturando uma execução fria e pelo menos três execuções quentes.
-4. Repetir o protocolo com uma amostra menor representativa e conferir se a soma das etapas explica o tempo total, considerando overhead residual.
-5. Consolidar a mediana/dispersão, RTF, pico RSS, tokens/s e etapa dominante; registrar a baseline real em `docs/ESTADO_ATUAL.md`.
+1. Executar `scripts/phase0_inventory.py --probe-torch` no equipamento real de homologação e revisar o inventário atualizado.
+2. Processar a mídia real de 37 minutos com a mesma configuração da execução reportada, capturando uma execução fria e pelo menos três execuções quentes.
+3. Repetir o protocolo com uma amostra menor representativa e conferir se a soma das etapas explica o tempo total, considerando overhead residual.
+4. Consolidar mediana/dispersão, RTF, pico RSS, throughput e etapa dominante; registrar a baseline real em `docs/ESTADO_ATUAL.md`.
 
 **Critério de conclusão:** baseline reproduzível com a decomposição temporal de todos os estágios, sem mudar a qualidade ou o motor do produto. A instrumentação no código, isoladamente, não conclui a Fase 1 nem substitui a medição da mídia real.
 

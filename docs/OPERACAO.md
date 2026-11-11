@@ -86,6 +86,26 @@ uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
 
 O resumo apresenta tempo e RTF por etapa, estado de carga dos modelos (`cold`, `warm` ou `unused`) e throughput de geração NLLB quando disponível. Uma execução fria carrega o modelo sob demanda; a carga e eventual download são medidos separadamente da inferência.
 
-Para comparar o áudio de referência, mantenha constantes arquivo, idioma, tradução, modelo, cache e equipamento. Registre uma execução fria e depois faça pelo menos três execuções quentes. Evite usar o computador para tarefas pesadas durante as rodadas. O valor de RTF total deverá ser comparado com a mesma configuração e com o tempo de mídia idêntico.
+### Protocolo prático para a mídia de 37 minutos
+
+1. Atualize o projeto para a `main` que contém a PR #8 e abra o Legendar normalmente.
+2. Gere o inventário atual do equipamento, na raiz do repositório:
+
+   ```bash
+   uv run --locked --no-sync python scripts/phase0_inventory.py --probe-torch --output phase1-inventory.json
+   ```
+
+3. Feche e reabra o Legendar antes da rodada fria. Execute o áudio de referência com o idioma, a opção de tradução e o mesmo modelo/configuração usados na execução original. A primeira execução registra a carga sob demanda dos modelos (e eventual acesso ao cache).
+4. Sem fechar o aplicativo, execute o mesmo arquivo mais três vezes. Como os adaptadores permanecem carregados na instância do aplicativo, essas rodadas serão quentes.
+5. Não altere arquivo, idioma, tradução, modelo, cache ou equipamento entre as quatro rodadas. Evite tarefas pesadas paralelas.
+6. Consulte os resultados:
+
+   ```bash
+   uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
+   ```
+
+O relatório de cada job fica em `~/.cache/legendar/logs/performance/`. Envie os JSONs dessas quatro execuções (e, se possível, o inventário) para análise. Eles não incluem áudio, transcrição, texto SRT, URL ou caminho pessoal do arquivo. O inventário também não contém conteúdo de mídia; ainda assim, compartilhe-o apenas se estiver confortável em revelar o modelo de CPU/GPU, RAM e versões do ambiente.
+
+Evite comparar uma execução fria com uma quente como se fossem equivalentes. A carga de modelo é exibida separadamente da inferência; para identificar o gargalo de uso contínuo, considere principalmente as três execuções quentes.
 
 Consulte [homologação](HOMOLOGACAO.md) e [estado atual](ESTADO_ATUAL.md).
