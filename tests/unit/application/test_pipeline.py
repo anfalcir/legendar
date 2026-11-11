@@ -367,3 +367,78 @@ def test_alignment_diagnostics_are_propagated_as_pipeline_warnings(
     result = pipeline.execute(_request(), job_context)
 
     assert "Anomalias no alinhamento: overlap." in result.warnings
+
+
+class PerformanceReporterFake:
+    def __init__(self) -> None:
+        self.reports: list[dict] = []
+
+    def capture_resources(self) -> dict[str, int]:
+        return {"process_rss_bytes": 1024, "system_memory_available_bytes": 4096}
+
+    def write_report(self, report) -> None:
+        self.reports.append(dict(report))
+
+
+def test_pipeline_records_sanitized_stage_timings_and_counts(job_context):
+    ports = {
+        "inspector": FakeInspector(),
+        "audio_preparer": FakeAudioPreparer(),
+        "transcriber": FakeTranscriber(),
+        "aligner": FakeAligner(),
+        "publisher": FakePublisher(),
+    }
+    reporter = PerformanceReporterFake()
+    pipeline = SerialPipeline(
+        PipelinePorts(**ports),
+        performance_reporter=reporter,
+    )
+
+    result = pipeline.execute(_request(), job_context)
+
+    assert result.output_path == str(job_context.output_path)
+    assert len(reporter.reports) == 1
+    report = reporter.reports[0]
+    assert report["status"] == "completed"
+    assert report["metadata"]["media_duration_seconds"] == 12.0
+    assert report["metadata"]["audio_duration_seconds"] == 12.0
+    assert [stage["name"] for stage in report["stages"]] == [
+        "media_acquisition",
+        "media_inspection",
+        "audio_preparation",
+        "transcription",
+        "alignment",
+        "segmentation",
+        "srt_validation",
+        "srt_publication",
+    ]
+    assert report["counts"]["recognized_words"] == 2
+    assert report["counts"]["aligned_words"] == 2
+    assert report["counts"]["subtitle_cues"] >= 1
+    assert all(stage["wall_seconds"] >= 0 for stage in report["stages"])
+    serialized = __import__("json").dumps(report)
+    assert "/tmp/aula.mp4" not in serialized
+    assert "hello world" not in serialized
+
+
+def test_pipeline_reports_failure_without_exception_message(job_context):
+    reporter = PerformanceReporterFake()
+    pipeline = SerialPipeline(
+        PipelinePorts(
+            inspector=FakeInspector(info=make_media_info(audio=False)),
+            audio_preparer=FakeAudioPreparer(),
+            transcriber=FakeTranscriber(),
+            aligner=FakeAligner(),
+            publisher=FakePublisher(),
+        ),
+        performance_reporter=reporter,
+    )
+
+    with pytest.raises(InvalidInputError):
+        pipeline.execute(_request(), job_context)
+
+    assert len(reporter.reports) == 1
+    report = reporter.reports[0]
+    assert report["status"] == "failed"
+    assert report["error_type"] == "InvalidInputError"
+    assert "exception_message" not in report

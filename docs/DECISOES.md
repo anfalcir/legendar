@@ -36,6 +36,7 @@
 | 28 | Idiomas da GUI | Falado e final independentes; tradução opcional | seleção de idioma não é perdida |
 | 29 | Layout da janela | Página única compacta, duas colunas em largura suficiente | interface se adapta a janelas menores |
 | 30 | Cache privado | Diretórios privados `0o700` | NLTK pode preparar `punkt_tab` em cache privado |
+| 31 | Telemetria de desempenho | Instrumentação local via porta `PerformanceReporter`; relatório JSON privado, sem mídia ou texto e sem envio externo | Não afeta o resultado do job; métricas servem à baseline comparável da Fase 1 |
 
 ## Decisões da Fase 10 (D1–D6)
 

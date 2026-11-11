@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from collections.abc import Callable, Sequence
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -29,6 +30,9 @@ from legendar.domain.errors.catalog import (
     UnsupportedLanguageError,
 )
 from legendar.domain.value_objects.language import Language
+from legendar.infrastructure.diagnostics.performance import (
+    collect_torch_thread_settings,
+)
 
 MODEL_NAME = "facebook/nllb-200-distilled-600M"
 DEFAULT_DEVICE = "auto"
@@ -127,10 +131,12 @@ def _run_nllb_batch(
     *,
     source_code: str,
     target_code: str,
+    metrics_callback: Callable[[str, int | float], None] | None = None,
 ) -> Sequence[str]:
     """Inferência de um lote com token de origem e de destino explícitos."""
     torch = _import_torch()
     tokenizer.src_lang = source_code
+    phase_started = time.perf_counter()
     encoded = tokenizer(
         list(texts),
         return_tensors="pt",
@@ -138,12 +144,26 @@ def _run_nllb_batch(
         truncation=True,
         max_length=MAX_INPUT_TOKENS,
     )
+    if metrics_callback is not None:
+        metrics_callback("tokenization_seconds", time.perf_counter() - phase_started)
+        attention_mask = encoded.get("attention_mask")
+        input_ids = encoded.get("input_ids")
+        if attention_mask is not None:
+            metrics_callback("input_tokens", int(attention_mask.sum().item()))
+        if input_ids is not None:
+            metrics_callback("padded_input_tokens", int(input_ids.numel()))
+
     device = _model_device(model)
+    phase_started = time.perf_counter()
     inputs = {name: value.to(device) for name, value in encoded.items()}
+    if metrics_callback is not None:
+        metrics_callback("device_transfer_seconds", time.perf_counter() - phase_started)
+
     bos_token_id = tokenizer.convert_tokens_to_ids(target_code)
     if not isinstance(bos_token_id, int) or bos_token_id < 0:
         raise ModelError(f"Token de idioma NLLB inválido: {target_code!r}")
     input_length = int(inputs["input_ids"].shape[1])
+    phase_started = time.perf_counter()
     with torch.inference_mode():
         generated = model.generate(
             **inputs,
@@ -151,7 +171,15 @@ def _run_nllb_batch(
             max_new_tokens=min(MAX_NEW_TOKENS, input_length * 2 + 8),
             num_beams=NUM_BEAMS,
         )
-    return tuple(tokenizer.batch_decode(generated, skip_special_tokens=True))
+    if metrics_callback is not None:
+        metrics_callback("generation_seconds", time.perf_counter() - phase_started)
+        metrics_callback("generated_tokens", int(generated.numel()))
+
+    phase_started = time.perf_counter()
+    decoded = tuple(tokenizer.batch_decode(generated, skip_special_tokens=True))
+    if metrics_callback is not None:
+        metrics_callback("batch_decode_seconds", time.perf_counter() - phase_started)
+    return decoded
 
 
 class NllbTranslator:
@@ -201,6 +229,23 @@ class NllbTranslator:
         self._model: Any | None = None
         self._device: str | None = None
         self._revision: str | None = None
+        self._metrics_lock = threading.Lock()
+        self._metrics: dict[str, int | float] = {
+            "model_load_attempts": 0,
+            "model_load_successes": 0,
+            "model_load_seconds": 0.0,
+            "batch_calls": 0,
+            "batch_units": 0,
+            "max_batch_units": 0,
+            "batch_inference_seconds": 0.0,
+            "tokenization_seconds": 0.0,
+            "device_transfer_seconds": 0.0,
+            "generation_seconds": 0.0,
+            "batch_decode_seconds": 0.0,
+            "input_tokens": 0,
+            "padded_input_tokens": 0,
+            "generated_tokens": 0,
+        }
 
     @classmethod
     def from_environment(cls, models_dir: Path) -> NllbTranslator:
@@ -227,6 +272,37 @@ class NllbTranslator:
     @property
     def batch_size(self) -> int:
         return self._batch_size
+
+    def performance_snapshot(self) -> dict[str, Any]:
+        """Snapshot acumulado de inferência, sem textos de entrada/saída."""
+        with self._metrics_lock:
+            counters = dict(self._metrics)
+        return {
+            "loaded": self.is_loaded,
+            "configuration": {
+                "adapter": "nllb-transformers",
+                "model": self.model_name,
+                "package_version": self._revision or self._version_provider(),
+                "requested_device": self.requested_device,
+                "loaded_device": self._device,
+                "batch_size": self._batch_size,
+                "num_beams": NUM_BEAMS,
+                "max_input_tokens": MAX_INPUT_TOKENS,
+                "max_new_tokens": MAX_NEW_TOKENS,
+                "dtype": str(getattr(self._model, "dtype", "unknown"))
+                if self._model is not None
+                else None,
+                **collect_torch_thread_settings(),
+            },
+            "counters": counters,
+        }
+
+    def _record_metric(self, name: str, value: int | float) -> None:
+        with self._metrics_lock:
+            if name == "max_batch_units":
+                self._metrics[name] = max(self._metrics.get(name, 0), value)
+            else:
+                self._metrics[name] = self._metrics.get(name, 0) + value
 
     def translate(
         self,
@@ -284,7 +360,20 @@ class NllbTranslator:
         target_code: str,
     ) -> Sequence[str]:
         tokenizer, model = self._ensure_model()
+        self._record_metric("batch_calls", 1)
+        self._record_metric("batch_units", len(texts))
+        self._record_metric("max_batch_units", len(texts))
+        batch_started = time.perf_counter()
         try:
+            if self._batch_translator is _run_nllb_batch:
+                return self._batch_translator(
+                    texts,
+                    tokenizer,
+                    model,
+                    source_code=source_code,
+                    target_code=target_code,
+                    metrics_callback=self._record_metric,
+                )
             return self._batch_translator(
                 texts,
                 tokenizer,
@@ -296,6 +385,10 @@ class NllbTranslator:
             raise
         except Exception as exc:
             raise TranslationError(f"Falha ao traduzir com NLLB: {exc}") from exc
+        finally:
+            self._record_metric(
+                "batch_inference_seconds", time.perf_counter() - batch_started
+            )
 
     def _ensure_model(self) -> tuple[Any, Any]:
         if self._tokenizer is not None and self._model is not None:
@@ -304,6 +397,8 @@ class NllbTranslator:
         with self._lock:
             if self._tokenizer is not None and self._model is not None:
                 return self._tokenizer, self._model
+            load_started = time.perf_counter()
+            self._record_metric("model_load_attempts", 1)
             try:
                 device = self._device or self._device_resolver(self.requested_device)
                 self.download_root.mkdir(parents=True, exist_ok=True)
@@ -317,7 +412,12 @@ class NllbTranslator:
                     f"Não foi possível carregar o modelo de tradução "
                     f"{self.model_name}: {exc}"
                 ) from exc
+            finally:
+                self._record_metric(
+                    "model_load_seconds", time.perf_counter() - load_started
+                )
 
+            self._record_metric("model_load_successes", 1)
             self._tokenizer = tokenizer
             self._model = model
             self._device = device

@@ -11,6 +11,7 @@ import contextlib
 import math
 import os
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from importlib.metadata import PackageNotFoundError, version
 from numbers import Real
@@ -32,6 +33,9 @@ from legendar.domain.errors.catalog import (
     UnsupportedLanguageError,
 )
 from legendar.domain.value_objects.time import TemporalError, TimelineMapping, TimeRange
+from legendar.infrastructure.diagnostics.performance import (
+    collect_torch_thread_settings,
+)
 from legendar.infrastructure.filesystem.paths import ensure_private_directory
 from legendar.infrastructure.transcription.whisper import load_pcm_waveform
 
@@ -239,6 +243,20 @@ class WhisperXAligner:
         self._inference_lock = threading.Lock()
         self._punkt_lock = threading.Lock()
         self._punkt_ready: set[str] = set()
+        self._metrics_lock = threading.Lock()
+        self._metrics: dict[str, int | float] = {
+            "model_load_attempts": 0,
+            "model_load_successes": 0,
+            "model_load_seconds": 0.0,
+            "punkt_preparations": 0,
+            "punkt_preparation_seconds": 0.0,
+            "waveform_load_seconds": 0.0,
+            "alignment_calls": 0,
+            "alignment_seconds": 0.0,
+            "aligned_words": 0,
+            "unmatched_words": 0,
+            "input_segments": 0,
+        }
 
     @classmethod
     def from_environment(cls, models_dir: Path) -> WhisperXAligner:
@@ -259,6 +277,31 @@ class WhisperXAligner:
     def revision(self) -> str | None:
         return self._revision
 
+    def performance_snapshot(self) -> dict[str, Any]:
+        """Snapshot acumulado de alinhamento, sem conteúdo de transcrição."""
+        with self._metrics_lock:
+            counters = dict(self._metrics)
+        return {
+            "loaded": bool(self._models),
+            "configuration": {
+                "adapter": "whisperx",
+                "package_version": self._revision or self._version_provider(),
+                "requested_device": self.requested_device,
+                "loaded_device": self._device,
+                "loaded_languages": sorted(self._models),
+                "alignment_models": dict(ALIGNMENT_MODELS),
+                "max_window_seconds": self._max_window_seconds,
+                "interpolate_method": "ignore",
+                "dtype": "backend_default",
+                **collect_torch_thread_settings(),
+            },
+            "counters": counters,
+        }
+
+    def _record_metric(self, name: str, value: int | float) -> None:
+        with self._metrics_lock:
+            self._metrics[name] = self._metrics.get(name, 0) + value
+
     def _get_model(self, language_code: str) -> tuple[Any, Mapping[str, Any], str]:
         if language_code in self._models and self._device is not None:
             model, metadata = self._models[language_code]
@@ -273,6 +316,8 @@ class WhisperXAligner:
                 raise UnsupportedLanguageError(
                     f"Idioma sem modelo de alinhamento: {language_code!r}."
                 )
+            load_started = time.perf_counter()
+            self._record_metric("model_load_attempts", 1)
             try:
                 device = self._device or self._device_resolver(self.requested_device)
                 self.download_root.mkdir(parents=True, exist_ok=True)
@@ -289,7 +334,12 @@ class WhisperXAligner:
                     f"Não foi possível carregar o modelo WhisperX para "
                     f"{language_code}: {exc}"
                 ) from exc
+            finally:
+                self._record_metric(
+                    "model_load_seconds", time.perf_counter() - load_started
+                )
 
+            self._record_metric("model_load_successes", 1)
             self._device = device
             self._revision = revision
             self._models[language_code] = (model, metadata)
@@ -301,6 +351,8 @@ class WhisperXAligner:
         with self._punkt_lock:
             if language_code in self._punkt_ready:
                 return
+            preparation_started = time.perf_counter()
+            self._record_metric("punkt_preparations", 1)
             try:
                 self._punkt_preparer(
                     language_code,
@@ -312,6 +364,11 @@ class WhisperXAligner:
                 raise ModelError(
                     f"Não foi possível preparar o tokenizador de frases: {exc}"
                 ) from exc
+            finally:
+                self._record_metric(
+                    "punkt_preparation_seconds",
+                    time.perf_counter() - preparation_started,
+                )
             self._punkt_ready.add(language_code)
 
     def align(
@@ -327,6 +384,7 @@ class WhisperXAligner:
         if transcript.is_empty:
             raise ModelError("Não há texto para alinhar.")
 
+        waveform_load_started = time.perf_counter()
         try:
             waveform = self._audio_loader(audio)
         except ModelError:
@@ -335,6 +393,11 @@ class WhisperXAligner:
             raise ModelError(
                 f"Não foi possível carregar o áudio para alinhamento: {exc}"
             ) from exc
+        finally:
+            self._record_metric(
+                "waveform_load_seconds",
+                time.perf_counter() - waveform_load_started,
+            )
 
         waveform_size = getattr(waveform, "size", None)
         if waveform_size is None:
@@ -445,6 +508,9 @@ class WhisperXAligner:
                     f"Alinhando segmento {current_segment_index + 1}/{total_segments}",
                 )
 
+            alignment_started = time.perf_counter()
+            self._record_metric("alignment_calls", 1)
+            self._record_metric("input_segments", 1)
             try:
                 with self._inference_lock:
                     if token is not None:
@@ -467,6 +533,10 @@ class WhisperXAligner:
                 raise ModelError(
                     f"Falha no forced alignment do segmento {segment_index + 1}: {exc}"
                 ) from exc
+            finally:
+                self._record_metric(
+                    "alignment_seconds", time.perf_counter() - alignment_started
+                )
 
             if not isinstance(result, Mapping):
                 raise ModelError("WhisperX retornou alinhamento em formato inválido.")
@@ -610,6 +680,8 @@ class WhisperXAligner:
         )
         if token is not None:
             token.raise_if_cancelled()
+        self._record_metric("aligned_words", aligned_word_count)
+        self._record_metric("unmatched_words", len(unmatched_words))
         progress.report(1.0, "Forced alignment WhisperX concluído")
         return AlignmentResult(
             transcript=aligned_transcript,

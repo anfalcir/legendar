@@ -3,8 +3,8 @@
 - **Documento:** plano vigente de engenharia, critérios de aceite e handoff de execução.
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
-- **Base da auditoria:** `main` em `85aa832954aa539d2c8e96a4335608f958e88776`.
-- **Status:** plano documentado; implementação das fases de correção ainda não iniciada.
+- **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
+- **Status:** Fase 1 em implementação; instrumentação e testes em branch dedicada; baseline real ainda pendente no equipamento de homologação.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -230,7 +230,26 @@ Entregas:
 
 **Protocolo comparativo:** mesma mídia, hardware, versão, idioma, destino, cache e configuração; pelo menos três execuções quentes por candidato quando viável; comparar mediana, dispersão e pico de memória. Registrar a execução fria separadamente.
 
-**Critério de conclusão:** baseline reproduzível com a decomposição temporal de todos os estágios, sem mudar a qualidade ou o motor do produto.
+**Implementação da Fase 1 (11/11/2026):**
+
+- Criada instrumentação monotônica no pipeline para aquisição, inspeção, preparação do áudio, transcrição, alinhamento, segmentação, tradução opcional, validação e publicação.
+- O relatório registra tempo de parede e CPU do processo por etapa, snapshots de RSS/memória disponível antes/depois, duração da mídia, contagens de segmentos/palavras/cues/avisos e status de conclusão, falha ou cancelamento.
+- Os adaptadores Whisper, WhisperX e NLLB expõem snapshots numéricos sanitizados. O custo de carregamento (incluindo eventual download/cache frio) é separado do custo de inferência; o alinhador acumula o custo de cada chamada por segmento; NLLB separa tokenização, transferência, geração e decodificação.
+- O relatório local inclui CPU, núcleos físicos/lógicos quando detectáveis, RAM, adaptadores gráficos, versões relevantes, ferramentas FFmpeg/ffprobe e configuração de modelo/dispositivo/beam/batch.
+- Relatórios ficam em `~/.cache/legendar/logs/performance/`, com diretório privado e arquivos `0600`. Não são enviados à rede e não incluem mídia, transcrição, texto de legenda, URL, caminho da mídia, mensagem de exceção ou credenciais.
+- O resumo `scripts/phase1_performance_summary.py` calcula tempos e RTF por etapa e destaca o throughput de geração da tradução quando mensurável.
+- A instrumentação é best-effort: falha ao escrever o relatório é registrada no log e não altera o resultado do job.
+- Testes unitários cobrem medição, delta de contadores, anonimização, permissões e integração com o pipeline.
+
+**Pendências para concluir a Fase 1:**
+
+1. Integrar a implementação à `main` após a suíte completa passar.
+2. Executar `scripts/phase0_inventory.py --probe-torch` no equipamento real de homologação e revisar o inventário atualizado.
+3. Processar a mídia real de 37 minutos com a mesma configuração da execução reportada, capturando uma execução fria e pelo menos três execuções quentes.
+4. Repetir o protocolo com uma amostra menor representativa e conferir se a soma das etapas explica o tempo total, considerando overhead residual.
+5. Consolidar a mediana/dispersão, RTF, pico RSS, tokens/s e etapa dominante; registrar a baseline real em `docs/ESTADO_ATUAL.md`.
+
+**Critério de conclusão:** baseline reproduzível com a decomposição temporal de todos os estágios, sem mudar a qualidade ou o motor do produto. A instrumentação no código, isoladamente, não conclui a Fase 1 nem substitui a medição da mídia real.
 
 ### Fase 2 — Integridade textual e robustez do alinhamento
 

@@ -17,6 +17,7 @@ from legendar.application.pipeline.serial_pipeline import (
 from legendar.application.ports.protocols import Aligner, Transcriber, Translator
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
+from legendar.infrastructure.diagnostics.performance import JsonPerformanceReporter
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
 from legendar.infrastructure.logging.setup import configure_logging
@@ -86,6 +87,7 @@ def _pipeline_factory(
     transcriber: Transcriber,
     aligner: Aligner,
     translator: Translator,
+    performance_reporter: JsonPerformanceReporter | None = None,
 ) -> SerialPipeline:
     """Monta aquisição, reconhecimento, alinhamento, tradução e publicação."""
 
@@ -98,7 +100,8 @@ def _pipeline_factory(
             publisher=SrtPublisher(),
             translator=translator,
             downloader=downloader,
-        )
+        ),
+        performance_reporter=performance_reporter,
     )
 
 
@@ -212,12 +215,18 @@ def build_ui_dependencies(
         js_runtime=selected_runtime[0] if selected_runtime else None,
         js_runtime_path=selected_runtime[1].path if selected_runtime else None,
     )
+    performance_reporter = JsonPerformanceReporter(settings.logs_dir)
     return UiDependencies(
         output_dir=settings.output_dir,
         cache_dir=settings.models_dir,
         workspace_factory=TempWorkspaceFactory(settings.temp_dir),
         pipeline_factory=lambda: _pipeline_factory(
-            inspector, downloader, transcriber, aligner, translator
+            inspector,
+            downloader,
+            transcriber,
+            aligner,
+            translator,
+            performance_reporter,
         ),
         output_path_factory=lambda stem, _language: suggest_output_path(settings, stem),
         translate_available=translation_available,

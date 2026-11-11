@@ -431,3 +431,27 @@ def test_negative_stream_start_maps_valid_later_word_times(tmp_path: Path) -> No
     assert ranges[0].end == pytest.approx(0.9)
     assert ranges[1].start == pytest.approx(1.05)
     assert ranges[1].end == pytest.approx(1.3)
+
+
+def test_performance_snapshot_tracks_model_load_and_per_segment_alignment(
+    tmp_path: Path,
+) -> None:
+    aligner = make_aligner(tmp_path)
+    result = aligner.align(
+        make_audio(),
+        make_transcript(),
+        progress=ProgressRecorder(),
+    )
+
+    snapshot = aligner.performance_snapshot()
+
+    assert result.diagnostics.aligned_words == 2
+    assert snapshot["loaded"] is True
+    assert snapshot["configuration"]["adapter"] == "whisperx"
+    assert snapshot["counters"]["model_load_attempts"] == 1
+    assert snapshot["counters"]["model_load_successes"] == 1
+    assert snapshot["counters"]["alignment_calls"] == 1
+    assert snapshot["counters"]["input_segments"] == 1
+    assert snapshot["counters"]["aligned_words"] == 2
+    assert snapshot["counters"]["model_load_seconds"] >= 0
+    assert snapshot["counters"]["alignment_seconds"] >= 0

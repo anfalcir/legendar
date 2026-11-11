@@ -3,11 +3,11 @@
 - **Última atualização:** 11/11/2026
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
 - **Branch de integração:** `main`
-- **HEAD usado nesta atualização documental:** `85aa832954aa539d2c8e96a4335608f958e88776`
+- **Base de início da Fase 1:** `d3530490df466aa6eeff4728b63d7e8dc22f056e`
 - **Integração da organização documental e do plano vigente:** PR [#7](https://github.com/anfalcir/legendar/pull/7), squash `a62f4459b76b07aa86f00d22acf663a8f95b7368`, integrada à `main`.
 - **CI da integração:** o job de documentação da PR #7 passou; parte da matriz da PR não chegou a executar testes porque os runners não resolveram os espelhos Ubuntu durante `apt-get`. A nova execução pós-merge da Fase 8 está em andamento ([run #43055692640](https://github.com/anfalcir/legendar/actions/runs/43055692640)). Não considerar a matriz completa aprovada até os jobs terminarem.
 - **Remodelação arquitetural anterior:** Fases 0–10 integradas à `main`.
-- **Nova frente:** plano de correção da qualidade editorial e melhoria de desempenho documentado; implementação ainda não iniciada.
+- **Nova frente:** Fase 1 de instrumentação de desempenho em implementação na branch `phase-1/performance-instrumentation`; medição da mídia real ainda pendente.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
@@ -21,7 +21,26 @@ A arquitetura e a base de engenharia das Fases 0–10 estão integradas. Uma aud
 
 A prioridade agora é corrigir a integridade e a legibilidade do resultado antes de trocar motores ou reduzir configurações de qualidade. Em paralelo, o novo plano estabelece instrumentação para localizar os gargalos de desempenho e testar otimizações com comparação pareada.
 
-## 2. Estado do repositório
+## 2. Estado da Fase 1 — instrumentação
+
+A implementação em andamento cria medições por etapa no pipeline e métricas internas dos adaptadores, sem trocar Whisper, WhisperX, NLLB, beam, batch, dtype ou política de alinhamento.
+
+**Etapas instrumentadas:** aquisição, inspeção, preparação do áudio, transcrição, alinhamento, segmentação, tradução opcional, validação e publicação.
+
+**Detalhamento dos motores:**
+- Whisper: carga do modelo, leitura do WAV, inferência, quantidade de segmentos e palavras reconhecidas.
+- WhisperX: carga do modelo, preparação do Punkt, leitura do WAV, tempo acumulado das chamadas por segmento, palavras alinhadas e não alinhadas.
+- NLLB: carga do tokenizador/modelo, lotes/unidades, tokenização, transferência para dispositivo, geração, decodificação, contagem de tokens e tokens/s.
+
+**Relatório local:** `~/.cache/legendar/logs/performance/job-<job-id>.json`, com arquivo `0600` e diretório privado. Não contém mídia, transcrição, texto SRT, URL, caminho da mídia, mensagem de exceção ou credenciais e não é transmitido para serviços externos. A coleta é best-effort e não pode falhar o job.
+
+**Leitura dos relatórios:**
+```bash
+uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
+```
+
+**Estado da evidência:** testes automatizados de instrumentação estão sendo acrescentados; baseline no equipamento real não foi coletada. O tempo inicial de 60 minutos para 37 minutos continua sendo relato do usuário, não uma medição decomposta. Fase 1 só será considerada concluída quando o inventário atual do equipamento e as rodadas fria/quentes com a mesma mídia/configuração estiverem registrados.
+## 3. Estado do repositório
 
 | Área | Estado |
 |---|---|

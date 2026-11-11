@@ -436,3 +436,28 @@ def test_from_environment_defaults_and_rejects_invalid_device(
     monkeypatch.setenv("LEGENDAR_TRANSLATE_DEVICE", "tpu")
     with pytest.raises(ValueError, match="Dispositivo de tradução inválido"):
         NllbTranslator.from_environment(tmp_path / "models")
+
+
+def test_performance_snapshot_tracks_model_load_and_batch_inference(
+    tmp_path: Path,
+) -> None:
+    translator = _make_translator(tmp_path)
+    translator.translate(
+        _units("olá", "até logo"),
+        source_language=Language.PORTUGUESE,
+        target_language=Language.ENGLISH,
+        progress=ProgressRecorder(),
+    )
+
+    snapshot = translator.performance_snapshot()
+
+    assert snapshot["loaded"] is True
+    assert snapshot["configuration"]["adapter"] == "nllb-transformers"
+    assert snapshot["configuration"]["batch_size"] == MAX_UNITS_PER_BATCH
+    assert snapshot["configuration"]["num_beams"] == 4
+    assert snapshot["counters"]["model_load_attempts"] == 1
+    assert snapshot["counters"]["model_load_successes"] == 1
+    assert snapshot["counters"]["batch_calls"] == 1
+    assert snapshot["counters"]["batch_units"] == 2
+    assert snapshot["counters"]["model_load_seconds"] >= 0
+    assert snapshot["counters"]["batch_inference_seconds"] >= 0
