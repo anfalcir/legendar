@@ -295,7 +295,7 @@ Entregas:
 8. Preservar todo o texto, sem sobreposição, duplicação ou reordenação.
 9. Recalcular o layout após tradução, pois o comprimento no idioma final muda.
 
-**Critério de conclusão:** corpus de teste comprova redução de fragmentação, estabilidade temporal, conservação do texto e melhoria das métricas de leitura. Não basta diminuir a contagem de cues.
+**Critério de conclusão:** corpus determinístico de alinhamentos comprova redução de fragmentação artificial, conservação textual, estabilidade temporal, tratamento de pausas/frases e respeito aos limites editoriais; CI completa verde. A homologação audiovisual com mídia real, player e comparação humana fica concentrada na Fase 8, para não confundir a validação do algoritmo puro com a validação ponta a ponta do modelo e do áudio.
 
 **Implementação em andamento (11/11/2026):**
 
@@ -309,7 +309,7 @@ Entregas:
 - O alinhador atual não oferece diarização confiável de falantes. A Fase 3 não infere mudança de interlocutor: usa cronologia, pausas e pontuação, mantendo essa limitação documentada.
 - Testes foram adicionados para consolidação entre segmentos, pausas, rastreabilidade, cronologia inválida em segmentos alinhados e fallback, preservação de segmentos fallback intercalados, fronteira de frase e extensão segura.
 
-**Ainda pendente:** avaliação do corpus audiovisual real, otimização editorial das fronteiras com pontuação/sintaxe e comprovação quantitativa de redução de fragmentação sem piorar CPS, cobertura ou sincronização. A Fase 3 não está concluída.
+**Estado da implementação:** o corpus determinístico agora cobre continuidade entre segmentos, pausas, fronteiras de frase, divisão por CPS, extensão segura, segmentos fallback intercalados, rastreabilidade e rejeição de cronologia inválida. A redução de fragmentação artificial é verificada por cenários em que dois segmentos contíguos do ASR passam a formar uma cue única, enquanto pausas e fronteiras de frase continuam gerando cues separadas. A homologação audiovisual com o arquivo real de 37min10s será executada na Fase 8; ela não é substituta para os testes puros da segmentação.
 
 ### Fase 4 — Gate editorial e diagnóstico de texto
 
