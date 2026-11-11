@@ -67,6 +67,37 @@ def test_segment_without_words_uses_its_own_range():
     assert result.dropped_segments == ()
 
 
+def test_unmatched_words_are_explicit_and_make_result_lossy():
+    aligned = _segment(_word("olá", 0.0, 0.4))
+    unmatched = TranscriptWord(text="mundo")
+    transcript = Transcript(
+        segments=(
+            TranscriptSegment(
+                text="olá mundo",
+                range=TimeRange(0.0, 1.0),
+                words=(aligned.words[0], unmatched),
+            ),
+        ),
+        language=Language.PORTUGUESE,
+        model_name="tiny",
+    )
+    alignment = AlignmentResult(
+        transcript=transcript,
+        diagnostics=AlignmentDiagnostics(
+            aligned_words=1,
+            unmatched_words=(unmatched,),
+            issues=("unmatched_word",),
+        ),
+    )
+
+    result = segment_alignment(alignment)
+
+    assert result.has_unmatched_words
+    assert result.unmatched_words == (unmatched,)
+    assert not result.is_lossless
+    assert "unmatched_word" in result.diagnostics
+
+
 def test_segment_without_words_or_range_is_dropped():
     segment = TranscriptSegment(text="sem tempo")
     result = segment_alignment(_alignment(segment))
