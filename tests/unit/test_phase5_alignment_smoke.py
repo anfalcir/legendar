@@ -5,8 +5,8 @@ import wave
 from pathlib import Path
 
 import numpy as np
-import soundfile as sf
 import pytest
+import soundfile as sf
 
 from scripts.phase5_alignment_smoke import _write_audio
 
