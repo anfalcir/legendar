@@ -1,6 +1,6 @@
 # Matriz e política de dependências do Legendar
 
-- **Status:** política de dependências consolidada na Fase 0; compatibilidade completa do produto permanece condicionada à integração/homologação.
+- **Status:** política de dependências consolidada na Fase 0; Fase 6 adiciona as dependências de tradução local (`transformers`, `sentencepiece`). Compatibilidade completa do produto permanece condicionada à integração/homologação.
 - **Fonte canônica de requisitos diretos:** `pyproject.toml`.
 - **Fonte canônica de resolução exata:** `uv.lock`, versionado no repositório.
 - **Gerenciador:** `uv`, ferramenta de desenvolvimento/instalação; não é dependência de runtime.
@@ -41,6 +41,8 @@ A dependência-base é PySide6. O aplicativo completo deve instalar exatamente u
 | torchvision | `>=0.23,<0.24` | Pareado com Torch 2.8 |
 | torchaudio | `>=2.8,<2.9` | Pareado com Torch 2.8 |
 | WhisperX | `>=3.8.6,<3.8.7` | Alinhador candidato; intervalo deliberado para aceitar release estável 3.8.6 e excluir 3.8.7rc1 |
+| transformers | `>=4.57,<5` | Tradução local (Fase 6); contrato direto porque o adaptador NLLB importa a API de tokenizer/modelo |
+| sentencepiece | `>=0.2,<1` | Tokenizador NLLB; contrato direto porque o adaptador instancia o tokenizador lento |
 | pytest / pytest-qt / pytest-cov | Grupo `test` | Testes; não runtime |
 | Ruff | Grupo `lint` | Qualidade de código; não runtime |
 | PyInstaller | Grupo `build` | Empacotamento; não runtime |
@@ -77,7 +79,7 @@ Uma resolução antiga contra PyPI sem origem explícita foi descartada porque i
 
 ## 4. Dependências transitivas e conflitos relevantes
 
-Pacotes como NumPy, CTranslate2, faster-whisper, transformers, pyannote-audio, torchcodec, NLTK e bibliotecas NVIDIA podem surgir como dependências transitivas. Não duplicar no manifesto sem contrato próprio ou necessidade explícita de controle.
+Pacotes como NumPy, CTranslate2, faster-whisper, pyannote-audio, torchcodec, NLTK e bibliotecas NVIDIA podem surgir como dependências transitivas. Não duplicar no manifesto sem contrato próprio ou necessidade explícita de controle. `transformers` e `sentencepiece` deixaram de ser apenas transitivos na Fase 6: o adaptador `NllbTranslator` importa diretamente a API de tokenizer/modelo e o sentencepiece, por isso ambos são declarados com intervalo próprio.
 
 Um conflito identificado na prova de avaliação: `datasets>=5.2` exige `huggingface-hub>=1.31`, enquanto WhisperX estável 3.8.6 exige `huggingface-hub<1.0`. A dependência `datasets` foi removida do grupo de avaliação; a POC lê TSV e arquivos de áudio do FLEURS diretamente usando `huggingface-hub`, respeitando a interseção do runtime. Não contornar com `--no-deps`, alterações manuais de metadata ou constraints ocultos.
 
@@ -112,6 +114,20 @@ Um conflito identificado na prova de avaliação: `datasets>=5.2` exige `hugging
 - Score do alinhador não é probabilidade calibrada; não usar sozinho como medida de confiança de produto.
 - O smoke FLEURS PT-BR/EN valida execução, WER lexical, cobertura e limites; erro temporal só é calculado com manifesto local e fronteiras humanas revisadas (`scripts/phase5_alignment_evaluation.py`).
 - Evidência da CI PR #42935490648: Whisper `tiny` + WhisperX 3.8.6 CPU, uma amostra por idioma. PT-BR: WER 0,083333, 12/12 palavras, cobertura 100%; EN: WER 0,352941, 14/15 palavras, cobertura 93,333%, uma palavra não alinhada preservada. Bounds válidos para todas as palavras alinhadas. Resultado é smoke pequeno de fala lida, não valida erro temporal humano nem desempenho no hardware-alvo.
+
+
+### Tradução local (Fase 6)
+
+- `transformers` (`>=4.57,<5`) e `sentencepiece` (`>=0.2,<1`) são dependências diretas dos perfis `runtime-cpu` e `runtime-cu128`; no perfil CUDA os marcadores restringem a instalação a Linux/Windows, onde o wheel CUDA existe.
+- Modelo padrão: `facebook/nllb-200-distilled-600M`; `LEGENDAR_TRANSLATE_MODEL` permite outro checkpoint compatível.
+- `LEGENDAR_TRANSLATE_DEVICE`: `auto`, `cpu` ou `cuda`; `auto` prioriza CUDA e cai para CPU. MPS não é anunciado para este adaptador.
+- Pesos persistem em `<models_dir>/nllb`, baixados sob demanda na primeira tradução; nunca entram no workspace temporário nem no Git.
+- O tradutor roda no próprio computador: nenhum texto de legenda é enviado a serviço externo, o que elimina custo por chamada e retenção por terceiros.
+- Tokenizador lento (`use_fast=False`) com origem `por_Latn`/`eng_Latn` e destino via `forced_bos_token_id`; lotes de 16 cue, `num_beams=4`, 256 tokens de entrada e saída.
+- Cancelamento é cooperativo entre lotes; uma inferência em andamento não é interrompida.
+- A primeira execução exige rede e cache gravável; ausência de `transformers`, idioma não mapeado ou dispositivo indisponível falham de forma explícita (`ModelError`/`UnsupportedLanguageError`).
+- Testes herméticos injetam `tokenizer_loader`, `model_loader`, `batch_translator`, `device_resolver` e `version_provider`; nenhum teste baixa pesos. O workflow `phase6-quality.yml` executa um smoke adicional com o runtime CPU real para provar que as dependências resolvem juntas.
+
 
 
 FFmpeg/ffprobe não são substituídos por pacotes Python com nomes semelhantes. O aplicativo deverá apresentar orientações para instalar ferramentas ausentes, sem alterar o sistema operacional silenciosamente.
@@ -152,6 +168,8 @@ A Fase 4 acrescenta `scripts/phase4_model_benchmark.py`: comparação reproduzí
 
 A Fase 5 acrescenta `scripts/phase5_alignment_smoke.py` para executar Whisper + WhisperX reais em amostras FLEURS PT-BR/EN, medindo WER lexical, cobertura, RTF e bounds. Como FLEURS não oferece fronteiras humanas, não mede erro temporal. Para esse gate, `scripts/phase5_alignment_evaluation.py` aceita JSONL local com palavras e tempos humanos; calcula erros de início/fim, mediana/P95, cobertura e não alinhadas, sem copiar caminhos, áudio ou texto para o relatório. Os limites de 150 ms (mediana) e 350 ms (P95) são metas provisórias e exigem corpus representativo antes de declarar aceitação.
 
+A Fase 6 acrescenta testes herméticos para tradução e publicação: `tests/unit/infrastructure/test_nllb_translator.py` cobre lotes, dispositivo, idioma, cancelamento e falhas do adaptador com carregadores injetados; `tests/integration/test_translation_publication.py` executa o pipeline completo com publicador real e tradutor falso. Nenhum teste baixa pesos. O workflow `phase6-quality.yml` adiciona um job com o extra `runtime-cpu` instalado para confirmar que `transformers` e `sentencepiece` resolvem junto do lock e reaproveita a mesma suíte com o runtime real.
+
 
 ### POC de idioma
 
@@ -187,6 +205,8 @@ Referências técnicas:
 - [PyTorch installation](https://docs.pytorch.org/get-started/locally/)
 - [OpenAI Whisper](https://github.com/openai/whisper)
 - [WhisperX](https://github.com/m-bain/whisperX)
+- [NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-distilled-600M)
+- [Transformers — tradução com NLLB](https://huggingface.co/docs/transformers/model_doc/nllb)
 - [FFmpeg](https://ffmpeg.org/documentation.html)
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)
 - [Google FLEURS dataset](https://huggingface.co/datasets/google/fleurs)

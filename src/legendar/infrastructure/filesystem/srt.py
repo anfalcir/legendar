@@ -12,6 +12,10 @@ from dataclasses import dataclass
 
 from legendar.domain.entities.subtitle import SubtitleTrack
 from legendar.domain.errors.catalog import SrtValidationError
+from legendar.domain.value_objects.text_layout import (
+    DEFAULT_MAX_CHARS_PER_LINE,
+    DEFAULT_MAX_LINES,
+)
 from legendar.domain.value_objects.time import TimeRange
 
 _TS = re.compile(r"^(\d{2}):(\d{2}):(\d{2}),(\d{3})$")
@@ -59,8 +63,17 @@ class ParsedCue:
         return TimeRange(self.start, self.end)
 
 
-def format_srt(track: SubtitleTrack) -> str:
-    """Serializa o trilho em SRT com ``\\n`` e linha final em branco."""
+def format_srt(
+    track: SubtitleTrack,
+    *,
+    max_chars_per_line: int = DEFAULT_MAX_CHARS_PER_LINE,
+    max_lines: int = DEFAULT_MAX_LINES,
+) -> str:
+    """Serializa o trilho em SRT com ``\\n`` e linha final em branco.
+
+    Cada cue é gravada em até ``max_lines`` linhas de ``max_chars_per_line``
+    caracteres, sem descartar palavras.
+    """
     if track.is_empty:
         raise SrtValidationError("Não é possível serializar um trilho vazio.")
     blocks: list[str] = []
@@ -68,10 +81,15 @@ def format_srt(track: SubtitleTrack) -> str:
         text = cue.normalized_text
         if not text:
             raise SrtValidationError(f"Cue {cue.index} sem texto após normalização.")
+        lines = cue.lines(
+            max_chars_per_line=max_chars_per_line,
+            max_lines=max_lines,
+        )
+        body = "\n".join(lines)
         blocks.append(
             f"{cue.index}\n"
             f"{format_timestamp(cue.range.start)} --> {format_timestamp(cue.range.end)}\n"
-            f"{text}\n"
+            f"{body}\n"
         )
     return "\n".join(blocks)
 

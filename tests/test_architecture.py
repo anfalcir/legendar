@@ -119,3 +119,39 @@ def test_ports_are_protocols_and_cover_the_pipeline():
     for name in expected:
         port = getattr(protocols, name)
         assert getattr(port, "_is_protocol", False), f"{name} não é Protocol"
+
+
+def test_translator_port_is_per_cue_and_language_explicit():
+    import inspect
+
+    from legendar.application.ports import protocols
+
+    signature = inspect.signature(protocols.Translator.translate)
+    parameters = list(signature.parameters.values())
+
+    assert parameters[1].name == "units"
+    assert parameters[1].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    keyword_only = {
+        parameter.name
+        for parameter in parameters[2:]
+        if parameter.kind is inspect.Parameter.KEYWORD_ONLY
+    }
+    assert keyword_only == {
+        "source_language",
+        "target_language",
+        "progress",
+        "token",
+    }
+
+
+def test_translation_adapter_is_the_only_module_that_knows_transformers():
+    """Só a infraestrutura de tradução importa ``transformers``/``sentencepiece``."""
+    offenders: list[str] = []
+    for path in sorted(SRC.rglob("*.py")):
+        relative = path.relative_to(SRC)
+        if relative.parts[0] == "infrastructure" and "translation" in relative.parts:
+            continue
+        names = _imported_names(path)
+        for name in sorted(names & {"transformers", "sentencepiece"}):
+            offenders.append(f"{relative} importa {name}")
+    assert offenders == []

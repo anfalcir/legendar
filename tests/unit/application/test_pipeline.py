@@ -132,7 +132,12 @@ def test_explicit_audio_stream_index_is_forwarded_to_preparer(job_context):
 
 
 def test_translation_preserves_cue_timings(job_context):
-    pipeline, _ = _pipeline(translator=FakeTranslator(language=Language.ENGLISH))
+    pipeline, _ = _pipeline(
+        transcriber=FakeTranscriber(
+            transcript=make_transcript(language=Language.PORTUGUESE)
+        ),
+        translator=FakeTranslator(),
+    )
     request = _request(
         source_language=Language.PORTUGUESE,
         output_language=Language.ENGLISH,
@@ -145,6 +150,95 @@ def test_translation_preserves_cue_timings(job_context):
     assert [cue.range for cue in translated] == [cue.range for cue in original]
     assert all(cue.language is Language.ENGLISH for cue in translated)
     assert all(cue.text.startswith("[en]") for cue in translated)
+    assert result.final_language is Language.ENGLISH
+
+
+def test_translation_reports_the_translating_state(job_context):
+    pipeline, _ = _pipeline(
+        transcriber=FakeTranscriber(
+            transcript=make_transcript(language=Language.PORTUGUESE)
+        ),
+        translator=FakeTranslator(),
+    )
+    seen: list[JobState] = []
+    pipeline.execute(
+        _request(
+            source_language=Language.PORTUGUESE,
+            output_language=Language.ENGLISH,
+            translate=True,
+        ),
+        job_context,
+        on_state=seen.append,
+    )
+
+    assert seen.index(JobState.SEGMENTING) < seen.index(JobState.TRANSLATING)
+    assert seen.index(JobState.TRANSLATING) < seen.index(JobState.VALIDATING_SRT)
+
+
+def test_translation_receives_one_unit_per_cue_and_the_detected_language(
+    job_context,
+):
+    translator = FakeTranslator()
+    pipeline, _ = _pipeline(
+        transcriber=FakeTranscriber(
+            transcript=make_transcript(language=Language.PORTUGUESE)
+        ),
+        translator=translator,
+    )
+    result = pipeline.execute(
+        _request(
+            source_language=Language.PORTUGUESE,
+            output_language=Language.ENGLISH,
+            translate=True,
+        ),
+        job_context,
+    )
+
+    units, source_language, target_language = translator.calls[0]
+    assert [unit.index for unit in units] == [
+        cue.index for cue in result.segmentation.track.cues
+    ]
+    assert [unit.text for unit in units] == [
+        cue.normalized_text for cue in result.segmentation.track.cues
+    ]
+    assert source_language is Language.PORTUGUESE
+    assert target_language is Language.ENGLISH
+
+
+def test_translator_returning_another_language_is_rejected(job_context):
+    pipeline, _ = _pipeline(
+        transcriber=FakeTranscriber(
+            transcript=make_transcript(language=Language.PORTUGUESE)
+        ),
+        translator=FakeTranslator(language=Language.PORTUGUESE),
+    )
+
+    with pytest.raises(TranslationError, match="idioma diferente"):
+        pipeline.execute(
+            _request(
+                source_language=Language.PORTUGUESE,
+                output_language=Language.ENGLISH,
+                translate=True,
+            ),
+            job_context,
+        )
+
+
+def test_translation_in_the_final_language_is_reported_as_error(job_context):
+    pipeline, _ = _pipeline(
+        transcriber=FakeTranscriber(transcript=make_transcript()),
+        translator=FakeTranslator(),
+    )
+
+    with pytest.raises(TranslationError, match="já está no idioma final"):
+        pipeline.execute(
+            _request(
+                source_language=Language.PORTUGUESE,
+                output_language=Language.ENGLISH,
+                translate=True,
+            ),
+            job_context,
+        )
 
 
 def test_translation_without_configured_translator_fails(job_context):
@@ -179,7 +273,7 @@ def test_translation_must_keep_one_unit_per_cue(job_context):
     transcriber = FakeTranscriber(transcript=_two_segment_transcript())
     pipeline, _ = _pipeline(
         transcriber=transcriber,
-        translator=FakeTranslator(language=Language.ENGLISH, keep_shape=False),
+        translator=FakeTranslator(keep_shape=False),
     )
     request = _request(
         source_language=Language.PORTUGUESE,
@@ -199,18 +293,17 @@ def test_output_language_differing_from_source_requires_translation(job_context)
 
 
 def test_detected_language_mismatch_becomes_warning(job_context):
-    pipeline, _ = _pipeline(
-        transcriber=FakeTranscriber(transcript=make_transcript()),
-        translator=FakeTranslator(language=Language.ENGLISH),
-    )
+    # O usuário declara PT-BR, mas o áudio está em inglês: publica-se em inglês
+    # (sem tradução) e o desvio é reportado como aviso.
+    pipeline, _ = _pipeline(transcriber=FakeTranscriber(transcript=make_transcript()))
     request = _request(
         source_language=Language.PORTUGUESE,
         output_language=Language.ENGLISH,
-        translate=True,
     )
     result = pipeline.execute(request, job_context)
 
     assert any("idioma detectado" in warning for warning in result.warnings)
+    assert result.final_language is Language.ENGLISH
 
 
 def test_media_without_audio_is_rejected(job_context):

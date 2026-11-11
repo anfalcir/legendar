@@ -109,3 +109,111 @@ def test_policy_rejects_incoherent_durations():
 
     with pytest.raises(SrtValidationError):
         SegmentationPolicy(min_cue_duration=5.0, max_cue_duration=1.0)
+
+
+def test_default_policy_targets_two_lines_and_reading_speed():
+    policy = SegmentationPolicy()
+
+    assert policy.max_chars_per_line == 42
+    assert policy.max_lines == 2
+    assert policy.max_chars_per_cue == 84
+    assert policy.min_cue_duration == 1.0
+    assert policy.max_cue_duration == 7.0
+    assert policy.chars_per_second == 17.0
+    assert policy.reading_time("a" * 34) == pytest.approx(2.0)
+
+
+def test_policy_rejects_invalid_editorial_parameters():
+    from legendar.domain.errors.catalog import SrtValidationError
+
+    with pytest.raises(SrtValidationError, match="Largura de linha"):
+        SegmentationPolicy(max_chars_per_line=10)
+    with pytest.raises(SrtValidationError, match="ao menos uma linha"):
+        SegmentationPolicy(max_lines=0)
+    with pytest.raises(SrtValidationError, match="caracteres por cue muito baixo"):
+        SegmentationPolicy(max_chars_per_cue=10)
+    with pytest.raises(SrtValidationError, match="excede a capacidade"):
+        SegmentationPolicy(max_chars_per_line=42, max_lines=2, max_chars_per_cue=100)
+    with pytest.raises(SrtValidationError, match="Velocidade de leitura"):
+        SegmentationPolicy(chars_per_second=0)
+    with pytest.raises(SrtValidationError, match="Proporção de quebra"):
+        SegmentationPolicy(sentence_break_ratio=1.5)
+    with pytest.raises(SrtValidationError, match="ao menos uma palavra"):
+        SegmentationPolicy(min_words_per_split_part=0)
+
+
+def _fast_speech_segment(count: int = 8) -> TranscriptSegment:
+    """Fala rápida: ~3,3 palavras/s com palavras de 7 caracteres."""
+    words = tuple(
+        _word("palavra", index * 0.3, index * 0.3 + 0.25) for index in range(count)
+    )
+    return _segment(*words)
+
+
+def test_fast_speech_is_split_into_shorter_cues():
+    segment = _fast_speech_segment()
+    result = segment_alignment(_alignment(segment))
+
+    assert result.cue_count > 1
+    assert "reading_speed_split" in result.diagnostics
+    assert " ".join(cue.text for cue in result.track.cues) == segment.text
+
+
+def test_split_cues_reuse_word_timestamps_only():
+    segment = _fast_speech_segment()
+    boundaries = {
+        boundary
+        for word in segment.words
+        for boundary in (word.range.start, word.range.end)
+    }
+
+    result = segment_alignment(_alignment(segment))
+
+    for cue in result.track.cues:
+        assert cue.range.start in boundaries
+        assert cue.range.end in boundaries
+        assert segment.range.start <= cue.range.start < cue.range.end
+        assert cue.range.end <= segment.range.end
+
+
+def test_split_cues_do_not_overlap_or_leave_gaps_between_words():
+    segment = _fast_speech_segment()
+    result = segment_alignment(_alignment(segment))
+
+    cues = result.track.cues
+    for previous, current in zip(cues, cues[1:], strict=False):
+        assert current.range.start >= previous.range.end
+
+
+def test_slow_speech_keeps_a_single_cue_without_split_diagnostic():
+    segment = _segment(
+        _word("bom", 0.0, 0.5), _word("dia", 0.9, 1.4), _word("a", 1.8, 2.0)
+    )
+    result = segment_alignment(_alignment(segment))
+
+    assert result.cue_count == 1
+    assert "reading_speed_split" not in result.diagnostics
+
+
+def test_single_line_policy_produces_shorter_cues():
+    words = tuple(
+        _word("palavra", index * 0.8, index * 0.8 + 0.5) for index in range(10)
+    )
+    segment = _segment(*words)
+    policy = SegmentationPolicy(max_lines=1, max_chars_per_cue=42)
+
+    result = segment_alignment(_alignment(segment), policy=policy)
+
+    assert result.cue_count > 1
+    assert all(len(cue.text) <= 42 for cue in result.track.cues)
+
+
+def test_cues_never_exceed_the_character_limit_per_cue():
+    words = tuple(
+        _word("palavra", index * 0.9, index * 0.9 + 0.6) for index in range(20)
+    )
+    segment = _segment(*words)
+
+    result = segment_alignment(_alignment(segment))
+
+    assert all(len(cue.text) <= 84 for cue in result.track.cues)

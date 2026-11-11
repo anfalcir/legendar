@@ -481,6 +481,101 @@ def test_translation_checkbox_is_disabled_without_translator(qtbot, tmp_path) ->
     assert not window.translate_check.isEnabled()
 
 
+def test_translation_checkbox_reports_missing_nllb_details(qtbot, tmp_path) -> None:
+    dependencies = replace(
+        _dependencies(tmp_path),
+        translate_readiness_details=("transformers não instalado.",),
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+
+    tooltip = window.translate_check.toolTip()
+
+    assert "NLLB" in tooltip
+    assert "transformers não instalado." in tooltip
+    assert not window.translate_check.isEnabled()
+
+
+def test_translation_checkbox_enables_the_target_language(qtbot, tmp_path) -> None:
+    window = _window(
+        qtbot, replace(_dependencies(tmp_path), translate_available=True), tmp_path
+    )
+    window.source_combo.setCurrentIndex(window.source_combo.findData("pt"))
+
+    assert window.translate_check.isEnabled()
+    assert "NLLB-200" in window.translate_check.toolTip()
+    assert not window.target_combo.isEnabled()
+
+    window.translate_check.setChecked(True)
+
+    assert window.target_combo.isEnabled()
+
+
+def test_translation_job_request_requires_distinct_languages(
+    qtbot, tmp_path, media
+) -> None:
+    window = _window(
+        qtbot, replace(_dependencies(tmp_path), translate_available=True), tmp_path
+    )
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+    window.source_combo.setCurrentIndex(window.source_combo.findData("pt"))
+    window.translate_check.setChecked(True)
+
+    with pytest.raises(InvalidInputError, match="mesmo idioma"):
+        window._build_job()
+
+
+def test_translation_job_request_requires_a_spoken_language(
+    qtbot, tmp_path, media
+) -> None:
+    window = _window(
+        qtbot, replace(_dependencies(tmp_path), translate_available=True), tmp_path
+    )
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+    window.source_combo.setCurrentIndex(window.source_combo.findData(None))
+    window.translate_check.setChecked(True)
+
+    with pytest.raises(InvalidInputError, match="idioma falado"):
+        window._build_job()
+
+
+def test_translation_job_request_carries_the_language_pair(
+    qtbot, tmp_path, media
+) -> None:
+    window = _window(
+        qtbot, replace(_dependencies(tmp_path), translate_available=True), tmp_path
+    )
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+    window.source_combo.setCurrentIndex(window.source_combo.findData("pt"))
+    window.translate_check.setChecked(True)
+    # O destino só aceita mudança depois que a tradução é marcada.
+    window.target_combo.setCurrentIndex(window.target_combo.findData("en"))
+
+    request, _label, _output = window._build_job()
+
+    assert request.translate is True
+    assert request.source_language is Language.PORTUGUESE
+    assert request.output_language is Language.ENGLISH
+
+
+def test_without_translation_the_target_follows_the_source(
+    qtbot, tmp_path, media
+) -> None:
+    window = _window(
+        qtbot, replace(_dependencies(tmp_path), translate_available=True), tmp_path
+    )
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+    window.source_combo.setCurrentIndex(window.source_combo.findData("en"))
+
+    request, _label, _output = window._build_job()
+
+    assert request.translate is False
+    assert request.output_language is Language.ENGLISH
+
+
 def test_pipeline_failure_is_shown_and_allows_retry(qtbot, tmp_path, media) -> None:
     class BrokenInspector:
         def inspect(self, source, *, token=None):

@@ -10,6 +10,11 @@ from dataclasses import dataclass, field
 
 from legendar.domain.errors.catalog import InvalidInputError, SrtValidationError
 from legendar.domain.value_objects.language import Language
+from legendar.domain.value_objects.text_layout import (
+    DEFAULT_MAX_CHARS_PER_LINE,
+    DEFAULT_MAX_LINES,
+    wrap_lines,
+)
 from legendar.domain.value_objects.time import TimeRange
 
 
@@ -41,8 +46,21 @@ class SubtitleCue:
 
     @property
     def normalized_text(self) -> str:
-        """Texto em uma linha, sem espaços redundantes (SRT não usa quebras)."""
+        """Texto em uma linha única, sem espaços redundantes."""
         return " ".join(self.text.split())
+
+    def lines(
+        self,
+        *,
+        max_chars_per_line: int = DEFAULT_MAX_CHARS_PER_LINE,
+        max_lines: int = DEFAULT_MAX_LINES,
+    ) -> tuple[str, ...]:
+        """Texto dividido nas linhas exibidas no arquivo final (até duas)."""
+        return wrap_lines(
+            self.normalized_text,
+            max_chars_per_line=max_chars_per_line,
+            max_lines=max_lines,
+        )
 
 
 @dataclass(frozen=True, slots=True)

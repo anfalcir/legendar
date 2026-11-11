@@ -10,6 +10,10 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from legendar.application.job.context import JobContext
+from legendar.application.pipeline.translation import (
+    TranslationResult,
+    TranslationUnit,
+)
 from legendar.domain.entities.media import (
     AudioAsset,
     AudioStreamInfo,
@@ -110,16 +114,19 @@ class Aligner(Protocol):
 
 @runtime_checkable
 class Translator(Protocol):
-    """Tradução opcional de texto; nenhum fornecedor é escolhido nesta fase."""
+    """Tradução local por unidade de legenda, preservando 1:1 com as cues."""
 
     def translate(
         self,
-        transcript: Transcript,
+        units: tuple[TranslationUnit, ...],
         *,
+        source_language: Language,
         target_language: Language,
         progress: ProgressSink,
         token: CancellationToken | None = None,
-    ) -> Transcript: ...
+    ) -> TranslationResult:
+        """Traduz cada unidade e devolve exatamente um texto por unidade."""
+        ...
 
 
 @runtime_checkable

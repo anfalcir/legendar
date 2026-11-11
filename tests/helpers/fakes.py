@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from legendar.application.pipeline.translation import TranslationResult
 from legendar.domain.entities.media import (
     AudioAsset,
     AudioStreamInfo,
@@ -163,30 +164,41 @@ class FakeAligner:
 
 @dataclass
 class FakeTranslator:
-    language: Language = Language.PORTUGUESE
+    """Tradutor por cue: prefixa o idioma e preserva 1:1 com as unidades.
+
+    ``language`` força um idioma divergente no resultado; ``None`` devolve o
+    idioma de destino recebido. ``keep_shape=False`` simula um modelo que
+    devolve quantidade de textos incompatível com as cues.
+    """
+
+    language: Language | None = None
     keep_shape: bool = True
+    calls: list = field(default_factory=list)
 
     def translate(
-        self, transcript, *, target_language, progress=None, token=None
-    ) -> Transcript:
+        self,
+        units,
+        *,
+        source_language,
+        target_language,
+        progress=None,
+        token=None,
+    ) -> TranslationResult:
+        self.calls.append((tuple(units), source_language, target_language))
         if token is not None:
             token.raise_if_cancelled()
+        if progress is not None:
+            progress.report(0.5, "Traduzindo")
+        texts = tuple(f"[{target_language.value}] {unit.text}" for unit in units)
         if not self.keep_shape:
-            return Transcript(
-                segments=(TranscriptSegment(text="texto único"),),
-                language=target_language,
-                model_name="fake-translator",
-            )
-        segments = tuple(
-            TranscriptSegment(
-                text=f"[{target_language.value}] {segment.text}",
-                range=segment.range,
-            )
-            for segment in transcript.segments
+            texts = (*texts, "texto excedente")
+        result = TranslationResult(
+            language=self.language or target_language,
+            texts=texts,
         )
-        return Transcript(
-            segments=segments, language=target_language, model_name="fake-translator"
-        )
+        if progress is not None:
+            progress.report(1.0, "Tradução concluída")
+        return result
 
 
 @dataclass

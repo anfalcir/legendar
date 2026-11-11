@@ -79,6 +79,7 @@ class UiDependencies:
     pipeline_factory: PipelineFactory
     output_path_factory: OutputPathFactory
     translate_available: bool = False
+    translate_readiness_details: tuple[str, ...] = ()
     readiness_ok: bool = True
     readiness_details: tuple[str, ...] = ()
     app_version: str = ""
@@ -346,8 +347,13 @@ class MainWindow(QMainWindow):
         self.translate_check.setObjectName("translateCheck")
         self.translate_check.setEnabled(self._deps.translate_available)
         if not self._deps.translate_available:
+            details = " ".join(self._deps.translate_readiness_details)
             self.translate_check.setToolTip(
-                "A integração com tradução será habilitada em uma fase posterior."
+                "A tradução local NLLB não está pronta neste ambiente. " + details
+            )
+        else:
+            self.translate_check.setToolTip(
+                "Traduz PT-BR ↔ EN localmente com NLLB-200, preservando os tempos."
             )
         layout.addWidget(self.translate_check)
         return panel

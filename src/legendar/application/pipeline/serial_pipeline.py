@@ -17,6 +17,11 @@ from legendar.application.pipeline.segmentation import (
     SegmentationResult,
     segment_alignment,
 )
+from legendar.application.pipeline.translation import (
+    apply_translation,
+    build_translation_units,
+)
+from legendar.application.pipeline.validation import validate_track
 from legendar.application.ports.protocols import (
     Aligner,
     AudioPreparer,
@@ -28,9 +33,9 @@ from legendar.application.ports.protocols import (
     Translator,
 )
 from legendar.application.progress.sink import MonotonicProgress, ScaledProgress
-from legendar.domain.entities.media import MediaKind, MediaSource
-from legendar.domain.entities.subtitle import SubtitleCue, SubtitleTrack
-from legendar.domain.entities.transcript import AlignmentResult, Transcript
+from legendar.domain.entities.media import MediaInfo, MediaKind, MediaSource
+from legendar.domain.entities.subtitle import SubtitleTrack
+from legendar.domain.entities.transcript import AlignmentResult
 from legendar.domain.errors.catalog import (
     AlignmentInsufficientError,
     InvalidInputError,
@@ -222,7 +227,7 @@ class SerialPipeline:
             track = self._translate(request, alignment, track, enter, warnings, token)
 
         # 7. Validação estrutural do trilho final
-        self._validate(track, enter)
+        self._validate(track, media_info, enter, warnings)
 
         # 8. Publicação atômica (ponto de não retorno)
         return self._publish(context, track, alignment, segmentation, warnings, enter)
@@ -261,29 +266,47 @@ class SerialPipeline:
         warnings: list[str],
         token: CancellationToken,
     ) -> SubtitleTrack:
-        if self._ports.translator is None:
+        translator = self._ports.translator
+        if translator is None:
             raise UnsupportedLanguageError(
                 "Tradução solicitada, mas nenhum tradutor está configurado."
             )
+        # O texto a traduzir está no idioma detectado na transcrição, não no
+        # idioma que o usuário declarou (que pode ter sido corrigido por aviso).
+        source_language = alignment.transcript.language
+        if source_language is request.output_language:
+            raise TranslationError(
+                "A mídia já está no idioma final; desabilite a tradução para publicar."
+            )
+        units = build_translation_units(track)
         stage = enter(JobState.TRANSLATING)
-        translated = self._ports.translator.translate(
-            alignment.transcript,
+        result = translator.translate(
+            units,
+            source_language=source_language,
             target_language=request.output_language,
             progress=stage,
             token=token,
         )
         token.raise_if_cancelled()
+        if result.language is not request.output_language:
+            raise TranslationError(
+                "O tradutor devolveu um idioma diferente do idioma final solicitado."
+            )
         stage.report(1.0, "Tradução concluída")
-        if translated.is_empty:
-            raise TranslationError("A tradução retornou texto vazio.")
-        return _apply_translation(track, translated, warnings)
+        applied = apply_translation(track, result)
+        warnings.extend(applied.warnings)
+        return applied.track
 
     def _validate(
-        self, track: SubtitleTrack, enter: Callable[[JobState], ScaledProgress]
+        self,
+        track: SubtitleTrack,
+        media_info: MediaInfo,
+        enter: Callable[[JobState], ScaledProgress],
+        warnings: list[str],
     ) -> None:
         stage = enter(JobState.VALIDATING_SRT)
-        if track.is_empty:
-            raise InvalidInputError("Trilho de legendas vazio.")
+        report = validate_track(track, media_duration=media_info.duration_seconds)
+        warnings.extend(report.warnings)
         stage.report(1.0, "Legendas validadas")
 
     def _publish(
@@ -314,35 +337,3 @@ def _as_local_source(source: MediaSource, media_path: str) -> MediaSource:
     if source.kind is MediaKind.LOCAL_FILE:
         return source
     return MediaSource(kind=MediaKind.LOCAL_FILE, location=media_path)
-
-
-def _apply_translation(
-    original: SubtitleTrack,
-    translated: Transcript,
-    warnings: list[str],
-) -> SubtitleTrack:
-    """Aplica os textos traduzidos às cues originais preservando os tempos.
-
-    Traduzir não pode mover legendas: o vínculo temporal vem do alinhamento.
-    Quando o tradutor não devolve exatamente uma unidade por cue, o
-    mapeamento 1:1 não é seguro e o job falha de forma explícita — nenhuma
-    cue é descartada nem tem texto redistribuído.
-    """
-    if len(translated.segments) != len(original.cues):
-        raise TranslationError(
-            "A tradução não manteve a correspondência 1:1 com as legendas "
-            f"({len(translated.segments)} unidades para {len(original.cues)} cues)."
-        )
-    cues = tuple(
-        SubtitleCue(
-            index=cue.index,
-            text=segment.text,
-            range=cue.range,
-            language=translated.language,
-            source_segments=cue.source_segments,
-        )
-        for cue, segment in zip(original.cues, translated.segments, strict=True)
-    )
-    if any(not cue.text.strip() for cue in cues):
-        warnings.append("Tradução produziu cue(s) sem texto.")
-    return SubtitleTrack(language=translated.language, cues=cues)

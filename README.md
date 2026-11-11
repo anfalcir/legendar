@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem é executada por fases. As Fases 0–5 estão implementadas, validadas por CI e integradas à `main`. A Fase 5 foi integrada por squash pela PR [#6](https://github.com/anfalcir/legendar/pull/6), commit `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`. O forced alignment WhisperX 3.8.6 em PT-BR/EN separa janelas aproximadas do Whisper de timestamps finais, preserva palavras não alinhadas e aplica offsets globais uma única vez. CI push/PR aprovada em Python 3.10–3.13 e smoke real CPU executado. A precisão temporal em pregações e no computador-alvo continua como gate de homologação do produto. A aplicação anterior permanece preservada como baseline.
+A remodelagem é executada por fases. As Fases 0–5 estão implementadas, validadas por CI e integradas à `main`. A Fase 5 foi integrada por squash pela PR [#6](https://github.com/anfalcir/legendar/pull/6), commit `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`. O forced alignment WhisperX 3.8.6 em PT-BR/EN separa janelas aproximadas do Whisper de timestamps finais, preserva palavras não alinhadas e aplica offsets globais uma única vez. CI push/PR aprovada em Python 3.10–3.13 e smoke real CPU executado. A Fase 6 está implementada e publicada na branch `phase-6/translation-segmentation-srt`, com CI de push verde em 5/5 jobs, e aguarda abertura de PR e integração: segmentação editorial limitada a duas linhas de 42 caracteres, tradução local por cue com NLLB-200 distilled 600M, validação do trilho e publicação SRT atômica com verificação de ida e volta. A precisão temporal e a qualidade tradutória em pregações, no computador-alvo, continuam como gates de homologação do produto. A aplicação anterior permanece preservada como baseline.
 
 ## Documentação do projeto
 
@@ -21,6 +21,8 @@ A remodelagem é executada por fases. As Fases 0–5 estão implementadas, valid
 - [Handoff da Fase 4](docs/HANDOFF_FASE_4.md) — arquitetura implementada, testes, benchmark e gates de homologação.
 - [Plano operacional da Fase 5](docs/FASE_5_PLANO.md) — WhisperX, janelas, offsets, métricas e avaliação temporal.
 - [Handoff da Fase 5](docs/HANDOFF_FASE_5.md) — adaptador, cache, diagnósticos, testes e homologação.
+- [Plano operacional da Fase 6](docs/FASE_6_PLANO.md) — segmentação editorial, tradução por cue, validação e publicação SRT.
+- [Handoff da Fase 6](docs/HANDOFF_FASE_6.md) — contratos, regras congeladas, runtime NLLB, testes e limites conhecidos.
 
 ## Direção do produto
 
@@ -35,7 +37,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–5 integradas; a Fase 5 conecta forced alignment WhisperX à transcrição local da Fase 4 por meio de `AlignmentResult`. A tradução, a segmentação editorial e a publicação SRT permanecem nas Fases 6/7; o botão de geração final segue bloqueado enquanto não há publicador. A próxima etapa de implementação é a Fase 6, que deve consumir os timestamps alinhados sem reintroduzir janelas aproximadas como tempos finais. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_5_PLANO.md](docs/FASE_5_PLANO.md) e [docs/HANDOFF_FASE_5.md](docs/HANDOFF_FASE_5.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–5 integradas; a Fase 5 conecta forced alignment WhisperX à transcrição local da Fase 4 por meio de `AlignmentResult`. A Fase 6 está implementada na branch `phase-6/translation-segmentation-srt`: a segmentação editorial consome as palavras alinhadas, o SRT é publicado com no máximo duas linhas por cue, a tradução PT↔EN roda localmente por cue e o trilho é validado antes da troca atômica do arquivo. A GUI ainda não dispara o pipeline completo; o botão de geração final permanece bloqueado até a Fase 7. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_6_PLANO.md](docs/FASE_6_PLANO.md) e [docs/HANDOFF_FASE_6.md](docs/HANDOFF_FASE_6.md).
 
 ## Licença
 

@@ -1,4 +1,4 @@
-"""Composição do aplicativo: portas reais de entrada e placeholders de fases futuras."""
+"""Composição do aplicativo: portas reais de media, fala, alinhamento, tradução e SRT."""
 
 from __future__ import annotations
 
@@ -14,11 +14,10 @@ from legendar.application.pipeline.serial_pipeline import (
     PipelinePorts,
     SerialPipeline,
 )
-from legendar.application.ports.protocols import Aligner, Transcriber
-from legendar.domain.entities.subtitle import SubtitleTrack
-from legendar.domain.errors.catalog import ModelError
+from legendar.application.ports.protocols import Aligner, Transcriber, Translator
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
+from legendar.infrastructure.filesystem.publisher import SrtPublisher
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
 from legendar.infrastructure.logging.setup import configure_logging
 from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
@@ -26,6 +25,7 @@ from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus, locate_tools
 from legendar.infrastructure.media.youtube import YtDlpDownloader
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
+from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
 
 ToolLocator = Callable[[tuple[str, ...]], Mapping[str, ToolStatus]]
@@ -79,20 +79,14 @@ def _js_runtime_details(
     return tuple(details)
 
 
-class _PendingPublisher:
-    """Publicação final SRT reservada à Fase 6/7."""
-
-    def publish(self, track: SubtitleTrack, destination_path: str) -> str:
-        raise ModelError("A geração e publicação SRT serão concluídas nas Fases 6/7.")
-
-
 def _pipeline_factory(
     inspector: FfprobeInspector,
     downloader: YtDlpDownloader,
     transcriber: Transcriber,
     aligner: Aligner,
+    translator: Translator,
 ) -> SerialPipeline:
-    """Monta aquisição, reconhecimento e forced alignment locais reais."""
+    """Monta aquisição, reconhecimento, alinhamento, tradução e publicação."""
 
     return SerialPipeline(
         PipelinePorts(
@@ -100,7 +94,8 @@ def _pipeline_factory(
             audio_preparer=FfmpegAudioPreparer(inspector=inspector),
             transcriber=transcriber,
             aligner=aligner,
-            publisher=_PendingPublisher(),
+            publisher=SrtPublisher(),
+            translator=translator,
             downloader=downloader,
         )
     )
@@ -186,6 +181,31 @@ def build_ui_dependencies(
         )
     alignment_available = whisperx_installed and alignment_configuration_ok
 
+    try:
+        transformers_installed = importlib.util.find_spec("transformers") is not None
+    except (ImportError, ValueError):
+        transformers_installed = False
+
+    translation_configuration_ok = True
+    try:
+        translator = NllbTranslator.from_environment(settings.models_dir)
+    except ValueError as exc:
+        translator = NllbTranslator(settings.models_dir)
+        translation_configuration_ok = False
+        translation_details = (f"Configuração NLLB inválida: {exc}",)
+    else:
+        translation_details = (
+            f"NLLB-200 distilled · modelo {translator.model_name}",
+            f"Dispositivo de tradução: {translator.requested_device}",
+            f"Pesos no cache local: {translator.download_root}",
+        )
+
+    if not transformers_installed:
+        translation_details = (
+            "transformers não instalado; sincronize runtime-cpu ou runtime-cu128.",
+        )
+    translation_available = transformers_installed and translation_configuration_ok
+
     inspector = FfprobeInspector()
     downloader = YtDlpDownloader(
         js_runtime=selected_runtime[0] if selected_runtime else None,
@@ -196,10 +216,11 @@ def build_ui_dependencies(
         cache_dir=settings.models_dir,
         workspace_factory=TempWorkspaceFactory(settings.temp_dir),
         pipeline_factory=lambda: _pipeline_factory(
-            inspector, downloader, transcriber, aligner
+            inspector, downloader, transcriber, aligner, translator
         ),
         output_path_factory=lambda stem, _language: suggest_output_path(settings, stem),
-        translate_available=False,
+        translate_available=translation_available,
+        translate_readiness_details=translation_details,
         readiness_ok=readiness_ok,
         readiness_details=readiness_details,
         app_version=__version__,
@@ -210,9 +231,10 @@ def build_ui_dependencies(
         transcription_readiness_details=transcription_details,
         alignment_available=alignment_available,
         alignment_readiness_details=alignment_details,
-        publishing_available=False,
+        publishing_available=True,
         publishing_readiness_details=(
-            "O publicador SRT será conectado nas Fases 6/7.",
+            "Publicação SRT atômica em UTF-8 (até 2 linhas por cue).",
+            "Validação round-trip concluída antes de escrever no destino.",
         ),
     )
 

@@ -4,6 +4,12 @@ Regras puras e determinísticas, sem Qt e sem I/O. O ponto central: **nenhum
 timestamp é fabricado**. Se uma cue ficaria curta demais para leitura, ela é
 mantida com o intervalo real e reportada em ``short_cues``; se um segmento não
 tem palavras alinhadas nem intervalo, ele é registrado em ``dropped_segments``.
+
+A partir da Fase 6 o alvo editorial é o de duas linhas de 42 caracteres, com
+quebra preferencial em fim de frase ou de oração e velocidade de leitura de
+~17 caracteres por segundo. Quando um grupo de palavras não cabe no tempo
+disponível, ele é subdividido em partes contíguas (nunca em timestamps
+inventados) antes de ser reportado como ``overflow_cues``.
 """
 
 from __future__ import annotations
@@ -19,34 +25,58 @@ from legendar.domain.entities.transcript import (
 from legendar.domain.errors.catalog import SrtValidationError
 from legendar.domain.value_objects.time import TimeRange
 
-#: Limites conservadores de legibilidade (revisáveis na Fase 2).
-MAX_CHARS_PER_CUE = 84
+#: Limites editoriais de legibilidade (duas linhas, ~17 cps, 1–7 s por cue).
+MAX_CHARS_PER_LINE = 42
+MAX_LINES = 2
+MAX_CHARS_PER_CUE = MAX_LINES * MAX_CHARS_PER_LINE
 MAX_CUE_DURATION_SECONDS = 7.0
-MIN_CUE_DURATION_SECONDS = 0.8
+MIN_CUE_DURATION_SECONDS = 1.0
 MAX_GAP_SECONDS = 0.6
-CHARS_PER_SECOND = 22.0
+CHARS_PER_SECOND = 17.0
+SENTENCE_BREAK_RATIO = 0.5
+MIN_WORDS_PER_SPLIT_PART = 2
+MAX_SPLIT_DEPTH = 6
 _MIN_WINDOW_SECONDS = 1e-3
+_SENTENCE_ENDINGS = (".", "!", "?", "…")
+_CLAUSE_ENDINGS = (*_SENTENCE_ENDINGS, ",", ";", ":", "—", "-")
 
 
 @dataclass(frozen=True, slots=True)
 class SegmentationPolicy:
     """Parâmetros de segmentação; imutáveis para reprodutibilidade."""
 
+    max_chars_per_line: int = MAX_CHARS_PER_LINE
+    max_lines: int = MAX_LINES
     max_chars_per_cue: int = MAX_CHARS_PER_CUE
     max_cue_duration: float = MAX_CUE_DURATION_SECONDS
     min_cue_duration: float = MIN_CUE_DURATION_SECONDS
     max_gap: float = MAX_GAP_SECONDS
     chars_per_second: float = CHARS_PER_SECOND
+    sentence_break_ratio: float = SENTENCE_BREAK_RATIO
+    min_words_per_split_part: int = MIN_WORDS_PER_SPLIT_PART
 
     def __post_init__(self) -> None:
+        if self.max_chars_per_line < 20:
+            raise SrtValidationError("Largura de linha da legenda muito baixa.")
+        if self.max_lines < 1:
+            raise SrtValidationError("A legenda precisa de ao menos uma linha.")
         if self.max_chars_per_cue < 20:
             raise SrtValidationError("Limite de caracteres por cue muito baixo.")
+        if self.max_chars_per_cue > self.max_chars_per_line * self.max_lines:
+            raise SrtValidationError(
+                "Limite de caracteres por cue excede a capacidade das linhas."
+            )
         if not 0 < self.min_cue_duration < self.max_cue_duration:
             raise SrtValidationError("Durações de cue inconsistentes.")
         if self.chars_per_second <= 0:
             raise SrtValidationError("Velocidade de leitura deve ser positiva.")
+        if not 0 <= self.sentence_break_ratio <= 1:
+            raise SrtValidationError("Proporção de quebra por frase fora de faixa.")
+        if self.min_words_per_split_part < 1:
+            raise SrtValidationError("Partes de cue precisam de ao menos uma palavra.")
 
     def reading_time(self, text: str) -> float:
+        """Tempo mínimo de leitura do texto, em segundos."""
         return len(text) / self.chars_per_second
 
 
@@ -95,8 +125,11 @@ def segment_alignment(
     overflow: list[int] = []
 
     last_end = 0.0
+    split_applied = False
     for position, segment in enumerate(alignment.transcript.segments):
-        for window, text in _groups_for_segment(segment, policy, dropped, position):
+        windows, refined = _groups_for_segment(segment, policy, dropped, position)
+        split_applied = split_applied or refined
+        for window, text in windows:
             window = _clip_to_previous(window, last_end)
             if window is None:
                 dropped.append(position)
@@ -123,6 +156,8 @@ def segment_alignment(
         diagnostics.append("short_cue")
     if overflow:
         diagnostics.append("reading_speed_overflow")
+    if split_applied:
+        diagnostics.append("reading_speed_split")
 
     return SegmentationResult(
         track=SubtitleTrack(language=alignment.transcript.language, cues=tuple(cues)),
@@ -152,33 +187,37 @@ def _groups_for_segment(
     policy: SegmentationPolicy,
     dropped: list[int],
     position: int,
-) -> list[tuple[TimeRange, str]]:
+) -> tuple[list[tuple[TimeRange, str]], bool]:
     """Agrupa o segmento em janelas temporais com texto final.
 
     Cada item retornado é ``(janela, texto)``; a janela vem sempre de dados
-    temporais reais (palavras alinhadas ou intervalo do segmento).
+    temporais reais (palavras alinhadas ou intervalo do segmento). O segundo
+    elemento do retorno indica se houve subdivisão por velocidade de leitura.
     """
     aligned: list[tuple[TranscriptWord, TimeRange]] = [
         (word, word.range) for word in segment.words if word.range is not None
     ]
     if aligned:
-        return [
+        groups = _split_words(aligned, policy)
+        refined = _refine_for_reading_speed(groups, policy)
+        windows = [
             (TimeRange(start=group[0][1].start, end=group[-1][1].end), _text_of(group))
-            for group in _split_words(aligned, policy)
+            for group in refined
         ]
+        return windows, len(refined) > len(groups)
 
     if segment.range is None:
         dropped.append(position)
-        return []
+        return [], False
 
     text = " ".join(segment.text.split())
     if not text:
         dropped.append(position)
-        return []
+        return [], False
 
     # Sem palavras alinhadas: usa o intervalo do próprio segmento, preservando
     # o texto original. Nenhum tempo novo é inventado.
-    return [(segment.range, text)]
+    return [(segment.range, text)], False
 
 
 def _split_words(
@@ -199,6 +238,7 @@ def _split_words(
             len(candidate_text) > policy.max_chars_per_cue
             or duration > policy.max_cue_duration
             or gap > policy.max_gap
+            or _prefers_break_after(current, policy)
         ):
             groups.append(current)
             current = [item]
@@ -207,6 +247,94 @@ def _split_words(
     if current:
         groups.append(current)
     return groups
+
+
+def _prefers_break_after(
+    group: list[tuple[TranscriptWord, TimeRange]],
+    policy: SegmentationPolicy,
+) -> bool:
+    """Prefere encerrar a cue em fim de frase quando ela já tem massa de texto."""
+    text = _text_of(group)
+    if len(text) < policy.sentence_break_ratio * policy.max_chars_per_cue:
+        return False
+    return text.endswith(_SENTENCE_ENDINGS)
+
+
+def _refine_for_reading_speed(
+    groups: list[list[tuple[TranscriptWord, TimeRange]]],
+    policy: SegmentationPolicy,
+) -> list[list[tuple[TranscriptWord, TimeRange]]]:
+    """Subdivide grupos que não cabem no tempo real de fala disponível.
+
+    O corte reaproveita os timestamps das próprias palavras: nenhuma parte
+    recebe tempo que a fala não ocupou.
+    """
+    refined: list[list[tuple[TranscriptWord, TimeRange]]] = []
+    for group in groups:
+        refined.extend(_split_group_by_reading_speed(group, policy, depth=0))
+    return refined
+
+
+def _split_group_by_reading_speed(
+    group: list[tuple[TranscriptWord, TimeRange]],
+    policy: SegmentationPolicy,
+    *,
+    depth: int,
+) -> list[list[tuple[TranscriptWord, TimeRange]]]:
+    if depth >= MAX_SPLIT_DEPTH or len(group) < 2 * policy.min_words_per_split_part:
+        return [group]
+    window = TimeRange(start=group[0][1].start, end=group[-1][1].end)
+    if window.duration >= policy.reading_time(_text_of(group)):
+        return [group]
+    index = _split_index(group, policy)
+    if index is None:
+        return [group]
+    return [
+        *_split_group_by_reading_speed(group[:index], policy, depth=depth + 1),
+        *_split_group_by_reading_speed(group[index:], policy, depth=depth + 1),
+    ]
+
+
+def _split_index(
+    group: list[tuple[TranscriptWord, TimeRange]],
+    policy: SegmentationPolicy,
+) -> int | None:
+    """Melhor ponto de corte: elimina overflow e prefere pausa sintática."""
+    best_key: tuple[int, int, float, int] | None = None
+    best_index: int | None = None
+    first = policy.min_words_per_split_part
+    last = len(group) - policy.min_words_per_split_part + 1
+    for index in range(first, last):
+        left, right = group[:index], group[index:]
+        left_text, right_text = _text_of(left), _text_of(right)
+        if (
+            len(left_text) > policy.max_chars_per_cue
+            or len(right_text) > policy.max_chars_per_cue
+        ):
+            continue
+        worst = max(
+            _reading_ratio(left, left_text, policy),
+            _reading_ratio(right, right_text, policy),
+        )
+        key = (
+            0 if worst <= 1.0 else 1,
+            0 if left_text.endswith(_CLAUSE_ENDINGS) else 1,
+            round(worst, 4),
+            abs(len(left_text) - len(right_text)),
+        )
+        if best_key is None or key < best_key:
+            best_key = key
+            best_index = index
+    return best_index
+
+
+def _reading_ratio(
+    part: list[tuple[TranscriptWord, TimeRange]],
+    text: str,
+    policy: SegmentationPolicy,
+) -> float:
+    window = TimeRange(start=part[0][1].start, end=part[-1][1].end)
+    return policy.reading_time(text) / window.duration
 
 
 def _text_of(words: list[tuple[TranscriptWord, TimeRange]]) -> str:

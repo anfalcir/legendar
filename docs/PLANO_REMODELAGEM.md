@@ -623,16 +623,17 @@ Versões, licenças, wheels, modelos, requisitos de runtime e combinações de b
 | 3 | Entrada e preparação de mídia | YouTube, áudio/vídeo local, ffprobe, FFmpeg, faixas, normalização e temporários | **Concluída e integrada à `main` pela PR #4 (squash, commit `dfa440b`):** aquisição local/YouTube, inspeção, seleção de faixa e normalização; CI 4/4 em Python 3.10–3.13, 249 testes por ambiente, cobertura 87%, gates herdados aprovados |
 | 4 | Reconhecimento Whisper | Adaptador local, detecção/seleção de idioma, perfis, cache, erros, worker e benchmark lexical | **Concluída e integrada pela PR #5 (squash, commit `2f975113`):** Whisper local PT-BR/EN, cache e worker; CI 4/4 Python 3.10–3.13 em push/PR e smoke CPU tiny/base/small com WER/CER/RTF publicados. Inventário e corpus representativo no computador-alvo permanecem como homologação de produto |
 | 5 | Alinhamento temporal | WhisperX, janelas de busca, offsets, chunks, validação de palavra, diagnósticos e avaliação com fronteiras humanas | **Implementada e integrada pela PR #6** (squash `5c9a2ba`): alinhamento PT/EN, palavras não alinhadas explícitas, offsets globais, avaliador temporal, CI e smoke real aprovados. A precisão contra fronteiras humanas no computador-alvo continua gate de homologação do produto |
-| 6 | Tradução, segmentação e SRT | Tradução, vínculo temporal, regras de leitura, writer e validator | SRT original e traduzido válidos nos casos de referência |
+| 6 | Tradução, segmentação e SRT | Tradução, vínculo temporal, regras de leitura, writer e validator | **Implementada, validada e publicada na branch `phase-6/translation-segmentation-srt`, com PR pendente de abertura:** segmentação de duas linhas de 42 caracteres, tradução local por cue com NLLB-200 distilled 600M, validação do trilho e publicação SRT atômica com roundtrip; 387 testes locais verdes, workflow `phase6-quality.yml` com matriz Python 3.10–3.13 e 5/5 jobs aprovados no push [#42951041522](https://github.com/anfalcir/legendar/actions/runs/42951041522). Qualidade tradutória e leitura em mídia real seguem como homologação de produto |
 | 7 | Integração de ponta a ponta | GUI conectada ao pipeline, progresso real, cancelamento, logs e recuperação | Fluxo completo com estados e erros controlados |
 | 8 | Testes e homologação | Unitários, integração, GUI, E2E, regressão e relatório | Critérios de aceite atendidos e falhas críticas resolvidas |
 | 9 | Documentação e finalização | Guias, arquitetura, operação, instalação, decisões e revisão final | Documentação coerente com código e instalação reproduzível |
 
-A execução e as evidências das Fases 1–5 estão registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md),
+A execução e as evidências das Fases 1–6 estão registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md),
 [FASE_1_PLANO.md](FASE_1_PLANO.md), [FASE_2_PLANO.md](FASE_2_PLANO.md), [FASE_3_PLANO.md](FASE_3_PLANO.md),
-[FASE_4_PLANO.md](FASE_4_PLANO.md), [FASE_5_PLANO.md](FASE_5_PLANO.md), [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md),
-[HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md),
-[HANDOFF_FASE_4.md](HANDOFF_FASE_4.md) e [HANDOFF_FASE_5.md](HANDOFF_FASE_5.md). As Fases 0–5 estão concluídas e integradas à `main`; a próxima fase de implementação é a Fase 6.
+[FASE_4_PLANO.md](FASE_4_PLANO.md), [FASE_5_PLANO.md](FASE_5_PLANO.md), [FASE_6_PLANO.md](FASE_6_PLANO.md),
+[HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md),
+[HANDOFF_FASE_4.md](HANDOFF_FASE_4.md), [HANDOFF_FASE_5.md](HANDOFF_FASE_5.md) e [HANDOFF_FASE_6.md](HANDOFF_FASE_6.md).
+As Fases 0–5 estão concluídas e integradas à `main`; a Fase 6 está implementada e publicada na branch `phase-6/translation-segmentation-srt`, com CI de push verde e PR pendente de abertura.
 
 ### 12.1. Regras de execução das fases
 
@@ -670,11 +671,11 @@ O projeto remodelado somente será considerado pronto quando:
 |---|---|---|
 | Alinhador primário | WhisperX estável 3.8.6 integrado à `main` pela Fase 5; smoke real CPU PT-BR/EN aprovado | Precisão temporal, cobertura e tolerância a casos difíceis ainda exigem corpus de pregações com fronteiras humanas e validação no computador-alvo |
 | Alternativa | stable-ts não foi incluído como dependência nem como fallback automático | Reconsiderar somente se a homologação humana da Fase 5/8 mostrar limitação mensurável do alinhador primário |
-| Tradução | Porta/adaptador independente; preservar original e não enviar áudio ao fornecedor | Selecionar provedor e aprovar preço, privacidade, retenção, limites e falhas antes da Fase 6 |
+| Tradução | Porta/adaptador independente; preservar original e não enviar áudio ao fornecedor. A Fase 6 escolheu NLLB-200 distilled 600M local via `transformers`, com pesos em `<models_dir>/nllb`, inferência no próprio computador e tradução por cue | Aprovar desempenho e qualidade PT↔EN em corpus autorizado de pregações; medir tempo de primeira carga, memória e comportamento no computador-alvo |
 | Modelo Whisper | OpenAI Whisper local; perfil inicial `base`, com `tiny`, `small`, `medium`, `large` e `turbo` disponíveis | Comparar WER/CER/RTF e memória em corpus PT-BR/EN; validar no computador-alvo e em fala representativa antes de declarar recomendação |
 | Normalização | WAV PCM signed 16-bit, mono, 16 kHz; conversão sintética e preservação de offset foram aprovadas | Homologar codecs, contêineres, streams, qualidade de áudio e fixtures reais na Fase 3 |
 | Idiomas | PT-BR e EN passaram pelo smoke integrado de Whisper + WhisperX da Fase 5 | Não declarar precisão/homologação de produto antes de avaliar corpus humano e computador-alvo nas Fases 5/8 |
-| Parâmetros SRT | Regras e faixas iniciais documentadas na seção 5.6 | Calibrar com leitura real, segmentação e critérios de aceite nas Fases 6/8 |
+| Parâmetros SRT | Regras implementadas na Fase 6: duas linhas de 42 caracteres, 84 por cue, 1–7 s, pausa de 0,6 s e ~17 cps; validador reporta excessos sem truncar | Calibrar com leitura real em corpus de pregações e revisão humana na Fase 8 |
 | Distribuição | Perfis CPU e CUDA 12.8 estão declarados; macOS usa wheels PyPI do perfil CPU e pode expor MPS conforme runtime | Definir plataformas/backends oficialmente suportados somente após homologação da aplicação integrada na Fase 8 |
 
 A Fase 0 encerra as decisões estruturais necessárias para começar a arquitetura. Os itens da terceira coluna são validações de produto, dependem de evidências ou decisões de fornecedor e permanecem atribuídos às fases que os consomem; não são critérios ocultos para reabrir esta fase.
