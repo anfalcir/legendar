@@ -65,6 +65,7 @@ def test_segment_without_words_uses_its_own_range():
     assert result.cue_count == 1
     assert result.track.cues[0].range == TimeRange(0.0, 2.0)
     assert result.dropped_segments == ()
+    assert result.is_lossless
 
 
 def test_unmatched_words_are_explicit_and_make_result_lossy():
