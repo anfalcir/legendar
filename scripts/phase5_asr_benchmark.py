@@ -40,7 +40,6 @@ BACKENDS = ("openai-whisper", "faster-whisper")
 MODEL_PROFILES = ("tiny", "base", "small", "medium", "large", "turbo")
 
 
-
 def _load_local_manifest(manifest: Path) -> list[dict[str, Any]]:
     """Lê áudio local com referência humana opcional; caminhos/textos não vão ao relatório."""
     from legendar.domain.value_objects.language import Language
@@ -89,6 +88,7 @@ def _load_local_manifest(manifest: Path) -> list[dict[str, Any]]:
     if not samples:
         raise ValueError("O manifesto não contém amostras.")
     return samples
+
 
 def _package_version(name: str) -> str:
     try:
@@ -276,7 +276,8 @@ def run_benchmark(
                             "mean_wer": (
                                 round(
                                     sum(
-                                        item["wer"] for item in items
+                                        item["wer"]
+                                        for item in items
                                         if item["wer"] is not None
                                     )
                                     / sum(item["wer"] is not None for item in items),
@@ -288,7 +289,8 @@ def run_benchmark(
                             "mean_cer": (
                                 round(
                                     sum(
-                                        item["cer"] for item in items
+                                        item["cer"]
+                                        for item in items
                                         if item["cer"] is not None
                                     )
                                     / sum(item["cer"] is not None for item in items),
