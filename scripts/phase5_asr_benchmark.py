@@ -141,6 +141,7 @@ def run_benchmark(
                         cache_dir / "models",
                         model_name=model_name,
                         device=device,
+                        beam_size=beam_size,
                     )
                 else:
                     transcriber = FasterWhisperTranscriber(
