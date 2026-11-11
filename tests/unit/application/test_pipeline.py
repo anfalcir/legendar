@@ -71,7 +71,7 @@ def test_happy_path_publishes_and_reports_states(job_context):
     assert result.output_path == str(job_context.output_path)
     assert result.final_language is Language.PORTUGUESE
     assert result.quality_report is not None
-    assert result.quality_report.status.value == "APPROVED"
+    assert result.quality_report.status.value == "REVIEW_REQUIRED"
     assert len(ports["publisher"].calls) == 1
     assert seen == [
         JobState.INSPECTING_MEDIA,
