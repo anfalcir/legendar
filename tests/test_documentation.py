@@ -21,6 +21,7 @@ REQUIRED_DOCUMENTS = (
     "docs/ARQUITETURA.md",
     "docs/OPERACAO.md",
     "docs/INSTALACAO.md",
+    "docs/HOMOLOGACAO.md",
     "docs/DECISOES.md",
     "docs/MATRIZ_DEPENDENCIAS.md",
     "docs/FASE_0_PROTOCOLO.md",

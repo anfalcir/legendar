@@ -5,7 +5,7 @@
 - **Branch padrão / base de integração:** `main`
 - **Fases concluídas e integradas:** 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9
 - **Fase em execução:** nenhuma — roadmap do plano mestre encerrado
-- **Próxima etapa:** homologação do usuário com mídia real, modelos completos e computador-alvo
+- **Próxima etapa:** homologação do usuário com mídia real, modelos completos e computador-alvo — roteiro em [HOMOLOGACAO.md](HOMOLOGACAO.md)
 - **Suíte determinística:** 451 testes aprovados e 86% de cobertura com FFmpeg/ffprobe no `PATH`; 441 aprovados e 10 skips explícitos sem as ferramentas
 - **Documentação:** guias de arquitetura, operação, instalação e decisões publicados; links relativos verificados automaticamente
 - **Manifestos:** `pyproject.toml` e `uv.lock`; o `requirements.txt` legado foi removido
@@ -87,6 +87,9 @@ As mais relevantes para operar o produto hoje:
 5. `pyproject.toml` + `uv.lock` como únicos manifestos; pip via `uv export`.
 
 ## 6. Pendências de homologação (usuário)
+
+Roteiro prático, com comandos, ordem dos testes e o que registrar em cada um:
+[HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | # | Item | Como validar |
 |---|---|---|

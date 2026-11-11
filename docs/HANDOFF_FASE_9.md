@@ -50,6 +50,9 @@ relativo quebrado.
 
 ## 4. Roteiro de homologação do usuário
 
+Passo a passo prático, com o que fazer e o que observar em cada teste:
+[HOMOLOGACAO.md](HOMOLOGACAO.md). Resumo:
+
 1. Instalar pelo [INSTALACAO.md](INSTALACAO.md) com o perfil adequado ao seu hardware.
 2. Abrir a aplicação e confirmar o painel de prontidão (FFmpeg, Whisper, WhisperX, NLLB).
 3. Processar um vídeo PT-BR curto sem tradução; inspecionar o SRT no player de referência.

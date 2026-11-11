@@ -66,6 +66,7 @@ cobertura de 85% (`.github/workflows/phase8-quality.yml`).
 - [Arquitetura](docs/ARQUITETURA.md) — camadas, módulos, portas, estados, threads e publicação.
 - [Operação](docs/OPERACAO.md) — uso da janela, estados, cancelamento, arquivos, erros e diagnóstico.
 - [Instalação](docs/INSTALACAO.md) — requisitos, perfis, execução, verificação e desinstalação.
+- [Homologação](docs/HOMOLOGACAO.md) — roteiro passo a passo para validar com mídia real e hardware próprio.
 - [Decisões](docs/DECISOES.md) — decisões consolidadas e decisões abertas.
 - [Plano mestre de remodelagem](docs/PLANO_REMODELAGEM.md) — visão do produto, requisitos e critérios de aceite.
 - [Estado atual](docs/ESTADO_ATUAL.md) — estado real, evidências, riscos e pendências.
