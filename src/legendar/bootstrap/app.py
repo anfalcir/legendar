@@ -221,7 +221,11 @@ def build_ui_dependencies(
         cache_dir=settings.models_dir,
         workspace_factory=TempWorkspaceFactory(settings.temp_dir),
         pipeline_factory=lambda: _pipeline_factory(
-            inspector, downloader, transcriber, aligner, translator,
+            inspector,
+            downloader,
+            transcriber,
+            aligner,
+            translator,
             performance_reporter,
         ),
         output_path_factory=lambda stem, _language: suggest_output_path(settings, stem),

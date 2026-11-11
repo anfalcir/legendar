@@ -49,7 +49,9 @@ def _linux_memory(meminfo_path: Path = Path("/proc/meminfo")) -> dict[str, int |
             value = int(parts[0])
         except ValueError:
             continue
-        values[key] = value * 1024 if len(parts) > 1 and parts[1].lower() == "kb" else value
+        values[key] = (
+            value * 1024 if len(parts) > 1 and parts[1].lower() == "kb" else value
+        )
     return {
         "total_bytes": values.get("MemTotal"),
         "available_bytes": values.get("MemAvailable", values.get("MemFree")),
@@ -156,9 +158,7 @@ def _physical_cpu_count(cpuinfo_path: Path = Path("/proc/cpuinfo")) -> int | Non
     physical_id: str | None = None
     core_id: str | None = None
     try:
-        lines = cpuinfo_path.read_text(
-            encoding="ascii", errors="replace"
-        ).splitlines()
+        lines = cpuinfo_path.read_text(encoding="ascii", errors="replace").splitlines()
     except OSError:
         return None
     for line in (*lines, ""):
@@ -229,7 +229,9 @@ def _nvidia_devices() -> list[str]:
     return [line.strip()[:240] for line in result.stdout.splitlines() if line.strip()]
 
 
-def _graphics_adapters(devices: Path = Path("/sys/bus/pci/devices")) -> list[dict[str, str | None]]:
+def _graphics_adapters(
+    devices: Path = Path("/sys/bus/pci/devices"),
+) -> list[dict[str, str | None]]:
     if not sys.platform.startswith("linux"):
         return []
     vendor_names = {"0x1002": "AMD", "0x10de": "NVIDIA", "0x8086": "Intel"}
@@ -328,7 +330,9 @@ def _gpu_runtime_resources() -> dict[str, int | None]:
         fields = [field.strip() for field in line.split(",")]
         if len(fields) != 2:
             continue
-        for suffix, raw in zip(("memory_used_mib", "utilization_percent"), fields, strict=True):
+        for suffix, raw in zip(
+            ("memory_used_mib", "utilization_percent"), fields, strict=True
+        ):
             try:
                 values[f"gpu{index}_{suffix}"] = int(raw)
             except ValueError:

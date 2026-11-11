@@ -289,7 +289,9 @@ class NllbTranslator:
                 "num_beams": NUM_BEAMS,
                 "max_input_tokens": MAX_INPUT_TOKENS,
                 "max_new_tokens": MAX_NEW_TOKENS,
-                "dtype": str(getattr(self._model, "dtype", "unknown")) if self._model is not None else None,
+                "dtype": str(getattr(self._model, "dtype", "unknown"))
+                if self._model is not None
+                else None,
                 **collect_torch_thread_settings(),
             },
             "counters": counters,

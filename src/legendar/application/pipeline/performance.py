@@ -42,7 +42,9 @@ def _safe_snapshot(provider: ResourceProvider | None) -> dict[str, Any] | None:
         return None
 
 
-def _numeric_delta(before: Mapping[str, Any], after: Mapping[str, Any]) -> dict[str, float]:
+def _numeric_delta(
+    before: Mapping[str, Any], after: Mapping[str, Any]
+) -> dict[str, float]:
     delta: dict[str, float] = {}
     for key, value in after.items():
         previous = before.get(key, 0)

@@ -181,7 +181,9 @@ class SerialPipeline:
                     reporter.write_report(report)
                 except Exception:
                     # Telemetria é best-effort e nunca pode mudar o resultado do job.
-                    LOGGER.exception("Não foi possível persistir o relatório de desempenho.")
+                    LOGGER.exception(
+                        "Não foi possível persistir o relatório de desempenho."
+                    )
 
     def _execute(
         self,

@@ -44,7 +44,9 @@ def test_reporter_writes_private_json_without_media_content(
     assert not list(path.parent.glob("*.partial"))
 
 
-def test_reporter_uses_safe_filename_for_job_identifier(tmp_path: Path, monkeypatch) -> None:
+def test_reporter_uses_safe_filename_for_job_identifier(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.setattr(module, "collect_performance_environment", lambda: {})
     reporter = JsonPerformanceReporter(tmp_path / "logs")
 
@@ -158,9 +160,7 @@ def test_environment_snapshot_and_resource_capture_are_composed(
     monkeypatch.setattr(module, "_graphics_adapters", lambda: [{"vendor": "AMD"}])
     monkeypatch.setattr(module, "_nvidia_devices", lambda: [])
     monkeypatch.setattr(module, "_package_versions", lambda: {"torch": "test"})
-    monkeypatch.setattr(
-        module, "_tool_version", lambda name: f"{name} version test"
-    )
+    monkeypatch.setattr(module, "_tool_version", lambda name: f"{name} version test")
     environment = module.collect_performance_environment()
     assert environment["cpu_model"] == "Test CPU"
     assert environment["physical_cpu_count"] == 4
@@ -168,12 +168,8 @@ def test_environment_snapshot_and_resource_capture_are_composed(
     assert environment["graphics_adapters"] == [{"vendor": "AMD"}]
     assert environment["media_tools"]["ffmpeg"] == "ffmpeg version test"
 
-    monkeypatch.setattr(
-        module, "_process_rss_bytes", lambda: 10
-    )
-    monkeypatch.setattr(
-        module, "_process_peak_rss_bytes", lambda: 20
-    )
+    monkeypatch.setattr(module, "_process_rss_bytes", lambda: 10)
+    monkeypatch.setattr(module, "_process_peak_rss_bytes", lambda: 20)
     monkeypatch.setattr(
         module,
         "_gpu_runtime_resources",
