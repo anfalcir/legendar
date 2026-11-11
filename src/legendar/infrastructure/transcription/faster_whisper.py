@@ -398,9 +398,7 @@ class FasterWhisperTranscriber:
                     window = TimeRange(start=float(raw_start), end=float(raw_end))
                 except TemporalError:
                     window = None
-            segments.append(
-                TranscriptSegment(text=normalized, alignment_window=window)
-            )
+            segments.append(TranscriptSegment(text=normalized, alignment_window=window))
 
         if not segments:
             raise ModelError(
@@ -421,5 +419,7 @@ class FasterWhisperTranscriber:
         self._record_metric(
             "recognized_words", sum(len(segment.text.split()) for segment in segments)
         )
-        progress.report(1.0, f"Reconhecimento faster-whisper {self.model_name} concluído")
+        progress.report(
+            1.0, f"Reconhecimento faster-whisper {self.model_name} concluído"
+        )
         return transcript
