@@ -208,10 +208,10 @@ def test_unmatched_word_gets_one_controlled_wider_window_recovery(tmp_path: Path
     assert result.diagnostics.unmatched_words == ()
     assert result.is_complete
     assert len(calls) == 2
-    assert calls[0][0]["start"] == pytest.approx(0.5)
-    assert calls[0][0]["end"] == pytest.approx(1.5)
-    assert calls[1][0]["start"] == pytest.approx(0.0)
-    assert calls[1][0]["end"] == pytest.approx(2.25)
+    assert calls[0][0][0]["start"] == pytest.approx(0.5)
+    assert calls[0][0][0]["end"] == pytest.approx(1.5)
+    assert calls[1][0][0]["start"] == pytest.approx(0.0)
+    assert calls[1][0][0]["end"] == pytest.approx(2.25)
     snapshot = aligner.performance_snapshot()
     assert snapshot["counters"]["recovery_attempts"] == 1
     assert snapshot["counters"]["recovered_words"] == 1
