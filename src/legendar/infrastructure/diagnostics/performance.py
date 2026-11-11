@@ -284,6 +284,25 @@ def collect_performance_environment() -> dict[str, Any]:
     }
 
 
+def collect_torch_thread_settings() -> dict[str, int]:
+    """Lê configurações PyTorch já inicializadas sem importar o runtime."""
+    torch = sys.modules.get("torch")
+    if torch is None:
+        return {}
+    result: dict[str, int] = {}
+    for key, attribute in (
+        ("pytorch_num_threads", "get_num_threads"),
+        ("pytorch_num_interop_threads", "get_num_interop_threads"),
+    ):
+        getter = getattr(torch, attribute, None)
+        if callable(getter):
+            try:
+                result[key] = int(getter())
+            except (RuntimeError, TypeError, ValueError):
+                continue
+    return result
+
+
 def _gpu_runtime_resources() -> dict[str, int | None]:
     binary = shutil.which("nvidia-smi")
     if not binary:
