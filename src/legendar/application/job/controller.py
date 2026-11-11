@@ -176,11 +176,13 @@ class JobController:
                     cue_count=len(result.track.cues),
                     quality_status=(
                         result.quality_report.status.value
-                        if result.quality_report is not None else "APPROVED"
+                        if result.quality_report is not None
+                        else "APPROVED"
                     ),
                     quality_summary=(
                         result.quality_report.summary
-                        if result.quality_report is not None else ""
+                        if result.quality_report is not None
+                        else ""
                     ),
                 )
             )
