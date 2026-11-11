@@ -26,7 +26,9 @@ from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus, locate_tools
 from legendar.infrastructure.media.youtube import YtDlpDownloader
-from legendar.infrastructure.transcription.faster_whisper import FasterWhisperTranscriber
+from legendar.infrastructure.transcription.faster_whisper import (
+    FasterWhisperTranscriber,
+)
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.presentation.qt.branding import app_icon
