@@ -106,6 +106,7 @@ src/legendar/
 | Modelo Whisper | `base` | `LEGENDAR_WHISPER_MODEL` |
 | Dispositivo Whisper | `auto` | `LEGENDAR_WHISPER_DEVICE` |
 | Dispositivo do alinhador | `auto` | `LEGENDAR_ALIGN_DEVICE` |
+| Padding de recuperação do alinhamento | `0,75 s` no bootstrap de produção | `LEGENDAR_ALIGN_RECOVERY_PADDING_SECONDS` |
 | Dispositivo da tradução | `auto` | `LEGENDAR_TRANSLATE_DEVICE` |
 | Checkpoint de tradução | `facebook/nllb-200-distilled-600M` | `LEGENDAR_TRANSLATE_MODEL` |
 
