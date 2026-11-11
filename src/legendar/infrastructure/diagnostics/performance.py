@@ -62,6 +62,7 @@ def _system_memory() -> dict[str, int | None]:
     if sys.platform.startswith("linux"):
         return _linux_memory()
     if os.name == "nt":
+
         class MemoryStatusEx(ctypes.Structure):
             _fields_ = [
                 ("dwLength", ctypes.c_ulong),
@@ -96,6 +97,7 @@ def _process_rss_bytes() -> int | None:
         except (OSError, ValueError, IndexError):
             return None
     if os.name == "nt":
+
         class ProcessMemoryCounters(ctypes.Structure):
             _fields_ = [
                 ("cb", ctypes.c_ulong),
