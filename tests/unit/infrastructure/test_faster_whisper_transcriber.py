@@ -39,8 +39,7 @@ class FakeModel:
         def generate():
             if self.error is not None:
                 raise self.error
-            for segment in self.segments:
-                yield segment
+            yield from self.segments
             self.generator_consumed = True
 
         return generate(), SimpleNamespace(
