@@ -96,9 +96,7 @@ def _load_samples(
                     break
         missing = wanted.difference(found)
         if missing:
-            raise RuntimeError(
-                f"Áudios ausentes no FLEURS {config}: {sorted(missing)}"
-            )
+            raise RuntimeError(f"Áudios ausentes no FLEURS {config}: {sorted(missing)}")
 
         for row in rows:
             samples.append(
@@ -231,7 +229,9 @@ def run_smoke(
                     if word.range is None:
                         continue
                     if (
-                        0.0 <= word.range.start < word.range.end
+                        0.0
+                        <= word.range.start
+                        < word.range.end
                         <= audio.duration_seconds + 1e-6
                     ):
                         valid_bounds += 1
@@ -258,9 +258,7 @@ def run_smoke(
                     ),
                     "aligned_words": aligned_words,
                     "unmatched_words": unmatched_words,
-                    "alignment_coverage": round(
-                        aligned_words / max(total_words, 1), 6
-                    ),
+                    "alignment_coverage": round(aligned_words / max(total_words, 1), 6),
                     "valid_timestamps": valid_bounds,
                     "diagnostic_issues": list(alignment.diagnostics.issues),
                 }

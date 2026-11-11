@@ -64,7 +64,6 @@ def test_output_language_requires_concrete_language():
     assert str(OutputLanguage(Language.PORTUGUESE)) == "pt"
 
 
-
 def test_negative_source_offset_maps_positive_local_time_without_negative_global_range():
     from legendar.domain.value_objects.time import TimelineMapping
 

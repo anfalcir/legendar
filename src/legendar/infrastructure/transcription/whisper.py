@@ -285,7 +285,9 @@ class WhisperTranscriber:
                         and not isinstance(raw_end, bool)
                         and math.isfinite(float(raw_start))
                         and math.isfinite(float(raw_end))
-                        and 0.0 <= float(raw_start) < float(raw_end)
+                        and 0.0
+                        <= float(raw_start)
+                        < float(raw_end)
                         <= audio.duration_seconds
                     ):
                         try:

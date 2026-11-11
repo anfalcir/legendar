@@ -56,7 +56,9 @@ def _percentile(values: list[float], percentile: float) -> float | None:
     return ordered[rank - 1]
 
 
-def _error_summary(start_errors: list[float], end_errors: list[float]) -> dict[str, Any]:
+def _error_summary(
+    start_errors: list[float], end_errors: list[float]
+) -> dict[str, Any]:
     boundary_errors = [*start_errors, *end_errors]
 
     def milliseconds(value: float | None) -> float | None:
@@ -175,7 +177,9 @@ def _read_manifest(manifest: Path) -> list[dict[str, Any]]:
                 window = TimeRange(window_start, window_end)
                 expected_tokens = text.split()
                 raw_words = segment.get("words")
-                if not isinstance(raw_words, list) or len(raw_words) != len(expected_tokens):
+                if not isinstance(raw_words, list) or len(raw_words) != len(
+                    expected_tokens
+                ):
                     raise ValueError(
                         f"Linha {line_number}, segmento {segment_index}: informe "
                         "uma palavra de referência para cada token separado por espaço."
@@ -191,7 +195,9 @@ def _read_manifest(manifest: Path) -> list[dict[str, Any]]:
                             f"palavra {word_index}: objeto inválido."
                         )
                     word = raw_word.get("word")
-                    if not isinstance(word, str) or _normalized_word(word) != _normalized_word(expected):
+                    if not isinstance(word, str) or _normalized_word(
+                        word
+                    ) != _normalized_word(expected):
                         raise ValueError(
                             f"Linha {line_number}, segmento {segment_index}, "
                             f"palavra {word_index}: texto de referência não corresponde "

@@ -142,7 +142,9 @@ def test_aligns_words_and_applies_source_offset_exactly_once(tmp_path: Path) -> 
     assert progress.reports[-1] == (1.0, "Forced alignment WhisperX concluído")
 
 
-def test_unaligned_word_is_not_interpolated_or_given_a_timestamp(tmp_path: Path) -> None:
+def test_unaligned_word_is_not_interpolated_or_given_a_timestamp(
+    tmp_path: Path,
+) -> None:
     aligner = make_aligner(
         tmp_path,
         result={

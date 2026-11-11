@@ -745,6 +745,9 @@ def test_final_generation_stays_disabled_until_srt_publisher_is_available(
     window.output_edit.setText(str(tmp_path / "saida.srt"))
 
     assert not window.generate_button.isEnabled()
-    assert "publicação final SRT ainda não foi implementada" in window.readiness_label.text()
+    assert (
+        "publicação final SRT ainda não foi implementada"
+        in window.readiness_label.text()
+    )
     with pytest.raises(InvalidInputError, match="publicação final"):
         window._build_job()

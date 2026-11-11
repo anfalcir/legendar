@@ -196,9 +196,7 @@ class SerialPipeline:
                 f"{len(alignment.diagnostics.unmatched_words)} palavra(s) sem alinhamento."
             )
         additional_issues = tuple(
-            issue
-            for issue in alignment.diagnostics.issues
-            if issue != "unmatched_word"
+            issue for issue in alignment.diagnostics.issues if issue != "unmatched_word"
         )
         if additional_issues:
             warnings.append(

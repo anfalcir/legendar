@@ -167,10 +167,7 @@ def test_missing_whisper_is_reported_without_crashing_application(
         "openai-whisper não instalado"
         in dependencies.transcription_readiness_details[0]
     )
-    assert (
-        "WhisperX não instalado"
-        in dependencies.alignment_readiness_details[0]
-    )
+    assert "WhisperX não instalado" in dependencies.alignment_readiness_details[0]
     assert isinstance(
         dependencies.pipeline_factory()._ports.transcriber, WhisperTranscriber
     )

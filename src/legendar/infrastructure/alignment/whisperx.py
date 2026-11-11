@@ -465,9 +465,7 @@ class WhisperXAligner:
             if not isinstance(raw_words, (list, tuple)):
                 aligned_segments = result.get("segments", [])
                 if not isinstance(aligned_segments, (list, tuple)):
-                    raise ModelError(
-                        "WhisperX retornou segmentos em formato inválido."
-                    )
+                    raise ModelError("WhisperX retornou segmentos em formato inválido.")
                 raw_words = [
                     word
                     for item in aligned_segments
