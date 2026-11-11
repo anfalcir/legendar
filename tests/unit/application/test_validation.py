@@ -117,3 +117,85 @@ def test_custom_policy_changes_the_thresholds() -> None:
     report = validate_track(track, policy=policy)
 
     assert report.short_cues == (1,)
+
+
+
+def test_quality_report_is_structured_and_includes_cps_metrics() -> None:
+    track = _track(_cue(1, "bom dia", 0.0, 2.0), _cue(2, "até logo", 2.5, 4.5))
+
+    report = validate_track(track)
+
+    assert report.status.value == "APPROVED"
+    assert report.cue_count == 2
+    assert report.max_cps == pytest.approx(4.0)
+    assert report.p95_cps == pytest.approx(4.0)
+    assert report.issues == ()
+
+
+def test_editorial_risks_require_review_without_removing_content() -> None:
+    repeated = "vamos seguir"
+    track = _track(
+        _cue(1, repeated, 0.0, 1.0),
+        _cue(2, repeated, 1.2, 2.2),
+    )
+
+    report = validate_track(track)
+
+    assert report.status.value == "REVIEW_REQUIRED"
+    assert report.duplicate_cues == (2,)
+    assert len(track.cues) == 2
+    assert track.cues[0].text == track.cues[1].text
+
+
+def test_suspicious_control_and_replacement_characters_are_reported() -> None:
+    track = _track(_cue(1, "texto \ufffd inválido", 0.0, 2.0))
+
+    report = validate_track(track)
+
+    assert report.status.value == "REVIEW_REQUIRED"
+    assert report.suspicious_cues == (1,)
+    assert any(issue.code == "SUSPICIOUS_TEXT" for issue in report.issues)
+
+
+def test_repeated_word_loop_is_reported_but_preserved() -> None:
+    text = "não não não não pare"
+    track = _track(_cue(1, text, 0.0, 3.0))
+
+    report = validate_track(track)
+
+    assert report.suspicious_cues == (1,)
+    assert track.cues[0].text == text
+
+
+def test_connector_at_cue_boundary_is_reported_as_fragment() -> None:
+    track = _track(
+        _cue(1, "ele caminhou para", 0.0, 2.0),
+        _cue(2, "casa rapidamente", 2.2, 4.0),
+    )
+
+    report = validate_track(track)
+
+    assert report.fragmented_cues == (2,)
+    assert report.status.value == "REVIEW_REQUIRED"
+
+
+def test_content_loss_blocks_publication_quality_gate() -> None:
+    track = _track(_cue(1, "conteúdo preservado", 0.0, 2.0))
+
+    report = validate_track(track, content_loss_count=1)
+
+    assert report.status.value == "BLOCKED"
+    assert report.is_blocked
+    assert "1 segmento(s)" in report.summary
+
+
+def test_translation_invariant_numbers_and_acronyms_are_checked() -> None:
+    source = _track(_cue(1, "A NASA lançou 3 satélites", 0.0, 3.0))
+    target = _track(_cue(1, "A agência lançou satélites", 0.0, 3.0))
+
+    report = validate_track(target, source_track=source)
+
+    assert report.status.value == "REVIEW_REQUIRED"
+    issue = next(issue for issue in report.issues if issue.code == "TRANSLATION_INVARIANT")
+    assert "número 3" in issue.message
+    assert "sigla NASA" in issue.message
