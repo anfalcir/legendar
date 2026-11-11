@@ -304,7 +304,7 @@ Entregas:
 - As cues podem atravessar limites artificiais do ASR quando há continuidade temporal e textual; pausas, pontuação, limite de caracteres e duração continuam determinando fronteiras.
 - Cada cue preserva os índices de todos os segmentos de origem em `source_segments`.
 - A entrada fora de ordem cronológica é rejeitada explicitamente; o sistema não reordena silenciosamente palavras e não altera o texto falado.
-- Cues curtas podem ganhar tempo de exibição somente dentro do silêncio anterior à próxima cue, com margem de segurança de 80 ms. A última cue não é estendida sem evidência do fim da mídia.
+- Cues curtas podem ganhar tempo de exibição até a duração mínima ou o tempo de leitura calculado, somente dentro do silêncio anterior à próxima cue e com margem de segurança de 80 ms. A última cue não é estendida sem evidência do fim da mídia.
 - Testes foram adicionados para consolidação entre segmentos, pausas, rastreabilidade, cronologia inválida e extensão segura.
 
 **Ainda pendente:** avaliação do corpus audiovisual real, otimização editorial das fronteiras com pontuação/sintaxe e comprovação quantitativa de redução de fragmentação sem piorar CPS, cobertura ou sincronização. A Fase 3 não está concluída.
