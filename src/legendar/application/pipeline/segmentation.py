@@ -127,37 +127,78 @@ def segment_alignment(
     *,
     policy: SegmentationPolicy | None = None,
 ) -> SegmentationResult:
-    """Converte um ``AlignmentResult`` em ``SubtitleTrack`` ordenado."""
+    """Segmenta um fluxo global de palavras, inclusive entre limites do ASR.
+
+    A origem de cada palavra é mantida para que cada cue continue rastreável.
+    Segmentos sem word timestamps continuam usando apenas seu próprio range.
+    """
     policy = policy or SegmentationPolicy()
-    cues: list[SubtitleCue] = []
+    events: list[tuple[TimeRange, str, tuple[int, ...]]] = []
     dropped: list[int] = []
     short: list[int] = []
     overflow: list[int] = []
+    words: list[tuple[TranscriptWord, TimeRange, int]] = []
 
-    last_end = 0.0
-    split_applied = False
     for position, segment in enumerate(alignment.transcript.segments):
-        windows, refined = _groups_for_segment(segment, policy, dropped, position)
-        split_applied = split_applied or refined
-        for window, text in windows:
-            window = _clip_to_previous(window, last_end)
-            if window is None:
-                dropped.append(position)
-                continue
-            last_end = window.end
-            cue = SubtitleCue(
-                index=len(cues) + 1,
-                text=text,
-                range=window,
-                language=alignment.transcript.language,
-                source_segments=(position,),
+        aligned = [
+            (word, word.range, position)
+            for word in segment.words
+            if word.range is not None
+        ]
+        if aligned:
+            words.extend(aligned)
+            continue
+        text = " ".join(segment.text.split())
+        if segment.range is None or not text:
+            dropped.append(position)
+            continue
+        events.append((segment.range, text, (position,)))
+
+    # A sequência global deve respeitar a cronologia. Ordenar silenciosamente
+    # poderia alterar a ordem falada; portanto, inconsistência é erro explícito.
+    for previous, current in zip(words, words[1:], strict=False):
+        if current[1].start < previous[1].start:
+            raise SrtValidationError(
+                "Palavras alinhadas fora da ordem cronológica da transcrição."
             )
-            cues.append(cue)
-            if window.duration < policy.min_cue_duration:
-                short.append(cue.index)
-            # Overflows: texto que não cabe no tempo de leitura da janela.
-            if window.duration < policy.reading_time(text):
-                overflow.append(cue.index)
+
+    plain_words = [(word, time_range) for word, time_range, _ in words]
+    groups = _split_words(plain_words, policy) if plain_words else []
+    refined = _refine_for_reading_speed(groups, policy)
+    split_applied = len(refined) > len(groups)
+    source_by_identity = {id(word): source for word, _, source in words}
+
+    for group in refined:
+        window = TimeRange(start=group[0][1].start, end=group[-1][1].end)
+        text = _text_of(group)
+        sources = tuple(
+            sorted({source_by_identity[id(word)] for word, _ in group})
+        )
+        events.append((window, text, sources))
+
+    # Eventos de segmentos sem timestamps por palavra coexistem com as cues
+    # globais, mas a publicação permanece cronológica e sem sobreposição.
+    events.sort(key=lambda item: (item[0].start, item[0].end))
+    cues: list[SubtitleCue] = []
+    last_end = 0.0
+    for window, text, sources in events:
+        clipped = _clip_to_previous(window, last_end)
+        if clipped is None:
+            dropped.extend(sources)
+            continue
+        last_end = clipped.end
+        cue = SubtitleCue(
+            index=len(cues) + 1,
+            text=text,
+            range=clipped,
+            language=alignment.transcript.language,
+            source_segments=sources,
+        )
+        cues.append(cue)
+        if clipped.duration < policy.min_cue_duration:
+            short.append(cue.index)
+        if clipped.duration < policy.reading_time(text):
+            overflow.append(cue.index)
 
     diagnostics: list[str] = []
     unmatched_words = alignment.diagnostics.unmatched_words
@@ -171,6 +212,8 @@ def segment_alignment(
         diagnostics.append("reading_speed_overflow")
     if split_applied:
         diagnostics.append("reading_speed_split")
+    if any(len(cue.source_segments) > 1 for cue in cues):
+        diagnostics.append("cross_segment_merge")
 
     return SegmentationResult(
         track=SubtitleTrack(language=alignment.transcript.language, cues=tuple(cues)),
@@ -181,7 +224,6 @@ def segment_alignment(
         unmatched_words=tuple(unmatched_words),
         diagnostics=tuple(dict.fromkeys(diagnostics)),
     )
-
 
 def _clip_to_previous(window: TimeRange, last_end: float) -> TimeRange | None:
     """Remove sobreposição com a cue anterior sem inventar tempo novo.
