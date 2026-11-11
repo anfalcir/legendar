@@ -114,6 +114,9 @@ def run_benchmark(
             last_wer, last_cer = _score(references, result.texts)
         snapshot = translator.performance_snapshot()
         config = snapshot.get("configuration", {})
+        warm_runs = run_seconds[1:]
+        warm_median = statistics.median(warm_runs) if warm_runs else None
+        throughput_seconds = warm_median or statistics.median(run_seconds)
         results.append(
             {
                 "backend": backend,
@@ -121,9 +124,12 @@ def run_benchmark(
                 "batch_size": config.get("batch_size"),
                 "units": len(units),
                 "repeats": repeats,
+                "first_run_seconds": run_seconds[0],
+                "warm_run_seconds": warm_runs,
+                "warm_median_seconds": warm_median,
                 "run_seconds": run_seconds,
                 "median_seconds": statistics.median(run_seconds),
-                "units_per_second": len(units) / statistics.median(run_seconds),
+                "units_per_second": len(units) / throughput_seconds,
                 "wer": last_wer,
                 "cer": last_cer,
                 "performance": snapshot,
