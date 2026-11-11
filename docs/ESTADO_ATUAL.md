@@ -152,8 +152,8 @@ Nenhuma dessas fases de código é declarada concluída por existir apenas no pl
 1. Executar a Fase 5 isoladamente, validar oportunidades de aceleração de ASR e manter as métricas de qualidade como critério de aceite.
 2. Na Fase 6, comparar Gemini API com NLLB usando o mesmo corpus e revisão humana. Antes das chamadas reais, solicitar o cadastro de `GEMINI_API_KEY` como secret no GitHub.
 3. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
-4. Consolidar a Fase 8 com comparação do pipeline completo, homologação audiovisual com a mídia real, validação no hardware-alvo e evidências sanitizadas.
-5. Manter a Fase 7 como etapa de gestão de memória, threads e perfis de execução conforme o resultado dos benchmarks.
+4. Executar a Fase 7 para gestão de memória, threads e perfis de execução, conforme os resultados dos benchmarks.
+5. Consolidar a Fase 8 com comparação do pipeline completo, homologação audiovisual com a mídia real, validação no hardware-alvo e evidências sanitizadas.
 
 ## 10. Histórico documental
 
