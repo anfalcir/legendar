@@ -13,7 +13,7 @@
 - **Fase 3:** concluída e integrada à `main` pela PR #10, squash `10f6d6d428a1fa5a45a7c7fd13870f48bdf67019`.
 - **Fase 4:** concluída e integrada à `main` pela PR [#11](https://github.com/anfalcir/legendar/pull/11), squash `32f20c3a5455dcc16f48e78a742ba4c7018339b5`. CI: 506 testes aprovados, cobertura de 86%, Python 3.10–3.13, Ruff e smoke Whisper/WhisperX CPU PT-BR/EN.
 - **Fase 5:** implementação técnica integrada à `main` pela PR [#12](https://github.com/anfalcir/legendar/pull/12), squash `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. CI específica aprovada. O Whisper continua padrão; a adoção do faster-whisper depende do benchmark no hardware-alvo e da revisão humana, previstos na Fase 8.
-- **Fase 6:** implementação em andamento na branch `phase-6/gemini-translation`. Gemini API está sendo integrado como candidato contextual; NLLB permanece padrão e selecionável..
+- **Fase 6:** implementação em andamento na branch `phase-6/gemini-translation`. Gemini API está sendo integrado como candidato contextual; NLLB permanece padrão e selecionável.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
@@ -134,11 +134,11 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 3 | Segmentação global e legibilidade | **Concluída e integrada à `main` (PR #10)** |
 | 4 | Gate editorial e diagnóstico textual | **Concluída e integrada à `main` (PR #11)** |
 | 5 | Benchmark e aceleração da transcrição | **Implementação integrada à `main` (PR #12); homologação operacional pendente na Fase 8** |
-| 6 | Benchmark e aceleração da tradução | **Em implementação (`phase-6/gemini-translation`)** |
+| 6 | Benchmark e aceleração da tradução | **Em implementação (`phase-6/gemini-translation`, PR #13 aberta)** |
 | 7 | Gestão de memória, threads e perfis de execução | Planejada |
 | 8 | Regressão, homologação real e comparação final | Planejada |
 
-Nenhuma dessas fases de código é declarada concluída por existir apenas no plano.
+A Fase 5 tem implementação integrada; seu aceite operacional de desempenho depende da homologação real na Fase 8. A Fase 6 só será encerrada após CI, benchmark pareado e revisão humana.
 
 ## 8. Critérios que não podem ser sacrificados
 
