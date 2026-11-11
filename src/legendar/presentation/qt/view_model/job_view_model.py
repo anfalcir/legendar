@@ -177,8 +177,13 @@ class JobViewModel:
                 status_text=f"Legenda publicada: {event.output_path}",
                 output_path=event.output_path,
                 error_message="",
-                notice_message="",
-                notice_level="",
+                notice_message=(
+                    event.quality_summary
+                    if event.quality_status == "REVIEW_REQUIRED" else ""
+                ),
+                notice_level=(
+                    "warning" if event.quality_status == "REVIEW_REQUIRED" else ""
+                ),
                 progress_known=True,
                 log_lines=_append_text(
                     snapshot.log_lines,
