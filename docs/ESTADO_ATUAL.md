@@ -9,7 +9,7 @@
 - **CI da Fase 1 (PR #8):** aprovada. Incluiu 492 testes, cobertura de 85,46%, E2E com FFmpeg/Qt em Python 3.10–3.13, smoke OpenAI Whisper PT-BR/EN, smoke NLLB real com Transformers em CPU, matriz multiplataforma, validação documental e os workflows determinísticos relacionados. Os checks de WhisperX benchmark/CUDA foram marcados como skipped pelos critérios do runner, não como falha.
 - **Remodelação arquitetural anterior:** Fases 0–10 integradas à `main`.
 - **Fase 1:** concluída e integrada à `main`; baseline real da mídia de 37min10s consolidado em 11/11/2026.
-- **Fase 2:** implementação de integridade textual e alinhamento recuperável em andamento na branch `phase-2/alignment-integrity`.
+- **Fase 2:** concluída, validada pelo CI e integrada à `main` pela PR #9. A próxima frente é a Fase 3.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
@@ -44,7 +44,7 @@ uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
 **Validação automatizada:** 492 testes aprovados; cobertura global de 85,46%; E2E em quatro versões de Python; smoke de reconhecimento Whisper PT-BR/EN; smoke NLLB real em CPU; CI multiplataforma e documentação aprovadas.
 
 **Evidência operacional consolidada (11/11/2026):** o inventário atualizado e quatro execuções da mídia real de 37min10s foram coletados: uma fria e três quentes. As três execuções quentes ficaram na faixa de ~23 minutos, com mediana de aproximadamente 23min21s (RTF ~0,63). A tradução NLLB foi o maior estágio isolado, em torno de 14 minutos por execução quente. Essa medição substitui o relato histórico de ~1 hora como baseline operacional para os próximos experimentos; não é necessário investigar o ambiente da medição histórica para avançar.
-## 3. Estado da Fase 2 — integridade textual e alinhamento recuperável
+## 3. Estado da Fase 2 — concluída
 
 A implementação atual da branch de Fase 2:
 
@@ -55,7 +55,7 @@ A implementação atual da branch de Fase 2:
 - registra tentativas, duração e palavras recuperadas nas métricas de performance;
 - possui testes unitários para perda explícita, bloqueio de publicação e recuperação.
 
-A Fase 2 só será considerada integrada após CI verde e merge na `main`. A homologação audiovisual real continua sendo gate posterior.
+A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes. A homologação audiovisual real continua sendo gate posterior.
 
 ## 3. Estado do repositório
 
@@ -122,7 +122,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 |---|---|---|
 | 0 | Auditoria, organização documental e plano | Documentada nesta entrega |
 | 1 | Instrumentação e baseline por etapa | **Concluída** |
-| 2 | Integridade textual e alinhamento recuperável | **Implementação em execução** |
+| 2 | Integridade textual e alinhamento recuperável | **Concluída e integrada à `main`** |
 | 3 | Segmentação global e legibilidade | Planejada |
 | 4 | Gate editorial e diagnóstico textual | Planejada |
 | 5 | Benchmark e aceleração da transcrição | Planejada |
