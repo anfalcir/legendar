@@ -33,7 +33,9 @@ from legendar.domain.errors.catalog import (
     UnsupportedLanguageError,
 )
 from legendar.domain.value_objects.time import TemporalError, TimelineMapping, TimeRange
-from legendar.infrastructure.diagnostics.performance import collect_torch_thread_settings
+from legendar.infrastructure.diagnostics.performance import (
+    collect_torch_thread_settings,
+)
 from legendar.infrastructure.filesystem.paths import ensure_private_directory
 from legendar.infrastructure.transcription.whisper import load_pcm_waveform
 

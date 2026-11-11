@@ -25,7 +25,9 @@ from legendar.domain.errors.catalog import (
 )
 from legendar.domain.value_objects.language import Language
 from legendar.domain.value_objects.time import TemporalError, TimeRange
-from legendar.infrastructure.diagnostics.performance import collect_torch_thread_settings
+from legendar.infrastructure.diagnostics.performance import (
+    collect_torch_thread_settings,
+)
 from legendar.infrastructure.media.waveform import load_pcm_waveform
 
 SUPPORTED_MODELS = frozenset({"tiny", "base", "small", "medium", "large", "turbo"})

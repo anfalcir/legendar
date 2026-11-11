@@ -13,8 +13,9 @@ import shutil
 import subprocess
 import sys
 import uuid
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from legendar.infrastructure.filesystem.paths import ensure_private_directory
 
@@ -328,7 +329,7 @@ def _gpu_runtime_resources() -> dict[str, int | None]:
         fields = [field.strip() for field in line.split(",")]
         if len(fields) != 2:
             continue
-        for suffix, raw in zip(("memory_used_mib", "utilization_percent"), fields):
+        for suffix, raw in zip(("memory_used_mib", "utilization_percent"), fields, strict=True):
             try:
                 values[f"gpu{index}_{suffix}"] = int(raw)
             except ValueError:

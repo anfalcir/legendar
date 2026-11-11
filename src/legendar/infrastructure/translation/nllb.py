@@ -24,13 +24,15 @@ from legendar.application.pipeline.translation import (
     TranslationUnit,
 )
 from legendar.application.ports.protocols import CancellationToken, ProgressSink
-from legendar.infrastructure.diagnostics.performance import collect_torch_thread_settings
 from legendar.domain.errors.catalog import (
     ModelError,
     TranslationError,
     UnsupportedLanguageError,
 )
 from legendar.domain.value_objects.language import Language
+from legendar.infrastructure.diagnostics.performance import (
+    collect_torch_thread_settings,
+)
 
 MODEL_NAME = "facebook/nllb-200-distilled-600M"
 DEFAULT_DEVICE = "auto"

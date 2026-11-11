@@ -23,6 +23,10 @@ from legendar.application.pipeline.translation import (
     build_translation_units,
 )
 from legendar.application.pipeline.validation import validate_track
+from legendar.application.pipeline.performance import (
+    PipelinePerformanceSession,
+    snapshot_adapter_metrics,
+)
 from legendar.application.ports.protocols import (
     Aligner,
     AudioPreparer,
@@ -34,18 +38,14 @@ from legendar.application.ports.protocols import (
     Transcriber,
     Translator,
 )
-from legendar.application.pipeline.performance import (
-    PipelinePerformanceSession,
-    snapshot_adapter_metrics,
-)
 from legendar.application.progress.sink import MonotonicProgress, ScaledProgress
 from legendar.domain.entities.media import MediaInfo, MediaKind, MediaSource
 from legendar.domain.entities.subtitle import SubtitleTrack
 from legendar.domain.entities.transcript import AlignmentResult
 from legendar.domain.errors.catalog import (
     AlignmentInsufficientError,
-    JobCancelledError,
     InvalidInputError,
+    JobCancelledError,
     ModelError,
     TranslationError,
     UnsupportedLanguageError,
