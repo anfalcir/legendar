@@ -179,10 +179,13 @@ class JobViewModel:
                 error_message="",
                 notice_message=(
                     event.quality_summary
-                    if event.quality_status == "REVIEW_REQUIRED" else ""
+                    if event.quality_status == "REVIEW_REQUIRED"
+                    else ""
                 ),
                 notice_level=(
-                    "warning" if event.quality_status == "REVIEW_REQUIRED" else ""
+                    "warning"
+                    if event.quality_status == "REVIEW_REQUIRED"
+                    else ""
                 ),
                 progress_known=True,
                 log_lines=_append_text(
