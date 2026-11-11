@@ -208,7 +208,7 @@ def test_unmatched_word_gets_one_controlled_wider_window_recovery(tmp_path: Path
     assert [word.text for word in words] == ["Olá", "mundo"]
     assert all(word.is_aligned for word in words)
     assert result.diagnostics.unmatched_words == ()
-    assert "alignment_recovered" in result.diagnostics.issues
+    assert result.is_complete
     assert len(calls) == 2
     assert calls[0][0]["start"] == pytest.approx(0.5)
     assert calls[0][0]["end"] == pytest.approx(1.5)
