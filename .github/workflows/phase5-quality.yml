@@ -68,7 +68,7 @@ jobs:
         run: python -m compileall -q src/legendar tests scripts
 
       - name: Run complete deterministic suite
-        run: uv run --locked --no-sync pytest -q --cov=legendar --cov-report=term-missing
+        run: uv run --locked --no-sync pytest -q --cov=src/legendar --cov-report=term-missing
 
       - name: Lint maintained architecture, tests and Phase 5 scripts
         run: >-
@@ -155,10 +155,36 @@ jobs:
             --cache-dir .cache/phase5 \
             --output phase5-alignment-smoke.json
 
-      - name: Upload alignment smoke report
+      - name: Run faster-whisper + WhisperX alignment smoke
+        env:
+          PYTHONPATH: src
+        run: |
+          uv run --locked --group dev --group phase0 --extra runtime-cpu python scripts/phase5_alignment_smoke.py \
+            --model tiny \
+            --samples-per-language 1 \
+            --device cpu \
+            --backend faster-whisper \
+            --output phase5-faster-whisper-alignment-smoke.json
+
+      - name: Compare OpenAI Whisper and faster-whisper on identical samples
+        env:
+          PYTHONPATH: src
+        run: |
+          uv run --locked --group dev --group phase0 --extra runtime-cpu python scripts/phase5_asr_benchmark.py \
+            --models base \
+            --samples-per-language 1 \
+            --device cpu \
+            --cpu-threads 4 \
+            --beam-size 5 \
+            --output phase5-asr-benchmark.json
+
+      - name: Upload alignment and ASR benchmark reports
         uses: actions/upload-artifact@v4
         with:
-          name: legendar-phase5-alignment-smoke
-          path: phase5-alignment-smoke.json
+          name: legendar-phase5-asr-evidence
+          path: |
+            phase5-alignment-smoke.json
+            phase5-faster-whisper-alignment-smoke.json
+            phase5-asr-benchmark.json
           if-no-files-found: error
           retention-days: 90
