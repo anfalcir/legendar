@@ -23,10 +23,10 @@ Variáveis de ambiente:
 | `LEGENDAR_WHISPER_DEVICE` | `auto` | `auto`, `cpu` ou `cuda` |
 | `LEGENDAR_FASTER_WHISPER_COMPUTE_TYPE` | automático | CPU: `int8`; CUDA: `float16` |
 | `LEGENDAR_FASTER_WHISPER_CPU_THREADS` | `4` | Threads do CTranslate2 |
-| `LEGENDAR_FASTER_WHISPER_BEAM_SIZE` | `5` | Beam search |
+| `LEGENDAR_WHISPER_BEAM_SIZE` | `5` | Beam search compartilhado pelos dois backends |
 | `LEGENDAR_FASTER_WHISPER_VAD_FILTER` | `false` | VAD experimental; desligado por padrão |
 
-O modelo `large` é mapeado para `large-v3` no adaptador faster-whisper. MPS não é suportado pelo CTranslate2; use CPU ou CUDA.
+O modelo `large` é mapeado para `large-v3` no adaptador faster-whisper. O beam search é configurado uma única vez para permitir comparações equivalentes entre os motores. A variável antiga `LEGENDAR_FASTER_WHISPER_BEAM_SIZE` permanece como fallback de compatibilidade se a variável compartilhada não estiver definida. MPS não é suportado pelo CTranslate2; use CPU ou CUDA.
 
 O perfil de runtime do projeto já instala WhisperX, que declara faster-whisper/CTranslate2 como dependências transitivas. A aplicação faz detecção de disponibilidade no preflight e não deve encerrar a GUI se o backend selecionado estiver ausente ou mal configurado; nesse caso, a prontidão de transcrição é marcada como indisponível e o baseline não é selecionado silenciosamente.
 
