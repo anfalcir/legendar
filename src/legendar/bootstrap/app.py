@@ -25,6 +25,7 @@ from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus, locate_tools
 from legendar.infrastructure.media.youtube import YtDlpDownloader
+from legendar.infrastructure.transcription.faster_whisper import FasterWhisperTranscriber
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.presentation.qt.branding import app_icon
@@ -135,30 +136,79 @@ def build_ui_dependencies(
         *runtime_details,
     )
 
+    asr_backend = __import__("os").environ.get(
+        "LEGENDAR_ASR_BACKEND", "whisper"
+    ).strip().casefold()
+    transcription_configuration_ok = asr_backend in {"whisper", "faster-whisper"}
     try:
         whisper_installed = importlib.util.find_spec("whisper") is not None
     except (ImportError, ValueError):
         whisper_installed = False
-
-    transcription_configuration_ok = True
     try:
-        transcriber = WhisperTranscriber.from_environment(settings.models_dir)
-    except ValueError as exc:
-        # Uma configuração inválida não deve impedir a GUI de abrir.
-        transcriber = WhisperTranscriber(models_dir=settings.models_dir)
-        transcription_configuration_ok = False
-        transcription_details = (f"Configuração Whisper inválida: {exc}",)
+        faster_whisper_installed = (
+            importlib.util.find_spec("faster_whisper") is not None
+        )
+    except (ImportError, ValueError):
+        faster_whisper_installed = False
+
+    if asr_backend == "faster-whisper":
+        if faster_whisper_installed:
+            try:
+                transcriber = FasterWhisperTranscriber.from_environment(
+                    settings.models_dir
+                )
+            except ValueError as exc:
+                transcriber = WhisperTranscriber.from_environment(settings.models_dir)
+                transcription_configuration_ok = False
+                transcription_details = (
+                    f"Configuração faster-whisper inválida: {exc}",
+                )
+            else:
+                transcription_details = (
+                    f"faster-whisper/CTranslate2 instalado · modelo {transcriber.model_name}",
+                    f"Dispositivo: {transcriber.requested_device} · "
+                    f"compute type: {transcriber.requested_compute_type or 'automático'}",
+                    f"CPU threads: {transcriber.cpu_threads} · beam: {transcriber.beam_size}",
+                )
+        else:
+            transcriber = WhisperTranscriber.from_environment(settings.models_dir)
+            transcription_configuration_ok = False
+            transcription_details = (
+                "faster-whisper não instalado; sincronize runtime-cpu ou runtime-cu128.",
+            )
+    elif asr_backend == "whisper":
+        try:
+            transcriber = WhisperTranscriber.from_environment(settings.models_dir)
+        except ValueError as exc:
+            transcriber = WhisperTranscriber(models_dir=settings.models_dir)
+            transcription_configuration_ok = False
+            transcription_details = (f"Configuração Whisper inválida: {exc}",)
+        else:
+            transcription_details = (
+                f"OpenAI Whisper instalado · modelo {transcriber.model_name}",
+                f"Dispositivo: {transcriber.requested_device} · pesos no cache local",
+            )
     else:
+        transcriber = WhisperTranscriber.from_environment(settings.models_dir)
+        transcription_configuration_ok = False
         transcription_details = (
-            f"OpenAI Whisper instalado · modelo {transcriber.model_name}",
-            f"Dispositivo: {transcriber.requested_device} · pesos no cache local",
+            "LEGENDAR_ASR_BACKEND inválido; use whisper ou faster-whisper.",
         )
 
-    if not whisper_installed:
+    if asr_backend == "whisper" and not whisper_installed:
         transcription_details = (
             "openai-whisper não instalado; sincronize runtime-cpu ou runtime-cu128.",
         )
-    transcription_available = whisper_installed and transcription_configuration_ok
+    if asr_backend == "faster-whisper" and not faster_whisper_installed:
+        transcription_configuration_ok = False
+    transcription_available = (
+        transcription_configuration_ok
+        and (
+            faster_whisper_installed
+            if asr_backend == "faster-whisper"
+            else whisper_installed
+        )
+    )
 
     try:
         whisperx_installed = importlib.util.find_spec("whisperx") is not None
