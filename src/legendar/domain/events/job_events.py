@@ -94,3 +94,5 @@ class JobCompleted(JobEvent):
 
     output_path: str = ""
     cue_count: int = 0
+    quality_status: str = "APPROVED"
+    quality_summary: str = ""

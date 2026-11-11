@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1, 2 e 3 concluídas e integradas à `main`; Fase 4 é a próxima etapa.
+- **Status:** Fases 1, 2 e 3 concluídas e integradas à `main`; Fase 4 em implementação na branch `phase-4/editorial-quality-gate`, aguardando CI e merge.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -329,6 +329,19 @@ Entregas:
 A detecção de repetição não deve remover texto automaticamente: repetição pode ser falada de verdade. O sistema deve identificar candidatos e preservar o conteúdo até haver evidência de erro.
 
 **Critério de conclusão:** os defeitos conhecidos geram alerta ou bloqueio verificável, com testes positivos e negativos; nenhum mecanismo de limpeza apaga fala legítima.
+
+**Implementação em andamento (11/11/2026):**
+
+- Criado relatório estruturado `TrackValidationReport`, com estados `APPROVED`, `REVIEW_REQUIRED` e `BLOCKED`, issues identificáveis, severidade, índices das cues, contagem, CPS máximo e P95.
+- O gate classifica duração curta/longa, velocidade de leitura, largura, fragmentos após conectivos/preposições, sequências rápidas de cues curtas (flicker), duplicações consecutivas próximas, caracteres de controle/substituição e loops de palavras.
+- Na tradução, compara números e siglas em relação ao trilho-fonte. O detector é conservador: nomes próprios e terminologia não são considerados validados automaticamente apenas por capitalização.
+- Segmentos de origem com texto que não chegaram ao SRT bloqueiam a publicação; segmentos vazios não são tratados como perda de conteúdo.
+- Problemas editoriais não críticos preservam o SRT, mas marcam o resultado como `REVIEW_REQUIRED`; a interface recebe um aviso final com detalhes das primeiras ocorrências. Nenhuma regra apaga ou reescreve fala.
+- Os testes cobrem estados, métricas, duplicações, texto suspeito, loops, fronteiras sintáticas, invariantes de tradução e bloqueio antes da chamada ao publicador.
+
+**Limites explícitos desta entrega:** o pipeline atual não dispõe de medição de energia/VAD no estágio editorial; portanto, o gate não afirma detectar texto pronunciado durante silêncio real. A consistência de nomes próprios e termos recorrentes exige glossário/avaliação contextual e continuará sendo validada no trabalho de tradução da Fase 6 e na homologação da Fase 8. Os alertas heurísticos são candidatos à revisão, não correções automáticas.
+
+**Status de integração:** implementação na branch; CI, revisão final, atualização de estado e merge ainda pendentes.
 
 ### Fase 5 — Benchmark e aceleração da transcrição (ASR)
 

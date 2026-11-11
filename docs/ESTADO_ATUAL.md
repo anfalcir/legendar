@@ -19,9 +19,9 @@
 
 O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliza o áudio, transcreve com Whisper, alinha palavras com WhisperX, forma legendas, traduz localmente com NLLB-200 quando solicitado, valida o trilho e publica SRT por troca atômica.
 
-A arquitetura e a base de engenharia das Fases 0–10 estão integradas. A auditoria estática posterior identificou lacunas editoriais; as Fases 2 e 3 já corrigiram a integridade textual e a consolidação cronológica da segmentação. A Fase 4 agora tratará o gate editorial bloqueante para CPS, duração, fragmentação e exceções.
+A arquitetura e a base de engenharia das Fases 0–10 estão integradas. A auditoria estática posterior identificou lacunas editoriais; as Fases 2 e 3 já corrigiram a integridade textual e a consolidação cronológica da segmentação. A Fase 4 está em implementação na branch `phase-4/editorial-quality-gate`: gate estruturado, diagnósticos editoriais e aviso de revisão na interface.
 
-As Fases 1, 2 e 3 estão concluídas e integradas à `main`. A Fase 3 consolidou globalmente as palavras alinhadas, preservou segmentos fallback, reforçou fronteiras editoriais e adicionou extensão segura de exibição. A próxima etapa é a Fase 4. O baseline real de 37min10s é ~23min21s; NLLB consome ~14min e será o foco da Fase 6, quando será avaliado Gemini com credencial fornecida pelo usuário via secret do GitHub.
+As Fases 1, 2 e 3 estão concluídas e integradas à `main`. A Fase 3 consolidou globalmente as palavras alinhadas, preservou segmentos fallback, reforçou fronteiras editoriais e adicionou extensão segura de exibição. A Fase 4 está em andamento; CI e merge ainda pendentes. O baseline real de 37min10s é ~23min21s; NLLB consome ~14min e será o foco da Fase 6, quando será avaliado Gemini com credencial fornecida pelo usuário via secret do GitHub.
 
 ## 2. Estado da Fase 1 — concluída
 
@@ -74,7 +74,7 @@ A Fase 3 foi integrada pela PR #10, squash commit `10f6d6d428a1fa5a45a7c7fd13870
 | Segmentação | Fluxo global cronológico integrado; consolida limites do Whisper, preserva fallback e rastreabilidade de origem |
 | Tradução | NLLB-200 distilled 600M via Transformers/PyTorch |
 | Publicação | SRT com round-trip e gravação atômica |
-| Gate editorial | Insuficiente: riscos de leitura podem continuar como avisos |
+| Gate editorial | Em implementação: relatório estruturado e bloqueio de perda de conteúdo na branch da Fase 4 |
 | Benchmark por etapa | Instrumentação integrada; baseline real consolidado em 11/11/2026 |
 | Otimização de motores | Fases 5–7 planejadas; Gemini é candidato para a Fase 6, sem adoção ainda |
 | Homologação audiovisual final | Pendente |
@@ -128,7 +128,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 1 | Instrumentação e baseline por etapa | **Concluída** |
 | 2 | Integridade textual e alinhamento recuperável | **Concluída e integrada à `main`** |
 | 3 | Segmentação global e legibilidade | **Concluída e integrada à `main` (PR #10)** |
-| 4 | Gate editorial e diagnóstico textual | Planejada |
+| 4 | Gate editorial e diagnóstico textual | **Em implementação na branch `phase-4/editorial-quality-gate`; CI/merge pendentes** |
 | 5 | Benchmark e aceleração da transcrição | Planejada |
 | 6 | Benchmark e aceleração da tradução | Planejada |
 | 7 | Gestão de memória, threads e perfis de execução | Planejada |
@@ -147,7 +147,7 @@ Nenhuma dessas fases de código é declarada concluída por existir apenas no pl
 
 ## 9. Próximas ações
 
-1. Executar a Fase 4 para tornar CPS, duração, fragmentação e integridade critérios editoriais auditáveis.
+1. Concluir CI, revisão e merge da Fase 4; confirmar que CPS, duração, fragmentação e integridade são critérios editoriais auditáveis.
 2. Executar a Fase 5 isoladamente, se o benchmark confirmar oportunidade de aceleração de ASR.
 3. Na Fase 6, comparar Gemini API com NLLB usando o mesmo corpus e revisão humana. Antes das chamadas reais, solicitar o cadastro de `GEMINI_API_KEY` como secret no GitHub.
 4. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.

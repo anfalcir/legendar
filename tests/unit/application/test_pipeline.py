@@ -33,6 +33,7 @@ from legendar.domain.errors.catalog import (
     InvalidInputError,
     JobCancelledError,
     PublicationError,
+    SrtValidationError,
     TranslationError,
     UnsupportedLanguageError,
 )
@@ -69,6 +70,8 @@ def test_happy_path_publishes_and_reports_states(job_context):
 
     assert result.output_path == str(job_context.output_path)
     assert result.final_language is Language.PORTUGUESE
+    assert result.quality_report is not None
+    assert result.quality_report.status.value == "REVIEW_REQUIRED"
     assert len(ports["publisher"].calls) == 1
     assert seen == [
         JobState.INSPECTING_MEDIA,
@@ -464,3 +467,28 @@ def test_pipeline_reports_failure_without_exception_message(job_context):
     assert report["status"] == "failed"
     assert report["error_type"] == "InvalidInputError"
     assert "exception_message" not in report
+
+
+def test_pipeline_blocks_publication_when_segmentation_drops_source_content(
+    job_context,
+):
+    base = make_transcript(language=Language.PORTUGUESE)
+    dropped = TranscriptSegment(text="fala sem tempo", range=None, words=())
+    transcript = Transcript(
+        segments=(*base.segments, dropped),
+        language=base.language,
+        model_name=base.model_name,
+    )
+    alignment = AlignmentResult(
+        transcript=transcript,
+        diagnostics=AlignmentDiagnostics(aligned_words=2),
+    )
+    publisher = FakePublisher()
+    pipeline, _ = _pipeline(
+        aligner=FakeAligner(alignment=alignment), publisher=publisher
+    )
+
+    with pytest.raises(SrtValidationError, match="Publicação bloqueada"):
+        pipeline.execute(_request(), job_context)
+
+    assert publisher.calls == []
