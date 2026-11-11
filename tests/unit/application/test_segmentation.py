@@ -300,3 +300,25 @@ def test_global_stream_rejects_non_chronological_aligned_words():
 
     with pytest.raises(SrtValidationError, match="ordem cronológica"):
         segment_alignment(_alignment(first, second))
+
+
+def test_short_cue_extends_only_into_silence_before_next_cue():
+    first = _segment(_word("oi", 0.0, 0.2))
+    second = _segment(_word("tudo", 2.0, 2.4))
+
+    result = segment_alignment(_alignment(first, second))
+
+    first_cue, second_cue = result.track.cues
+    assert first_cue.range.start == pytest.approx(0.0)
+    assert first_cue.range.end == pytest.approx(1.0)
+    assert second_cue.range.start == pytest.approx(2.0)
+    assert first_cue.range.end < second_cue.range.start
+
+
+def test_short_final_cue_is_not_extended_without_silence_evidence():
+    segment = _segment(_word("oi", 0.0, 0.2))
+
+    result = segment_alignment(_alignment(segment))
+
+    assert result.track.cues[0].range == TimeRange(0.0, 0.2)
+    assert result.short_cues == (1,)
