@@ -4,6 +4,8 @@
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
 - **Branch de integração:** `main`
 - **HEAD usado nesta atualização documental:** `85aa832954aa539d2c8e96a4335608f958e88776`
+- **Integração da organização documental e do plano vigente:** PR [#7](https://github.com/anfalcir/legendar/pull/7), squash `a62f4459b76b07aa86f00d22acf663a8f95b7368`, integrada à `main`.
+- **CI da integração:** o job de documentação da PR #7 passou; parte da matriz da PR não chegou a executar testes porque os runners não resolveram os espelhos Ubuntu durante `apt-get`. A nova execução pós-merge da Fase 8 está em andamento ([run #43055692640](https://github.com/anfalcir/legendar/actions/runs/43055692640)). Não considerar a matriz completa aprovada até os jobs terminarem.
 - **Remodelação arquitetural anterior:** Fases 0–10 integradas à `main`.
 - **Nova frente:** plano de correção da qualidade editorial e melhoria de desempenho documentado; implementação ainda não iniciada.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
