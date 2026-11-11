@@ -264,7 +264,9 @@ def test_faster_whisper_backend_is_selected_explicitly(tmp_path, monkeypatch) ->
     assert pipeline._ports.transcriber.requested_compute_type is None
 
 
-def test_faster_whisper_backend_reports_missing_dependency(tmp_path, monkeypatch) -> None:
+def test_faster_whisper_backend_reports_missing_dependency(
+    tmp_path, monkeypatch
+) -> None:
     _patch_modules(monkeypatch)
     monkeypatch.setenv("LEGENDAR_ASR_BACKEND", "faster-whisper")
 
@@ -277,7 +279,10 @@ def test_faster_whisper_backend_reports_missing_dependency(tmp_path, monkeypatch
     )
 
     assert not dependencies.transcription_available
-    assert "faster-whisper não instalado" in dependencies.transcription_readiness_details[0]
+    assert (
+        "faster-whisper não instalado"
+        in dependencies.transcription_readiness_details[0]
+    )
     assert isinstance(
         dependencies.pipeline_factory()._ports.transcriber, WhisperTranscriber
     )
@@ -296,4 +301,7 @@ def test_unknown_asr_backend_is_not_silently_accepted(tmp_path, monkeypatch) -> 
     )
 
     assert not dependencies.transcription_available
-    assert "LEGENDAR_ASR_BACKEND inválido" in dependencies.transcription_readiness_details[0]
+    assert (
+        "LEGENDAR_ASR_BACKEND inválido"
+        in dependencies.transcription_readiness_details[0]
+    )
