@@ -60,7 +60,7 @@ O adaptador usa HTTPS e envia a chave no header \`x-goog-api-key\`, nunca na URL
 - Métricas sanitizadas: número de requisições, retries, lotes, cues, duração de chamadas, tokens de entrada/saída e consultas de grounding.
 - O snapshot de performance não contém texto ou segredo.
 
-Grounding com Google Search é **opt-in**. Use apenas quando uma referência cultural, nome ou termo do universo exigir pesquisa. Grounding ajuda a identificar referências, mas não autoriza acrescentar fatos à fala. Ele pode aumentar latência e consumo; compare separadamente a configuração ligada/desligada.
+Grounding com Google Search é **opt-in**. A matriz de modelos consultada indica que o modelo padrão `gemini-3.8-flash` não oferece esse recurso; o adaptador rejeita a combinação para não enviar uma configuração inválida. Para testar grounding, configure explicitamente `LEGENDAR_GEMINI_MODEL=gemini-3.5-flash-lite` junto com `LEGENDAR_GEMINI_GROUNDING=true`. Use apenas quando uma referência cultural, nome ou termo do universo exigir pesquisa. Grounding ajuda a identificar referências, mas não autoriza acrescentar fatos à fala. Ele pode aumentar latência e consumo; compare separadamente a configuração ligada/desligada.
 
 ## 5. Instalação e configuração
 
