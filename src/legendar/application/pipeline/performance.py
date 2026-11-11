@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from time import perf_counter, process_time
 from typing import Any
 
 
@@ -67,10 +66,12 @@ class PipelinePerformanceSession:
         resource_provider: ResourceProvider | None = None,
         adapter_metrics_before: Mapping[str, Mapping[str, Any]] | None = None,
     ) -> None:
+        import time
+
         self.job_id = job_id
         self._resource_provider = resource_provider
-        self._started = perf_counter()
-        self._process_started = process_time()
+        self._started = time.perf_counter()
+        self._process_started = time.process_time()
         self._stages: list[dict[str, Any]] = []
         self._counts: dict[str, int | float] = {}
         self._metadata: dict[str, Any] = {}
@@ -81,14 +82,16 @@ class PipelinePerformanceSession:
     @contextmanager
     def measure(self, name: str) -> Iterator[None]:
         """Mede tempo de parede, CPU do processo e recursos antes/depois."""
+        import time
+
         resources_before = _safe_snapshot(self._resource_provider)
-        wall_started = perf_counter()
-        cpu_started = process_time()
+        wall_started = time.perf_counter()
+        cpu_started = time.process_time()
         try:
             yield
         finally:
-            wall_seconds = max(0.0, perf_counter() - wall_started)
-            cpu_seconds = max(0.0, process_time() - cpu_started)
+            wall_seconds = max(0.0, time.perf_counter() - wall_started)
+            cpu_seconds = max(0.0, time.process_time() - cpu_started)
             resources_after = _safe_snapshot(self._resource_provider)
             self._stages.append(
                 {
@@ -116,6 +119,8 @@ class PipelinePerformanceSession:
         adapter_metrics_after: Mapping[str, Mapping[str, Any]] | None = None,
         error_type: str | None = None,
     ) -> dict[str, Any]:
+        import time
+
         adapters_after = adapter_metrics_after or {}
         adapters: dict[str, Any] = {}
         for name in sorted(set(self._adapter_metrics_before) | set(adapters_after)):
@@ -140,9 +145,9 @@ class PipelinePerformanceSession:
             "job_id": self.job_id,
             "generated_at_utc": datetime.now(timezone.utc).isoformat(),
             "status": status,
-            "total_wall_seconds": max(0.0, perf_counter() - self._started),
+            "total_wall_seconds": max(0.0, time.perf_counter() - self._started),
             "total_process_cpu_seconds": max(
-                0.0, process_time() - self._process_started
+                0.0, time.process_time() - self._process_started
             ),
             "metadata": self._metadata,
             "counts": self._counts,
