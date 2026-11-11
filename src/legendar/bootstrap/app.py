@@ -14,11 +14,11 @@ from legendar.application.pipeline.serial_pipeline import (
     PipelinePorts,
     SerialPipeline,
 )
+from legendar.application.ports.protocols import Transcriber
 from legendar.domain.entities.media import AudioAsset
 from legendar.domain.entities.subtitle import SubtitleTrack
 from legendar.domain.entities.transcript import Transcript
 from legendar.domain.errors.catalog import ModelError
-from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
 from legendar.infrastructure.logging.setup import configure_logging
@@ -26,6 +26,7 @@ from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus, locate_tools
 from legendar.infrastructure.media.youtube import YtDlpDownloader
+from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
 
 ToolLocator = Callable[[tuple[str, ...]], Mapping[str, ToolStatus]]

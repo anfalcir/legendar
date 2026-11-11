@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem está em execução por fases. As Fases 0–3 foram implementadas, validadas e integradas à `main` pelas PRs #1–#4. A Fase 3 foi integrada por squash pela PR [#4](https://github.com/anfalcir/legendar/pull/4), commit `dfa440b39e7623356388c774834e23ee53fc1d09`; sua CI aprovou Python 3.10–3.13 (249 testes por ambiente, cobertura 87%, Ruff check/format verdes). A aplicação anterior permanece preservada como baseline. Whisper/WhisperX, tradução e publicação SRT continuam nas fases posteriores.
+A remodelagem é executada por fases. As Fases 0–3 foram implementadas, validadas e integradas à `main` pelas PRs #1–#4. A Fase 4 (reconhecimento Whisper) está em implementação na branch `phase-4/whisper-recognition`: conecta o motor local à porta `Transcriber`, preserva a separação do alinhamento e acrescenta benchmark PT-BR/EN. A aplicação anterior permanece preservada como baseline. Consulte o estado vivo para distinguir entregas integradas de mudanças ainda em revisão.
 
 ## Documentação do projeto
 
@@ -17,6 +17,8 @@ A remodelagem está em execução por fases. As Fases 0–3 foram implementadas,
 - [Handoff da Fase 2](docs/HANDOFF_FASE_2.md) — implementação, evidências de CI, limitações e próximos gates.
 - [Plano operacional da Fase 3](docs/FASE_3_PLANO.md) — escopo, decisões de mídia, critérios de aceite e gates de CI.
 - [Handoff da Fase 3](docs/HANDOFF_FASE_3.md) — arquitetura implementada, evidências, riscos e próximos passos.
+- [Plano operacional da Fase 4](docs/FASE_4_PLANO.md) — reconhecimento local, perfis Whisper, cache, métricas e critérios de aceite.
+- [Handoff da Fase 4](docs/HANDOFF_FASE_4.md) — arquitetura implementada, testes, benchmark e gates de homologação.
 
 ## Direção do produto
 
@@ -31,7 +33,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–3 integradas. A nova arquitetura possui adaptadores concretos para ffprobe, FFmpeg e yt-dlp, seleção de faixa local, inspeção assíncrona e preflight de runtime EJS. Whisper/WhisperX, alinhamento, tradução e publicação SRT continuam fora do escopo da Fase 3. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_3_PLANO.md](docs/FASE_3_PLANO.md) e [docs/HANDOFF_FASE_3.md](docs/HANDOFF_FASE_3.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–3 integradas; a branch da Fase 4 conecta o adaptador local OpenAI Whisper ao pipeline, com detecção de idioma PT/EN, cache de modelos e execução no worker. WhisperX/alinhamento por palavra, tradução e publicação SRT permanecem em fases posteriores. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_4_PLANO.md](docs/FASE_4_PLANO.md) e [docs/HANDOFF_FASE_4.md](docs/HANDOFF_FASE_4.md).
 
 ## Licença
 

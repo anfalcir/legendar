@@ -85,6 +85,8 @@ class UiDependencies:
     media_inspector: MediaInspector | None = None
     youtube_available: bool = False
     youtube_readiness_details: tuple[str, ...] = ()
+    transcription_available: bool = True
+    transcription_readiness_details: tuple[str, ...] = ()
 
 
 class MainWindow(QMainWindow):
@@ -824,6 +826,11 @@ class MainWindow(QMainWindow):
     # -- confirmação e montagem do trabalho -------------------------------
 
     def _build_job(self) -> tuple[JobRequest, str, Path]:
+        if not self._deps.transcription_available:
+            details = " ".join(self._deps.transcription_readiness_details)
+            raise InvalidInputError(
+                "O reconhecimento Whisper não está pronto neste ambiente. " + details
+            )
         media_text = self.file_edit.text().strip()
         if not media_text:
             raise InvalidInputError("Selecione um arquivo ou informe uma URL.")
@@ -1148,9 +1155,13 @@ class MainWindow(QMainWindow):
             scrollbar.setValue(scrollbar.maximum())
 
         if not busy:
-            source_ready = self._deps.readiness_ok and (
-                self._source_kind() is MediaKind.LOCAL_FILE
-                or self._deps.youtube_available
+            source_ready = (
+                self._deps.readiness_ok
+                and self._deps.transcription_available
+                and (
+                    self._source_kind() is MediaKind.LOCAL_FILE
+                    or self._deps.youtube_available
+                )
             )
             self.generate_button.setEnabled(source_ready)
             self.cancel_button.setEnabled(False)
@@ -1169,8 +1180,10 @@ class MainWindow(QMainWindow):
 
     def _update_status_pill(self, snapshot: JobViewSnapshot, busy: bool) -> None:
         local_source = self._source_kind() is MediaKind.LOCAL_FILE
-        source_ready = self._deps.readiness_ok and (
-            local_source or self._deps.youtube_available
+        source_ready = (
+            self._deps.readiness_ok
+            and self._deps.transcription_available
+            and (local_source or self._deps.youtube_available)
         )
         if snapshot.state is JobState.FAILED:
             label, state = "Atenção necessária", "error"
@@ -1190,17 +1203,29 @@ class MainWindow(QMainWindow):
         self.status_pill.style().polish(self.status_pill)
 
         tool_details = " ".join(self._deps.readiness_details)
+        whisper_details = " ".join(self._deps.transcription_readiness_details)
+        media_requirement = (
+            "FFmpeg e ffprobe precisam estar instalados. "
+            if not self._deps.readiness_ok
+            else ""
+        )
+        whisper_requirement = (
+            "O runtime openai-whisper precisa ser instalado. "
+            if not self._deps.transcription_available
+            else ""
+        )
+
         if local_source:
             if source_ready:
                 self.readiness_icon.setStyleSheet("color: #16845b;")
                 self.readiness_label.setText(
-                    f"FFmpeg e ffprobe verificados. {tool_details}"
+                    f"FFmpeg, ffprobe e Whisper prontos. {tool_details} {whisper_details}"
                 )
             else:
                 self.readiness_icon.setStyleSheet("color: #a96712;")
                 self.readiness_label.setText(
-                    "Entrada local indisponível até instalar FFmpeg e ffprobe. "
-                    f"{tool_details}"
+                    f"Geração local indisponível. {media_requirement}"
+                    f"{whisper_requirement}{tool_details} {whisper_details}"
                 )
             return
 
@@ -1208,24 +1233,21 @@ class MainWindow(QMainWindow):
         if source_ready:
             self.readiness_icon.setStyleSheet("color: #16845b;")
             self.readiness_label.setText(
-                "YouTube pronto. FFmpeg e ffprobe verificados. "
-                f"{tool_details} {online_details}"
+                "YouTube e reconhecimento Whisper prontos. "
+                f"FFmpeg/ffprobe verificados. {tool_details} "
+                f"{whisper_details} {online_details}"
             )
         else:
-            self.readiness_icon.setStyleSheet("color: #a96712;")
-            media_requirement = (
-                "FFmpeg e ffprobe precisam estar instalados. "
-                if not self._deps.readiness_ok
-                else ""
-            )
             youtube_requirement = (
                 ""
                 if self._deps.youtube_available
                 else "yt-dlp e um runtime EJS compatível são necessários. "
             )
+            self.readiness_icon.setStyleSheet("color: #a96712;")
             self.readiness_label.setText(
                 f"YouTube indisponível. {media_requirement}"
-                f"{youtube_requirement}{tool_details} {online_details}"
+                f"{whisper_requirement}{youtube_requirement}"
+                f"{tool_details} {whisper_details} {online_details}"
             )
 
     def _set_inputs_enabled(self, enabled: bool) -> None:

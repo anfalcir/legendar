@@ -91,6 +91,14 @@ Um conflito identificado na prova de avaliação: `datasets>=5.2` exige `hugging
 | Node.js | Runtime alternativo (>=22) a detectar e configurar explicitamente no yt-dlp | Não assumir que sua presença basta sem verificar compatibilidade; não é habilitado por padrão em todas as versões do yt-dlp |
 | Modelos Whisper/alinhadores | Artefatos de runtime | Cache/download sob demanda; registrar ID/revisão, licença e local; não incluir pesos no Git |
 
+### Reconhecimento local (Fase 4)
+
+- O pacote `openai-whisper` é o motor local de reconhecimento; o áudio não é enviado a uma API externa.
+- O perfil inicial configurado por padrão é `base`; `tiny`, `small`, `medium`, `large` e `turbo` são perfis multilíngues selecionáveis por configuração. O padrão é uma escolha inicial, não uma homologação de qualidade.
+- `LEGENDAR_WHISPER_MODEL` seleciona o perfil. `LEGENDAR_WHISPER_DEVICE` aceita `auto`, `cpu`, `cuda` ou `mps`; `auto` prioriza CUDA, depois MPS e por fim CPU.
+- Os pesos são baixados na primeira utilização e mantidos em `<models_dir>/whisper` (por padrão, sob `~/.cache/legendar/models/whisper`). O cache não pertence ao workspace temporário e nunca é removido ao cancelar um job.
+- O adaptador utiliza `task="transcribe"`, sem tradução automática e sem timestamps por palavra. Segmentos do decoder não são tratados como forced alignment; a Fase 5 continua responsável pela sincronização temporal.
+
 FFmpeg/ffprobe não são substituídos por pacotes Python com nomes semelhantes. O aplicativo deverá apresentar orientações para instalar ferramentas ausentes, sem alterar o sistema operacional silenciosamente.
 
 ### Runtime JavaScript do YouTube (EJS)
@@ -123,6 +131,8 @@ A CI da Fase 0 separa:
 Os 12 cenários de coletor não equivalem a suporte funcional completo do aplicativo em todos os sistemas operacionais. A POC FLEURS é um smoke benchmark pequeno; WER mede reconhecimento lexical, não precisão temporal. No workflow #109, com WhisperX 3.8.6 / tiny / CPU-int8 e duas amostras por idioma, PT-BR apresentou WER médio 0,275 e RTF médio 0,372 (26 palavras com timestamps válidos); EN apresentou WER médio 0,209559 e RTF médio 0,163 (30 palavras com timestamps válidos). Não houve palavra com timestamp ausente/inválido nas quatro amostras. O processo levou 62,131 s e o pico de RSS foi 3.456.839.680 bytes (~3,22 GiB) no runner GitHub. O artefato `legendar-phase0-model-poc` contém os detalhes por amostra.
 
 O log registrou um aviso não bloqueante de TorchCodec/pyannote: as bibliotecas FFmpeg compartilhadas não foram carregadas para o backend de I/O. A POC faz preload do áudio e passa o waveform diretamente ao WhisperX/alinhador, portanto o teste concluiu com sucesso; a decodificação via TorchCodec não foi validada por esse benchmark. A prova independente com FFmpeg/ffprobe passou no mesmo workflow. Se o produto vier a usar o caminho de I/O do TorchCodec, verificar a compatibilidade de bibliotecas e versões explicitamente.
+
+A Fase 4 acrescenta `scripts/phase4_model_benchmark.py`: comparação reproduzível de modelos com WER, CER, RTF, duração, RSS e versões. O script usa FLEURS ou um manifesto TSV local (`language`, `audio`, `reference`); o relatório contém métricas e IDs sintéticos, nunca áudio ou texto transcrito. A CI executa smoke test CPU PT-BR/EN em Python 3.12. A qualidade no computador-alvo e em corpus representativo de pregações precisa ser medida antes de declarar um perfil recomendado.
 
 A precisão de alinhamento deve ser medida com timestamps humanos anotados e amostras representativas do uso final.
 
@@ -163,3 +173,4 @@ Referências técnicas:
 - [FFmpeg](https://ffmpeg.org/documentation.html)
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)
 - [Google FLEURS dataset](https://huggingface.co/datasets/google/fleurs)
+- [OpenAI Whisper — API local Python](https://github.com/openai/whisper)
