@@ -7,6 +7,7 @@ seguir. O NLLB permanece disponível como backend local alternativo.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import threading
@@ -98,10 +99,8 @@ def _http_request(
             raw = response.read()
     except HTTPError as exc:
         retry_after = None
-        try:
+        with contextlib.suppress(TypeError, ValueError):
             retry_after = float(exc.headers.get("Retry-After", ""))
-        except (TypeError, ValueError):
-            pass
         raise GeminiApiError(exc.code, retry_after) from None
     except (TimeoutError, URLError, OSError) as exc:
         raise TranslationError(
