@@ -17,6 +17,7 @@ LIVING_DOCUMENTS = (
     "README.md",
     "docs/README.md",
     "docs/PLANO_CORRECAO_MELHORIA.md",
+    "docs/FASE_5_PLANO.md",
     "docs/ESTADO_ATUAL.md",
     "docs/ARQUITETURA.md",
     "docs/OPERACAO.md",
@@ -58,6 +59,7 @@ ARCHIVED_DOCUMENTS = (
 DOCS_ROOT_LIVING_FILES = {
     "README.md",
     "PLANO_CORRECAO_MELHORIA.md",
+    "FASE_5_PLANO.md",
     "ESTADO_ATUAL.md",
     "ARQUITETURA.md",
     "OPERACAO.md",
