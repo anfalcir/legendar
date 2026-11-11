@@ -19,9 +19,9 @@
 
 O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliza o áudio, transcreve com Whisper, alinha palavras com WhisperX, forma legendas, traduz localmente com NLLB-200 quando solicitado, valida o trilho e publica SRT por troca atômica.
 
-A arquitetura e a base de engenharia das Fases 0–10 estão integradas. Uma auditoria estática posterior identificou lacunas no caminho de qualidade final: ausência de consolidação editorial entre segmentos consecutivos do Whisper, subdivisão de textos com CPS alto sem resolver a falta de tempo de leitura, aceitação de cues curtas como simples aviso, possível perda de palavras sem alinhamento na segmentação e ausência de um gate editorial bloqueante.
+A arquitetura e a base de engenharia das Fases 0–10 estão integradas. A auditoria estática posterior identificou lacunas editoriais; as Fases 2 e 3 já corrigiram a integridade textual e a consolidação cronológica da segmentação. A Fase 4 agora tratará o gate editorial bloqueante para CPS, duração, fragmentação e exceções.
 
-As Fases 1 e 2 estão concluídas. A Fase 3 está em implementação para consolidar globalmente as palavras alinhadas e melhorar a legibilidade. O baseline real de 37min10s é ~23min21s; NLLB consome ~14min e será o foco da Fase 6, quando será avaliado Gemini com credencial fornecida pelo usuário via secret do GitHub.
+As Fases 1, 2 e 3 estão concluídas e integradas à `main`. A Fase 3 consolidou globalmente as palavras alinhadas, preservou segmentos fallback, reforçou fronteiras editoriais e adicionou extensão segura de exibição. A próxima etapa é a Fase 4. O baseline real de 37min10s é ~23min21s; NLLB consome ~14min e será o foco da Fase 6, quando será avaliado Gemini com credencial fornecida pelo usuário via secret do GitHub.
 
 ## 2. Estado da Fase 1 — concluída
 
@@ -57,9 +57,11 @@ A implementação atual da branch de Fase 2:
 
 A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes. A homologação audiovisual real continua sendo gate posterior.
 
-## 3. Estado da Fase 3 — em andamento
+## 3. Estado da Fase 3 — concluída e integrada à `main`
 
-A branch `phase-3/global-segmentation` implementa fluxo global de palavras alinhadas, consolidação entre segmentos contíguos do Whisper, barreiras para segmentos fallback, rastreabilidade `source_segments`, rejeição de cronologia inválida, respeito a fronteiras de frase significativas e extensão de cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). O corpus determinístico cobre continuidade, pausas, pontuação, CPS, extensão segura, fallback intercalado e layout final de duas linhas. A CI da Fase 3 está em validação final; a homologação audiovisual com a mídia real fica na Fase 8.
+A Fase 3 foi integrada pela PR #10, squash commit `10f6d6d428a1fa5a45a7c7fd13870f48bdf67019`. A implementação usa fluxo global cronológico de palavras alinhadas, consolida segmentos contíguos do Whisper, preserva segmentos fallback como barreiras, mantém rastreabilidade `source_segments`, rejeita cronologia inválida, respeita fronteiras de frase significativas e estende cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). O corpus determinístico cobre continuidade, pausas, pontuação, CPS, extensão segura, fallback intercalado, rastreabilidade e layout final de duas linhas.
+
+**Validação:** CI específica verde em Python 3.10–3.13; 506 testes aprovados; cobertura global de 86%; Ruff lint/formatação e integração FFmpeg/Qt/E2E aprovados. Workflows das Fases 4, 5, 6 e 8 também passaram no mesmo head. A homologação audiovisual com a mídia real de 37min10s permanece no escopo da Fase 8.
 
 ## 4. Estado do repositório
 
@@ -69,7 +71,7 @@ A branch `phase-3/global-segmentation` implementa fluxo global de palavras alinh
 | UI, worker e pipeline real | Implementados |
 | Reconhecimento | OpenAI Whisper local; padrão declarado `base` |
 | Alinhamento | WhisperX 3.8.6; forced alignment por segmento |
-| Segmentação | Fluxo global cronológico em implementação; consolida limites do Whisper e preserva rastreabilidade de origem |
+| Segmentação | Fluxo global cronológico integrado; consolida limites do Whisper, preserva fallback e rastreabilidade de origem |
 | Tradução | NLLB-200 distilled 600M via Transformers/PyTorch |
 | Publicação | SRT com round-trip e gravação atômica |
 | Gate editorial | Insuficiente: riscos de leitura podem continuar como avisos |
@@ -125,7 +127,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 0 | Auditoria, organização documental e plano | Documentada nesta entrega |
 | 1 | Instrumentação e baseline por etapa | **Concluída** |
 | 2 | Integridade textual e alinhamento recuperável | **Concluída e integrada à `main`** |
-| 3 | Segmentação global e legibilidade | **Em andamento na branch `phase-3/global-segmentation`** |
+| 3 | Segmentação global e legibilidade | **Concluída e integrada à `main` (PR #10)** |
 | 4 | Gate editorial e diagnóstico textual | Planejada |
 | 5 | Benchmark e aceleração da transcrição | Planejada |
 | 6 | Benchmark e aceleração da tradução | Planejada |
@@ -145,12 +147,11 @@ Nenhuma dessas fases de código é declarada concluída por existir apenas no pl
 
 ## 9. Próximas ações
 
-1. Concluir a Fase 3 com CI verde, regressão determinística e homologação audiovisual.
-2. Executar a Fase 4 para tornar CPS, duração, fragmentação e integridade critérios editoriais auditáveis.
-3. Executar a Fase 5 isoladamente, se o benchmark confirmar oportunidade de aceleração de ASR.
-4. Na Fase 6, comparar Gemini API com NLLB usando o mesmo corpus e revisão humana. Antes das chamadas reais, solicitar o cadastro de `GEMINI_API_KEY` como secret no GitHub.
-5. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
-6. Consolidar a Fase 8 com comparação do pipeline completo, homologação no hardware-alvo e evidências sanitizadas.
+1. Executar a Fase 4 para tornar CPS, duração, fragmentação e integridade critérios editoriais auditáveis.
+2. Executar a Fase 5 isoladamente, se o benchmark confirmar oportunidade de aceleração de ASR.
+3. Na Fase 6, comparar Gemini API com NLLB usando o mesmo corpus e revisão humana. Antes das chamadas reais, solicitar o cadastro de `GEMINI_API_KEY` como secret no GitHub.
+4. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
+5. Consolidar a Fase 8 com comparação do pipeline completo, homologação audiovisual com a mídia real, validação no hardware-alvo e evidências sanitizadas.
 
 ## 10. Histórico documental
 
