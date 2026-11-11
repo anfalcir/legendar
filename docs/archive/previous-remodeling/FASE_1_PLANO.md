@@ -4,7 +4,7 @@
 - **Status:** concluída, validada e integrada à `main` pela PR #2 (squash)
 - **Branch de implementação:** `phase-1/architecture` (integrada à `main`)
 - **Base:** `main` pós-integração da Fase 0 (commit de squash `992cb87`); integração final da Fase 1 em `de31ddd`
-- **Fontes de referência:** [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md), [ESTADO_ATUAL.md](ESTADO_ATUAL.md), [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
+- **Fontes de referência:** [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md), [ESTADO_ATUAL.md](../../ESTADO_ATUAL.md), [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
 
 ---
 

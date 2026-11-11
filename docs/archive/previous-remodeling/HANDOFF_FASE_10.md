@@ -3,7 +3,7 @@
 - **Status:** implementado e verificado localmente; aguarda homologação do usuário.
 - **CI:** run [#43030902623](https://github.com/anfalcir/legendar/actions/runs/43030902623) aprovado em 5/5 jobs (Python 3.10–3.13 + documentação).
 - **Origem:** 13 achados da rodada de 11/11/2026, registrados em
-  [HOMOLOGACAO.md](HOMOLOGACAO.md) e provados em [FASE_10_PLANO.md](FASE_10_PLANO.md).
+  [HOMOLOGACAO.md](../../HOMOLOGACAO.md) e provados em [FASE_10_PLANO.md](FASE_10_PLANO.md).
 - **Regra desta fase:** nenhuma correção de sintoma. Cada achado recebeu a causa
   sistêmica correspondente e um teste que falha se a causa voltar.
 
@@ -29,7 +29,7 @@
 
 ## 2. Decisões adotadas nesta rodada (D1–D6)
 
-Registradas em [DECISOES.md](DECISOES.md), seção “Fase 10”. São o padrão
+Registradas em [DECISOES.md](../../DECISOES.md), seção “Fase 10”. São o padrão
 recomendado no plano e continuam reversíveis se a homologação indicar o
 contrário.
 
@@ -78,7 +78,7 @@ PYTHONPATH=src uv run --locked --no-sync python -m legendar
 - **Ícone SVG** depende do plugin de imagem SVG; sem ele o desenho de reserva
   (`branding._painted_icon`) assume, então a janela nunca fica sem ícone.
 - **Acessibilidade fina** (contraste medido, leitor de tela) segue como
-  verificação manual na seção 9 de [HOMOLOGACAO.md](HOMOLOGACAO.md).
+  verificação manual na seção 9 de [HOMOLOGACAO.md](../../HOMOLOGACAO.md).
 
 ## 5. Mapa dos arquivos tocados
 

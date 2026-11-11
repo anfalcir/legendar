@@ -1,0 +1,627 @@
+# Plano mestre de correção da qualidade e melhoria de desempenho
+
+- **Documento:** plano vigente de engenharia, critérios de aceite e handoff de execução.
+- **Projeto:** Legendar — `anfalcir/legendar`.
+- **Data de abertura:** 11/11/2026.
+- **Base da auditoria:** `main` em `85aa832954aa539d2c8e96a4335608f958e88776`.
+- **Status:** plano documentado; implementação das fases de correção ainda não iniciada.
+- **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
+
+Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
+
+---
+
+## 1. Resumo executivo
+
+Uma execução recente reportada pelo usuário levou aproximadamente **1 hora para processar 37 minutos de áudio**. Os pontos percebidos como mais lentos foram transcrição e tradução. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
+
+O trabalho será conduzido em duas frentes coordenadas:
+
+1. **Qualidade e integridade:** corrigir o fluxo de dados desde o reconhecimento até a publicação, assegurando que o conteúdo reconhecido seja preservado, o alinhamento seja confiável e a segmentação forme legendas confortáveis.
+2. **Desempenho:** medir o custo real de cada estágio e avaliar implementações, quantização, batching, threads e gestão de memória. Uma alteração só entra no produto quando a qualidade permanece equivalente.
+
+Não se pretende substituir toda a arquitetura nem trocar todos os modelos de uma vez. Whisper, WhisperX e NLLB atuais serão mantidos como baseline de comparação até que uma alternativa passe pelos mesmos testes.
+
+## 2. Contexto e baseline
+
+### 2.1. Resultado operacional reportado
+
+| Indicador | Valor inicial | Natureza |
+|---|---:|---|
+| Duração da mídia | 37 min | Relato do usuário |
+| Tempo total de processamento | aproximadamente 60 min | Relato do usuário |
+| RTF global aproximado | 1,62 | Calculado a partir dos dois valores acima |
+| Tempo de transcrição | ainda não medido isoladamente | Pendente de instrumentação |
+| Tempo de alinhamento | ainda não medido isoladamente | Pendente de instrumentação |
+| Tempo de tradução | ainda não medido isoladamente | Pendente de instrumentação |
+| Perfil exato de hardware/execução dessa rodada | precisa ser reconfirmado | Pendente |
+
+O tempo total não deve ser repartido por suposição. A Fase 1 medirá as etapas individualmente, distinguindo carregamento de modelos, inferência e trabalho de preparação.
+
+### 2.2. Perfil de hardware conhecido
+
+O inventário de ambiente arquivado da Fase 0 registrou, na máquina então inspecionada:
+
+- AMD Ryzen 3 2200G;
+- quatro CPUs lógicas;
+- aproximadamente 12,59 GiB de RAM;
+- vídeo integrado Radeon Vega;
+- ausência de GPU NVIDIA/CUDA naquele inventário.
+
+O inventário é antigo e não deve ser tratado como estado garantido da máquina atual. Reexecutar `scripts/phase0_inventory.py --probe-torch` antes dos benchmarks e registrar CPU, núcleos físicos/lógicos, RAM disponível, GPU, backend e versões.
+
+A estratégia precisa funcionar bem em CPU. CUDA, MPS ou outros backends compatíveis serão otimizados quando detectados, mas não serão pré-requisito para uma aplicação utilizável.
+
+### 2.3. Configuração atual identificada no código
+
+| Etapa | Implementação atual | Observação técnica |
+|---|---|---|
+| Reconhecimento | `WhisperTranscriber` / OpenAI Whisper | Padrão `base`, PyTorch; execução atual não usa word timestamps |
+| Alinhamento | `WhisperXAligner` | WhisperX 3.8.6; chama `whisperx.align` por segmento original |
+| Segmentação | `segment_alignment` | Processa cada segmento independentemente; subdivide grupos com excesso de CPS |
+| Tradução | `NllbTranslator` | NLLB-200 distilled 600M via Transformers/PyTorch |
+| Parâmetros da tradução | `batch_size=16`, `num_beams=4` | Já existe batching; há oportunidades para otimizar sua composição e a geração |
+| Publicação | `SrtPublisher` | Round-trip e gravação atômica |
+
+A implementação NLLB usa `torch.inference_mode()`, portanto o plano não presume que a ausência desse mecanismo seja o gargalo. O custo deverá ser decomposto em tokenização, padding, transferência, geração autoregressiva e decodificação do resultado.
+
+### 2.4. Limites da evidência atual
+
+A auditoria foi estática e identificou caminhos de código e lacunas dos testes. Ela não mede, por si só, o erro temporal no áudio de 37 minutos nem atribui cada erro textual a Whisper, WhisperX ou NLLB. A comparação experimental e a referência humana são etapas obrigatórias.
+
+---
+
+## 3. Objetivos de produto
+
+### 3.1. Qualidade
+
+O SRT aprovado deverá:
+
+1. Preservar todo o conteúdo reconhecido, sem omissões silenciosas.
+2. Não atribuir timestamps finais fabricados a palavras sem evidência temporal.
+3. Manter início e fim coerentes com a fala e com a linha do tempo original.
+4. Formar cues contínuas e legíveis, sem fragmentação artificial.
+5. Respeitar largura, número de linhas, duração e velocidade de leitura.
+6. Evitar repetições anômalas, caracteres inesperados e saídas vazias ou suspeitas.
+7. Manter a consistência de nomes próprios, números, siglas e vocabulário do domínio na tradução.
+8. Informar claramente quando a automação não tem evidência suficiente para publicar um resultado confiável.
+
+### 3.2. Desempenho
+
+- **Meta inicial de aceite:** redução de pelo menos 20% na mediana do tempo total da execução completa, em comparação pareada com o baseline, sem degradação mensurável da qualidade.
+- **Meta aspiracional:** redução de 30% ou mais no tempo total. Isso não é promessa de desempenho nem justificativa para aceitar regressão.
+- **Meta por gargalo:** uma otimização deverá reduzir de forma material o estágio que pretende corrigir; como referência de experimento, buscar pelo menos 1,5× de throughput quando a alternativa e o hardware permitirem.
+- **Condição inegociável:** se uma configuração mais rápida não atingir os gates de qualidade, ela não será adotada como padrão.
+
+A meta global é deliberadamente moderada porque a aceleração teórica de uma etapa não se converte integralmente em aceleração do job completo. A Lei de Amdahl e os custos de carregamento, memória e sincronização precisam ser considerados.
+
+---
+
+## 4. Critérios de qualidade e métricas
+
+Os limites a seguir são critérios propostos para orientar os testes. Os valores já existentes no código ou no avaliador permanecem identificados como baseline; os demais serão calibrados na Fase 1/2 com corpus representativo.
+
+### 4.1. Integridade textual
+
+- Cada palavra/token da transcrição deve ser contabilizado no resultado: publicado, explicitamente não alinhado com revisão requerida ou rejeitado por uma regra documentada.
+- Nenhuma palavra não alinhada pode simplesmente desaparecer porque a segmentação filtrou `word.range is None`.
+- A publicação automática de um trilho com conteúdo reconhecido sem timestamp confiável deve ser bloqueada até que exista recuperação validada ou revisão explícita.
+- O sistema não pode compensar uma palavra não alinhada copiando o timestamp de outra palavra ou usando silenciosamente a janela aproximada do Whisper como timestamp final.
+- A reconciliação deverá considerar pontuação, contrações, palavras repetidas e tokens omitidos sem deslocar o alinhamento das palavras seguintes.
+
+### 4.2. Reconhecimento (ASR)
+
+Avaliar com manifesto de áudio e transcrição humana revisada:
+
+- WER e CER;
+- nomes próprios, números, datas, referências e siglas;
+- falsos trechos de fala em silêncio;
+- repetições de palavras/frases;
+- omissões e inserções;
+- consistência entre início, meio e fim da mídia.
+
+**Gate comparativo proposto:** a alternativa não poderá piorar WER/CER em mais de 0,5 ponto percentual absoluto frente ao baseline no mesmo corpus, e nenhuma regressão crítica poderá ocorrer em nomes, números, negações ou trechos representativos. A amostra e a margem devem ser congeladas antes do experimento.
+
+### 4.3. Alinhamento temporal
+
+O avaliador `scripts/phase5_alignment_evaluation.py` já possui metas provisórias de erro de fronteira:
+
+- mediana de início/fim ≤ 150 ms;
+- P95 de início/fim ≤ 350 ms.
+
+Esses valores são **metas provisórias existentes**, ainda pendentes de homologação em fala real. A Fase 2 deverá medir:
+
+- erro absoluto do início e do fim;
+- mediana e P95;
+- cobertura de palavras alinhadas;
+- número de palavras sem alinhamento;
+- sobreposições, janelas inválidas e scores;
+- erros por idioma, ruído, fala rápida e tipo de mídia.
+
+Uma taxa global de alinhamento não substitui a análise dos casos não alinhados. Palavra sem âncora deve continuar explícita.
+
+### 4.4. Legibilidade e estabilidade visual
+
+Manter como ponto de partida editorial:
+
+- até duas linhas por cue;
+- até 42 caracteres por linha;
+- alvo de aproximadamente 17 caracteres por segundo;
+- duração preferencial entre 1 e 7 segundos;
+- quebra em limites de frase/oração e respeito a pausas;
+- ausência de sobreposição e ordem temporal válida.
+
+A regra de 1 segundo não pode ser aplicada como extensão arbitrária sobre fala ou sobre a legenda seguinte. Deve-se distinguir:
+
+- **intervalo de fala:** âncoras provenientes das palavras alinhadas;
+- **intervalo de exibição:** intervalo escolhido para manter a legenda visível enquanto houver silêncio seguro, limitado pela próxima cue e pelo fim da mídia.
+
+Uma cue curta poderá ser estendida somente dentro de silêncio disponível e de limites explícitos. Quando não existir silêncio suficiente, o algoritmo deve tentar consolidar conteúdo contíguo; se ainda assim não houver solução, registrar uma exceção ou exigir revisão, em vez de criar uma sequência de flashes.
+
+Métricas adicionais:
+
+- cues abaixo da duração mínima;
+- CPS por cue e P95 do CPS;
+- mudanças de legenda por minuto;
+- cues de uma palavra isolada sem justificativa;
+- fragmentos iniciados/encerrados em limites sintáticos ruins;
+- pausas entre cues e distância da próxima fala;
+- repetição consecutiva e duplicação textual.
+
+### 4.5. Tradução
+
+A comparação deve combinar:
+
+- revisão humana bilíngue cega entre baseline e candidato;
+- preservação de sentido, negação, sujeito e tempo verbal;
+- consistência de nomes próprios e termos recorrentes;
+- números, referências e siglas;
+- adequação ao contexto da frase e da legenda vizinha;
+- comprimento final e CPS após tradução.
+
+Não aceitar uma tradução apenas porque devolveu um texto não vazio ou alterou o idioma. Uma saída pode ser lexicalmente plausível e semanticamente incorreta.
+
+### 4.6. Critérios de bloqueio e aviso
+
+A Fase 4 introduzirá um resultado estruturado de qualidade com estados como:
+
+- `APPROVED`: sem falhas críticas e dentro dos critérios aceitos;
+- `REVIEW_REQUIRED`: conteúdo preservado, mas há problemas que precisam de decisão humana;
+- `BLOCKED`: conteúdo perdido, timestamp não confiável, estrutura inválida ou risco crítico.
+
+A política exata será testada e documentada. Uma interjeição legítima de curta duração não deve ser tratada como falha automaticamente; a exceção precisa ser identificável e auditável.
+
+---
+
+## 5. Fases de execução
+
+### Fase 0 — Auditoria, organização documental e plano
+
+**Objetivo:** estabelecer uma fonte de verdade para a nova frente.
+
+Entregas:
+- auditoria estática do pipeline e testes existentes;
+- classificação de problemas confirmados, hipóteses e medições pendentes;
+- documentos históricos arquivados sem apagar o conteúdo;
+- este plano mestre, métricas e fases;
+- atualização de estado, decisões e matriz de dependências.
+
+**Critério de conclusão:** documentação viva consistente e plano aprovado para execução. Esta entrega documental cobre essa fase; não significa que as correções de código estejam realizadas.
+
+### Fase 1 — Instrumentação e baseline de desempenho
+
+**Objetivo:** descobrir o tempo e o custo real de cada etapa, antes de alterar os motores.
+
+Entregas:
+
+1. Medição monotônica de duração de cada estágio: aquisição, inspeção, preparação, transcrição, alinhamento, segmentação, tradução, validação e publicação.
+2. Medição separada de inicialização/carregamento de modelos e inferência.
+3. Relatório sanitizado com:
+   - duração e RTF por etapa;
+   - throughput de áudio, tokens e cues quando aplicável;
+   - CPU, núcleos físicos/lógicos, RAM e GPU;
+   - RSS máximo e memória livre antes/depois dos estágios;
+   - modelo, versão, dispositivo, dtype, beam, batch e threads;
+   - número de segmentos, palavras, cues e lotes;
+   - cobertura de alinhamento e quantidade de avisos.
+4. Distinguir execução **fria** (cache/carregamento) de execução **quente** (modelos disponíveis).
+5. Criar benchmark repetível com a mídia de 37 minutos e amostras menores representativas.
+6. Preservar privacidade: relatório não deve conter áudio, transcrição, legenda, URLs privadas, caminhos pessoais ou credenciais.
+
+**Protocolo comparativo:** mesma mídia, hardware, versão, idioma, destino, cache e configuração; pelo menos três execuções quentes por candidato quando viável; comparar mediana, dispersão e pico de memória. Registrar a execução fria separadamente.
+
+**Critério de conclusão:** baseline reproduzível com a decomposição temporal de todos os estágios, sem mudar a qualidade ou o motor do produto.
+
+### Fase 2 — Integridade textual e robustez do alinhamento
+
+**Objetivo:** impedir perda silenciosa de conteúdo e tornar a falha de alinhamento recuperável ou explícita.
+
+Entregas:
+
+1. Contrato de conservação do texto reconhecido entre transcrição, alinhamento, segmentação e resultado.
+2. Reconciliação de palavras alinhadas/não alinhadas que não descarte tokens sem timestamp.
+3. Tentativas de recuperação controladas para janelas inválidas ou palavras omitidas, sem inventar tempos.
+4. Avaliação de uma segunda tentativa de alinhamento com janelas maiores/agrupadas, desde que preserve as posições e não misture falas diferentes.
+5. Diagnóstico por palavra e segmento, com score e motivo de não alinhamento.
+6. Regra de bloqueio de publicação quando houver conteúdo reconhecido sem destino temporal confiável.
+7. Testes para palavras repetidas, pontuação, contrações, omissão de token, nomes próprios, sobreposição, offset e fim de mídia.
+
+**Critério de conclusão:** nenhum token reconhecido desaparece silenciosamente; toda palavra sem âncora termina alinhada por método validado ou exige revisão. A timeline global continua correta.
+
+### Fase 3 — Segmentação global e legibilidade
+
+**Objetivo:** substituir a segmentação isolada por segmento por uma estratégia editorial que considere a sequência contínua de palavras alinhadas.
+
+Entregas:
+
+1. Construir fluxo cronológico de palavras, preservando referências aos segmentos de origem.
+2. Permitir consolidar palavras através de limites do Whisper quando a fala for contínua.
+3. Respeitar pausas, pontuação, fim de frase, mudanças de turno detectáveis, lacunas e limites reais.
+4. Otimizar a escolha de fronteiras para equilibrar comprimento de texto, duração, CPS e sintaxe.
+5. Evitar subdividir automaticamente uma cue em flashes quando o problema é falta de tempo de leitura.
+6. Separar tempo de fala de tempo de exibição, permitindo extensão somente dentro de silêncio seguro.
+7. Tratar cues curtas legítimas como exceções explícitas.
+8. Preservar todo o texto, sem sobreposição, duplicação ou reordenação.
+9. Recalcular o layout após tradução, pois o comprimento no idioma final muda.
+
+**Critério de conclusão:** corpus de teste comprova redução de fragmentação, estabilidade temporal, conservação do texto e melhoria das métricas de leitura. Não basta diminuir a contagem de cues.
+
+### Fase 4 — Gate editorial e diagnóstico de texto
+
+**Objetivo:** impedir que um SRT estruturalmente válido, mas editorialmente ruim, seja apresentado como aprovado.
+
+Entregas:
+
+- resultado de qualidade estruturado em vez de avisos livres;
+- bloqueios para perda de conteúdo, timestamps inválidos e erros críticos;
+- alertas de CPS, duração, cue curta, cue longa, quebra sintática e flicker;
+- detecção de segmentos repetidos, loops, duplicações e texto suspeito em silêncio;
+- verificação de caracteres fora do conjunto esperado, sem proibir idiomas, nomes ou símbolos legítimos;
+- verificação de números, nomes, siglas e termos frequentes;
+- resumo final com contagem de cues aprovadas, exceções e revisão requerida;
+- logs e interface mostrando motivo e etapa, sem esconder o detalhe técnico.
+
+A detecção de repetição não deve remover texto automaticamente: repetição pode ser falada de verdade. O sistema deve identificar candidatos e preservar o conteúdo até haver evidência de erro.
+
+**Critério de conclusão:** os defeitos conhecidos geram alerta ou bloqueio verificável, com testes positivos e negativos; nenhum mecanismo de limpeza apaga fala legítima.
+
+### Fase 5 — Benchmark e aceleração da transcrição (ASR)
+
+**Objetivo:** reduzir o tempo de reconhecimento sem perda de fidelidade.
+
+Baseline:
+- adaptador atual `WhisperTranscriber`;
+- modelo padrão `base`;
+- PyTorch;
+- reconhecimento sem timestamps de palavra, pois o forced alignment é uma etapa posterior.
+
+Candidatos e experimentos:
+
+**A. faster-whisper / CTranslate2**
+
+- Criar adaptador alternativo atrás da mesma porta `Transcriber`.
+- Comparar inicialmente o mesmo tamanho de modelo, idioma e estratégia de decodificação.
+- Medir CPU `int8`, GPU `float16` e, quando suportado, `int8_float16`.
+- Comparar beam search, fallback de temperatura, condicionamento de texto anterior e demais parâmetros equivalentes.
+- Confirmar consumo integral do generator de segmentos antes de finalizar a transcrição.
+- Validar que os intervalos de segmentos são locais ao WAV e compatíveis com o contrato de `alignment_window`.
+
+A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, timestamps de palavra e VAD opcional. A adoção não é automática: os parâmetros de decoding e o comportamento do VAD precisam ser comparados com o Whisper atual.
+
+**B. VAD e silêncio**
+
+- Medir proporção de silêncio e tempo gasto no reconhecimento.
+- Testar VAD como experimento separado, primeiro com parâmetros conservadores.
+- Verificar se pausas, fala baixa, início/fim de palavra e timestamps restaurados permanecem corretos.
+- Não habilitar VAD por padrão se houver perda de fala ou mudança de alinhamento.
+
+**C. Modelo e decoding**
+
+- Comparar `base`, `small` e os demais perfis pertinentes, sem assumir que modelo menor será aceitável.
+- Manter o baseline de qualidade para cada idioma e trecho.
+- Testar parâmetros de beam e threads individualmente.
+- Não quebrar o áudio em janelas paralelas sem estratégia de overlap, contexto e reconciliação testada; paralelismo ingênuo pode duplicar ou perder palavras nas fronteiras.
+
+**D. CPU e execução**
+
+- Medir threads intra/inter-op e `cpu_threads` do backend.
+- Evitar oversubscription: o produto não deve alocar mais threads totais do que os núcleos físicos disponíveis sem evidência de ganho.
+- Ajustar lote e paralelismo por perfil de hardware.
+- Manter interface responsiva e progresso honesto.
+
+**Critério de conclusão:** alternativa escolhida com WER/CER dentro do gate, qualidade de nomes/números preservada, alinhamento posterior aprovado e ganho de tempo demonstrado no hardware de referência.
+
+### Fase 6 — Benchmark e aceleração da tradução
+
+**Objetivo:** reduzir o custo do NLLB sem degradar o sentido, a terminologia ou a consistência.
+
+Baseline atual:
+- `facebook/nllb-200-distilled-600M`;
+- Transformers/PyTorch;
+- `num_beams=4`;
+- lote de 16 cues;
+- tokenização com padding, truncamento e limite de 256 tokens.
+
+**A. Medir antes de alterar**
+
+Separar:
+- tokenização;
+- padding e preparação de tensores;
+- transferência para dispositivo;
+- geração;
+- batch decode;
+- quantidade de cues e tokens por lote;
+- throughput de tokens gerados por segundo.
+
+**B. CTranslate2 para NLLB**
+
+A documentação CTranslate2 demonstra conversão de modelos Transformers NLLB com `ct2-transformers-converter` e execução via `translate_batch`.
+
+Experimento proposto:
+1. Converter o checkpoint atual com versão de ferramenta fixada.
+2. Preservar tokenizer, códigos `por_Latn` / `eng_Latn` e prefixo de idioma de destino.
+3. Comparar pesos float32 e quantizados `int8` onde o backend realmente suportar.
+4. Validar a decodificação de tokens especiais e a correspondência exata entre unidade de entrada e saída.
+5. Manter o adaptador Transformers como fallback até a aprovação.
+
+O suporte INT8 em CPU depende da arquitetura e do backend disponibilizado pelo binário. A documentação CTranslate2 destaca MKL/oneDNN em x86-64; portanto, no Ryzen AMD, a disponibilidade e o ganho precisam ser medidos no ambiente real. Não presumir aceleração apenas porque a opção `int8` existe.
+
+**C. Batch e tokenização**
+
+- O sistema já processa 16 unidades por lote; não tratar batching como recurso ausente.
+- Comparar batch 8, 16, 32 e tamanho dinâmico, respeitando RAM.
+- Agrupar cues por comprimento aproximado em tokens (*length bucketing*) para reduzir padding.
+- Restaurar rigorosamente a ordem original após agrupar.
+- Avaliar orçamento de tokens por lote em vez de apenas contagem fixa de cues.
+- Não permitir truncamento silencioso de conteúdo; qualquer limite de entrada deve gerar diagnóstico e teste.
+
+**D. Beam search e geração**
+
+- Comparar `num_beams=4`, 2 e 1.
+- Beam menor pode reduzir tempo, mas pode mudar qualidade e escolhas lexicais.
+- A configuração mais rápida só será aceita após revisão humana e métrica comparativa.
+- Não reduzir `max_new_tokens` apenas para acelerar se houver cortes na tradução.
+
+**E. Contexto e consistência**
+
+A tradução atual recebe uma unidade por cue, agrupada em batches. Isso mantém a correspondência 1:1, mas limita o contexto linguístico entre cues vizinhas.
+
+Avaliar, sem adoção antecipada:
+- contexto anterior/posterior como referência adicional;
+- glossário local de nomes próprios e termos recorrentes;
+- preservação de números, referências e siglas;
+- agrupamento contextual sem perder mapeamento de saída por cue.
+
+Não concatenar cues com delimitadores arbitrários e assumir que o modelo preservará a segmentação. O experimento precisa provar retorno 1:1, ausência de mistura de falas e preservação temporal.
+
+**F. Licença e governança**
+
+O model card do NLLB-200 distilled 600M declara licença CC-BY-NC-4.0 e limitações de uso, incluindo domínio específico e uso em produção. A licença do código Legendar (MIT) não substitui a licença do modelo. Antes de distribuir o aplicativo ou adotar outro checkpoint, revisar licença, finalidade e obrigações aplicáveis.
+
+**Critério de conclusão:** o candidato tem throughput superior, tradução não inferior na revisão humana, preserva unidades/ordem e timestamps e possui licença/versão documentadas.
+
+### Fase 7 — Gestão de memória, threads e perfis
+
+**Objetivo:** evitar que a aceleração de uma etapa seja anulada por pressão de RAM, swapping ou disputa de CPU.
+
+A aplicação mantém instâncias reutilizáveis de Whisper, WhisperX e NLLB. Isso economiza carregamentos entre jobs, mas pode manter múltiplos modelos residentes durante o mesmo processo. O efeito sobre RAM e swapping ainda precisa ser medido.
+
+Entregas:
+- medir RSS e memória disponível antes/depois de cada carga;
+- medir se modelos simultaneamente residentes causam pressão de memória;
+- projetar política de retenção/evicção de modelos por perfil de hardware;
+- permitir descarregar modelo que não será reutilizado durante a fase seguinte quando isso reduzir pressão sem custo total maior;
+- equilibrar cache em memória para execuções repetidas versus perfil de baixo consumo;
+- controlar threads CPU e evitar sobreposição de inferências concorrentes;
+- detectar CUDA/MPS/backend suportado sem assumir disponibilidade;
+- registrar configuração efetiva no diagnóstico.
+
+A política de memória deve ser orientada por medição. Descarregar e recarregar o mesmo modelo pode aumentar o tempo total; manter tudo residente pode provocar swapping. O melhor ponto dependerá da RAM disponível e do backend.
+
+**Critério de conclusão:** configuração por perfil de hardware com menor ou igual tempo total e sem pico de memória que provoque instabilidade ou swapping excessivo.
+
+### Fase 8 — Regressão, homologação e liberação
+
+**Objetivo:** comprovar a melhoria no pipeline completo e congelar uma baseline nova.
+
+Entregas:
+
+1. Testes unitários para integridade textual, alinhamento, segmentação, gate e tradução.
+2. E2E determinístico com dublês para contratos e publicação.
+3. E2E real separado, opt-in, com modelos instalados e corpus autorizado.
+4. Corpus de avaliação local com amostras PT-BR e EN e referências revisadas.
+5. Comparação antes/depois com a mesma mídia de 37 minutos.
+6. Medição fria e quente, três execuções quentes quando viável, mediana e dispersão.
+7. Inspeção do SRT em player real, com trechos anotados para sincronização e legibilidade.
+8. Atualização de documentação, matriz de dependências e decisões.
+9. CI verde, lock reproduzível e revisão do diff antes de merge.
+
+**Critério de conclusão:** todos os gates de qualidade atendidos, ganho de tempo documentado, nenhum erro crítico aberto e homologação no hardware-alvo concluída.
+
+---
+
+## 6. Estratégia de benchmark e comparação
+
+### 6.1. Matriz de execução
+
+| Cenário | Reconhecimento | Tradução | Objetivo |
+|---|---|---|---|
+| B0 — baseline | Whisper atual | NLLB Transformers atual | Referência imutável |
+| B1 | faster-whisper, mesmo perfil de modelo | NLLB atual | Isolar ganho de ASR |
+| B2 | ASR aprovado | CTranslate2 NLLB candidato | Isolar ganho de tradução |
+| B3 | ASR aprovado | NLLB com batch/beam alternativos | Ajustar throughput e qualidade |
+| B4 | configuração combinada aprovada | configuração combinada aprovada | Ver ganho total e efeitos de interação |
+
+Não trocar ASR e tradução simultaneamente no primeiro experimento. Isso impede atribuição causal e dificulta localizar regressões.
+
+### 6.2. Protocolo
+
+- Fixar arquivo, versão, idioma, hardware, parâmetros e pesos.
+- Excluir downloads de modelo do benchmark quente, mas medir a carga inicial separadamente.
+- Fazer pelo menos três execuções quentes por configuração quando o ambiente permitir.
+- Intercalar baseline e candidato ou executar em condições térmicas comparáveis.
+- Não executar outras tarefas pesadas durante o teste.
+- Registrar tempo por estágio, RSS máximo, CPU, GPU, dispositivo e threads.
+- Comparar mediana e dispersão, não apenas a melhor execução.
+- Guardar áudio e referências em ambiente local autorizado; no Git entram apenas testes sintéticos e métricas sanitizadas.
+
+### 6.3. Corpus de referência
+
+Priorizar trechos representativos de:
+- fala contínua;
+- pausas longas e curtas;
+- fala rápida;
+- palavras repetidas;
+- nomes próprios e termos religiosos;
+- números, datas, siglas e referências;
+- ruído, música de fundo e fala baixa;
+- começo e fim de mídia;
+- português brasileiro e inglês.
+
+A mídia completa de 37 minutos será usada para o benchmark de desempenho. Para métricas lexicais/temporais, construir amostras com texto e fronteiras humanas revisadas, sem subir mídia privada ou transcrição confidencial ao repositório.
+
+---
+
+## 7. Como priorizar gargalos e evitar otimização prematura
+
+### Transcrição
+
+Investigar primeiro:
+1. custo real de inferência do Whisper base;
+2. faster-whisper/CTranslate2 no mesmo tamanho de modelo e parâmetros comparáveis;
+3. INT8 em CPU e FP16 quando houver GPU suportada;
+4. threads e aproveitamento do hardware;
+5. VAD como experimento separado;
+6. tamanho do modelo e parâmetros de decodificação.
+
+Não reduzir o modelo nem a busca de decoding apenas por tempo sem medir WER/CER e revisar nomes/números.
+
+### Tradução
+
+Investigar primeiro:
+1. tempo de geração por token;
+2. custo de `num_beams=4`;
+3. CTranslate2 com NLLB convertido;
+4. quantização suportada pelo hardware real;
+5. bucketing por comprimento e padding;
+6. tamanho de batch e orçamento de tokens;
+7. contexto e glossário sem perda de correspondência 1:1.
+
+O lote atual de 16 cues já é uma otimização existente. A hipótese de ganho está no backend, no decoding, na quantização e na formação de batches mais eficientes.
+
+### Alinhamento
+
+Apesar de não ser o principal gargalo reportado, o alinhador chama WhisperX por segmento. A Fase 1 deverá medir o número de chamadas, tempo médio por segmento e custo fixo de chamada. Só então avaliar alinhar múltiplos segmentos juntos ou consolidar janelas sem misturar conteúdo e sem deslocar timestamps.
+
+### Memória e CPU
+
+- Evitar modelos grandes residentes ao mesmo tempo em máquinas com RAM limitada, caso o benchmark demonstre swapping.
+- Controlar threads para não sobrecarregar CPUs com poucos núcleos.
+- Evitar paralelismo entre dois modelos pesados no mesmo CPU sem medir.
+- Preferir execução serial eficiente quando a concorrência aumenta contenção.
+- Armazenar e reutilizar pesos do disco, sem recarregar entre jobs quando a política de memória permitir.
+
+---
+
+## 8. Testes obrigatórios
+
+| Camada | O que precisa provar |
+|---|---|
+| Domínio | Regras de tempo, ordenação, conservação do texto e estados de qualidade |
+| Segmentação | Consolidação entre segmentos, pausas, sintaxe, duração, CPS e ausência de fragmentação artificial |
+| Alinhamento | Palavras não alinhadas, repetidas, offsets, sobreposições e tentativas de recuperação |
+| Tradução | 1:1, ordem, idioma, nomes/números, texto completo e timestamps preservados |
+| Validação | bloqueios, avisos, exceções legítimas e diagnóstico reproduzível |
+| Integração | pipeline completo e publicação atômica |
+| E2E determinístico | pipeline com dublês, sem depender de rede ou modelos |
+| E2E real | Whisper/faster-whisper, WhisperX, NLLB e FFmpeg reais em corpus local |
+| Performance | mediana por estágio, RTF, tokens/s, RSS e hardware |
+| Homologação | player real e avaliação humana de sincronização, leitura e tradução |
+
+A CI comum não deverá baixar pesos de vários modelos nem executar benchmark longo em todo push. Testes determinísticos e de contrato permanecem rápidos; smokes reais e benchmarks ficam em workflows opt-in ou agendados, com dependências e dados explicitamente controlados.
+
+---
+
+## 9. Riscos e controles
+
+| Risco | Controle |
+|---|---|
+| Modelo mais rápido reconhece diferente | WER/CER pareado e revisão de trechos críticos |
+| INT8 muda escolhas lexicais | comparação com o baseline e rejeição por qualidade |
+| VAD remove fala baixa | teste específico de cobertura e timestamps |
+| Beam menor piora tradução | revisão humana, termos críticos e comparação cega |
+| Batch maior esgota RAM | medição de pico e limite por perfil |
+| Vários modelos provocam swapping | política de retenção baseada em RSS/memória livre |
+| Agrupar segmentos cruza pausa/turno | limites temporais, gaps e teste de fala contínua |
+| Extender cue invade fala seguinte | limite pelo início da próxima cue e margem de segurança |
+| Palavra não alinhada perde conteúdo | contrato de conservação e gate bloqueante |
+| Detectar repetição apaga repetição legítima | detecção sinaliza; remoção automática proibida |
+| Trocar dependências quebra lock | POC isolada, versão fixada, matriz Python e CI |
+| Modelo tem licença incompatível | revisão de licença antes de distribuição/adoção |
+
+---
+
+## 10. Regras de mudança e aceite
+
+1. Uma hipótese deve ser transformada em benchmark antes de virar decisão.
+2. Alterar um fator por vez nos experimentos de desempenho.
+3. Não remover o motor baseline enquanto o candidato não passar.
+4. Atualizar `pyproject.toml`, `uv.lock`, matriz e testes somente quando uma dependência for aprovada.
+5. Manter as portas de aplicação para permitir troca de adaptador sem reescrever o pipeline.
+6. Mudanças em thresholds editoriais exigem corpus, decisão registrada e testes.
+7. Não fabricar timestamps, não truncar texto e não descartar palavra sem diagnóstico.
+8. Uma PR não será considerada concluída apenas porque CI está verde; também é necessário comprovar os gates de qualidade pertinentes à fase.
+9. Atualizar [ESTADO_ATUAL.md](ESTADO_ATUAL.md) no fechamento de cada fase.
+10. Manter a raiz de `docs/` com documentos vivos; evidências concluídas vão para `docs/archive/`.
+
+## 11. Ordem de execução e próximo passo
+
+A ordem de dependência será:
+
+```text
+Fase 0 — auditoria e plano (documentada)
+          |
+Fase 1 — instrumentação / baseline
+          |
+Fase 2 — integridade / alinhamento
+          |
+Fase 3 — segmentação / legibilidade
+          |
+Fase 4 — gate editorial
+          |
+          +--------------------+
+          |                    |
+Fase 5 — ASR              Fase 6 — tradução
+          |                    |
+          +---------+----------+
+                    |
+Fase 7 — memória, threads e perfis
+                    |
+Fase 8 — regressão e homologação final
+```
+
+**Próxima execução autorizada pelo plano:** Fase 1 — instrumentação e baseline de desempenho. Não alterar Whisper, WhisperX ou NLLB antes de obter a medição reproduzível.
+
+### Definition of Done de cada fase
+
+- escopo implementado e revisado;
+- testes unitários e de integração cobrindo o comportamento;
+- regressões e casos de erro tratados;
+- Ruff, formatação, links documentais, lock e CI aprovados;
+- documentação viva atualizada;
+- evidências e métricas registradas;
+- merge na `main` somente após validação.
+
+---
+
+## 12. Referências técnicas externas
+
+As referências abaixo sustentam opções de investigação, não decisões de dependência já adotadas:
+
+- [faster-whisper — uso, CPU INT8, GPU FP16, timestamps por palavra e VAD](https://github.com/SYSTRAN/faster-whisper)
+- [CTranslate2 — dicas de desempenho](https://opennmt.net/CTranslate2/performance.html)
+- [CTranslate2 — quantização e tipos suportados](https://opennmt.net/CTranslate2/quantization.html)
+- [CTranslate2 — conversão e execução de NLLB](https://opennmt.net/CTranslate2/guides/transformers.html)
+- [Model card NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-distilled-600M)
+
+**Nota de licença:** o model card do NLLB-200 distilled 600M informa CC-BY-NC-4.0 e descreve limites de uso. A licença do código Legendar e a licença dos pesos são artefatos distintos; validar o uso pretendido antes de distribuir.

@@ -1,28 +1,27 @@
 # Legendar
 
-Aplicação desktop para transcrever áudio, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução local opcional para inglês ou português brasileiro.
+Aplicação desktop para transcrever áudio, alinhar a fala à linha do tempo da mídia e produzir legendas SRT, com tradução local opcional entre português brasileiro e inglês.
 
-- **Estado:** Fases 0–9 concluídas, validadas e integradas à `main`. O que resta é a homologação do usuário com mídia real e hardware próprio.
-- **Suíte:** 452 testes aprovados e 86% de cobertura no ambiente com FFmpeg (442 aprovados e 10 skips explícitos sem FFmpeg).
-- **Licença:** MIT, em [LICENSE](LICENSE).
+- **Estado:** remodelação arquitetural das Fases 0–10 integrada à `main`; a qualidade editorial e o desempenho de ponta a ponta estão sob um novo plano de correção e melhoria.
+- **Base técnica:** Python 3.10–3.13, PySide6, FFmpeg, Whisper, WhisperX e NLLB-200.
+- **Qualidade:** o arquivo pode ser estruturalmente válido sem estar editorialmente aprovado. O plano atual trata essa lacuna explicitamente.
+- **Licença do código:** MIT. As licenças dos modelos e pesos são independentes e devem ser observadas.
 
 ## O que a aplicação faz
 
-1. Recebe um arquivo local (áudio ou vídeo) ou uma URL do YouTube.
-2. Inspeciona a mídia com ffprobe, permite escolher a faixa de áudio e normaliza para WAV PCM mono 16 kHz preservando o offset temporal.
-3. Transcreve com Whisper no idioma de origem.
-4. Alinha por palavra com WhisperX e sinaliza palavras sem âncora confiável.
-5. Segmenta em cues de até duas linhas de 42 caracteres, respeitando pausas e tempo de leitura.
-6. Traduz por cue com NLLB-200 distilled 600M **local**, preservando os tempos originais.
-7. Valida o trilho, reparseia o arquivo e publica o SRT por troca atômica.
-8. Mostra etapa, progresso honesto, log recolhível e permite cancelamento cooperativo em ponto seguro.
+1. Recebe mídia local ou URL do YouTube.
+2. Inspeciona streams e normaliza o áudio para WAV PCM mono 16 kHz, preservando o offset da mídia.
+3. Transcreve a fala no idioma de origem com Whisper.
+4. Alinha palavras com WhisperX.
+5. Segmenta o texto em cues, valida e publica SRT por troca atômica.
+6. Opcionalmente traduz as cues localmente com NLLB-200.
 
 ## Requisitos
 
 - Python 3.10–3.13 e [uv](https://docs.astral.sh/uv/)
 - FFmpeg e ffprobe no `PATH`
-- Para YouTube: `yt-dlp-ejs` (já instalado pelo perfil) e Deno ≥ 2.3 ou Node ≥ 22
-- Espaço em disco para os modelos (≈ 6 GB)
+- Para YouTube: `yt-dlp-ejs` e Deno ≥ 2.3 ou Node ≥ 22
+- Espaço em disco para os modelos; consulte [Instalação](docs/INSTALACAO.md)
 
 ## Instalação e execução
 
@@ -32,71 +31,50 @@ cd legendar
 
 uv lock --check
 uv sync --locked --group dev --group phase0 --extra runtime-cpu
-# GPU NVIDIA com CUDA 12.8: use --extra runtime-cu128 no lugar de runtime-cpu
+# Alternativa em Linux/Windows com GPU NVIDIA compatível:
+# uv sync --locked --group dev --group phase0 --extra runtime-cu128
 
 PYTHONPATH=src uv run --locked --no-sync python -m legendar
 ```
 
-Detalhes por sistema operacional, perfis de hardware, variáveis de ambiente e
-desinstalação estão em [docs/INSTALACAO.md](docs/INSTALACAO.md).
-
-
-## Testes
+## Testes e qualidade estática
 
 ```bash
-# Suíte determinística (sem rede, sem modelos)
 QT_QPA_PLATFORM=offscreen uv run --locked --no-sync pytest -q
-
-# Somente end-to-end (matriz de idiomas, falhas e mídia real)
 QT_QPA_PLATFORM=offscreen uv run --locked --no-sync pytest -q -m e2e
-
-# Qualidade estática e documentação
 uv run --locked --no-sync ruff check src/legendar tests scripts
 uv run --locked --no-sync ruff format --check src/legendar tests
 uv run --locked --no-sync python scripts/check_doc_links.py
 ```
 
-A CI da Fase 8 instala FFmpeg e roda a matriz Python 3.10–3.13 com gate de
-cobertura de 85% (`.github/workflows/phase8-quality.yml`).
+A CI da Fase 8 executa a matriz Python 3.10–3.13 com FFmpeg, Qt offscreen, E2E, cobertura e consistência documental. Consulte [GitHub Actions](https://github.com/anfalcir/legendar/actions).
 
-## Documentação
+## Documentação viva
 
-**Porta de entrada técnica**
+O índice técnico e operacional está em [docs/README.md](docs/README.md). Os documentos mantidos na raiz de `docs/` são os documentos vivos:
 
-- [Arquitetura](docs/ARQUITETURA.md) — camadas, módulos, portas, estados, threads e publicação.
-- [Operação](docs/OPERACAO.md) — uso da janela, estados, cancelamento, arquivos, erros e diagnóstico.
-- [Instalação](docs/INSTALACAO.md) — requisitos, perfis, execução, verificação e desinstalação.
-- [Homologação](docs/HOMOLOGACAO.md) — roteiro passo a passo para validar com mídia real e hardware próprio.
-- [Decisões](docs/DECISOES.md) — decisões consolidadas e decisões abertas.
-- [Plano mestre de remodelagem](docs/PLANO_REMODELAGEM.md) — visão do produto, requisitos e critérios de aceite.
-- [Estado atual](docs/ESTADO_ATUAL.md) — estado real, evidências, riscos e pendências.
-- [Matriz de dependências](docs/MATRIZ_DEPENDENCIAS.md) — governança, faixas de versão, perfis e compatibilidade.
-- [Baseline legada](docs/LEGACY_BASELINE.md) — contratos caracterizados e política da aplicação anterior.
+- [Estado atual](docs/ESTADO_ATUAL.md)
+- [Plano de correção, qualidade e desempenho](docs/PLANO_CORRECAO_MELHORIA.md)
+- [Arquitetura](docs/ARQUITETURA.md)
+- [Operação](docs/OPERACAO.md)
+- [Instalação](docs/INSTALACAO.md)
+- [Homologação](docs/HOMOLOGACAO.md)
+- [Decisões](docs/DECISOES.md)
+- [Matriz de dependências](docs/MATRIZ_DEPENDENCIAS.md)
 
-**Planos e handoffs por fase**
+Planos, handoffs e relatórios encerrados das Fases 0–10 foram preservados em [docs/archive/README.md](docs/archive/README.md). O arquivamento organiza o histórico; não apaga evidências.
 
-| Fase | Plano | Handoff |
-|---|---|---|
-| 0 | [Protocolo](docs/FASE_0_PROTOCOLO.md) | — |
-| 1 | [Plano](docs/FASE_1_PLANO.md) | [Handoff](docs/HANDOFF_FASE_1.md) |
-| 2 | [Plano](docs/FASE_2_PLANO.md) | [Handoff](docs/HANDOFF_FASE_2.md) |
-| 3 | [Plano](docs/FASE_3_PLANO.md) | [Handoff](docs/HANDOFF_FASE_3.md) |
-| 4 | [Plano](docs/FASE_4_PLANO.md) | [Handoff](docs/HANDOFF_FASE_4.md) |
-| 5 | [Plano](docs/FASE_5_PLANO.md) | [Handoff](docs/HANDOFF_FASE_5.md) |
-| 6 | [Plano](docs/FASE_6_PLANO.md) | [Handoff](docs/HANDOFF_FASE_6.md) |
-| 7 | [Plano](docs/FASE_7_PLANO.md) | [Handoff](docs/HANDOFF_FASE_7.md) |
-| 8 | [Plano](docs/FASE_8_PLANO.md) | [Handoff](docs/HANDOFF_FASE_8.md) e [relatório](docs/RELATORIO_FASE_8.md) |
-| 9 | [Plano](docs/FASE_9_PLANO.md) | [Handoff final](docs/HANDOFF_FASE_9.md) |
+## Princípios do produto
 
-## Limites conhecidos
+- Fidelidade ao que foi falado e preservação de todo o conteúdo reconhecido.
+- Timestamps ancorados em evidência temporal; nenhum horário inventado para mascarar falha de alinhamento.
+- Legibilidade como critério de qualidade, não apenas validade sintática do SRT.
+- Tradução local e privada, com avaliação contextual e terminológica.
+- Desempenho otimizado somente quando testes pareados demonstrarem qualidade equivalente.
+- Erros, conteúdo não alinhado e resultados que precisam de revisão devem ser explícitos.
 
-- A precisão temporal e a qualidade tradutória dependem de homologação humana com corpus autorizado e o computador-alvo.
-- O cancelamento é cooperativo: uma inferência em andamento termina antes de o job encerrar.
-- A publicação (`PUBLISHING`) é ponto de não retorno e não aceita cancelamento.
-- Empacotamento distribuível (PyInstaller) ainda não é um fluxo homologado.
-- Sistemas operacionais oficialmente suportados serão declarados após a homologação integrada; a CI cobre Ubuntu com Python 3.10–3.13.
-- O repositório preserva a aplicação anterior (`main.py`, `core/`, `gui/`) como baseline caracterizada.
+## Plano atual
 
-## Licença
+A auditoria de código identificou lacunas na recomposição de segmentos, subdivisão por CPS, preservação de palavras não alinhadas e gate editorial. Também foi reportado processamento de aproximadamente 60 minutos para 37 minutos de mídia; a duração por etapa ainda precisa ser medida.
 
-MIT. Consulte [LICENSE](LICENSE).
+O plano completo, com critérios de aceite, fases, benchmarks e estratégia de aceleração de CPU/GPU, está em [PLANO_CORRECAO_MELHORIA.md](docs/PLANO_CORRECAO_MELHORIA.md).

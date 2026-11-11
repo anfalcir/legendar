@@ -30,10 +30,10 @@
 
 | Documento | Conteúdo |
 |---|---|
-| [ARQUITETURA.md](ARQUITETURA.md) | camadas, mapa de módulos, fluxo do job, portas, estados, threads, publicação e arquitetura de testes |
-| [OPERACAO.md](OPERACAO.md) | jornada na UI, estados, cancelamento, arquivos, primeira execução, erros, preferências, diagnóstico |
-| [INSTALACAO.md](INSTALACAO.md) | requisitos, ferramentas externas, perfis `uv`, execução, verificação, ajustes por ambiente, pip e desinstalação |
-| [DECISOES.md](DECISOES.md) | 24 decisões consolidadas e 5 decisões abertas |
+| [ARQUITETURA.md](../../ARQUITETURA.md) | camadas, mapa de módulos, fluxo do job, portas, estados, threads, publicação e arquitetura de testes |
+| [OPERACAO.md](../../OPERACAO.md) | jornada na UI, estados, cancelamento, arquivos, primeira execução, erros, preferências, diagnóstico |
+| [INSTALACAO.md](../../INSTALACAO.md) | requisitos, ferramentas externas, perfis `uv`, execução, verificação, ajustes por ambiente, pip e desinstalação |
+| [DECISOES.md](../../DECISOES.md) | 24 decisões consolidadas e 5 decisões abertas |
 | [HANDOFF_FASE_9.md](HANDOFF_FASE_9.md) | encerramento do projeto, evidências e roteiro de homologação |
 | `README.md` | porta de entrada único e coerente com os guias |
 | `LICENSE` | MIT, referenciada pelo README |
@@ -49,11 +49,11 @@
 
 1. Toda afirmação dos guias corresponde ao código ou a um teste existente.
 2. A documentação não contém links relativos quebrados.
-3. Instalação e execução podem ser reproduzidas seguindo apenas [INSTALACAO.md](INSTALACAO.md).
+3. Instalação e execução podem ser reproduzidas seguindo apenas [INSTALACAO.md](../../INSTALACAO.md).
 4. O README leva a todos os documentos relevantes e não promete o que não existe.
 5. `pyproject.toml` + `uv.lock` são os únicos manifestos de dependências.
 6. Suíte completa, Ruff e verificação de documentação verdes após as mudanças.
-7. O estado final e as pendências humanas estão explícitos em [ESTADO_ATUAL.md](ESTADO_ATUAL.md).
+7. O estado final e as pendências humanas estão explícitos em [ESTADO_ATUAL.md](../../ESTADO_ATUAL.md).
 
 ## 5. Comandos de verificação
 

@@ -6,8 +6,8 @@
 - **Data:** 10/11/2026
 - **Branch:** `phase-0/technical-inventory`
 - **Plano mestre:** [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md)
-- **Estado vivo:** [ESTADO_ATUAL.md](ESTADO_ATUAL.md)
-- **Matriz de dependências:** [MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md)
+- **Estado vivo:** [ESTADO_ATUAL.md](../../ESTADO_ATUAL.md)
+- **Matriz de dependências:** [MATRIZ_DEPENDENCIAS.md](../../MATRIZ_DEPENDENCIAS.md)
 - **Handoff da próxima fase:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md)
 
 ---

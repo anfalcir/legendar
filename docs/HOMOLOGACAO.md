@@ -1,167 +1,118 @@
 # Homologação do Legendar — roteiro prático
 
-- **Para quem:** você, no seu computador, com mídia real.
-- **Para quê:** fechar os critérios que nenhum teste automático decide — sincronia, qualidade da tradução, desempenho e conforto da interface.
-- **Tempo:** ~2 h de trabalho, mais o download inicial de modelos (~3 GB).
-- **Contexto:** [OPERACAO.md](OPERACAO.md) explica estados e erros; [INSTALACAO.md](INSTALACAO.md) cobre perfis de hardware.
+- **Para quem:** responsável por executar a aplicação no computador-alvo.
+- **Para quê:** validar sincronização, qualidade textual, tradução, desempenho e interface com mídia real.
+- **Operação:** [OPERACAO.md](OPERACAO.md).
+- **Plano de correção e desempenho:** [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
+- **Instalação:** [INSTALACAO.md](INSTALACAO.md).
 
-## 0. Preparar o ambiente (uma vez)
+## 1. Preparar ambiente
 
-Estado medido nesta máquina: sem GPU NVIDIA, Node 22 presente, FFmpeg só em
-`./ffmpeg/bin` (fora do `PATH`) e perfis de runtime ainda **não** instalados.
+Execute novamente o inventário atualizado antes de uma rodada de desempenho. O snapshot antigo do hardware está no histórico da Fase 0 e não deve ser tomado como prova de configuração atual.
 
 ```bash
-cd ~/Documentos/Codes/legendar
-
-# 1) Perfis de execução (≈3 GB de download; sem GPU use runtime-cpu)
-uv sync --locked --group dev --group phase0 --extra runtime-cpu
-
-# 2) FFmpeg/ffprobe no PATH (já existe uma cópia local no repositório)
-export PATH="$PWD/ffmpeg/bin:$PATH"     # ou: sudo apt-get install -y ffmpeg
-
-# 3) Conferir as ferramentas e as bibliotecas
-ffmpeg -version | head -n 1
-ffprobe -version | head -n 1
-uv run --locked --no-sync python -c "import importlib.util as u; print({n: bool(u.find_spec(n)) for n in ('torch','whisper','whisperx','transformers','yt_dlp')})"
+python scripts/phase0_inventory.py --probe-torch
 ```
 
-Espere `True` nos cinco nomes. O modelo de transcrição padrão é `base`; para
-mídia real use `export LEGENDAR_WHISPER_MODEL=small` (ou `medium`) na sessão do
-terminal antes de abrir a aplicação.
+Confirme:
+- versão Python e distribuição Linux/Windows/macOS;
+- CPU, núcleos físicos/lógicos e RAM total/disponível;
+- GPU, driver e disponibilidade de CUDA/MPS;
+- FFmpeg/ffprobe e versões dos modelos instalados;
+- espaço livre no disco.
 
-## 1. Abrir o sistema
+Instale o perfil CPU ou CUDA compatível conforme [INSTALACAO.md](INSTALACAO.md). Não combine os dois extras.
+
+## 2. Abrir o sistema
 
 ```bash
-cd ~/Documentos/Codes/legendar
-export PATH="$PWD/ffmpeg/bin:$PATH"
-export LEGENDAR_WHISPER_MODEL=small
 PYTHONPATH=src uv run --locked --no-sync python -m legendar
 ```
 
-**Observe na abertura**
+A jornada e os estados da interface estão em [OPERACAO.md](OPERACAO.md).
 
-- janela única com a pílula de estado no topo e o rodapé de prontidão;
-- rodapé verde = pronto; âmbar = falta algo, e a frase diz exatamente o quê;
-- **Traduzir a fala para o idioma final** cinza = tradução indisponível (o tooltip diz por quê);
-- destino sugerido já preenchido (padrão `~/Videos`).
+## 3. Teste A — PT-BR para PT-BR
 
-Se a janela não abrir: `tail -40 ~/.cache/legendar/logs/legendar.log`.
+Use 2–5 minutos de mídia real representativa:
+1. selecione o arquivo e a faixa;
+2. escolha português como idioma falado e final;
+3. deixe a tradução desmarcada;
+4. gere e abra o SRT no player de referência.
 
-## 2. Teste A — PT-BR para PT-BR (2 a 5 min de áudio)
-
-1. **Origem da mídia:** *Arquivo local* → **Selecionar arquivo…**.
-2. Opcional: **Inspecionar faixas** e escolha a faixa de áudio certa.
-3. **Idioma falado:** Português (BR). **Idioma final:** Português (BR). Tradução desmarcada.
-4. **Destino:** confirme o caminho `.srt`.
-5. **Gerar legenda →** → revise o resumo → **Iniciar processamento**.
-
-**Observe**
-
-- a sequência de etapas: preparar áudio → transcrever → alinhar → segmentar → validar SRT → publicar;
-- o percentual só aparece quando existe medida real; "sem percentual medido" é esperado em transcrição e alinhamento;
-- os campos bloqueiam durante o trabalho e o **Cancelar trabalho** fica ativo;
-- no fim: caminho publicado na barra de status e **Abrir pasta** habilitado.
-
-**Anote:** tempo total e tempo por etapa.
-
-## 3. Conferir o SRT no player (insubstituível)
-
-```bash
-vlc --sub-file="$HOME/Videos/<nome>.srt" "$HOME/Videos/<nome>.mp4"
-```
-
-**Observe**
-
-- a fala aparece sincronizada, sem legenda adiantada ou atrasada de forma sistemática;
-- no máximo 2 linhas por cue, linhas de até 42 caracteres, nenhuma cue passando de 7 s;
-- acentuação correta (UTF-8), sem sobreposição de cues e sem cue depois do fim do vídeo;
-- nomes próprios, números, referências bíblicas e termos técnicos.
-
-**Anote:** 3 trechos com o tempo do vídeo e o tempo que a legenda mostra. Essa é
-a medida que calibra a meta de sincronia (seção 9.4 do plano mestre).
+Observe fidelidade textual, nomes, números, omissões, repetições, alinhamento e conforto de leitura.
 
 ## 4. Teste B — PT-BR para inglês
 
-Mesma mídia do Teste A; **Idioma final: Inglês** e marque **Traduzir a fala para
-o idioma final**.
+Use a mesma mídia do Teste A, habilitando a tradução. Verifique:
+- preservação de significado e negações;
+- nomes, referências, números e siglas;
+- frases divididas em cues vizinhas;
+- timestamps preservados;
+- texto completo e natural no idioma final.
 
-**Observe:** a primeira execução baixa o NLLB-200 distilled (~2,4 GB) — a etapa
-fica sem percentual, isso é download, não travamento. Depois, revise: os tempos
-continuam idênticos aos do Teste A (a tradução não move cues), nomes e números
-preservados, frases completas (sem corte no meio da ideia).
+## 5. Teste C — inglês para PT-BR e detecção
 
-## 5. Teste C — inglês para PT-BR e detecção automática
-
-1. Mídia com fala em inglês → **Idioma falado: Inglês**, **final: Português (BR)**, tradução marcada.
-2. Repita uma vez com **Idioma falado: Detectar automaticamente** e confirme que o resultado não degrada.
+Repita com áudio em inglês e tradução para PT-BR. Teste também a detecção automática. Compare com o idioma explicitamente selecionado.
 
 ## 6. Teste D — cancelamento
 
-Em três momentos distintos (baixar, transcrever, traduzir): **Cancelar trabalho** → confirmar.
-
-**Observe:** "Cancelando em um ponto seguro…", o job encerra em segundos, **nenhum
-SRT parcial** aparece no destino, os campos voltam a ficar ativos e
-`~/.cache/legendar/tmp` fica sem a pasta do job. Fechar a janela durante o
-trabalho também pede cancelamento.
+Solicite cancelamento durante transcrição, alinhamento e tradução. Confirme:
+- encerramento em ponto seguro;
+- nenhum SRT parcial no destino;
+- estado e controles retornam corretamente;
+- workspace temporário é limpo.
 
 ## 7. Teste E — YouTube
 
-*YouTube* → cole a URL de um vídeo curto que você tenha direito de processar →
-**Gerar legenda**. Se o preflight indicar indisponível, o motivo aparece no
-rodapé (aqui: Node 22 já atende; falta apenas `yt-dlp`, que vem do perfil).
+Use URL de mídia autorizada e confira disponibilidade do `yt-dlp` e runtime JavaScript. Teste cancelamento durante download.
 
-## 8. Teste F — pregação longa (desempenho)
+## 8. Teste F — mídia longa e desempenho
 
-Uma mídia de 30–60 min, com a aplicação aberta e o monitor do sistema visível.
+Use a mídia de referência de aproximadamente 37 minutos, quando disponível.
 
-**Observe e anote:** tempo total e por etapa, RAM máxima, uso de CPU,
-temperatura, se a janela continua respondendo (rolar o log, mover a janela) e se
-a última cue termina coerente com o fim da mídia. Registre também o hardware
-(CPU, RAM, GPU) e o modelo usado.
+Registre:
+- tempo total;
+- tempo de cada estágio;
+- tempo de carregamento de modelos separado da inferência;
+- CPU média/pico e uso por núcleo;
+- RAM máxima e memória livre por estágio;
+- GPU/VRAM, se aplicável;
+- modelos, dtype, beam, batch, threads e versões;
+- tempo frio e quente;
+- qualidade textual, alinhamento, CPS e legibilidade.
 
-## 9. Teste G — interface e acessibilidade
+O tempo global reportado inicialmente foi cerca de 60 minutos para 37 minutos de áudio (RTF ≈ 1,62). Esse é um relato inicial, não uma baseline de estágio nem uma medição reproduzida. A Fase 1 do [plano vigente](PLANO_CORRECAO_MELHORIA.md) criará o benchmark comparável.
 
-- **Preferências:** tema (sistema, claro, escuro), idioma final padrão, pasta padrão, log expandido — feche e reabra para confirmar que persistem.
-- Escala do sistema em 125% e 150% (HiDPI): nada cortado, botões alcançáveis.
-- Teclado: `Tab` percorre os campos na ordem lógica, `Enter` aciona **Gerar legenda**, `Esc` fecha diálogos.
-- Redimensionar a janela para o mínimo: o conteúdo rola em vez de sobrepor.
+## 9. Teste G — inspeção independente do SRT
 
-## 10. Teste H — erros esperados
+Abra o SRT no VLC ou em outro player de referência e observe:
+- início/fim em relação à fala;
+- até duas linhas e largura dentro do limite;
+- duração confortável e sem flashes;
+- frases agrupadas de modo natural;
+- nenhuma palavra omitida ou duplicada;
+- ausência de sobreposição e cue fora da mídia;
+- nomes próprios, números, referências e caracteres inesperados.
 
-| Induzir | Mensagem esperada |
+Para precisão temporal, marque fronteiras humanas em uma amostra de fala e compare com o SRT. Use o avaliador de alinhamento existente com manifesto local; áudio e texto privado não devem ser versionados.
+
+## 10. Registro de resultado
+
+| Campo | Valor |
 |---|---|
-| Renomear/mover o arquivo depois de selecionar | entrada inválida, campo volta a ficar ativo |
-| Vídeo sem faixa de áudio | "A mídia selecionada não possui áudio." |
-| Destino em pasta sem permissão | falha de escrita, nenhum arquivo publicado |
-| Destino já existente | segunda confirmação antes de sobrescrever |
+| Data e hardware | |
+| Sistema operacional/Python | |
+| Modelos e versões | |
+| Duração da mídia | |
+| Tempo frio / quente | |
+| Tempo por estágio | |
+| CPU/RAM/GPU | |
+| WER/CER ou revisão textual | |
+| Erro temporal mediano/P95 | |
+| Cobertura de alinhamento | |
+| Cues abaixo de 1 s / acima de CPS | |
+| Palavras omitidas/duplicadas | |
+| Qualidade da tradução | |
+| Observações e decisão | |
 
-## 11. Como registrar
-
-Devolva esta tabela preenchida (ou só o que divergir):
-
-| Teste | Resultado | Tempo | Observações |
-|---|---|---|---|
-| A — PT→PT curto | | | |
-| SRT no player | | | |
-| B — PT→EN | | | |
-| C — EN→PT / automático | | | |
-| D — cancelamento (3 pontos) | | | |
-| E — YouTube | | | |
-| F — pregação longa | | | |
-| G — interface/HiDPI | | | |
-| H — erros | | | |
-
-## 12. O que não é bug
-
-- Etapas sem percentual: transcrição, alinhamento e download não informam progresso medido.
-- Primeira execução lenta: download de modelos no cache (`~/.cache/legendar/models`).
-- Cancelamento demora alguns segundos: a inferência em andamento termina antes.
-- **Publicando** recusa cancelamento: a troca atômica já começou (ponto de não retorno).
-- Modelo `base` erra mais em áudio ruidoso: troque para `small`/`medium` e repita.
-
-## 13. Quando algo falha
-
-1. Categoria e mensagem na barra de status.
-2. Detalhe técnico em `~/.cache/legendar/logs/legendar.log` (rotativo, ~3 MB).
-3. Me envie: a categoria, o trecho do log e o arquivo problemático (ou as
-   características dele: duração, contêiner, codec, taxa de amostragem).
+Não inclua no repositório áudio, transcrição ou caminho pessoal. Registre somente IDs sintéticos e métricas sanitizadas, com arquivos privados mantidos localmente.

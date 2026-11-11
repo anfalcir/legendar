@@ -73,7 +73,7 @@ A Fase 2 está concluída, validada e integrada à `main`. Não iniciar a Fase 3
 ## 6. Documentos relacionados
 
 - [Plano mestre](PLANO_REMODELAGEM.md)
-- [Estado atual](ESTADO_ATUAL.md)
+- [Estado atual](../../ESTADO_ATUAL.md)
 - [Plano operacional da Fase 2](FASE_2_PLANO.md)
 - [Plano operacional da Fase 1](FASE_1_PLANO.md)
 - [Baseline legada](LEGACY_BASELINE.md)
