@@ -71,6 +71,7 @@ def make_aligner(
     loader_calls: list | None = None,
     model_error: Exception | None = None,
     waveform: FakeWaveform | None = None,
+    result_sequence: list[dict] | None = None,
     **kwargs,
 ) -> WhisperXAligner:
     model_calls = loader_calls if loader_calls is not None else []
@@ -84,12 +85,14 @@ def make_aligner(
             raise model_error
         return fake_model, fake_metadata
 
-    def align_function(
+    def default_align_function(
         segments, model, metadata, audio, device, *, progress_callback=None
     ):
         align_calls.append((segments, model, metadata, audio, device))
         if progress_callback is not None:
             progress_callback(50.0)
+        if result_sequence:
+            return result_sequence.pop(0)
         return result or {
             "word_segments": [
                 {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.95},
@@ -101,7 +104,7 @@ def make_aligner(
         tmp_path / "models",
         device="cpu",
         model_loader=loader,
-        align_function=align_function,
+        align_function=default_align_function,
         device_resolver=lambda requested: requested,
         audio_loader=lambda _audio: waveform or FakeWaveform(),
         version_provider=lambda: "3.8.6",
@@ -170,6 +173,48 @@ def test_unaligned_word_is_not_interpolated_or_given_a_timestamp(
     assert result.diagnostics.alignment_ratio == pytest.approx(0.5)
     assert "unmatched_word" in result.diagnostics.issues
     assert not result.is_complete
+
+
+def test_unmatched_word_gets_one_controlled_wider_window_recovery(tmp_path: Path):
+    calls: list = []
+    first_result = {
+        "word_segments": [
+            {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.9},
+        ]
+    }
+    second_result = {
+        "word_segments": [
+            {"word": "Olá", "start": 0.1, "end": 0.4, "score": 0.9},
+            {"word": "mundo", "start": 0.55, "end": 0.8, "score": 0.9},
+        ]
+    }
+
+    aligner = make_aligner(
+        tmp_path,
+        calls=calls,
+        result_sequence=[first_result, second_result],
+        recovery_padding_seconds=0.75,
+    )
+
+    result = aligner.align(
+        make_audio(),
+        make_transcript(window=TimeRange(0.5, 1.5)),
+        progress=ProgressRecorder(),
+    )
+
+    words = result.transcript.segments[0].words
+    assert [word.text for word in words] == ["Olá", "mundo"]
+    assert all(word.is_aligned for word in words)
+    assert result.diagnostics.unmatched_words == ()
+    assert result.is_complete
+    assert len(calls) == 2
+    assert calls[0][0][0]["start"] == pytest.approx(0.5)
+    assert calls[0][0][0]["end"] == pytest.approx(1.5)
+    assert calls[1][0][0]["start"] == pytest.approx(0.0)
+    assert calls[1][0][0]["end"] == pytest.approx(2.25)
+    snapshot = aligner.performance_snapshot()
+    assert snapshot["counters"]["recovery_attempts"] == 1
+    assert snapshot["counters"]["recovered_words"] == 2
 
 
 def test_missing_search_window_does_not_load_or_call_alignment_model(
@@ -375,6 +420,18 @@ def test_audio_duration_mismatch_is_rejected_before_model_loading(
         )
 
     assert loads == []
+
+
+def test_environment_enables_controlled_recovery_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("LEGENDAR_ALIGN_RECOVERY_PADDING_SECONDS", raising=False)
+
+    aligner = WhisperXAligner.from_environment(tmp_path / "models")
+
+    assert aligner.performance_snapshot()["configuration"][
+        "recovery_padding_seconds"
+    ] == pytest.approx(0.75)
 
 
 def test_invalid_device_is_rejected(tmp_path: Path) -> None:

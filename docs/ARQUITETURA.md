@@ -95,7 +95,7 @@ src/legendar/
 3. `validate_track` bloqueia estrutura inválida e sinaliza riscos de legibilidade.
 4. `format_srt` serializa; `validate_roundtrip` reparseia e compara; `atomic_write_text` troca o arquivo por rename.
 
-**Limitação conhecida:** a política atual pode permitir cues curtas ou acima de CPS como avisos; a segmentação também não consolida explicitamente segmentos originais consecutivos do Whisper. Ver [plano de correção/melhoria](PLANO_CORRECAO_MELHORIA.md).
+**Limitações conhecidas:** a política editorial de cues ainda será tratada na Fase 3. A Fase 2 agora bloqueia a publicação quando o alinhamento deixa palavras reconhecidas sem âncora temporal confiável e tenta uma recuperação controlada com janela ampliada antes de aceitar a falha.
 
 ## 8. Configuração e caminhos
 
@@ -106,6 +106,7 @@ src/legendar/
 | Modelo Whisper | `base` | `LEGENDAR_WHISPER_MODEL` |
 | Dispositivo Whisper | `auto` | `LEGENDAR_WHISPER_DEVICE` |
 | Dispositivo do alinhador | `auto` | `LEGENDAR_ALIGN_DEVICE` |
+| Padding de recuperação do alinhamento | `0,75 s` no bootstrap de produção | `LEGENDAR_ALIGN_RECOVERY_PADDING_SECONDS` |
 | Dispositivo da tradução | `auto` | `LEGENDAR_TRANSLATE_DEVICE` |
 | Checkpoint de tradução | `facebook/nllb-200-distilled-600M` | `LEGENDAR_TRANSLATE_MODEL` |
 
@@ -129,7 +130,8 @@ A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` per
 
 A evolução proposta é:
 - instrumentar tempo e memória por estágio;
-- garantir conservação integral do conteúdo reconhecido;
+- **garantir conservação integral do conteúdo reconhecido (Fase 2 em implementação);**
+- **recuperar alinhamentos parciais com segunda tentativa controlada, sem fabricar timestamps (Fase 2);**
 - formar cues a partir de um fluxo contínuo de palavras alinhadas;
 - distinguir tempo de fala de tempo de exibição;
 - transformar riscos editoriais em um gate explícito;

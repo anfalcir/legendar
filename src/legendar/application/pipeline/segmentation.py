@@ -89,6 +89,7 @@ class SegmentationResult:
     short_cues: tuple[int, ...] = ()
     overflow_cues: tuple[int, ...] = ()
     source_segment_count: int = 0
+    unmatched_words: tuple[TranscriptWord, ...] = ()
     diagnostics: tuple[str, ...] = field(default_factory=tuple)
 
     @property
@@ -101,7 +102,16 @@ class SegmentationResult:
 
     @property
     def is_lossless(self) -> bool:
-        return not self.dropped_segments and not self.overflow_cues
+        return (
+            not self.dropped_segments
+            and not self.overflow_cues
+            and not self.unmatched_words
+        )
+
+    @property
+    def has_unmatched_words(self) -> bool:
+        """Indica conteúdo reconhecido que ainda não possui âncora temporal."""
+        return bool(self.unmatched_words)
 
     @property
     def coverage_ratio(self) -> float:
@@ -150,6 +160,9 @@ def segment_alignment(
                 overflow.append(cue.index)
 
     diagnostics: list[str] = []
+    unmatched_words = alignment.diagnostics.unmatched_words
+    if unmatched_words:
+        diagnostics.append("unmatched_word")
     if dropped:
         diagnostics.append("dropped_segment")
     if short:
@@ -165,7 +178,8 @@ def segment_alignment(
         short_cues=tuple(short),
         overflow_cues=tuple(overflow),
         source_segment_count=len(alignment.transcript.segments),
-        diagnostics=tuple(diagnostics),
+        unmatched_words=tuple(unmatched_words),
+        diagnostics=tuple(dict.fromkeys(diagnostics)),
     )
 
 

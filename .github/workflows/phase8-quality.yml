@@ -78,7 +78,7 @@ jobs:
       - name: Run the complete suite with a coverage gate
         run: |
           uv run --locked --no-sync pytest -q \
-            --cov=legendar --cov-report=term-missing --cov-fail-under=85
+            --cov=src/legendar --cov-report=term-missing --cov-fail-under=85
 
       - name: Run the end-to-end suite alone
         run: uv run --locked --no-sync pytest -q -m e2e
