@@ -8,22 +8,22 @@
 
 | Documento | Para quê serve |
 |---|---|
-| [README.md](../README.md) | porta de entrada: estado, instalação rápida, execução, testes e índice |
-| [ARQUITETURA.md](ARQUITETURA.md) | camadas, módulos, portas, estados, threads, publicação e testes |
-| [OPERACAO.md](OPERACAO.md) | uso da janela, estados, cancelamento, arquivos, erros e diagnóstico |
-| [INSTALACAO.md](INSTALACAO.md) | requisitos, perfis `uv`, ferramentas externas, verificação e desinstalação |
-| [DECISOES.md](DECISOES.md) | decisões consolidadas e decisões abertas |
+| [README.md](../../../README.md) | porta de entrada: estado, instalação rápida, execução, testes e índice |
+| [ARQUITETURA.md](../../ARQUITETURA.md) | camadas, módulos, portas, estados, threads, publicação e testes |
+| [OPERACAO.md](../../OPERACAO.md) | uso da janela, estados, cancelamento, arquivos, erros e diagnóstico |
+| [INSTALACAO.md](../../INSTALACAO.md) | requisitos, perfis `uv`, ferramentas externas, verificação e desinstalação |
+| [DECISOES.md](../../DECISOES.md) | decisões consolidadas e decisões abertas |
 | [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md) | destino do produto e critérios globais de aceite |
-| [ESTADO_ATUAL.md](ESTADO_ATUAL.md) | estado real, evidências, riscos e pendências |
+| [ESTADO_ATUAL.md](../../ESTADO_ATUAL.md) | estado real, evidências, riscos e pendências |
 | [RELATORIO_FASE_8.md](RELATORIO_FASE_8.md) | matriz de testes, cobertura e pendências humanas |
-| [MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md) | governança de dependências, perfis e compatibilidade |
+| [MATRIZ_DEPENDENCIAS.md](../../MATRIZ_DEPENDENCIAS.md) | governança de dependências, perfis e compatibilidade |
 | Planos e handoffs das Fases 0–8 | histórico técnico de cada fronteira |
 
 ## 2. Mudanças de repositório na fase
 
 1. `requirements.txt` removido: era um snapshot UTF-16 da baseline, sem
    correspondência com o manifesto atual. A exportação para `pip` agora é feita
-   por `uv export` (documentada em [INSTALACAO.md](INSTALACAO.md)).
+   por `uv export` (documentada em [INSTALACAO.md](../../INSTALACAO.md)).
 2. `LICENSE` (MIT) adicionado, conforme prometido pelo README.
 3. `tests/test_documentation.py` passou a exigir os documentos das Fases 8 e 9,
    o `LICENSE` e links relativos válidos.
@@ -51,9 +51,9 @@ relativo quebrado.
 ## 4. Roteiro de homologação do usuário
 
 Passo a passo prático, com o que fazer e o que observar em cada teste:
-[HOMOLOGACAO.md](HOMOLOGACAO.md). Resumo:
+[HOMOLOGACAO.md](../../HOMOLOGACAO.md). Resumo:
 
-1. Instalar pelo [INSTALACAO.md](INSTALACAO.md) com o perfil adequado ao seu hardware.
+1. Instalar pelo [INSTALACAO.md](../../INSTALACAO.md) com o perfil adequado ao seu hardware.
 2. Abrir a aplicação e confirmar o painel de prontidão (FFmpeg, Whisper, WhisperX, NLLB).
 3. Processar um vídeo PT-BR curto sem tradução; inspecionar o SRT no player de referência.
 4. Repetir com tradução para inglês e revisar nomes, números e termos técnicos.

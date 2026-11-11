@@ -1,168 +1,117 @@
 # Estado atual do Legendar
 
 - **Última atualização:** 11/11/2026
-- **Repositório:** anfalcir/legendar
-- **Branch padrão / base de integração:** `main`
-- **Fases concluídas e integradas:** 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9
-- **Fase em execução:** Fase 10 — correções pós-homologação implementadas; evidências e roteiro em [HANDOFF_FASE_10.md](HANDOFF_FASE_10.md)
-- **Próxima etapa:** homologação do usuário com mídia real, modelos completos e computador-alvo — roteiro em [HOMOLOGACAO.md](HOMOLOGACAO.md); os 13 achados da rodada de 11/11/2026 estão corrigidos
-- **Suíte determinística:** 464 testes aprovados e 10 skips explícitos sem FFmpeg/ffprobe no `PATH` (474 com as ferramentas)
-- **Documentação:** guias de arquitetura, operação, instalação, decisões e o handoff da Fase 10 publicados; links relativos verificados automaticamente
-- **Manifestos:** `pyproject.toml` e `uv.lock`; o `requirements.txt` legado foi removido
+- **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
+- **Branch de integração:** `main`
+- **HEAD usado nesta atualização documental:** `85aa832954aa539d2c8e96a4335608f958e88776`
+- **Remodelação arquitetural anterior:** Fases 0–10 integradas à `main`.
+- **Nova frente:** plano de correção da qualidade editorial e melhoria de desempenho documentado; implementação ainda não iniciada.
+- **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
+- **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
-> Este documento registra a realidade do repositório, não a intenção. Toda
-> afirmação abaixo tem como evidência um teste, um comando executado ou um
-> documento de fase. O que depende do usuário está explicitamente separado.
-
----
+> Este documento separa comportamento observado no código, resultados confirmados por CI e medições ainda pendentes. Um teste verde de software não equivale a homologação de qualidade audiovisual.
 
 ## 1. Resumo executivo
 
-O Legendar é uma aplicação desktop PySide6 que produz legendas SRT fiéis ao
-áudio: recebe arquivo local ou YouTube, normaliza a mídia com FFmpeg, transcreve
-com Whisper, alinha por palavra com WhisperX, segmenta em cues de duas linhas,
-traduz localmente por cue com NLLB-200 quando solicitado, valida o trilho e
-publica o arquivo por troca atômica.
+O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliza o áudio, transcreve com Whisper, alinha palavras com WhisperX, forma legendas, traduz localmente com NLLB-200 quando solicitado, valida o trilho e publica SRT por troca atômica.
 
-Todas as fases do [plano mestre](PLANO_REMODELAGEM.md) estão implementadas e
-integradas à `main`. A Fase 6 entregou segmentação, tradução e publicação; a
-Fase 7 conectou a janela ao pipeline real; a Fase 8 provou o fluxo com matriz
-end-to-end e mídia real; a Fase 9 consolidou a documentação e encerrou o legado.
+A arquitetura e a base de engenharia das Fases 0–10 estão integradas. Uma auditoria estática posterior identificou lacunas no caminho de qualidade final: ausência de consolidação editorial entre segmentos consecutivos do Whisper, subdivisão de textos com CPS alto sem resolver a falta de tempo de leitura, aceitação de cues curtas como simples aviso, possível perda de palavras sem alinhamento na segmentação e ausência de um gate editorial bloqueante.
 
-O que resta não é implementação: é a homologação com pregações reais, pesos
-completos, hardware do usuário e julgamento editorial, listada na seção 6.
+A prioridade agora é corrigir a integridade e a legibilidade do resultado antes de trocar motores ou reduzir configurações de qualidade. Em paralelo, o novo plano estabelece instrumentação para localizar os gargalos de desempenho e testar otimizações com comparação pareada.
 
-## 2. Situação do repositório
+## 2. Estado do repositório
 
-| Item | Estado |
+| Área | Estado |
 |---|---|
-| `main` | Contém as Fases 0–9 integradas |
-| Fases 0–5 | Integradas por PRs squash (#1 a #6) |
-| Fase 6 | Branch `phase-6/translation-segmentation-srt`; squash `d600283`; CI de push 5/5 jobs ([#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587)) |
-| Fase 7 | Branch `phase-7/gui-pipeline-integration`; squash `9ccab33` |
-| Fase 8 | Branch `phase-8/validation`; squash `e9e2a18` |
-| Fase 9 | Branch `phase-9/documentation`; squash local `8f82e83` (fast-forward à `main`) |
-| Fase 10 | Correções dos 13 achados aplicadas na `main`; evidências em [HANDOFF_FASE_10.md](HANDOFF_FASE_10.md) |
-| CI da fase 10 | Run [#43030902623](https://github.com/anfalcir/legendar/actions/runs/43030902623) aprovado em 5/5 jobs (Python 3.10–3.13 + documentação) |
-| CI da fase 8/9 | `phase8-quality.yml` roda em pushes para `main`, `phase-8/**` e `phase-9/**` e em PRs para `main`; correção do job documental em `b1a83f9`; run [#42999223201](https://github.com/anfalcir/legendar/actions/runs/42999223201) aprovado em 5/5 jobs |
-| `main` (base de integração) | Correção de CI `b1a83f9` integrada diretamente; HEAD remoto e checks confirmados no GitHub |
-| Motivo do squash local (6–9) | criação de PR indisponível no ambiente de execução (sem `gh` e sem token) |
-| Manifestos | `pyproject.toml` (canônico) + `uv.lock` (198 pacotes resolvidos) |
-| Lockfile | validado com `uv lock --check` |
-| Legado | `main.py`, `core/` e `gui/` preservados e caracterizados em [LEGACY_BASELINE.md](LEGACY_BASELINE.md) |
+| Arquitetura das Fases 0–10 | Integrada à `main` |
+| UI, worker e pipeline real | Implementados |
+| Reconhecimento | OpenAI Whisper local; padrão declarado `base` |
+| Alinhamento | WhisperX 3.8.6; forced alignment por segmento |
+| Segmentação | Algoritmo determinístico atual; correções planejadas |
+| Tradução | NLLB-200 distilled 600M via Transformers/PyTorch |
+| Publicação | SRT com round-trip e gravação atômica |
+| Gate editorial | Insuficiente: riscos de leitura podem continuar como avisos |
+| Benchmark por etapa | Ainda não há baseline estruturada e comparável por estágio |
+| Otimização de motores | Candidatos em avaliação; nenhum motor alternativo adotado |
+| Homologação audiovisual final | Pendente |
 
-## 3. Arquitetura em operação
+## 3. Evidências de qualidade e lacunas conhecidas
 
-| Camada | Conteúdo atual |
-|---|---|
-| `domain` | entidades de mídia/transcrição/legenda, value objects, máquina de estados, eventos e catálogo de erros |
-| `application` | `JobContext`, `JobController`, `SerialPipeline`, segmentação, tradução por cue, validação, portas e progresso |
-| `infrastructure` | ffprobe/FFmpeg, yt-dlp, Whisper, WhisperX, NLLB, SRT atômico, workspace, settings e logging |
-| `presentation` | janela PySide6, view model puro, workers, diálogos, preferências e tema |
-| `bootstrap` | composição das portas reais, preflight de ambiente e entrada da GUI |
+Os módulos auditados incluem:
 
-Detalhes em [ARQUITETURA.md](ARQUITETURA.md).
+- `src/legendar/infrastructure/transcription/whisper.py`
+- `src/legendar/infrastructure/alignment/whisperx.py`
+- `src/legendar/application/pipeline/segmentation.py`
+- `src/legendar/application/pipeline/validation.py`
+- `src/legendar/application/pipeline/serial_pipeline.py`
+- `src/legendar/infrastructure/translation/nllb.py`
+- `src/legendar/infrastructure/filesystem/srt.py`
 
-## 4. Evidências de validação
+Achados estáticos confirmados:
 
-| Evidência | Resultado |
-|---|---|
-| Suíte completa com FFmpeg 7.0.2 static e Qt offscreen | **452 testes aprovados, 0 skips, cobertura 86%** |
-| Suíte completa sem FFmpeg/ffprobe | **442 aprovados, 10 skips explícitos** |
-| Ruff check (`src/legendar`, `tests`, `scripts`) | limpo |
-| Ruff format check (arquivos mantidos) | limpo |
-| `uv lock --check` | 198 pacotes, sem divergência |
-| Verificador de links da documentação | sem links relativos quebrados |
-| CI Fase 6 (`phase6-quality.yml`) | 5/5 jobs em Python 3.10–3.13 + smoke NLLB real em CPU |
-| CI Fase 8 (`phase8-quality.yml`) | matriz Python 3.10–3.13 com FFmpeg, cobertura ≥ 85%, `-m e2e` isolada e consistência de documentação |
-| Gates herdados | `phase0`, `phase1`, `phase3`, `phase4`, `phase5` permanecem ativos |
+1. A segmentação percorre cada segmento original da transcrição separadamente; não há consolidação explícita de palavras entre segmentos consecutivos.
+2. Grupos acima da velocidade de leitura podem ser subdivididos em cues menores, cujos tempos continuam limitados aos intervalos reais das palavras.
+3. Cues abaixo de 1 segundo são diagnosticadas, mas não recebem tratamento editorial que assegure conforto de leitura.
+4. Quando um segmento contém palavras alinhadas e não alinhadas, o caminho principal da segmentação considera somente as palavras com intervalo. Isso pode omitir texto no SRT.
+5. A validação estrutural bloqueia falhas graves de formato, mas duração curta, CPS e outros riscos de legibilidade são avisos e não impedem a publicação.
+6. Os testes E2E de mídia usam transcritor e alinhador falsos. Eles validam integração e publicação, não a qualidade real dos modelos em fala contínua.
+7. O alinhador real chama WhisperX por segmento. O custo acumulado precisa ser medido antes de qualquer mudança de lote.
 
-## 5. Decisões que sustentam o estado atual
+Esses achados descrevem o código; não identificam, por si sós, a origem de cada erro textual ou temporal de uma mídia específica. A correlação com áudio de referência exige homologação.
 
-As 24 decisões consolidadas e as 5 abertas estão em [DECISOES.md](DECISOES.md).
-As mais relevantes para operar o produto hoje:
+## 4. Desempenho: baseline disponível e limitações
 
-1. Tradução local NLLB-200 distilled 600M, por cue, sem enviar texto a terceiros.
-2. Duas linhas de 42 caracteres por cue, 1–7 s, pausa de 0,6 s, ~17 cps.
-3. WhisperX 3.8.6 como alinhador primário; stable-ts fora do manifesto.
-4. Publicação atômica com roundtrip e `PUBLISHING` como ponto de não retorno.
-5. `pyproject.toml` + `uv.lock` como únicos manifestos; pip via `uv export`.
+**Relato operacional inicial:** aproximadamente 60 minutos para processar uma mídia de 37 minutos, ou RTF global aproximado de 1,62.
 
-## 6. Pendências de homologação (usuário)
+Essa medição é informada pelo usuário, não reproduzida nesta auditoria. Não há ainda tempos confiáveis e persistidos por estágio, portanto não se deve atribuir uma fração exata do total à transcrição ou à tradução.
 
-Roteiro prático, com comandos, ordem dos testes e o que registrar em cada um:
-[HOMOLOGACAO.md](HOMOLOGACAO.md).
+Configuração atual relevante:
 
-| # | Item | Como validar |
+- Transcrição: OpenAI Whisper, padrão `base`, execução PyTorch.
+- Alinhamento: WhisperX 3.8.6, chamadas por segmento.
+- Tradução: NLLB-200 distilled 600M via Transformers/PyTorch, `num_beams=4`, lote padrão de 16 unidades e tokenização com padding.
+- O adaptador de tradução já implementa batching; o próximo trabalho deve investigar custo por token, padding, beam search, tempo de geração e backend, não apenas aumentar o tamanho do lote.
+
+O inventário da Fase 0 registrou um perfil de referência com Ryzen 3 2200G, quatro CPUs lógicas, cerca de 12,59 GiB de RAM e AMD Vega integrada, sem NVIDIA. Esse inventário é histórico e precisa ser reexecutado antes de uma decisão de hardware ou configuração.
+
+O plano vigente exige instrumentação de tempo de cada etapa, CPU, memória e configuração dos modelos; benchmark frio/quente; e comparação com a mesma mídia e hardware. A meta inicial é reduzir o tempo global em pelo menos 20% sem degradação mensurável de qualidade; 30% é uma meta aspiracional, não uma garantia.
+
+## 5. Plano de execução vigente
+
+A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
+
+| Fase | Objetivo | Situação |
 |---|---|---|
-| 1 | Precisão temporal em fala real | marcar fronteiras humanas em 2–3 pregações e comparar com o SRT |
-| 2 | Qualidade tradutória PT↔EN | revisar nomes, números, siglas e linguagem religiosa |
-| 3 | Desempenho no computador-alvo | medir tempo, memória e temperatura na primeira execução completa |
-| 4 | Fluxo YouTube | processar uma URL autorizada e cancelar durante o download |
-| 5 | Interface física | validar HiDPI, tema e sistema operacional padrão |
-| 6 | Arquivo longo | processar mais de uma hora e verificar estabilidade |
-| 7 | Inspeção independente | abrir o SRT final em um player de referência |
+| 0 | Auditoria, organização documental e plano | Documentada nesta entrega |
+| 1 | Instrumentação e baseline por etapa | Próxima execução |
+| 2 | Integridade textual e alinhamento recuperável | Planejada |
+| 3 | Segmentação global e legibilidade | Planejada |
+| 4 | Gate editorial e diagnóstico textual | Planejada |
+| 5 | Benchmark e aceleração da transcrição | Planejada |
+| 6 | Benchmark e aceleração da tradução | Planejada |
+| 7 | Gestão de memória, threads e perfis de execução | Planejada |
+| 8 | Regressão, homologação real e comparação final | Planejada |
 
-Roteiro detalhado: [HANDOFF_FASE_9.md](HANDOFF_FASE_9.md) seção 4.
+Nenhuma dessas fases de código é declarada concluída por existir apenas no plano.
 
-## 7. Riscos e limitações conhecidas
+## 6. Critérios que não podem ser sacrificados
 
-| Risco | Situação |
-|---|---|
-| Modelos reais fora da suíte determinística | cobertos por smoke tests de fase e preflight de ambiente |
-| Qualidade tradutória não medida | decisão editorial pendente do usuário |
-| Cancelamento não interrompe inferência em andamento | documentado; observado entre lotes/etapas |
-| Publicação não cancelável | decisão explícita para preservar integridade do arquivo |
-| YouTube muda com frequência | yt-dlp + runtime JS verificado no preflight |
-| Empacotamento distribuível | não homologado; execução suportada é via `uv` |
-| Plataformas suportadas | CI cobre Ubuntu/Python 3.10–3.13; demais dependem de homologação |
+- Nenhuma palavra reconhecida pode desaparecer silenciosamente.
+- Nenhum timestamp pode ser inventado para encobrir falha de alinhamento.
+- A segmentação deve respeitar pausas, continuidade sintática, duração de exibição, CPS e limites de linhas.
+- Uma falha editorial grave deve gerar revisão explícita, não um falso sucesso.
+- Uma otimização de motor só será adotada após avaliação de WER/CER, cobertura, alinhamento e revisão humana da tradução.
+- A publicação continua atômica e só ocorre após os gates definidos.
 
-## 8. Como reproduzir a validação
+## 7. Próximas ações
 
-```bash
-uv lock --check
-uv sync --locked --group dev --group phase0
+1. Integrar a reorganização e o plano documental.
+2. Executar a Fase 1, criando a medição de baseline sem alterar os motores.
+3. Usar a mesma mídia de 37 minutos para separar transcrição, alinhamento, segmentação, tradução e publicação.
+4. Executar as fases de correção de integridade e legibilidade.
+5. Medir candidatos de aceleração em comparação pareada; atualizar a matriz de dependências somente quando um candidato for aprovado.
+6. Fazer a homologação final no hardware-alvo e registrar evidências sanitizadas.
 
-QT_QPA_PLATFORM=offscreen uv run --locked --no-sync pytest -q
-QT_QPA_PLATFORM=offscreen uv run --locked --no-sync pytest -q -m e2e
+## 8. Histórico documental
 
-uv run --locked --no-sync ruff check src/legendar tests scripts
-uv run --locked --no-sync ruff format --check src/legendar tests
-uv run --locked --no-sync python scripts/check_doc_links.py
-```
-
-Em ambiente sem FFmpeg no `PATH`, os testes de mídia real são pulados; para
-executá-los localmente, aponte o `PATH` para um build estático (a CI instala o
-pacote do sistema).
-
-## 9. Documentos de referência
-
-| Documento | Papel |
-|---|---|
-| [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md) | destino do produto e critérios de aceite |
-| [ARQUITETURA.md](ARQUITETURA.md) | camadas, fluxo, portas, estados e testes |
-| [OPERACAO.md](OPERACAO.md) | uso da janela, arquivos, erros e diagnóstico |
-| [INSTALACAO.md](INSTALACAO.md) | requisitos, perfis, execução e verificação |
-| [DECISOES.md](DECISOES.md) | decisões consolidadas e abertas |
-| [MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md) | governança, perfis e compatibilidade |
-| [RELATORIO_FASE_8.md](RELATORIO_FASE_8.md) | evidências de teste e pendências humanas |
-| [LEGACY_BASELINE.md](LEGACY_BASELINE.md) | baseline antiga e política de aposentadoria |
-| Planos e handoffs das Fases 0–9 | histórico técnico de cada fronteira |
-
-## 10. Política de manutenção deste documento
-
-Atualizar `ESTADO_ATUAL.md` quando:
-
-- uma fase começar ou terminar;
-- uma decisão técnica mudar;
-- um teste relevante passar ou falhar;
-- surgir bloqueio, risco material ou pendência humana;
-- uma funcionalidade for implementada, alterada ou removida.
-
-Nenhuma tarefa é marcada como concluída sem evidência executável. Se o plano
-mestre e este documento divergirem, este documento descreve o repositório e a
-divergência deve ser registrada antes de qualquer nova implementação.
-
-
-Relatório completo, matriz de cenários e riscos residuais:
-[RELATORIO_FASE_8.md](RELATORIO_FASE_8.md).
+Os protocolos, planos, handoffs e relatórios concluídos da remodelação anterior estão preservados em [archive/README.md](archive/README.md). Eles servem como registro histórico; este arquivo e o plano vigente representam o estado atual.

@@ -1,216 +1,102 @@
 # Matriz e política de dependências do Legendar
 
-- **Status:** política de dependências consolidada na Fase 0; Fase 6 adiciona as dependências de tradução local (`transformers`, `sentencepiece`); Fase 9 retira o snapshot legado `requirements.txt`. Compatibilidade completa do produto permanece condicionada à homologação.
 - **Fonte canônica de requisitos diretos:** `pyproject.toml`.
-- **Fonte canônica de resolução exata:** `uv.lock`, versionado no repositório.
-- **Gerenciador:** `uv`, ferramenta de desenvolvimento/instalação; não é dependência de runtime.
-- **Snapshot legado:** `requirements.txt` foi removido na Fase 9; para `pip`, use `uv export` conforme [INSTALACAO.md](INSTALACAO.md).
-
----
+- **Fonte canônica de resolução exata:** `uv.lock`.
+- **Gerenciador:** `uv`.
+- **Plano de otimização:** [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
 
 ## 1. Princípio de governança
 
-O repositório Legendar é a fonte de verdade dos requisitos de software. O computador onde o aplicativo será executado é um perfil de validação/implantação, não a autoridade que define dependências, versões ou limites arquiteturais do produto.
+O repositório é a fonte de verdade dos requisitos. O computador-alvo é um perfil de validação, não a autoridade que define dependências, versões ou arquitetura.
 
-Decisões devem considerar contratos do produto, compatibilidade upstream, interseção de dependências, disponibilidade de wheels/binários, CI multiplataforma, segurança, licença, manutenção, privacidade e reprodutibilidade.
+Toda alteração deve considerar contratos do produto, compatibilidade upstream, interseção de dependências, disponibilidade de wheels/binários, CI, segurança, licença, manutenção, privacidade e reprodutibilidade.
 
-Nenhuma instalação/update global deve ser executada silenciosamente pelo aplicativo. Alterações devem ocorrer em ambiente isolado e ser registradas no manifesto e no lockfile.
+Nenhuma instalação/update global deve ser executada silenciosamente pelo aplicativo. Alterações de runtime ocorrem em ambiente isolado e ficam registradas no manifesto e no lockfile.
 
 ## 2. Fontes de verdade
 
 | Artefato | Responsabilidade | Regra |
 |---|---|---|
-| `pyproject.toml` | Dependências diretas, intervalos, extras e grupos de desenvolvimento/avaliação | Fonte canônica; toda alteração começa aqui |
-| `uv.lock` | Resolução exata, dependências transitivas, marcadores e origens dos wheels | Versionar e atualizar com o manifesto; instalar com `--locked` |
-| `requirements.txt` | — | Removido na Fase 9; exportação para pip é gerada por `uv export` e nunca versionada |
-| `docs/MATRIZ_DEPENDENCIAS.md` | Justificativas, categorias, compatibilidade, políticas e evidências | Documentação; não substitui artefatos executáveis |
+| `pyproject.toml` | Dependências diretas, intervalos, extras e grupos | Fonte canônica |
+| `uv.lock` | Resolução exata, transitivas, marcadores e origem de wheels | Versionar e instalar com `--locked` |
+| `docs/MATRIZ_DEPENDENCIAS.md` | Política, compatibilidade e justificativas | Não substitui os artefatos executáveis |
+| `requirements.txt` | — | Removido; exportação por `uv export` |
 
-Dependências transitivas não devem ser copiadas para o manifesto só porque constam de `pip freeze`. Declarar diretamente bibliotecas importadas como contrato pelo código Legendar ou necessárias para uma decisão explícita de compatibilidade.
+## 3. Runtime atual
 
-## 3. Manifesto de runtime e perfis
-
-A dependência-base é PySide6. O aplicativo completo deve instalar exatamente um perfil de runtime; os extras CPU e CUDA são declarados como conflitantes.
-
-| Componente | Requisito no manifesto | Categoria e observação |
+| Componente | Requisito atual | Categoria |
 |---|---|---|
-| PySide6 | `>=6.9,<7` | GUI base |
+| PySide6 | `>=6.9,<7` | GUI |
 | openai-whisper | `>=20250625` | Reconhecimento |
 | yt-dlp | `>=2025.4.30` | Entrada YouTube |
-| yt-dlp-ejs | `>=0.8,<1` | Suporte EJS do fluxo YouTube |
-| PyTorch | `>=2.8,<2.9` | Backend tensorial; origem do wheel selecionada pelo perfil |
-| torchvision | `>=0.23,<0.24` | Pareado com Torch 2.8 |
-| torchaudio | `>=2.8,<2.9` | Pareado com Torch 2.8 |
-| WhisperX | `>=3.8.6,<3.8.7` | Alinhador candidato; intervalo deliberado para aceitar release estável 3.8.6 e excluir 3.8.7rc1 |
-| transformers | `>=4.57,<5` | Tradução local (Fase 6); contrato direto porque o adaptador NLLB importa a API de tokenizer/modelo |
-| sentencepiece | `>=0.2,<1` | Tokenizador NLLB; contrato direto porque o adaptador instancia o tokenizador lento |
-| pytest / pytest-qt / pytest-cov | Grupo `test` | Testes; não runtime |
-| Ruff | Grupo `lint` | Qualidade de código; não runtime |
-| PyInstaller | Grupo `build` | Empacotamento; não runtime |
-| jiwer / soundfile / huggingface-hub | Grupo `phase0` | Métrica lexical, decodificação de áudio e download dos dados públicos de avaliação; não runtime do produto |
+| yt-dlp-ejs | `>=0.8,<1` | JavaScript do fluxo YouTube |
+| torch | `>=2.8,<2.9` | Backend |
+| torchvision | `>=0.23,<0.24` | Pareado com Torch |
+| torchaudio | `>=2.8,<2.9` | Pareado com Torch |
+| whisperx | `>=3.8.6,<3.8.7` | Alinhamento |
+| transformers | `>=4.57,<5` | Tradução local |
+| sentencepiece | `>=0.2,<1` | Tokenização NLLB |
 
-### Python
+O perfil CPU e CUDA 12.8 são extras mutuamente exclusivos. O perfil ROCm não está declarado porque a interseção validada com o WhisperX atual não foi estabelecida.
 
-O projeto declara `>=3.10,<3.14`. O limite superior decorre do candidato WhisperX estável 3.8.6, cuja metadata não declara suporte a Python 3.14; não foi escolhido pela versão instalada no computador-alvo. Ampliar exige rever a interseção do perfil completo e testar wheels/integrações.
-
-### Perfis disponíveis
+## 4. Perfis
 
 | Extra | Seleção PyTorch | Plataformas pretendidas | Observação |
 |---|---|---|---|
 | `runtime-cpu` | Índice oficial CPU em Linux/Windows; wheels PyPI em macOS | Linux, Windows, macOS | Perfil de compatibilidade |
-| `runtime-cu128` | Índice oficial CUDA 12.8 | Linux/Windows compatíveis | Opcional; depende de GPU/driver NVIDIA compatíveis |
-| ROCm 7.2 | Não exposto como extra | — | PyTorch disponível no índice ROCm consultado começa em 2.11; WhisperX 3.8.6 exige Torch 2.8.x |
-| Apple MPS | Wheel PyTorch PyPI no perfil CPU | macOS/Apple Silicon quando suportado | A disponibilidade é detectada no runtime; não há índice MPS separado |
+| `runtime-cu128` | Índice oficial CUDA 12.8 | Linux/Windows compatíveis | Depende de GPU/driver NVIDIA |
+| Apple MPS | Wheel PyTorch PyPI no perfil CPU | macOS/Apple Silicon compatível | Detectado em runtime |
+| ROCm | Não exposto | — | Não homologado com o stack atual |
 
-Comandos:
+Não combinar extras de runtime. Não ampliar a faixa do WhisperX sem revalidar lock, Python, Torch e todos os workflows.
 
-```bash
-# Instalação completa em CPU
-uv sync --locked --no-dev --extra runtime-cpu
+## 5. Opções em avaliação para desempenho
 
-# Instalação completa CUDA 12.8 (Linux/Windows compatíveis)
-uv sync --locked --no-dev --extra runtime-cu128
-```
+As opções abaixo **não são dependências adotadas**. Só devem entrar no manifesto quando uma prova de conceito demonstrar ganho real e equivalência de qualidade.
 
-Não combinar extras `runtime-*`. Não forçar a instalação de ROCm 7.2 com override ou versão pré-release do WhisperX; reavaliar quando o upstream estável oferecer interseção compatível ou houver outra solução de alinhamento homologada.
+### 5.1. faster-whisper / CTranslate2 para ASR
 
-Uma resolução antiga contra PyPI sem origem explícita foi descartada porque introduziu bibliotecas NVIDIA/CUDA sem seleção explícita de perfil. A configuração atual direciona Torch/torchvision/torchaudio para os índices oficiais CPU/cu128 onde aplicável. O lock universal preserva as variantes e seus marcadores; a CI deve verificar os perfis separadamente.
+O faster-whisper é uma implementação de Whisper baseada em CTranslate2. Sua documentação demonstra INT8 em CPU, FP16 em GPU, timestamps por palavra e VAD opcional.
 
-**Correção de integridade do lock:** a primeira faixa `whisperx>=3.8.6,<3.9` permitiu selecionar `3.8.7rc1`. Isso foi corrigido para `>=3.8.6,<3.8.7`. O lock atual deve conter somente WhisperX 3.8.6, nunca uma pré-release.
+Avaliar:
+- compatibilidade de versão com Python, Torch/WhisperX e wheels disponíveis;
+- suporte INT8 no hardware AMD do perfil de referência;
+- WER/CER e alinhamento em comparação com OpenAI Whisper atual;
+- equivalência de parâmetros e comportamento de janelas;
+- uso de CPU/RAM, threads e tempo de inferência.
 
-## 4. Dependências transitivas e conflitos relevantes
+Não adicionar pacote como dependência direta até a Fase 5 aprovar o candidato.
 
-Pacotes como NumPy, CTranslate2, faster-whisper, pyannote-audio, torchcodec, NLTK e bibliotecas NVIDIA podem surgir como dependências transitivas. Não duplicar no manifesto sem contrato próprio ou necessidade explícita de controle. `transformers` e `sentencepiece` deixaram de ser apenas transitivos na Fase 6: o adaptador `NllbTranslator` importa diretamente a API de tokenizer/modelo e o sentencepiece, por isso ambos são declarados com intervalo próprio.
+Referência: [SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper).
 
-Um conflito identificado na prova de avaliação: `datasets>=5.2` exige `huggingface-hub>=1.31`, enquanto WhisperX estável 3.8.6 exige `huggingface-hub<1.0`. A dependência `datasets` foi removida do grupo de avaliação; a POC lê TSV e arquivos de áudio do FLEURS diretamente usando `huggingface-hub`, respeitando a interseção do runtime. Não contornar com `--no-deps`, alterações manuais de metadata ou constraints ocultos.
+### 5.2. CTranslate2 para NLLB-200
 
-## 5. Executáveis e runtimes externos
+A documentação CTranslate2 demonstra conversão de NLLB a partir de Transformers e execução via `translate_batch`. A quantização pode reduzir tamanho e acelerar, mas o tipo efetivo depende do backend.
 
-| Componente | Categoria | Política |
-|---|---|---|
-| FFmpeg | Ferramenta externa obrigatória | Localizar `ffmpeg` no PATH ou distribuição gerenciada pelo instalador; verificar versão/capacidades |
-| ffprobe | Ferramenta externa obrigatória | Localizar e verificar; inspeção de streams e timestamps |
-| Deno | Runtime JavaScript recomendado (>=2.3) a detectar no fluxo YouTube | Pré-flight deve identificar versão mínima e explicar ausência/incompatibilidade |
-| Node.js | Runtime alternativo (>=22) a detectar e configurar explicitamente no yt-dlp | Não assumir que sua presença basta sem verificar compatibilidade; não é habilitado por padrão em todas as versões do yt-dlp |
-| Modelos Whisper/alinhadores | Artefatos de runtime | Cache/download sob demanda; registrar ID/revisão, licença e local; não incluir pesos no Git |
+Avaliar:
+- conversão e reprodução do checkpoint NLLB-200 distilled 600M atual;
+- correspondência de códigos `por_Latn` e `eng_Latn`;
+- INT8 no hardware real, verificando `get_supported_compute_types`;
+- beam 4, 2 e 1;
+- batches por tokens e bucketing por comprimento;
+- qualidade contextual e terminológica, com revisão humana;
+- lock, wheel, plataforma e licença do modelo.
 
-### Reconhecimento local (Fase 4)
+Referências: [conversão NLLB](https://opennmt.net/CTranslate2/guides/transformers.html), [desempenho](https://opennmt.net/CTranslate2/performance.html), [quantização](https://opennmt.net/CTranslate2/quantization.html).
 
-- O pacote `openai-whisper` é o motor local de reconhecimento; o áudio não é enviado a uma API externa.
-- O perfil inicial configurado por padrão é `base`; `tiny`, `small`, `medium`, `large` e `turbo` são perfis multilíngues selecionáveis por configuração. O padrão é uma escolha inicial, não uma homologação de qualidade.
-- `LEGENDAR_WHISPER_MODEL` seleciona o perfil. `LEGENDAR_WHISPER_DEVICE` aceita `auto`, `cpu`, `cuda` ou `mps`; `auto` prioriza CUDA, depois MPS e por fim CPU.
-- Os pesos são baixados na primeira utilização e mantidos em `<models_dir>/whisper` (por padrão, sob `~/.cache/legendar/models/whisper`). O cache não pertence ao workspace temporário e nunca é removido ao cancelar um job.
-- O adaptador utiliza `task="transcribe"`, sem tradução automática e sem timestamps por palavra. Segmentos do decoder são preservados em `TranscriptSegment.alignment_window` apenas como janelas aproximadas de busca.
+### 5.3. Licença do checkpoint NLLB
 
-### Forced alignment local (Fase 5)
+O model card do `facebook/nllb-200-distilled-600M` informa CC-BY-NC-4.0 e descreve limites de finalidade/uso. O código MIT do Legendar não altera a licença dos pesos. Qualquer distribuição ou mudança de checkpoint exige revisão da licença do modelo selecionado.
 
-- WhisperX estável 3.8.6 é o alinhador concreto; manter a faixa `>=3.8.6,<3.8.7` e o lock atual.
-- Modelos de alinhamento: PT `jonatasgrosman/wav2vec2-large-xlsr-53-portuguese`; EN `WAV2VEC2_ASR_BASE_960H` (torchaudio).
-- `LEGENDAR_ALIGN_DEVICE`: `auto`, `cpu` ou `cuda`; MPS não é anunciado para WhisperX 3.8.6.
-- Pesos persistem em `<models_dir>/whisperx-align`; NLTK `punkt_tab` é preparado sob `<models_dir>/whisperx-align/nltk_data`. O primeiro uso exige rede e cache gravável.
-- O adaptador passa waveform PCM mono/16 kHz já carregado, evitando depender do caminho de leitura TorchCodec/pyannote; isso não declara TorchCodec homologado.
-- Whisper segment-level start/end são apenas `alignment_window` local. O tempo final vem do forced alignment e recebe `AudioAsset.timeline_start_seconds` uma única vez.
-- `interpolate_method="ignore"` mantém palavras sem evidência acústica sem timestamp. Palavras ausentes/incompatíveis, score inválido, janelas fora do áudio e sobreposição ficam nos diagnósticos.
-- Offset de stream pode ser negativo; intervalos finais continuam sujeitos ao invariante não negativo de `TimeRange`.
-- Score do alinhador não é probabilidade calibrada; não usar sozinho como medida de confiança de produto.
-- O smoke FLEURS PT-BR/EN valida execução, WER lexical, cobertura e limites; erro temporal só é calculado com manifesto local e fronteiras humanas revisadas (`scripts/phase5_alignment_evaluation.py`).
-- Evidência da CI PR #42935490648: Whisper `tiny` + WhisperX 3.8.6 CPU, uma amostra por idioma. PT-BR: WER 0,083333, 12/12 palavras, cobertura 100%; EN: WER 0,352941, 14/15 palavras, cobertura 93,333%, uma palavra não alinhada preservada. Bounds válidos para todas as palavras alinhadas. Resultado é smoke pequeno de fala lida, não valida erro temporal humano nem desempenho no hardware-alvo.
+Referência: [NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-distilled-600M).
 
+## 6. Política de atualização
 
-### Tradução local (Fase 6)
-
-- `transformers` (`>=4.57,<5`) e `sentencepiece` (`>=0.2,<1`) são dependências diretas dos perfis `runtime-cpu` e `runtime-cu128`; no perfil CUDA os marcadores restringem a instalação a Linux/Windows, onde o wheel CUDA existe.
-- Modelo padrão: `facebook/nllb-200-distilled-600M`; `LEGENDAR_TRANSLATE_MODEL` permite outro checkpoint compatível.
-- `LEGENDAR_TRANSLATE_DEVICE`: `auto`, `cpu` ou `cuda`; `auto` prioriza CUDA e cai para CPU. MPS não é anunciado para este adaptador.
-- Pesos persistem em `<models_dir>/nllb`, baixados sob demanda na primeira tradução; nunca entram no workspace temporário nem no Git.
-- O tradutor roda no próprio computador: nenhum texto de legenda é enviado a serviço externo, o que elimina custo por chamada e retenção por terceiros.
-- Tokenizador lento (`use_fast=False`) com origem `por_Latn`/`eng_Latn` e destino via `forced_bos_token_id`; lotes de 16 cue, `num_beams=4`, 256 tokens de entrada e saída.
-- Cancelamento é cooperativo entre lotes; uma inferência em andamento não é interrompida.
-- A primeira execução exige rede e cache gravável; ausência de `transformers`, idioma não mapeado ou dispositivo indisponível falham de forma explícita (`ModelError`/`UnsupportedLanguageError`).
-- Testes herméticos injetam `tokenizer_loader`, `model_loader`, `batch_translator`, `device_resolver` e `version_provider`; nenhum teste baixa pesos. O workflow `phase6-quality.yml` executa um smoke adicional com o runtime CPU real para provar que as dependências resolvem juntas.
-
-
-
-FFmpeg/ffprobe não são substituídos por pacotes Python com nomes semelhantes. O aplicativo deverá apresentar orientações para instalar ferramentas ausentes, sem alterar o sistema operacional silenciosamente.
-
-### Runtime JavaScript do YouTube (EJS)
-
-O fluxo YouTube depende do suporte JavaScript EJS do yt-dlp e não deve tratar a simples existência de um binário como compatibilidade. O preflight aceita Deno >=2.3 (preferencial) ou Node.js >=22. Quando Node é selecionado, o adaptador configura explicitamente `js_runtimes` na API Python do yt-dlp; não confiar no default, que pode habilitar somente Deno. A versão instalada é lida no preflight e a GUI informa runtime ausente, versão antiga ou selecionada.
-
-Referências oficiais: [yt-dlp EJS](https://github.com/yt-dlp/ejs) e [EJS wiki do yt-dlp](https://github.com/yt-dlp/yt-dlp-wiki/blob/master/EJS.md).
-
-## 6. Política de hardware e backend
-
-A aplicação deve detectar capacidades em runtime e selecionar apenas backends homologados. Presença de GPU não é evidência de que todas as etapas podem usá-la.
-
-- **CPU:** caminho de compatibilidade quando suportado pelas dependências e modelos.
-- **NVIDIA CUDA 12.8:** perfil opcional Linux/Windows com wheels PyTorch oficiais e driver compatível.
-- **Apple MPS:** possível por wheels PyPI no macOS/Apple Silicon; precisa ser testado na aplicação integrada.
-- **AMD ROCm 7.2:** sem perfil completo no estado atual pela incompatibilidade entre Torch >=2.11 do índice e Torch 2.8.x requerido pelo WhisperX estável 3.8.6.
-- **Outros backends:** não anunciar sem wheels, preflight e testes específicos.
-
-O computador inventariado (Ryzen 3 2200G, quatro CPUs lógicas, Radeon Vega) é somente um perfil concreto de homologação CPU; não limita os requisitos globais do produto.
-
-## 7. Reprodutibilidade e CI
-
-A CI da Fase 0 separa:
-1. Testes determinísticos do coletor em Python 3.10–3.13 × Linux/Windows/macOS.
-2. Resolução/consistência do lock e simulação de instalação dos dois perfis com `uv sync --locked --dry-run`.
-3. Instalação real e importação do perfil CPU junto da POC de modelo PT-BR/EN.
-4. Instalação real e importação de Torch, torchvision e torchaudio no perfil CUDA 12.8; o runner não precisa ter GPU física, portanto `torch.cuda.is_available() == False` é esperado e não é falha do teste de wheel.
-5. Prova FFmpeg/ffprobe de normalização e mapeamento de offsets.
-
-Os 12 cenários de coletor não equivalem a suporte funcional completo do aplicativo em todos os sistemas operacionais. A POC FLEURS é um smoke benchmark pequeno; WER mede reconhecimento lexical, não precisão temporal. No workflow #109, com WhisperX 3.8.6 / tiny / CPU-int8 e duas amostras por idioma, PT-BR apresentou WER médio 0,275 e RTF médio 0,372 (26 palavras com timestamps válidos); EN apresentou WER médio 0,209559 e RTF médio 0,163 (30 palavras com timestamps válidos). Não houve palavra com timestamp ausente/inválido nas quatro amostras. O processo levou 62,131 s e o pico de RSS foi 3.456.839.680 bytes (~3,22 GiB) no runner GitHub. O artefato `legendar-phase0-model-poc` contém os detalhes por amostra.
-
-O log registrou um aviso não bloqueante de TorchCodec/pyannote: as bibliotecas FFmpeg compartilhadas não foram carregadas para o backend de I/O. A POC faz preload do áudio e passa o waveform diretamente ao WhisperX/alinhador, portanto o teste concluiu com sucesso; a decodificação via TorchCodec não foi validada por esse benchmark. A prova independente com FFmpeg/ffprobe passou no mesmo workflow. Se o produto vier a usar o caminho de I/O do TorchCodec, verificar a compatibilidade de bibliotecas e versões explicitamente.
-
-A Fase 4 acrescenta `scripts/phase4_model_benchmark.py`: comparação reproduzível de modelos com WER, CER, RTF, duração, RSS e versões. O script usa FLEURS ou um manifesto TSV local (`language`, `audio`, `reference`); o relatório contém métricas e IDs sintéticos, nunca áudio ou texto transcrito. A CI executa smoke test CPU PT-BR/EN em Python 3.12. A qualidade no computador-alvo e em corpus representativo de pregações precisa ser medida antes de declarar um perfil recomendado.
-
-
-A Fase 5 acrescenta `scripts/phase5_alignment_smoke.py` para executar Whisper + WhisperX reais em amostras FLEURS PT-BR/EN, medindo WER lexical, cobertura, RTF e bounds. Como FLEURS não oferece fronteiras humanas, não mede erro temporal. Para esse gate, `scripts/phase5_alignment_evaluation.py` aceita JSONL local com palavras e tempos humanos; calcula erros de início/fim, mediana/P95, cobertura e não alinhadas, sem copiar caminhos, áudio ou texto para o relatório. Os limites de 150 ms (mediana) e 350 ms (P95) são metas provisórias e exigem corpus representativo antes de declarar aceitação.
-
-A Fase 6 acrescenta testes herméticos para tradução e publicação: `tests/unit/infrastructure/test_nllb_translator.py` cobre lotes, dispositivo, idioma, cancelamento e falhas do adaptador com carregadores injetados; `tests/integration/test_translation_publication.py` executa o pipeline completo com publicador real e tradutor falso. Nenhum teste baixa pesos. O workflow `phase6-quality.yml` adiciona um job com o extra `runtime-cpu` instalado para confirmar que `transformers` e `sentencepiece` resolvem junto do lock e reaproveita a mesma suíte com o runtime real.
-
-
-### POC de idioma
-
-A avaliação controlada usa FLEURS `pt_br` e `en_us`, split test, revisão de dataset fixada, modelo WhisperX `tiny`, CPU/int8 e amostras pequenas. Registra WER, tempos, RTF, memória máxima do processo, palavras alinhadas e palavras sem timestamp válido. O corpus é CC-BY-4.0 e consiste em fala lida; não representa sermões, música, ruído, fala espontânea ou sobreposição.
-
-Relatório CI: artefato `legendar-phase0-model-poc`, quando a execução do job terminar. Ele é evidência experimental, não dado de runtime do aplicativo.
-
-## 8. Migração do legado
-
-O snapshot `requirements.txt` foi removido na Fase 9, depois de:
-
-1. `pyproject.toml` e `uv.lock` estarem validados (`uv lock --check`).
-2. Instalações limpas dos perfis serem reproduzíveis com `uv sync --locked`.
-3. Os fluxos essenciais estarem cobertos pela suíte determinística e pela CI.
-4. A documentação de instalação descrever a exportação para `pip`.
-
-Consumidores que ainda precisem de `pip` geram a lista a partir do lockfile
-(`uv export --locked ... -o requirements-export.txt`), sem versionar um segundo
-manifesto editado à mão. Nunca manter dois manifestos concorrentes.
-
-## 9. Manutenção e atualização
-
-- Preferir releases estáveis; pré-releases e branches móveis somente em laboratório com aprovação explícita.
-- Definir mínimos a partir de funcionalidades utilizadas e versões testadas.
-- Fixar versões exatas no lockfile; usar intervalos no manifesto.
-- Atualizar lock junto de manifesto e documentação.
-- Revalidar origem de wheels, índices, marcadores, licenças, segurança e Python/OS/arquiteturas.
-- Evitar overrides; quando inevitáveis, justificar escopo e prazo de revisão.
-- Reavaliar dependências sem manutenção, com licença inadequada ou sem wheels compatíveis.
-- Não confundir a presença de pacote/modelo com qualidade comprovada.
-
-Referências técnicas:
-- [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/)
-- [Dependency Groups](https://packaging.python.org/en/latest/specifications/dependency-groups/)
-- [uv universal resolution](https://docs.astral.sh/uv/concepts/resolution/)
-- [PyTorch installation](https://docs.pytorch.org/get-started/locally/)
-- [OpenAI Whisper](https://github.com/openai/whisper)
-- [WhisperX](https://github.com/m-bain/whisperX)
-- [NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-distilled-600M)
-- [Transformers — tradução com NLLB](https://huggingface.co/docs/transformers/model_doc/nllb)
-- [FFmpeg](https://ffmpeg.org/documentation.html)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp)
-- [Google FLEURS dataset](https://huggingface.co/datasets/google/fleurs)
-- [OpenAI Whisper — API local Python](https://github.com/openai/whisper)
+1. Criar experimento isolado e reproduzível.
+2. Fixar versões candidatas e registrar ambiente.
+3. Comparar qualidade e desempenho no mesmo corpus/hardware.
+4. Revisar licença, segurança, plataformas e impacto no pacote.
+5. Declarar dependência direta somente se o código passar a depender diretamente da API.
+6. Atualizar `pyproject.toml`, executar `uv lock`, revisar diff e validar com `uv lock --check`.
+7. Executar matriz Python, testes e documentação.
+8. Registrar a decisão em [DECISOES.md](DECISOES.md) e [ESTADO_ATUAL.md](ESTADO_ATUAL.md).

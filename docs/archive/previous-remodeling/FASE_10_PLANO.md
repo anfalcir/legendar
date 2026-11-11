@@ -4,8 +4,8 @@
   verificação em [HANDOFF_FASE_10.md](HANDOFF_FASE_10.md).
 - **Fronteira:** eliminar os 13 achados da homologação de 11/11/2026 tratando causas
   sistêmicas (não apenas os sintomas), sem regredir as Fases 0–9.
-- **Dependências:** Fases 0–9 integradas à `main` (ver [ESTADO_ATUAL.md](ESTADO_ATUAL.md)).
-- **Roteiro que originou os achados:** [HOMOLOGACAO.md](HOMOLOGACAO.md).
+- **Dependências:** Fases 0–9 integradas à `main` (ver [ESTADO_ATUAL.md](../../ESTADO_ATUAL.md)).
+- **Roteiro que originou os achados:** [HOMOLOGACAO.md](../../HOMOLOGACAO.md).
 - **Documento de transferência previsto:** `docs/HANDOFF_FASE_10.md` (criado ao final da execução).
 
 ---
@@ -509,7 +509,7 @@ uv run python scripts/check_doc_links.py
 | G9 | Etapa de transcrição reporta progresso em intervalos ≤ 30 s e ETA baseado em throughput |
 | G10 | `setWindowIcon` + `.desktop` fazem o ícone da marca aparecer na janela, taskbar e lançador |
 
-**Re-homologação:** repetir os 13 cenários originais de [HOMOLOGACAO.md](HOMOLOGACAO.md)
+**Re-homologação:** repetir os 13 cenários originais de [HOMOLOGACAO.md](../../HOMOLOGACAO.md)
 mais três cenários novos: (a) cache com permissões hostis prévias, (b) execução sem rede
 (MOCK de download) e (c) tela 1366×768.
 
@@ -536,7 +536,7 @@ mais três cenários novos: (a) cache com permissões hostis prévias, (b) execu
 | D5 | Canal de erro em execução | toast persistente com ação vs. modal | toast persistente; modal só para confirmação destrutiva |
 | D6 | Distribuição do ícone | `.desktop` por script vs. pacote de instalação | script nesta fase; pacote quando houver instalador |
 
-Decisões aprovadas aqui devem ser registradas em [DECISOES.md](DECISOES.md) antes da
+Decisões aprovadas aqui devem ser registradas em [DECISOES.md](../../DECISOES.md) antes da
 implementação correspondente.
 
 ## 9. Sequência de PRs sugerida

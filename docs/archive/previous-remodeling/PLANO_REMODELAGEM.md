@@ -570,7 +570,7 @@ O repositório Legendar é a fonte de verdade dos requisitos de software. O ambi
 
 - `pyproject.toml` é o manifesto canônico das dependências diretas, faixas de versão, extras e grupos de desenvolvimento.
 - `uv.lock` é o registro versionado da resolução universal exata de dependências transitivas, variantes PyTorch e marcadores de plataforma; toda instalação de validação deve usar `uv sync --locked`.
-- `requirements.txt` foi removido na Fase 9 por ser um snapshot UTF-16 da baseline, sem relação com o manifesto atual. Consumidores que usam pip geram a lista com `uv export --locked`, conforme [INSTALACAO.md](INSTALACAO.md); nenhum segundo manifesto é versionado.
+- `requirements.txt` foi removido na Fase 9 por ser um snapshot UTF-16 da baseline, sem relação com o manifesto atual. Consumidores que usam pip geram a lista com `uv export --locked`, conforme [INSTALACAO.md](../../INSTALACAO.md); nenhum segundo manifesto é versionado.
 - Dependências diretas devem refletir contratos usados pelo próprio Legendar. Dependências transitivas devem ser resolvidas pelo gerenciador e registradas no lockfile, sem duplicação manual desnecessária.
 - Utilizar faixas de versão com limites mínimos testados e limites máximos somente quando houver justificativa de compatibilidade. Fixações exatas ficam no lockfile, não no manifesto de requisitos.
 - Separar dependências-base, perfis completos de runtime, recursos opcionais (como alinhamento) e ferramentas de desenvolvimento/teste/build.
@@ -583,7 +583,7 @@ O `pyproject.toml` foi introduzido na Fase 0 com PySide6 como dependência-base 
 
 A faixa inicial de Python é `>=3.10,<3.14`, determinada pela compatibilidade declarada pelo candidato WhisperX estável 3.8.6, e não pela versão instalada no computador-alvo. Essa faixa será ampliada quando a interseção das dependências críticas, os wheels e a CI demonstrarem suporte adicional.
 
-A matriz, os comandos de instalação, os perfis, as justificativas, as dependências externas e a política de manutenção estão em [docs/MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md). Uma resolução experimental anterior feita apenas contra PyPI puxou bibliotecas CUDA/NVIDIA por padrão para Linux e foi descartada; a resolução agora usa índices explícitos para não confundir perfil CPU com GPU. O lock universal está versionado e validado por resolução. A CI executa instalação real/importação do perfil CPU e CUDA 12.8, além de uma POC de modelo PT-BR/EN; isso é evidência de compatibilidade inicial, não homologação completa do produto em todos os sistemas e hardwares.
+A matriz, os comandos de instalação, os perfis, as justificativas, as dependências externas e a política de manutenção estão em [docs/MATRIZ_DEPENDENCIAS.md](../../MATRIZ_DEPENDENCIAS.md). Uma resolução experimental anterior feita apenas contra PyPI puxou bibliotecas CUDA/NVIDIA por padrão para Linux e foi descartada; a resolução agora usa índices explícitos para não confundir perfil CPU com GPU. O lock universal está versionado e validado por resolução. A CI executa instalação real/importação do perfil CPU e CUDA 12.8, além de uma POC de modelo PT-BR/EN; isso é evidência de compatibilidade inicial, não homologação completa do produto em todos os sistemas e hardwares.
 
 ### 11.3. Ferramentas externas
 
@@ -626,9 +626,9 @@ Versões, licenças, wheels, modelos, requisitos de runtime e combinações de b
 | 6 | Tradução, segmentação e SRT | Tradução, vínculo temporal, regras de leitura, writer e validator | **Concluída e integrada à `main` por squash (`d600283`):** segmentação de duas linhas de 42 caracteres, tradução local por cue com NLLB-200 distilled 600M, validação do trilho e publicação SRT atômica com roundtrip; 387 testes locais verdes e workflow `phase6-quality.yml` com matriz Python 3.10–3.13, 5/5 jobs verdes no push [#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587). Qualidade tradutória e leitura em mídia real seguem como homologação de produto |
 | 7 | Integração de ponta a ponta | GUI conectada ao pipeline, progresso real, cancelamento, logs e recuperação | **Concluída e integrada à `main` por squash:** a janela dispara o `SerialPipeline` real em `QThread`, consome eventos, bloqueia campos, cancela em ponto seguro, limpa o workspace e abre a pasta do SRT publicado; 39 testes de GUI offscreen verdes, suíte determinística completa verde e Ruff limpo. Critérios do [plano operacional da Fase 7](FASE_7_PLANO.md) atendidos |
 | 8 | Testes e homologação | Unitários, integração, GUI, E2E, regressão e relatório | **Concluída e integrada à `main` por squash:** matriz E2E PT→PT, PT→EN, EN→PT e EN→EN, modos de falha e cancelamento, mídia real em seis formatos com FFmpeg, gate de cobertura de 85% e verificador de links; **443 testes aprovados e 86% de cobertura** na medição da fase (433 aprovados e 10 skips explícitos sem FFmpeg). A Fase 9 acrescentou os testes de documentação, totalizando **451**. Evidências e pendências humanas em [RELATORIO_FASE_8.md](RELATORIO_FASE_8.md) |
-| 9 | Documentação e finalização | Guias, arquitetura, operação, instalação, decisões e revisão final | **Concluída e integrada à `main` por squash:** [ARQUITETURA.md](ARQUITETURA.md), [OPERACAO.md](OPERACAO.md), [INSTALACAO.md](INSTALACAO.md), [DECISOES.md](DECISOES.md), README revisado, `LICENSE` MIT, remoção do `requirements.txt` legado e verificação automática de links da documentação. Documentação coerente com código e instalação reproduzível |
+| 9 | Documentação e finalização | Guias, arquitetura, operação, instalação, decisões e revisão final | **Concluída e integrada à `main` por squash:** [ARQUITETURA.md](../../ARQUITETURA.md), [OPERACAO.md](../../OPERACAO.md), [INSTALACAO.md](../../INSTALACAO.md), [DECISOES.md](../../DECISOES.md), README revisado, `LICENSE` MIT, remoção do `requirements.txt` legado e verificação automática de links da documentação. Documentação coerente com código e instalação reproduzível |
 
-A execução e as evidências das Fases 1–9 estão registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md),
+A execução e as evidências das Fases 1–9 estão registradas em [ESTADO_ATUAL.md](../../ESTADO_ATUAL.md),
 [FASE_1_PLANO.md](FASE_1_PLANO.md), [FASE_2_PLANO.md](FASE_2_PLANO.md), [FASE_3_PLANO.md](FASE_3_PLANO.md),
 [FASE_4_PLANO.md](FASE_4_PLANO.md), [FASE_5_PLANO.md](FASE_5_PLANO.md), [FASE_6_PLANO.md](FASE_6_PLANO.md),
 [FASE_7_PLANO.md](FASE_7_PLANO.md), [FASE_8_PLANO.md](FASE_8_PLANO.md) e [FASE_9_PLANO.md](FASE_9_PLANO.md),
@@ -669,7 +669,7 @@ O projeto remodelado somente será considerado pronto quando:
 - Dependências, modelos, licenças e dados transmitidos a serviços externos estiverem documentados.
 
 **Situação após a Fase 9:** os critérios verificáveis por código, teste e CI estão
-atendidos e registrados em [ESTADO_ATUAL.md](ESTADO_ATUAL.md) e
+atendidos e registrados em [ESTADO_ATUAL.md](../../ESTADO_ATUAL.md) e
 [RELATORIO_FASE_8.md](RELATORIO_FASE_8.md). Permanecem dependentes do usuário:
 medição de alinhamento com fronteiras humanas, revisão da qualidade tradutória,
 homologação do fluxo YouTube real, validação visual em monitor físico/sistema

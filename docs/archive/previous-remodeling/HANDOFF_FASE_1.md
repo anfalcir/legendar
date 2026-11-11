@@ -10,7 +10,7 @@
 - **Commit da Fase 1 na main:** `de31dddffc4f8e761692129d4c47a02ca89b8b83`
 - **Regra de governança:** o repositório é a fonte de verdade das dependências e decisões; o computador de homologação não define sozinho os requisitos do produto.
 
-Este documento registra a conclusão técnica da Fase 1. Não reiniciar a arquitetura nem antecipar funcionalidades das fases seguintes. A PR #2 está merged e a entrega encontra-se na `main`; a Fase 2 permanece bloqueada até aprovação explícita do responsável. Leia-o em conjunto com o [plano mestre](PLANO_REMODELAGEM.md), o [estado atual](ESTADO_ATUAL.md), o [plano operacional da Fase 1](FASE_1_PLANO.md), a [baseline legada](LEGACY_BASELINE.md), a [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e o [protocolo da Fase 0](FASE_0_PROTOCOLO.md).
+Este documento registra a conclusão técnica da Fase 1. Não reiniciar a arquitetura nem antecipar funcionalidades das fases seguintes. A PR #2 está merged e a entrega encontra-se na `main`; a Fase 2 permanece bloqueada até aprovação explícita do responsável. Leia-o em conjunto com o [plano mestre](PLANO_REMODELAGEM.md), o [estado atual](../../ESTADO_ATUAL.md), o [plano operacional da Fase 1](FASE_1_PLANO.md), a [baseline legada](LEGACY_BASELINE.md), a [matriz de dependências](../../MATRIZ_DEPENDENCIAS.md) e o [protocolo da Fase 0](FASE_0_PROTOCOLO.md).
 
 ## Checkpoint atual da Fase 1
 
@@ -57,7 +57,7 @@ A Fase 0 concluiu as definições que permitem estruturar a aplicação sem mant
 - Ferramenta de gerenciamento: `uv`; não é dependência de runtime do aplicativo.
 - Python declarado: `>=3.10,<3.14`.
 - A faixa superior existe por compatibilidade declarada pelo WhisperX estável adotado; não foi escolhida com base no Python instalado no computador-alvo.
-- `requirements.txt` era um snapshot legado e foi **removido na Fase 9**; não recriá-lo como segunda fonte de verdade. Consumidores de pip usam `uv export`, conforme [INSTALACAO.md](INSTALACAO.md).
+- `requirements.txt` era um snapshot legado e foi **removido na Fase 9**; não recriá-lo como segunda fonte de verdade. Consumidores de pip usam `uv export`, conforme [INSTALACAO.md](../../INSTALACAO.md).
 - Instalações deverão ocorrer em ambientes isolados e com `uv sync --locked`. Não instalar, atualizar ou remover dependências globalmente no computador do usuário.
 
 ### 2.2. Perfis completos de runtime

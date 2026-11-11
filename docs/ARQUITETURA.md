@@ -2,7 +2,8 @@
 
 - **Escopo:** aplicação desktop PySide6 que transforma áudio/vídeo em SRT validado, com tradução local opcional.
 - **Princípio:** regras puras no domínio, orquestração na aplicação, integrações na infraestrutura, Qt apenas na apresentação e composição explícita no bootstrap.
-- **Documentos relacionados:** [PLANO_REMODELAGEM.md](PLANO_REMODELAGEM.md), [ESTADO_ATUAL.md](ESTADO_ATUAL.md), [OPERACAO.md](OPERACAO.md), [INSTALACAO.md](INSTALACAO.md) e [DECISOES.md](DECISOES.md).
+- **Evolução atual:** correções de integridade, segmentação editorial, gate de qualidade e desempenho são conduzidos pelo [plano vigente](PLANO_CORRECAO_MELHORIA.md).
+- **Documentos relacionados:** [estado atual](ESTADO_ATUAL.md), [operação](OPERACAO.md), [instalação](INSTALACAO.md), [decisões](DECISOES.md) e [plano de correção/melhoria](PLANO_CORRECAO_MELHORIA.md).
 
 ## 1. Camadas
 
@@ -14,36 +15,35 @@
 | Apresentação | `src/legendar/presentation` | aplicação (portas, pipeline, eventos), domínio | adaptadores concretos de infraestrutura |
 | Bootstrap | `src/legendar/bootstrap` | todas as camadas | — |
 
-Essa direção é verificada por `tests/test_architecture.py`, que falha se uma
-camada importar algo proibido.
+Essa direção é verificada por `tests/test_architecture.py`, que falha se uma camada importar algo proibido.
 
 ## 2. Mapa de módulos
 
 ```text
 src/legendar/
-  bootstrap/app.py                     composição de portas reais + entrada da GUI
+  bootstrap/app.py
   domain/
     entities/{media,transcript,subtitle}.py
     value_objects/{language,time,text_layout}.py
-    state/machine.py                   estados e transições do job
-    events/job_events.py               eventos estruturados do job
-    errors/{base,catalog}.py           categorias e erros de domínio
+    state/machine.py
+    events/job_events.py
+    errors/{base,catalog}.py
   application/
-    job/{context,controller}.py        contexto do job e autoridade de estado
+    job/{context,controller}.py
     pipeline/{serial_pipeline,segmentation,translation,validation}.py
-    ports/protocols.py                 portas (Protocol) do pipeline
-    progress/sink.py                   progresso monotônico e escalonado
+    ports/protocols.py
+    progress/sink.py
   infrastructure/
     media/{probe,ffmpeg,ffprobe,tools,youtube}.py
-    transcription/whisper.py           adaptador Whisper
-    alignment/whisperx.py              adaptador WhisperX
-    translation/nllb.py                adaptador NLLB-200
+    transcription/whisper.py
+    alignment/whisperx.py
+    translation/nllb.py
     filesystem/{srt,publisher,atomic,workspace,paths}.py
-    config/settings.py                 diretórios de cache, saída, logs e temporários
-    logging/setup.py                   log rotativo com redação de caminho pessoal
+    config/settings.py
+    logging/setup.py
   presentation/qt/
-    main_window.py                     janela, confirmações, estado e resultado
-    view_model/job_view_model.py       eventos → snapshot exibível (sem Qt)
+    main_window.py
+    view_model/job_view_model.py
     workers/{job_worker,media_inspection_worker}.py
     dialogs.py, preferences.py, theme.py
 ```
@@ -51,11 +51,11 @@ src/legendar/
 ## 3. Fluxo de um job
 
 1. `MainWindow` monta `JobRequest` (origem, idiomas, tradução, faixa) e `JobContext` (job id, workspace, destino, token).
-2. `JobWorker` roda `JobController.run` em `QThread`; o controlador abre o estado `VALIDATING_INPUT`.
+2. `JobWorker` roda `JobController.run` em `QThread`; o controlador abre `VALIDATING_INPUT`.
 3. `SerialPipeline` executa, em ordem: inspeção, preparação de áudio, transcrição, alinhamento, segmentação, tradução opcional, validação e publicação.
-4. Cada etapa reporta progresso por `ScaledProgress`, que mapeia a fração local para a faixa global da etapa.
-5. O controlador converte transições em `StateChanged`, mensagens em `ProgressReported`/`LogRecorded` e o desfecho em `JobCompleted`, `JobFailed` ou `JobCancelled` — um único evento terminal.
-6. `JobViewModel` transforma eventos em `JobViewSnapshot`; a janela apenas desenha, habilita controles e limpa o workspace.
+4. Cada etapa reporta progresso por `ScaledProgress`, que mapeia a fração local para a faixa global.
+5. O controlador converte transições e mensagens em eventos; o resultado é um único evento terminal.
+6. `JobViewModel` transforma eventos em snapshot; a janela apenas desenha, habilita controles e limpa o workspace.
 
 ## 4. Portas do pipeline
 
@@ -72,30 +72,27 @@ src/legendar/
 
 ## 5. Máquina de estados
 
-`IDLE → VALIDATING_INPUT → INSPECTING_MEDIA → PREPARING_AUDIO → TRANSCRIBING →
-ALIGNING → SEGMENTING → [TRANSLATING] → VALIDATING_SRT → PUBLISHING →
-COMPLETED`, com `CANCELLING → CANCELLED` e `FAILED` como desvios.
+`IDLE → VALIDATING_INPUT → INSPECTING_MEDIA → PREPARING_AUDIO → TRANSCRIBING → ALIGNING → SEGMENTING → [TRANSLATING] → VALIDATING_SRT → PUBLISHING → COMPLETED`, com `CANCELLING → CANCELLED` e `FAILED` como desvios.
 
-Regras:
-
-- Somente `StateMachine.transition` decide se uma transição é válida.
+- Somente `StateMachine.transition` decide transições válidas.
 - `PUBLISHING` é terminal para cancelamento: a troca atômica já começou.
-- `JobController` garante um único evento terminal por job, mesmo sob erro inesperado.
+- `JobController` garante um único evento terminal por job.
 
 ## 6. Threads e responsividade
 
-- A thread principal só desenha; nenhum FFmpeg, modelo ou rede roda nela.
-- `JobWorker` vive em `QThread`; eventos atravessam por `Signal(object)` em conexão enfileirada.
-- A inspeção de mídia tem `QThread` própria e token independente.
-- Fechar a janela durante o trabalho pede cancelamento, espera até 5 s e só então encerra.
+- A thread principal só desenha; FFmpeg, modelos e rede rodam fora dela.
+- `JobWorker` vive em `QThread`; eventos atravessam por `Signal(object)`.
+- A inspeção de mídia tem `QThread` própria.
+- O cancelamento de inferência é cooperativo; uma chamada em andamento retorna antes do encerramento.
 
-## 7. Publicação SRT
+## 7. Publicação SRT atual
 
-1. `segment_alignment` produz cues de até duas linhas de 42 caracteres (84 por cue), 1–7 s, pausa de 0,6 s.
-2. A tradução opcional reescreve o texto preservando `TimeRange` e a relação 1:1 por cue.
-3. `validate_track` bloqueia trilho vazio, cue sem texto e cue além do fim da mídia; reporta avisos de duração e largura.
+1. A segmentação atual usa palavras alinhadas e produz cues de até duas linhas de 42 caracteres; a política atual declara 1–7 s, pausa de 0,6 s e cerca de 17 CPS.
+2. A tradução opcional preserva `TimeRange` e correspondência 1:1 entre cue e texto traduzido.
+3. `validate_track` bloqueia estrutura inválida e sinaliza riscos de legibilidade.
 4. `format_srt` serializa; `validate_roundtrip` reparseia e compara; `atomic_write_text` troca o arquivo por rename.
-5. Em qualquer falha anterior à troca, o SRT existente permanece intacto e nenhum `.partial` sobra.
+
+**Limitação conhecida:** a política atual pode permitir cues curtas ou acima de CPS como avisos; a segmentação também não consolida explicitamente segmentos originais consecutivos do Whisper. Ver [plano de correção/melhoria](PLANO_CORRECAO_MELHORIA.md).
 
 ## 8. Configuração e caminhos
 
@@ -109,8 +106,7 @@ Regras:
 | Dispositivo da tradução | `auto` | `LEGENDAR_TRANSLATE_DEVICE` |
 | Checkpoint de tradução | `facebook/nllb-200-distilled-600M` | `LEGENDAR_TRANSLATE_MODEL` |
 
-Workspaces ficam em `<cache>/tmp` e são exclusivos por job; modelos ficam em
-`<cache>/models` e nunca são removidos para cancelar um job.
+Workspaces ficam em `<cache>/tmp` e são exclusivos por job; modelos ficam em `<cache>/models`.
 
 ## 9. Arquitetura de testes
 
@@ -119,20 +115,22 @@ Workspaces ficam em `<cache>/tmp` e são exclusivos por job; modelos ficam em
 | Unitário | `tests/unit` | dublês em memória, sem I/O externo |
 | Integração | `tests/integration` | sistema de arquivos real; FFmpeg quando instalado |
 | GUI | `tests/gui` | Qt offscreen com pipeline dublê |
-| E2E | `tests/e2e` | controlador, pipeline e publicação reais |
+| E2E | `tests/e2e` | controlador, pipeline e publicação com adaptadores controlados |
 | Governança | `tests/test_architecture.py`, `tests/test_documentation.py` | importações e documentação |
 
-`tests/helpers/fakes.py` concentra os dublês reutilizáveis; nenhum teste baixa
-modelos, acessa rede ou depende de credenciais.
+Os testes E2E de mídia atuais usam adaptadores falsos para reconhecimento e alinhamento; não medem qualidade real dos motores.
 
-## 10. Baseline legada
+## 10. Evolução sob o plano atual
 
-`main.py`, `core/` e `gui/` permanecem como aplicação anterior caracterizada por
-testes (`tests/legacy`) e descrita em [LEGACY_BASELINE.md](LEGACY_BASELINE.md).
-A aplicação nova não importa esses módulos; a política de aposentadoria está no
-documento da baseline.
+A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. As próximas mudanças devem preservar essas fronteiras.
 
-| `ProgressSink` | `report(fraction, message)` |
+A evolução proposta é:
+- instrumentar tempo e memória por estágio;
+- garantir conservação integral do conteúdo reconhecido;
+- formar cues a partir de um fluxo contínuo de palavras alinhadas;
+- distinguir tempo de fala de tempo de exibição;
+- transformar riscos editoriais em um gate explícito;
+- avaliar faster-whisper/CTranslate2 e NLLB via CTranslate2 por benchmark;
+- gerenciar a residência dos modelos e threads por perfil de hardware.
 
-As portas existem porque têm consumidor real no pipeline e dublês nos testes.
-Nenhuma abstração é criada sem consumidor.
+Essas mudanças ainda não são comportamento implementado. Escopo, dependências, critérios e ordem estão em [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
