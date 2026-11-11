@@ -773,8 +773,8 @@ class WhisperXAligner:
                             previous_global_end=previous_global_end,
                         )
                         if len(recovered_unmatched) < len(selected_unmatched):
-                            recovered_count = (
-                                len(selected_unmatched) - len(recovered_unmatched)
+                            recovered_count = len(selected_unmatched) - len(
+                                recovered_unmatched
                             )
                             selected_segment = recovered_segment
                             selected_unmatched = recovered_unmatched
@@ -783,14 +783,20 @@ class WhisperXAligner:
                             selected_previous_end = recovered_previous_end
                             self._record_metric("recovered_words", recovered_count)
                         else:
-                            selected_issues = (*selected_issues, "alignment_recovery_no_improvement")
+                            selected_issues = (
+                                *selected_issues,
+                                "alignment_recovery_no_improvement",
+                            )
                     except JobCancelledError:
                         raise
                     except Exception:
                         # A recovery failure never destroys a valid partial result
                         # from the first attempt; it is retained and remains visible
                         # through the unmatched diagnostics.
-                        selected_issues = (*selected_issues, "alignment_recovery_failed")
+                        selected_issues = (
+                            *selected_issues,
+                            "alignment_recovery_failed",
+                        )
                     finally:
                         self._record_metric(
                             "recovery_seconds", time.perf_counter() - recovery_started
