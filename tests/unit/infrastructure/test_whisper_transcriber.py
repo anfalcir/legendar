@@ -12,6 +12,7 @@ from legendar.domain.errors.catalog import (
     UnsupportedLanguageError,
 )
 from legendar.domain.value_objects.language import Language
+from legendar.domain.value_objects.time import TimeRange
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 
 
@@ -105,6 +106,10 @@ def test_transcribes_original_language_and_preserves_recognized_segments(
     assert transcript.model_revision == "20250625"
     assert [segment.text for segment in transcript.segments] == ["Olá,", "mundo!"]
     assert all(segment.range is None for segment in transcript.segments)
+    assert [segment.alignment_window for segment in transcript.segments] == [
+        TimeRange(0.0, 0.4),
+        TimeRange(0.5, 1.0),
+    ]
     assert all(not segment.words for segment in transcript.segments)
     assert model.calls[0]["task"] == "transcribe"
     assert model.calls[0]["language"] == "pt"

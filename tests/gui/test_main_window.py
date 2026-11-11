@@ -727,3 +727,26 @@ def test_youtube_readiness_also_requires_ffmpeg_and_ffprobe(qtbot, tmp_path) -> 
     assert window.status_pill.text() == "Verifique o ambiente"
     assert "YouTube indisponível" in window.readiness_label.text()
     assert "FFmpeg e ffprobe precisam estar instalados" in window.readiness_label.text()
+
+
+def test_final_generation_stays_disabled_until_srt_publisher_is_available(
+    qtbot, tmp_path, media
+) -> None:
+    dependencies = replace(
+        _dependencies(tmp_path),
+        publishing_available=False,
+        publishing_readiness_details=(
+            "O publicador SRT será conectado nas Fases 6/7.",
+        ),
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+
+    assert not window.generate_button.isEnabled()
+    assert (
+        "publicação final SRT ainda não foi implementada"
+        in window.readiness_label.text()
+    )
+    with pytest.raises(InvalidInputError, match="publicação final"):
+        window._build_job()

@@ -62,3 +62,13 @@ def test_output_language_requires_concrete_language():
     with pytest.raises(LanguageError):
         OutputLanguage(value="pt")  # type: ignore[arg-type]
     assert str(OutputLanguage(Language.PORTUGUESE)) == "pt"
+
+
+def test_negative_source_offset_maps_positive_local_time_without_negative_global_range():
+    from legendar.domain.value_objects.time import TimelineMapping
+
+    mapping = TimelineMapping(source_offset=-0.5)
+
+    assert mapping.range_to_global(TimeRange(0.75, 1.25)) == TimeRange(0.25, 0.75)
+    with pytest.raises(TemporalError):
+        mapping.range_to_global(TimeRange(0.1, 0.4))

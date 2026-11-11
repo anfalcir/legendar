@@ -9,9 +9,10 @@
 - **Branch de implementação da Fase 3:** `phase-3/media-ingestion` (integrada pela PR #4)
 - **Branch padrão:** `main`
 - **Fases concluídas e integradas:** Fases 0–4
-- **Fase em execução:** nenhuma; próximo checkpoint: Fase 5 — Alinhamento temporal
+- **Fase em execução:** Fase 5 — Alinhamento temporal, branch `phase-5/temporal-alignment`
 - **Fase concluída mais recente integrada:** Fase 4 — Reconhecimento Whisper
-- **Integração mais recente:** PR [#5](https://github.com/anfalcir/legendar/pull/5), squash em `2f9751139616591e31a0ec73902265b38b040d41`
+- **Implementação mais recente em revisão:** WhisperX, diagnóstico por palavra, métricas temporais e avaliação humana
+- **Última integração na `main`:** PR [#5](https://github.com/anfalcir/legendar/pull/5), squash em `2f9751139616591e31a0ec73902265b38b040d41`
 - **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), integrada por squash
 - **PR da Fase 1:** [#2](https://github.com/anfalcir/legendar/pull/2), merged por squash em 10/11/2026
 - **PR da Fase 2:** [#3](https://github.com/anfalcir/legendar/pull/3), merged por squash em 10/11/2026
@@ -22,9 +23,9 @@
 - **Commit de integração da Fase 2:** `4129f0a906a04693502f298b71767605499e3f68`
 - **Commit de integração da Fase 3:** `dfa440b39e7623356388c774834e23ee53fc1d09`
 - **Commit de integração da Fase 4:** `2f9751139616591e31a0ec73902265b38b040d41`
-- **Documentos de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md) e [HANDOFF_FASE_4.md](HANDOFF_FASE_4.md)
+- **Documentos de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md), [HANDOFF_FASE_4.md](HANDOFF_FASE_4.md) e [HANDOFF_FASE_5.md](HANDOFF_FASE_5.md)
 
-> As Fases 0–4 estão concluídas e integradas à `main`. A Fase 4 foi integrada pela PR [#5](https://github.com/anfalcir/legendar/pull/5), squash no commit `2f9751139616591e31a0ec73902265b38b040d41`. CI de push e PR: 4/4 ambientes Python 3.10–3.13 aprovados em cada workflow, com suíte, Ruff e formatação; smoke real CPU executou tiny/base/small em PT-BR/EN e publicou relatório. Gates herdados de Fase 0, 1 e 3 também passaram. A homologação de qualidade no computador-alvo e com corpus representativo de pregações permanece pendente.
+> As Fases 0–4 estão concluídas e integradas à `main`. A Fase 4 foi integrada pela PR [#5](https://github.com/anfalcir/legendar/pull/5), squash no commit `2f9751139616591e31a0ec73902265b38b040d41`; CI de push/PR 4/4 em Python 3.10–3.13, smoke real CPU tiny/base/small PT-BR/EN e gates herdados Fase 0/1/3 aprovados. A Fase 5 está em execução na branch `phase-5/temporal-alignment`; a implementação usa WhisperX 3.8.6 com janela aproximada separada do timestamp final, palavras não alinhadas visíveis e offset global aplicado uma vez. CI e PR da Fase 5 ainda serão registradas após execução. A homologação temporal em corpus autorizado e no computador-alvo permanece pendente.
 
 ---
 
@@ -47,6 +48,7 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | Branch de implementação da Fase 2 | `phase-2/professional-ui`, integrada na `main` pela PR #3 |
 | Branch de implementação da Fase 3 | `phase-3/media-ingestion`, integrada na main pela PR #4 |
 | Branch de implementação da Fase 4 | `phase-4/whisper-recognition`, integrada à `main` pela PR #5 |
+| Branch de implementação da Fase 5 | `phase-5/temporal-alignment`, criada a partir da `main` pós-Fase 4 |
 | `main` | Contém as entregas integrais das Fases 0–4; HEAD de integração da Fase 4: `2f975113` |
 | Fonte de dependências | `pyproject.toml` |
 | Lock | `uv.lock` regenerado pela CI e integrado à `main`; invariantes, fontes e exports CPU/CUDA aprovados no workflow #113 |
@@ -54,10 +56,10 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | POC de mídia | `scripts/phase0_media_poc.py` |
 | POC de modelos | `scripts/phase0_model_poc.py` |
 | Validador do lock | `scripts/phase0_validate_lock.py` |
-| Documentação técnica | plano mestre, estado vivo, protocolo, matriz de dependências, planos operacionais e handoffs das Fases 1–4 |
-| CI | workflows de qualidade das Fases 0–4; a Fase 3 passou em push/PR; a Fase 4 adiciona matriz Python 3.10–3.13 e benchmark real Whisper CPU PT-BR/EN |
+| Documentação técnica | plano mestre, estado vivo, protocolo, matriz de dependências, planos operacionais e handoffs das Fases 1–5 |
+| CI | workflows de qualidade das Fases 0–5; Fase 5 acrescenta matriz Python 3.10–3.13, testes herméticos WhisperX e smoke real de forced alignment CPU PT-BR/EN |
 
-As PRs #1–#5 foram revisadas e integradas por squash. A `main` contém as Fases 0–4; as branches `phase-1/architecture`, `phase-2/professional-ui`, `phase-3/media-ingestion` e `phase-4/whisper-recognition` preservam seus históricos.
+As PRs #1–#5 foram revisadas e integradas por squash. A `main` contém as Fases 0–4; a branch `phase-5/temporal-alignment` está em execução a partir dessa base. As branches `phase-1/architecture`, `phase-2/professional-ui`, `phase-3/media-ingestion` e `phase-4/whisper-recognition` preservam seus históricos.
 
 ### 2.1. Checkpoint atual da Fase 1
 
@@ -170,7 +172,9 @@ O primeiro relatório antecede a ampliação do coletor que agora identifica dis
 | Adaptador Whisper | Concluído e integrado pela PR #5 | OpenAI Whisper local; PT/EN automático/manual; cache e modelo carregado sob demanda; transcrição em worker |
 | Benchmark de reconhecimento | Smoke real aprovado | FLEURS, tiny/base/small, duas amostras por idioma; WER/CER/RTF/tempo/RSS no artefato da CI |
 | Inventário e benchmark do computador-alvo | Pendente | Executar scripts locais com runtime CPU/CUDA adequado; runner GitHub não representa o hardware de implantação |
-| Corpus representativo de pregações | Pendente | Preparar amostras autorizadas com referências textuais humanas revisadas; avaliar fora do corpus de fala lida FLEURS |
+| Corpus representativo de pregações | Pendente | Preparar amostras autorizadas com referências textuais humanas e fronteiras revisadas; avaliar fora do corpus de fala lida FLEURS |
+| Adaptador de alinhamento WhisperX | Implementação na branch Fase 5 | PT/EN, cache por idioma, janela de busca separada do range final, sem interpolação automática e diagnósticos explícitos |
+| Avaliador temporal | Implementado na branch Fase 5 | JSONL local com palavra/início/fim humano; mediana/P95, cobertura e não alinhadas; relatório sem áudio, caminhos ou texto |
 | Inventário atualizado no computador-alvo | Pendente | Reexecutar antes da homologação de mídia/modelos |
 | Precisão temporal contra timestamps humanos | Pendente | Gate da Fase 5 |
 | Tradução com fornecedor/custo/privacidade | Decidido adiar escolha do provedor até antes da Fase 6 | Não bloqueia arquitetura |
@@ -190,7 +194,7 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 | 2 — Interface profissional | **Concluída e integrada** | PR #3 merged por squash no commit `4129f0a`; 218 testes por ambiente Python 3.10–3.13, cobertura 88%, Ruff/format aprovados |
 | 3 — Entrada e preparação de mídia | **Concluída e integrada** | PR #4 merged por squash em `dfa440b39e7623356388c774834e23ee53fc1d09`; CI 4/4 push e PR em Python 3.10–3.13, 249 testes por ambiente e cobertura 87% |
 | 4 — Reconhecimento Whisper | **Concluída e integrada** | PR #5 merged por squash em `2f975113`; CI push/PR 4/4 em Python 3.10–3.13; smoke real CPU e benchmark tiny/base/small PT-BR/EN publicados. Homologação no computador-alvo/corpus de pregações segue pendente |
-| 5 — Alinhamento temporal | Não iniciada | Referência humana, mediana/P95, cobertura e anomalias |
+| 5 — Alinhamento temporal | Em implementação na branch `phase-5/temporal-alignment` | WhisperX 3.8.6, offsets, timestamps por palavra, diagnósticos e avaliador humano em construção; CI/PR e homologação do alvo permanecem gates |
 | 6 — Tradução, segmentação e SRT | Não iniciada | Escolha de fornecedor antes da implementação da tradução |
 | 7 — Integração ponta a ponta | Não iniciada | Conectar GUI ao pipeline real |
 | 8 — Testes e homologação | Não iniciada | Homologação nos ambientes declarados suportados |
@@ -200,7 +204,7 @@ WER mede erro lexical, não precisão dos timestamps. As quatro amostras de fala
 
 1. **Fases 0–4:** concluídas e integradas à `main`; a Fase 4 passou CI de push/PR e smoke real de reconhecimento CPU PT-BR/EN.
 2. **Fase 4 — gates de produto ainda abertos:** atualizar inventário do computador-alvo e executar benchmark com amostras representativas de pregações PT-BR/EN e referências textuais humanas revisadas. O smoke FLEURS (2 amostras/idioma) não homologa qualidade final nem escolhe definitivamente o perfil.
-3. **Fase 5:** forced alignment com WhisperX; anotar início/fim de palavras e medir erro mediano/P95, cobertura e falhas; não homologar sincronização apenas por WER.
+3. **Fase 5:** implementação em `phase-5/temporal-alignment`; concluir CI, revisar PR e integrar. Depois, avaliar início/fim de palavras em corpus autorizado, medir mediana/P95, cobertura e falhas; não homologar sincronização apenas por WER.
 4. **Antes da Fase 6:** escolher provedor e aprovar custo, privacidade, retenção, limites e comportamento de falha.
 5. **Fase 8:** testar aplicação e fluxos completos nos sistemas/backends declarados como suportados, incluindo arquivos reais e homologação online controlada do YouTube.
 
@@ -208,7 +212,7 @@ As pendências acima são gates de produto alocados às fases responsáveis; ela
 
 ## 9. Próxima ação objetiva
 
-A Fase 4 está concluída e integrada pela PR #5. A próxima fase prevista é a Fase 5 — alinhamento temporal com WhisperX —, cujo início permanece como checkpoint separado. Antes dela, ainda é possível executar a homologação de qualidade Whisper no computador-alvo e no corpus representativo, conforme `docs/FASE_4_PLANO.md`.
+A Fase 5 foi iniciada na branch `phase-5/temporal-alignment` a partir da `main` pós-Fase 4. Acompanhar `docs/FASE_5_PLANO.md` e `docs/HANDOFF_FASE_5.md`; antes de declarar a precisão temporal homologada, executar o avaliador em corpus de pregações autorizado com fronteiras humanas revisadas e no computador-alvo.
 
 ---
 
@@ -232,3 +236,5 @@ A Fase 4 está concluída e integrada pela PR #5. A próxima fase prevista é a 
 | 10/11/2026 | Fase 3 integrada por squash à `main` pela PR #4, commit `dfa440b39e7623356388c774834e23ee53fc1d09`; 249 testes por ambiente Python 3.10–3.13, cobertura 87%, Ruff/format verdes |
 
 | 10/11/2026 | Fase 4 integrada por squash pela PR #5 no commit `2f9751139616591e31a0ec73902265b38b040d41`; CI push/PR 4/4 Python 3.10–3.13, smoke CPU real tiny/base/small PT-BR/EN e artefato de métricas publicados. Homologação no computador-alvo e corpus de pregações permanece pendente |
+
+| 10/11/2026 | Fase 5 iniciada na branch `phase-5/temporal-alignment` a partir da `main` pós-Fase 4; adaptador WhisperX, janela aproximada, offset global, diagnósticos, smoke e avaliador temporal adicionados em implementação. CI e PR ainda pendentes |

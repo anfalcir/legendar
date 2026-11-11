@@ -1,0 +1,164 @@
+name: Phase 5 quality
+
+on:
+  push:
+    branches:
+      - "phase-5/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "scripts/phase5_*.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "docs/FASE_5_PLANO.md"
+      - "docs/HANDOFF_FASE_5.md"
+      - ".github/workflows/phase5-quality.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: phase-5-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-quality:
+    name: Python ${{ matrix.python-version }} / deterministic suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Qt system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends libegl1 libgl1 libxkbcommon-x11-0
+
+      - name: Install pinned uv
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
+
+      - name: Verify lockfile
+        run: uv lock --check --no-progress
+
+      - name: Install deterministic test dependencies
+        run: uv sync --locked --group dev --group phase0 --no-progress
+
+      - name: Compile source, tests and scripts
+        run: python -m compileall -q src/legendar tests scripts
+
+      - name: Run complete deterministic suite
+        run: uv run --locked --no-sync pytest -q --cov=legendar --cov-report=term-missing
+
+      - name: Lint maintained architecture, tests and Phase 5 scripts
+        run: >-
+          uv run --locked --no-sync ruff check
+          src/legendar
+          tests/unit
+          tests/integration
+          tests/gui
+          tests/helpers
+          tests/legacy
+          tests/test_architecture.py
+          tests/conftest.py
+          tests/__init__.py
+          scripts/phase5_alignment_smoke.py
+          scripts/phase5_alignment_evaluation.py
+
+      - name: Verify formatting
+        run: >-
+          uv run --locked --no-sync ruff format --check
+          src/legendar
+          tests/unit
+          tests/integration
+          tests/gui
+          tests/helpers
+          tests/legacy
+          tests/test_architecture.py
+          tests/conftest.py
+          tests/__init__.py
+          scripts/phase5_alignment_smoke.py
+          scripts/phase5_alignment_evaluation.py
+
+  whisperx-cpu-smoke:
+    name: Whisper + WhisperX / PT-BR and English CPU smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DISABLE_PROGRESS_BARS: "1"
+      TOKENIZERS_PARALLELISM: "false"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Qt and FFmpeg runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ffmpeg libegl1 libgl1 libxkbcommon-x11-0
+
+      - name: Install pinned uv
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
+
+      - name: Cache Whisper, WhisperX, alignment weights and FLEURS
+        uses: actions/cache@v4
+        with:
+          path: .cache/phase5
+          key: phase5-whisperx-cpu-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            phase5-whisperx-cpu-
+
+      - name: Install locked CPU runtime and evaluation dependencies
+        run: uv sync --locked --group dev --group phase0 --extra runtime-cpu --no-progress
+
+      - name: Run deterministic adapter and annotation evaluator tests
+        run: |
+          uv run --locked --group dev --group phase0 --extra runtime-cpu pytest -q \
+            tests/unit/infrastructure/test_whisperx_aligner.py \
+            tests/unit/infrastructure/test_whisper_transcriber.py \
+            tests/unit/test_phase5_alignment_evaluation.py \
+            tests/unit/test_phase5_alignment_smoke.py
+
+      - name: Run real multilingual Whisper + WhisperX alignment smoke
+        env:
+          PYTHONPATH: src
+        run: |
+          uv run --locked --group dev --group phase0 --extra runtime-cpu python scripts/phase5_alignment_smoke.py \
+            --model tiny \
+            --samples-per-language 1 \
+            --device cpu \
+            --cache-dir .cache/phase5 \
+            --output phase5-alignment-smoke.json
+
+      - name: Upload alignment smoke report
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendar-phase5-alignment-smoke
+          path: phase5-alignment-smoke.json
+          if-no-files-found: error
+          retention-days: 90

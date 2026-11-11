@@ -14,11 +14,10 @@ from legendar.application.pipeline.serial_pipeline import (
     PipelinePorts,
     SerialPipeline,
 )
-from legendar.application.ports.protocols import Transcriber
-from legendar.domain.entities.media import AudioAsset
+from legendar.application.ports.protocols import Aligner, Transcriber
 from legendar.domain.entities.subtitle import SubtitleTrack
-from legendar.domain.entities.transcript import Transcript
 from legendar.domain.errors.catalog import ModelError
+from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
 from legendar.infrastructure.logging.setup import configure_logging
@@ -80,13 +79,6 @@ def _js_runtime_details(
     return tuple(details)
 
 
-class _PendingAligner:
-    """Motor de alinhamento reservado à Fase 5."""
-
-    def align(self, audio: AudioAsset, transcript: Transcript, *, progress, token=None):
-        raise ModelError("O alinhamento temporal será conectado na Fase 5.")
-
-
 class _PendingPublisher:
     """Publicação final SRT reservada à Fase 6/7."""
 
@@ -98,18 +90,16 @@ def _pipeline_factory(
     inspector: FfprobeInspector,
     downloader: YtDlpDownloader,
     transcriber: Transcriber,
+    aligner: Aligner,
 ) -> SerialPipeline:
-    """Monta aquisição de mídia e reconhecimento locais reais.
-
-    Forced alignment e publicação SRT permanecem como etapas futuras explícitas.
-    """
+    """Monta aquisição, reconhecimento e forced alignment locais reais."""
 
     return SerialPipeline(
         PipelinePorts(
             inspector=inspector,
             audio_preparer=FfmpegAudioPreparer(inspector=inspector),
             transcriber=transcriber,
-            aligner=_PendingAligner(),
+            aligner=aligner,
             publisher=_PendingPublisher(),
             downloader=downloader,
         )
@@ -171,6 +161,31 @@ def build_ui_dependencies(
         )
     transcription_available = whisper_installed and transcription_configuration_ok
 
+    try:
+        whisperx_installed = importlib.util.find_spec("whisperx") is not None
+    except (ImportError, ValueError):
+        whisperx_installed = False
+
+    alignment_configuration_ok = True
+    try:
+        aligner = WhisperXAligner.from_environment(settings.models_dir)
+    except ValueError as exc:
+        aligner = WhisperXAligner(models_dir=settings.models_dir)
+        alignment_configuration_ok = False
+        alignment_details = (f"Configuração WhisperX inválida: {exc}",)
+    else:
+        alignment_details = (
+            "WhisperX 3.8.6 · forced alignment PT/EN sob demanda",
+            f"Dispositivo de alinhamento: {aligner.requested_device}",
+            "Modelos de alinhamento no cache local",
+        )
+
+    if not whisperx_installed:
+        alignment_details = (
+            "WhisperX não instalado; sincronize runtime-cpu ou runtime-cu128.",
+        )
+    alignment_available = whisperx_installed and alignment_configuration_ok
+
     inspector = FfprobeInspector()
     downloader = YtDlpDownloader(
         js_runtime=selected_runtime[0] if selected_runtime else None,
@@ -180,7 +195,9 @@ def build_ui_dependencies(
         output_dir=settings.output_dir,
         cache_dir=settings.models_dir,
         workspace_factory=TempWorkspaceFactory(settings.temp_dir),
-        pipeline_factory=lambda: _pipeline_factory(inspector, downloader, transcriber),
+        pipeline_factory=lambda: _pipeline_factory(
+            inspector, downloader, transcriber, aligner
+        ),
         output_path_factory=lambda stem, _language: suggest_output_path(settings, stem),
         translate_available=False,
         readiness_ok=readiness_ok,
@@ -191,6 +208,12 @@ def build_ui_dependencies(
         youtube_readiness_details=youtube_details,
         transcription_available=transcription_available,
         transcription_readiness_details=transcription_details,
+        alignment_available=alignment_available,
+        alignment_readiness_details=alignment_details,
+        publishing_available=False,
+        publishing_readiness_details=(
+            "O publicador SRT será conectado nas Fases 6/7.",
+        ),
     )
 
 

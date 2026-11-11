@@ -87,6 +87,10 @@ class UiDependencies:
     youtube_readiness_details: tuple[str, ...] = ()
     transcription_available: bool = True
     transcription_readiness_details: tuple[str, ...] = ()
+    alignment_available: bool = True
+    alignment_readiness_details: tuple[str, ...] = ()
+    publishing_available: bool = True
+    publishing_readiness_details: tuple[str, ...] = ()
 
 
 class MainWindow(QMainWindow):
@@ -831,6 +835,16 @@ class MainWindow(QMainWindow):
             raise InvalidInputError(
                 "O reconhecimento Whisper não está pronto neste ambiente. " + details
             )
+        if not self._deps.alignment_available:
+            details = " ".join(self._deps.alignment_readiness_details)
+            raise InvalidInputError(
+                "O alinhamento WhisperX não está pronto neste ambiente. " + details
+            )
+        if not self._deps.publishing_available:
+            details = " ".join(self._deps.publishing_readiness_details)
+            raise InvalidInputError(
+                "A publicação final de legendas ainda não está disponível. " + details
+            )
         media_text = self.file_edit.text().strip()
         if not media_text:
             raise InvalidInputError("Selecione um arquivo ou informe uma URL.")
@@ -1158,6 +1172,8 @@ class MainWindow(QMainWindow):
             source_ready = (
                 self._deps.readiness_ok
                 and self._deps.transcription_available
+                and self._deps.alignment_available
+                and self._deps.publishing_available
                 and (
                     self._source_kind() is MediaKind.LOCAL_FILE
                     or self._deps.youtube_available
@@ -1183,6 +1199,8 @@ class MainWindow(QMainWindow):
         source_ready = (
             self._deps.readiness_ok
             and self._deps.transcription_available
+            and self._deps.alignment_available
+            and self._deps.publishing_available
             and (local_source or self._deps.youtube_available)
         )
         if snapshot.state is JobState.FAILED:
@@ -1204,6 +1222,8 @@ class MainWindow(QMainWindow):
 
         tool_details = " ".join(self._deps.readiness_details)
         whisper_details = " ".join(self._deps.transcription_readiness_details)
+        alignment_details = " ".join(self._deps.alignment_readiness_details)
+        publishing_details = " ".join(self._deps.publishing_readiness_details)
         media_requirement = (
             "FFmpeg e ffprobe precisam estar instalados. "
             if not self._deps.readiness_ok
@@ -1214,18 +1234,31 @@ class MainWindow(QMainWindow):
             if not self._deps.transcription_available
             else ""
         )
+        alignment_requirement = (
+            "O runtime WhisperX precisa ser instalado/configurado. "
+            if not self._deps.alignment_available
+            else ""
+        )
+        publishing_requirement = (
+            "A publicação final SRT ainda não foi implementada. "
+            if not self._deps.publishing_available
+            else ""
+        )
+        model_details = f"{whisper_details} {alignment_details} {publishing_details}"
 
         if local_source:
             if source_ready:
                 self.readiness_icon.setStyleSheet("color: #16845b;")
                 self.readiness_label.setText(
-                    f"FFmpeg, ffprobe e Whisper prontos. {tool_details} {whisper_details}"
+                    f"FFmpeg, ffprobe, Whisper, WhisperX e publicação SRT prontos. "
+                    f"{tool_details} {model_details}"
                 )
             else:
                 self.readiness_icon.setStyleSheet("color: #a96712;")
                 self.readiness_label.setText(
                     f"Geração local indisponível. {media_requirement}"
-                    f"{whisper_requirement}{tool_details} {whisper_details}"
+                    f"{whisper_requirement}{alignment_requirement}"
+                    f"{publishing_requirement}{tool_details} {model_details}"
                 )
             return
 
@@ -1233,9 +1266,9 @@ class MainWindow(QMainWindow):
         if source_ready:
             self.readiness_icon.setStyleSheet("color: #16845b;")
             self.readiness_label.setText(
-                "YouTube e reconhecimento Whisper prontos. "
+                "YouTube, Whisper, WhisperX e publicação SRT prontos. "
                 f"FFmpeg/ffprobe verificados. {tool_details} "
-                f"{whisper_details} {online_details}"
+                f"{model_details} {online_details}"
             )
         else:
             youtube_requirement = (
@@ -1246,8 +1279,9 @@ class MainWindow(QMainWindow):
             self.readiness_icon.setStyleSheet("color: #a96712;")
             self.readiness_label.setText(
                 f"YouTube indisponível. {media_requirement}"
-                f"{whisper_requirement}{youtube_requirement}"
-                f"{tool_details} {whisper_details} {online_details}"
+                f"{whisper_requirement}{alignment_requirement}"
+                f"{publishing_requirement}{youtube_requirement}"
+                f"{tool_details} {model_details} {online_details}"
             )
 
     def _set_inputs_enabled(self, enabled: bool) -> None:

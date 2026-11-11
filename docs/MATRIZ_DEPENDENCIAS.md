@@ -97,7 +97,21 @@ Um conflito identificado na prova de avaliação: `datasets>=5.2` exige `hugging
 - O perfil inicial configurado por padrão é `base`; `tiny`, `small`, `medium`, `large` e `turbo` são perfis multilíngues selecionáveis por configuração. O padrão é uma escolha inicial, não uma homologação de qualidade.
 - `LEGENDAR_WHISPER_MODEL` seleciona o perfil. `LEGENDAR_WHISPER_DEVICE` aceita `auto`, `cpu`, `cuda` ou `mps`; `auto` prioriza CUDA, depois MPS e por fim CPU.
 - Os pesos são baixados na primeira utilização e mantidos em `<models_dir>/whisper` (por padrão, sob `~/.cache/legendar/models/whisper`). O cache não pertence ao workspace temporário e nunca é removido ao cancelar um job.
-- O adaptador utiliza `task="transcribe"`, sem tradução automática e sem timestamps por palavra. Segmentos do decoder não são tratados como forced alignment; a Fase 5 continua responsável pela sincronização temporal.
+- O adaptador utiliza `task="transcribe"`, sem tradução automática e sem timestamps por palavra. Segmentos do decoder são preservados em `TranscriptSegment.alignment_window` apenas como janelas aproximadas de busca.
+
+### Forced alignment local (Fase 5)
+
+- WhisperX estável 3.8.6 é o alinhador concreto; manter a faixa `>=3.8.6,<3.8.7` e o lock atual.
+- Modelos de alinhamento: PT `jonatasgrosman/wav2vec2-large-xlsr-53-portuguese`; EN `WAV2VEC2_ASR_BASE_960H` (torchaudio).
+- `LEGENDAR_ALIGN_DEVICE`: `auto`, `cpu` ou `cuda`; MPS não é anunciado para WhisperX 3.8.6.
+- Pesos persistem em `<models_dir>/whisperx-align`; NLTK `punkt_tab` é preparado sob `<models_dir>/whisperx-align/nltk_data`. O primeiro uso exige rede e cache gravável.
+- O adaptador passa waveform PCM mono/16 kHz já carregado, evitando depender do caminho de leitura TorchCodec/pyannote; isso não declara TorchCodec homologado.
+- Whisper segment-level start/end são apenas `alignment_window` local. O tempo final vem do forced alignment e recebe `AudioAsset.timeline_start_seconds` uma única vez.
+- `interpolate_method="ignore"` mantém palavras sem evidência acústica sem timestamp. Palavras ausentes/incompatíveis, score inválido, janelas fora do áudio e sobreposição ficam nos diagnósticos.
+- Offset de stream pode ser negativo; intervalos finais continuam sujeitos ao invariante não negativo de `TimeRange`.
+- Score do alinhador não é probabilidade calibrada; não usar sozinho como medida de confiança de produto.
+- O smoke FLEURS PT-BR/EN valida execução, WER lexical, cobertura e limites; erro temporal só é calculado com manifesto local e fronteiras humanas revisadas (`scripts/phase5_alignment_evaluation.py`).
+
 
 FFmpeg/ffprobe não são substituídos por pacotes Python com nomes semelhantes. O aplicativo deverá apresentar orientações para instalar ferramentas ausentes, sem alterar o sistema operacional silenciosamente.
 
@@ -134,7 +148,9 @@ O log registrou um aviso não bloqueante de TorchCodec/pyannote: as bibliotecas 
 
 A Fase 4 acrescenta `scripts/phase4_model_benchmark.py`: comparação reproduzível de modelos com WER, CER, RTF, duração, RSS e versões. O script usa FLEURS ou um manifesto TSV local (`language`, `audio`, `reference`); o relatório contém métricas e IDs sintéticos, nunca áudio ou texto transcrito. A CI executa smoke test CPU PT-BR/EN em Python 3.12. A qualidade no computador-alvo e em corpus representativo de pregações precisa ser medida antes de declarar um perfil recomendado.
 
-A precisão de alinhamento deve ser medida com timestamps humanos anotados e amostras representativas do uso final.
+
+A Fase 5 acrescenta `scripts/phase5_alignment_smoke.py` para executar Whisper + WhisperX reais em amostras FLEURS PT-BR/EN, medindo WER lexical, cobertura, RTF e bounds. Como FLEURS não oferece fronteiras humanas, não mede erro temporal. Para esse gate, `scripts/phase5_alignment_evaluation.py` aceita JSONL local com palavras e tempos humanos; calcula erros de início/fim, mediana/P95, cobertura e não alinhadas, sem copiar caminhos, áudio ou texto para o relatório. Os limites de 150 ms (mediana) e 350 ms (P95) são metas provisórias e exigem corpus representativo antes de declarar aceitação.
+
 
 ### POC de idioma
 

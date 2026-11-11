@@ -79,9 +79,10 @@ class TimeRange:
 class TimelineMapping:
     """Mapeamento aditivo de tempo local para a linha do tempo da mídia.
 
-    ``source_offset`` é o ``start_time`` do stream de áudio selecionado no
-    contêiner original; ``chunk_offset`` é o deslocamento global do chunk
-    dentro do stream normalizado. Não somar offsets mais de uma vez.
+    ``source_offset`` é o ``start_time`` do stream e pode ser negativo quando
+    a faixa começa antes de zero. ``chunk_offset`` é o deslocamento do chunk.
+    A conversão final ainda exige ranges não negativos por meio de ``TimeRange``.
+    Nunca some offsets mais de uma vez.
     """
 
     source_offset: float = 0.0
@@ -94,8 +95,6 @@ class TimelineMapping:
         object.__setattr__(
             self, "chunk_offset", _require_finite("chunk_offset", self.chunk_offset)
         )
-        if self.source_offset + self.chunk_offset < 0:
-            raise TemporalError("offset global não pode ser negativo")
 
     @property
     def global_offset(self) -> float:
