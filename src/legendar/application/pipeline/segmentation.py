@@ -238,44 +238,6 @@ def _clip_to_previous(window: TimeRange, last_end: float) -> TimeRange | None:
     return window
 
 
-def _groups_for_segment(
-    segment: TranscriptSegment,
-    policy: SegmentationPolicy,
-    dropped: list[int],
-    position: int,
-) -> tuple[list[tuple[TimeRange, str]], bool]:
-    """Agrupa o segmento em janelas temporais com texto final.
-
-    Cada item retornado é ``(janela, texto)``; a janela vem sempre de dados
-    temporais reais (palavras alinhadas ou intervalo do segmento). O segundo
-    elemento do retorno indica se houve subdivisão por velocidade de leitura.
-    """
-    aligned: list[tuple[TranscriptWord, TimeRange]] = [
-        (word, word.range) for word in segment.words if word.range is not None
-    ]
-    if aligned:
-        groups = _split_words(aligned, policy)
-        refined = _refine_for_reading_speed(groups, policy)
-        windows = [
-            (TimeRange(start=group[0][1].start, end=group[-1][1].end), _text_of(group))
-            for group in refined
-        ]
-        return windows, len(refined) > len(groups)
-
-    if segment.range is None:
-        dropped.append(position)
-        return [], False
-
-    text = " ".join(segment.text.split())
-    if not text:
-        dropped.append(position)
-        return [], False
-
-    # Sem palavras alinhadas: usa o intervalo do próprio segmento, preservando
-    # o texto original. Nenhum tempo novo é inventado.
-    return [(segment.range, text)], False
-
-
 def _split_words(
     words: list[tuple[TranscriptWord, TimeRange]],
     policy: SegmentationPolicy,
