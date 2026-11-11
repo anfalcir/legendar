@@ -76,14 +76,25 @@ class TrackValidationReport:
         return self.status is QualityStatus.BLOCKED
 
     @property
+    def review_cue_indices(self) -> tuple[int, ...]:
+        return tuple(sorted({index for issue in self.issues for index in issue.cue_indices}))
+
+    @property
+    def approved_cue_count(self) -> int:
+        return max(0, self.cue_count - len(self.review_cue_indices))
+
+    @property
     def summary(self) -> str:
         if self.status is QualityStatus.APPROVED:
             return f"Qualidade editorial aprovada: {self.cue_count} cues."
         if self.status is QualityStatus.BLOCKED:
             return "Publicação bloqueada: " + "; ".join(self.blocked_reasons)
+        details = " | ".join(issue.message for issue in self.issues[:3])
+        suffix = " | ..." if len(self.issues) > 3 else ""
         return (
-            f"Revisão editorial necessária: {len(self.issues)} ocorrência(s) "
-            f"em {self.cue_count} cues."
+            f"Revisão editorial necessária: {self.approved_cue_count} cue(s) sem "
+            f"alerta; {len(self.review_cue_indices)} cue(s) para revisar. "
+            f"{details}{suffix}"
         )
 
 
