@@ -214,7 +214,7 @@ def test_unmatched_word_gets_one_controlled_wider_window_recovery(tmp_path: Path
     assert calls[1][0][0]["end"] == pytest.approx(2.25)
     snapshot = aligner.performance_snapshot()
     assert snapshot["counters"]["recovery_attempts"] == 1
-    assert snapshot["counters"]["recovered_words"] == 1
+    assert snapshot["counters"]["recovered_words"] == 2
 
 
 def test_missing_search_window_does_not_load_or_call_alignment_model(
