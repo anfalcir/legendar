@@ -179,7 +179,9 @@ def test_grounding_is_opt_in() -> None:
     plain_calls: list = []
     grounded_calls: list = []
     plain = _translator(calls=plain_calls)
-    grounded = _translator(calls=grounded_calls, grounding=True)
+    grounded = _translator(
+        calls=grounded_calls, grounding=True, model="gemini-3.5-flash-lite"
+    )
     unit = _units("The city is old.")
 
     plain.translate(
@@ -446,3 +448,9 @@ def test_environment_numeric_configuration_is_validated(
     monkeypatch.setenv("LEGENDAR_GEMINI_BATCH_SIZE", "not-an-int")
     with pytest.raises(ValueError, match="numérica Gemini"):
         GeminiTranslator.from_environment(tmp_path)
+
+
+
+def test_grounding_rejects_models_without_search_support() -> None:
+    with pytest.raises(ValueError, match="grounding não está disponível"):
+        GeminiTranslator(api_key="test", grounding=True, model="gemini-3.8-flash")
