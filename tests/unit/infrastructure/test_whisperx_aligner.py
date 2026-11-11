@@ -104,7 +104,7 @@ def make_aligner(
         tmp_path / "models",
         device="cpu",
         model_loader=loader,
-        align_function=align_function_override or default_align_function,
+        align_function=default_align_function,
         device_resolver=lambda requested: requested,
         audio_loader=lambda _audio: waveform or FakeWaveform(),
         version_provider=lambda: "3.8.6",
