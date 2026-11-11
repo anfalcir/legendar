@@ -9,6 +9,7 @@ nunca inclui áudio, transcrição de referência ou hipótese.
 from __future__ import annotations
 
 import argparse
+import csv
 import gc
 import json
 import os
@@ -40,6 +41,56 @@ except ModuleNotFoundError:
 BACKENDS = ("openai-whisper", "faster-whisper")
 MODEL_PROFILES = ("tiny", "base", "small", "medium", "large", "turbo")
 
+
+
+def _load_local_manifest(manifest: Path) -> list[dict[str, Any]]:
+    """Lê áudio local com referência humana opcional; caminhos/textos não vão ao relatório."""
+    from legendar.domain.value_objects.language import Language
+
+    manifest = manifest.expanduser().resolve()
+    if not manifest.is_file():
+        raise FileNotFoundError(f"Manifesto não encontrado: {manifest}")
+    samples: list[dict[str, Any]] = []
+    with manifest.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\\t")
+        required = {"language", "audio"}
+        headers = {
+            (name or "").strip().casefold() for name in (reader.fieldnames or [])
+        }
+        if not required.issubset(headers):
+            raise ValueError("Manifesto TSV exige as colunas language e audio.")
+        for row_number, row in enumerate(reader, start=2):
+            normalized = {
+                (key or "").strip().casefold(): (value or "").strip()
+                for key, value in row.items()
+            }
+            language = Language.parse(normalized.get("language"))
+            if language is None:
+                raise ValueError(
+                    f"Linha {row_number}: idioma deve ser pt-BR/pt ou en/en-US."
+                )
+            audio_value = normalized.get("audio", "")
+            if not audio_value:
+                raise ValueError(f"Linha {row_number}: áudio é obrigatório.")
+            audio_path = Path(audio_value).expanduser()
+            if not audio_path.is_absolute():
+                audio_path = manifest.parent / audio_path
+            audio_path = audio_path.resolve()
+            if not audio_path.is_file():
+                raise FileNotFoundError(
+                    f"Linha {row_number}: arquivo de áudio não encontrado."
+                )
+            samples.append(
+                {
+                    "sample_id": f"local-{len(samples) + 1:04d}",
+                    "language": language.value,
+                    "reference": normalized.get("reference") or None,
+                    "audio_path": str(audio_path),
+                }
+            )
+    if not samples:
+        raise ValueError("O manifesto não contém amostras.")
+    return samples
 
 def _package_version(name: str) -> str:
     try:
@@ -113,7 +164,7 @@ def run_benchmark(
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
     started = time.perf_counter()
     samples = (
-        _load_manifest_rows(manifest)
+        _load_local_manifest(manifest)
         if manifest is not None
         else _load_fleurs_rows(cache_dir / "dataset", samples_per_language)
     )
@@ -164,7 +215,12 @@ def run_benchmark(
                         progress=_NullProgress(),
                     )
                     elapsed = time.perf_counter() - inference_started
-                    reference = _normalize_text(sample["reference"])
+                    reference_value = sample.get("reference")
+                    reference = (
+                        _normalize_text(reference_value)
+                        if isinstance(reference_value, str)
+                        else None
+                    )
                     hypothesis = _normalize_text(transcript.text)
                     if not hypothesis:
                         raise RuntimeError(
@@ -177,10 +233,20 @@ def run_benchmark(
                         "sample_id": sample["sample_id"],
                         "language": sample["language"],
                         "audio_duration_seconds": round(duration, 3),
-                        "reference_word_count": len(reference.split()),
+                        "reference_word_count": (
+                            len(reference.split()) if reference is not None else None
+                        ),
                         "hypothesis_word_count": len(hypothesis.split()),
-                        "wer": round(float(wer(reference, hypothesis)), 6),
-                        "cer": round(float(cer(reference, hypothesis)), 6),
+                        "wer": (
+                            round(float(wer(reference, hypothesis)), 6)
+                            if reference is not None
+                            else None
+                        ),
+                        "cer": (
+                            round(float(cer(reference, hypothesis)), 6)
+                            if reference is not None
+                            else None
+                        ),
                         "transcription_wall_seconds": round(elapsed, 3),
                         "real_time_factor": round(elapsed / max(duration, 0.001), 4),
                         "first_sample_includes_cold_model_load": len(model_records)
@@ -197,16 +263,41 @@ def run_benchmark(
                 for item in model_records:
                     by_language.setdefault(item["language"], []).append(item)
                 key = f"{backend}:{model_name}"
+                scored_records = [
+                    item for item in model_records if item["wer"] is not None
+                ]
                 summaries[key] = {
                     "samples": len(model_records),
+                    "quality_scored_samples": len(scored_records),
                     "languages": {
                         language: {
                             "samples": len(items),
-                            "mean_wer": round(
-                                sum(item["wer"] for item in items) / len(items), 6
+                            "quality_scored_samples": sum(
+                                item["wer"] is not None for item in items
                             ),
-                            "mean_cer": round(
-                                sum(item["cer"] for item in items) / len(items), 6
+                            "mean_wer": (
+                                round(
+                                    sum(
+                                        item["wer"] for item in items
+                                        if item["wer"] is not None
+                                    )
+                                    / sum(item["wer"] is not None for item in items),
+                                    6,
+                                )
+                                if any(item["wer"] is not None for item in items)
+                                else None
+                            ),
+                            "mean_cer": (
+                                round(
+                                    sum(
+                                        item["cer"] for item in items
+                                        if item["cer"] is not None
+                                    )
+                                    / sum(item["cer"] is not None for item in items),
+                                    6,
+                                )
+                                if any(item["cer"] is not None for item in items)
+                                else None
                             ),
                             "mean_real_time_factor": round(
                                 sum(item["real_time_factor"] for item in items)
@@ -269,13 +360,19 @@ def run_benchmark(
             language_comparison[language] = {
                 "baseline_mean_wer": baseline["mean_wer"],
                 "candidate_mean_wer": candidate["mean_wer"],
-                "wer_delta_absolute": round(
-                    candidate["mean_wer"] - baseline["mean_wer"], 6
+                "wer_delta_absolute": (
+                    round(candidate["mean_wer"] - baseline["mean_wer"], 6)
+                    if candidate["mean_wer"] is not None
+                    and baseline["mean_wer"] is not None
+                    else None
                 ),
                 "baseline_mean_cer": baseline["mean_cer"],
                 "candidate_mean_cer": candidate["mean_cer"],
-                "cer_delta_absolute": round(
-                    candidate["mean_cer"] - baseline["mean_cer"], 6
+                "cer_delta_absolute": (
+                    round(candidate["mean_cer"] - baseline["mean_cer"], 6)
+                    if candidate["mean_cer"] is not None
+                    and baseline["mean_cer"] is not None
+                    else None
                 ),
                 "baseline_mean_rtf": baseline_rtf,
                 "candidate_mean_rtf": candidate_rtf,
@@ -307,6 +404,9 @@ def run_benchmark(
             else {
                 "id": "local-manifest",
                 "manifest_sample_count": len(samples),
+                "quality_scored_samples": sum(
+                    isinstance(sample.get("reference"), str) for sample in samples
+                ),
                 "audio_and_references_not_embedded": True,
             }
         ),
@@ -331,6 +431,7 @@ def run_benchmark(
             "FLEURS é fala lida; não representa sermões, fala espontânea, música, ruído ou sobreposição.",
             "WER/CER medem reconhecimento lexical, não qualidade de timestamps.",
             "Amostras pequenas no CI são smoke tests, não aceite estatístico do produto.",
+            "Manifestos locais sem coluna/reference permitem medir desempenho, mas WER/CER ficam sem pontuação.",
             "Resultados de runners GitHub não predizem desempenho no computador de referência.",
             "O primeiro sample de cada backend/model inclui carga fria; os demais reutilizam o modelo.",
             "VAD permanece desabilitado para comparação justa; seu efeito exige experimento separado.",
