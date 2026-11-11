@@ -38,7 +38,7 @@ except ModuleNotFoundError:
     )
 
 BACKENDS = ("openai-whisper", "faster-whisper")
-MODEL_PROFILES = ("tiny", "base", "small", "medium", "large-v3", "turbo")
+MODEL_PROFILES = ("tiny", "base", "small", "medium", "large", "turbo")
 
 
 def _package_version(name: str) -> str:
