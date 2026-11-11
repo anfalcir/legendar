@@ -357,7 +357,7 @@ class WhisperXAligner:
         version_provider: VersionProvider = _package_version,
         punkt_preparer: PunktPreparer = _ensure_punkt_data,
         max_window_seconds: float = MAX_ALIGNMENT_WINDOW_SECONDS,
-        recovery_padding_seconds: float = DEFAULT_RECOVERY_PADDING_SECONDS,
+        recovery_padding_seconds: float = 0.0,
     ) -> None:
         normalized_device = (device or "").strip().lower()
         if normalized_device not in SUPPORTED_DEVICES:
@@ -407,9 +407,20 @@ class WhisperXAligner:
 
     @classmethod
     def from_environment(cls, models_dir: Path) -> WhisperXAligner:
+        recovery_padding = os.environ.get(
+            "LEGENDAR_ALIGN_RECOVERY_PADDING_SECONDS",
+            str(DEFAULT_RECOVERY_PADDING_SECONDS),
+        )
+        try:
+            recovery_padding_seconds = float(recovery_padding)
+        except ValueError as exc:
+            raise ValueError(
+                "LEGENDAR_ALIGN_RECOVERY_PADDING_SECONDS deve ser numérico."
+            ) from exc
         return cls(
             models_dir=models_dir,
             device=os.environ.get("LEGENDAR_ALIGN_DEVICE", DEFAULT_DEVICE),
+            recovery_padding_seconds=recovery_padding_seconds,
         )
 
     @property
