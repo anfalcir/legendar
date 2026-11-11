@@ -3,6 +3,7 @@ name: Phase 8 quality
 on:
   push:
     branches:
+      - main
       - "phase-8/**"
       - "phase-9/**"
   pull_request:
