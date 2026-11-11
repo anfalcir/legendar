@@ -234,9 +234,9 @@ def build_ui_dependencies(
         )
     alignment_available = whisperx_installed and alignment_configuration_ok
 
-    translation_backend = os.environ.get(
-        "LEGENDAR_TRANSLATION_BACKEND", "nllb"
-    ).strip().casefold()
+    translation_backend = (
+        os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "nllb").strip().casefold()
+    )
     translation_configuration_ok = True
 
     if translation_backend == "gemini":
