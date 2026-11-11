@@ -333,7 +333,7 @@ class GeminiTranslator:
             "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
-                "temperature": 0.2,
+                "temperature": 1.0 if self.grounding else 0.2,
                 "maxOutputTokens": 8192,
                 "responseMimeType": "application/json",
                 "responseJsonSchema": _response_schema(),
@@ -360,7 +360,12 @@ class GeminiTranslator:
                         "output_tokens",
                         int(usage.get("candidatesTokenCount", 0)),
                     )
+                candidates = response.get("candidates", [])
                 grounding = response.get("groundingMetadata", {})
+                if not grounding and isinstance(candidates, list) and candidates:
+                    first = candidates[0]
+                    if isinstance(first, Mapping):
+                        grounding = first.get("groundingMetadata", {})
                 if isinstance(grounding, Mapping):
                     queries = grounding.get("webSearchQueries", [])
                     if isinstance(queries, list):
