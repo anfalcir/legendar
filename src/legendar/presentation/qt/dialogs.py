@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from legendar.domain.value_objects.language import Language
 from legendar.presentation.qt.preferences import UiPreferences
+from legendar.presentation.qt.widgets import prepare_combo
 
 
 class JobConfirmationDialog(QDialog):
@@ -51,8 +52,7 @@ class JobConfirmationDialog(QDialog):
         eyebrow = QLabel("REVISÃO DO TRABALHO")
         eyebrow.setObjectName("eyebrow")
         title = QLabel("Tudo pronto para começar?")
-        title.setObjectName("sectionTitle")
-        title.setStyleSheet("font-size: 16pt;")
+        title.setObjectName("dialogTitle")
         subtitle = QLabel(
             "Confira a mídia e o destino antes de iniciar o processamento."
         )
@@ -155,7 +155,7 @@ class PreferencesDialog(QDialog):
         form.setVerticalSpacing(14)
         form.setHorizontalSpacing(18)
 
-        self.theme_combo = QComboBox(self)
+        self.theme_combo = prepare_combo(QComboBox(self))
         self.theme_combo.setObjectName("themeCombo")
         self.theme_combo.addItem("Seguir o sistema", "system")
         self.theme_combo.addItem("Claro", "light")
@@ -164,7 +164,7 @@ class PreferencesDialog(QDialog):
             max(0, self.theme_combo.findData(preferences.theme))
         )
 
-        self.language_combo = QComboBox(self)
+        self.language_combo = prepare_combo(QComboBox(self))
         self.language_combo.setObjectName("defaultLanguageCombo")
         for language in Language:
             self.language_combo.addItem(language.label_pt, language.value)

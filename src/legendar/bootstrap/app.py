@@ -26,6 +26,7 @@ from legendar.infrastructure.media.tools import ToolStatus, locate_tools
 from legendar.infrastructure.media.youtube import YtDlpDownloader
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.nllb import NllbTranslator
+from legendar.presentation.qt.branding import app_icon
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
 
 ToolLocator = Callable[[tuple[str, ...]], Mapping[str, ToolStatus]]
@@ -249,6 +250,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     app = QApplication(list(argv) if argv is not None else sys.argv)
     app.setApplicationName("Legendar")
     app.setApplicationVersion(__version__)
+    app.setWindowIcon(app_icon())
     window = MainWindow(build_ui_dependencies(settings))
     window.show()
     return int(app.exec())

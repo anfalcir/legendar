@@ -38,3 +38,27 @@ def ensure_directory(path: Path) -> Path:
     """Cria ``path`` se necessário e devolve o próprio caminho."""
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+PRIVATE_DIRECTORY_MODE = 0o700
+
+
+def ensure_private_directory(path: Path) -> Path:
+    """Cria ``path`` e garante que só o dono possa listar/escrever.
+
+    Bibliotecas de terceiros recusam cache compartilhado: o NLTK 3.10 aborta o
+    ``download`` quando o diretório tem permissão de grupo, e o cache do produto
+    nascia com ``0o775`` por causa do ``umask 002`` de algumas distribuições. A
+    correção é explícita: cria com ``0o700`` e corrige diretórios já existentes.
+    """
+
+    path.mkdir(parents=True, exist_ok=True)
+    try:
+        current = path.stat().st_mode & 0o777
+        if current & 0o077:
+            path.chmod(PRIVATE_DIRECTORY_MODE)
+    except OSError:
+        # Sem permissão para ajustar: o chamador decide o que fazer; não
+        # escondemos o problema nem derrubamos a aplicação por causa disso.
+        return path
+    return path

@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import stat
 from pathlib import Path
 
 import pytest
 
-from legendar.infrastructure.filesystem.paths import ensure_directory, unique_path
+from legendar.infrastructure.filesystem.paths import (
+    PRIVATE_DIRECTORY_MODE,
+    ensure_directory,
+    ensure_private_directory,
+    unique_path,
+)
 
 
 def test_first_candidate_is_used_when_free(tmp_path: Path) -> None:
@@ -47,3 +53,24 @@ def test_ensure_directory_is_idempotent(tmp_path: Path) -> None:
     assert ensure_directory(target) == target
     assert target.is_dir()
     assert ensure_directory(target) == target
+
+
+def test_private_directory_is_created_owner_only(tmp_path: Path) -> None:
+    """Achado 12: cache com 0o775 fazia o NLTK recusar o download."""
+
+    target = tmp_path / "cache" / "nltk_data"
+
+    assert ensure_private_directory(target) == target
+    assert target.is_dir()
+    assert stat.S_IMODE(target.stat().st_mode) == PRIVATE_DIRECTORY_MODE
+
+
+def test_private_directory_fixes_a_group_writable_cache(tmp_path: Path) -> None:
+    target = tmp_path / "models"
+    target.mkdir()
+    target.chmod(0o775)
+
+    ensure_private_directory(target)
+
+    assert stat.S_IMODE(target.stat().st_mode) == PRIVATE_DIRECTORY_MODE
+

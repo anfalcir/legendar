@@ -4,10 +4,10 @@
 - **Repositório:** anfalcir/legendar
 - **Branch padrão / base de integração:** `main`
 - **Fases concluídas e integradas:** 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9
-- **Fase em execução:** Fase 10 — correções e endurecimento pós-homologação; plano aprovado para execução em [FASE_10_PLANO.md](FASE_10_PLANO.md) (implementação ainda não iniciada)
-- **Próxima etapa:** homologação do usuário com mídia real, modelos completos e computador-alvo — roteiro em [HOMOLOGACAO.md](HOMOLOGACAO.md); os 13 achados da rodada de 11/11/2026 estão mapeados no plano da Fase 10
-- **Suíte determinística:** 452 testes aprovados e 86% de cobertura com FFmpeg/ffprobe no `PATH`; 442 aprovados e 10 skips explícitos sem as ferramentas
-- **Documentação:** guias de arquitetura, operação, instalação e decisões publicados; links relativos verificados automaticamente
+- **Fase em execução:** Fase 10 — correções pós-homologação implementadas; evidências e roteiro em [HANDOFF_FASE_10.md](HANDOFF_FASE_10.md)
+- **Próxima etapa:** homologação do usuário com mídia real, modelos completos e computador-alvo — roteiro em [HOMOLOGACAO.md](HOMOLOGACAO.md); os 13 achados da rodada de 11/11/2026 estão corrigidos
+- **Suíte determinística:** 464 testes aprovados e 10 skips explícitos sem FFmpeg/ffprobe no `PATH` (474 com as ferramentas)
+- **Documentação:** guias de arquitetura, operação, instalação, decisões e o handoff da Fase 10 publicados; links relativos verificados automaticamente
 - **Manifestos:** `pyproject.toml` e `uv.lock`; o `requirements.txt` legado foi removido
 
 > Este documento registra a realidade do repositório, não a intenção. Toda
@@ -42,6 +42,7 @@ completos, hardware do usuário e julgamento editorial, listada na seção 6.
 | Fase 7 | Branch `phase-7/gui-pipeline-integration`; squash `9ccab33` |
 | Fase 8 | Branch `phase-8/validation`; squash `e9e2a18` |
 | Fase 9 | Branch `phase-9/documentation`; squash local `8f82e83` (fast-forward à `main`) |
+| Fase 10 | Correções dos 13 achados aplicadas na `main`; evidências em [HANDOFF_FASE_10.md](HANDOFF_FASE_10.md) |
 | CI da fase 8/9 | `phase8-quality.yml` roda em pushes para `main`, `phase-8/**` e `phase-9/**` e em PRs para `main`; correção do job documental em `b1a83f9`; run [#42999223201](https://github.com/anfalcir/legendar/actions/runs/42999223201) aprovado em 5/5 jobs |
 | `main` (base de integração) | Correção de CI `b1a83f9` integrada diretamente; HEAD remoto e checks confirmados no GitHub |
 | Motivo do squash local (6–9) | criação de PR indisponível no ambiente de execução (sem `gh` e sem token) |

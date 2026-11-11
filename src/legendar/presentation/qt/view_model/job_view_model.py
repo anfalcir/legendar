@@ -46,6 +46,8 @@ class JobViewSnapshot:
     log_lines: tuple[str, ...] = ()
     output_path: str = ""
     error_message: str = ""
+    notice_message: str = ""
+    notice_level: str = ""
 
     @property
     def progress_percent(self) -> int:
@@ -99,6 +101,8 @@ class JobViewModel:
             self._snapshot,
             status_text=f"Falha: {message}",
             error_message=message,
+            notice_message=message,
+            notice_level="error",
             log_lines=_append_text(
                 self._snapshot.log_lines, _timestamped(f"Erro: {message}")
             ),
@@ -109,6 +113,8 @@ class JobViewModel:
         """Registra um aviso operacional sem alterar o estado do processamento."""
         self._snapshot = replace(
             self._snapshot,
+            notice_message=message,
+            notice_level="warning",
             log_lines=_append_text(
                 self._snapshot.log_lines, _timestamped(f"Aviso: {message}")
             ),
@@ -133,6 +139,8 @@ class JobViewModel:
                 snapshot,
                 status_text=f"Processando: {event.source_label or 'mídia'}",
                 error_message="",
+                notice_message="",
+                notice_level="",
                 output_path="",
                 log_lines=_append_text(
                     snapshot.log_lines,
@@ -169,6 +177,8 @@ class JobViewModel:
                 status_text=f"Legenda publicada: {event.output_path}",
                 output_path=event.output_path,
                 error_message="",
+                notice_message="",
+                notice_level="",
                 progress_known=True,
                 log_lines=_append_text(
                     snapshot.log_lines,
@@ -184,6 +194,8 @@ class JobViewModel:
                 state=JobState.FAILED,
                 status_text=f"Falha: {event.message}",
                 error_message=event.message,
+                notice_message=event.message,
+                notice_level="error",
                 output_path="",
                 log_lines=_append_text(
                     snapshot.log_lines,

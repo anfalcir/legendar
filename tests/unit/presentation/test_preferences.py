@@ -21,7 +21,7 @@ def test_preferences_load_with_safe_defaults(tmp_path: Path) -> None:
     assert preferences.theme == "system"
     assert preferences.output_dir == tmp_path / "output"
     assert preferences.target_language is Language.PORTUGUESE
-    assert preferences.log_expanded is True
+    assert preferences.log_expanded is False
 
 
 def test_preferences_round_trip_without_persisting_media_paths(

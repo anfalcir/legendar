@@ -11,6 +11,11 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from legendar.infrastructure.filesystem.paths import (
+    ensure_directory,
+    ensure_private_directory,
+)
+
 APP_NAME = "legendar"
 
 
@@ -54,9 +59,17 @@ class AppSettings:
         )
 
     def ensure_directories(self) -> None:
-        """Cria diretórios de cache/log/temp; nunca o diretório de saída."""
-        for path in (self.cache_dir, self.models_dir, self.logs_dir, self.temp_dir):
-            path.mkdir(parents=True, exist_ok=True)
+        """Cria cache/log/temp; nunca o diretório de saída.
+
+        Cache e temporários nascem privados (``0o700``) porque ferramentas de
+        terceiros recusam diretórios graváveis pelo grupo — é a causa da falha
+        do ``punkt_tab`` no fim do alinhamento.
+        """
+
+        for path in (self.cache_dir, self.models_dir):
+            ensure_private_directory(path)
+        ensure_private_directory(self.temp_dir)
+        ensure_directory(self.logs_dir)
 
 
 def suggest_output_path(settings: AppSettings, source_label: str) -> Path:

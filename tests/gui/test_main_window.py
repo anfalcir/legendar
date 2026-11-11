@@ -341,14 +341,17 @@ def test_destructive_prompts_use_no_as_the_default_choice(
 def test_activity_panel_can_be_collapsed_and_expanded(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
-    assert window.log_view.isVisible()
-    qtbot.mouseClick(window.log_toggle, Qt.MouseButton.LeftButton)
+    # Padrão compacto: o formulário cabe em 1280x800 sem rolagem (achado 6).
     assert not window.log_view.isVisible()
     assert window._preferences.log_expanded is False
 
     qtbot.mouseClick(window.log_toggle, Qt.MouseButton.LeftButton)
     assert window.log_view.isVisible()
     assert window._preferences.log_expanded is True
+
+    qtbot.mouseClick(window.log_toggle, Qt.MouseButton.LeftButton)
+    assert not window.log_view.isVisible()
+    assert window._preferences.log_expanded is False
 
 
 def test_log_scroll_follows_only_when_the_user_is_at_the_bottom(
@@ -465,15 +468,16 @@ def test_progress_indicator_stops_animating_after_terminal_failure(
     window._thread = None
 
 
-def test_source_language_syncs_target_when_not_translating(
+def test_source_language_does_not_hijack_the_target_language(
     qtbot, tmp_path, media
 ) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
     window.source_combo.setCurrentIndex(window.source_combo.findData("en"))
 
-    assert window.target_combo.currentData() == "en"
-    assert not window.target_combo.isEnabled()
+    assert window.target_combo.currentData() == "pt"
+    assert window.target_combo.isEnabled()
+    assert "Sem tradução" in window.language_hint.text()
 
 
 def test_translation_checkbox_is_disabled_without_translator(qtbot, tmp_path) -> None:
@@ -496,22 +500,27 @@ def test_translation_checkbox_reports_missing_nllb_details(qtbot, tmp_path) -> N
     assert not window.translate_check.isEnabled()
 
 
-def test_translation_checkbox_enables_the_target_language(qtbot, tmp_path) -> None:
+def test_translation_checkbox_explains_the_effect_on_the_target(
+    qtbot, tmp_path
+) -> None:
     window = _window(
         qtbot, replace(_dependencies(tmp_path), translate_available=True), tmp_path
     )
     window.source_combo.setCurrentIndex(window.source_combo.findData("pt"))
+    window.target_combo.setCurrentIndex(window.target_combo.findData("en"))
 
     assert window.translate_check.isEnabled()
     assert "NLLB-200" in window.translate_check.toolTip()
-    assert not window.target_combo.isEnabled()
+    assert window.target_combo.isEnabled()
+    assert "Sem tradução" in window.language_hint.text()
 
     window.translate_check.setChecked(True)
 
     assert window.target_combo.isEnabled()
+    assert "NLLB-200" in window.language_hint.text()
 
 
-def test_translation_job_request_requires_distinct_languages(
+def test_translation_to_the_same_language_is_skipped(
     qtbot, tmp_path, media
 ) -> None:
     window = _window(
@@ -522,8 +531,10 @@ def test_translation_job_request_requires_distinct_languages(
     window.source_combo.setCurrentIndex(window.source_combo.findData("pt"))
     window.translate_check.setChecked(True)
 
-    with pytest.raises(InvalidInputError, match="mesmo idioma"):
-        window._build_job()
+    request, _label, _output = window._build_job()
+
+    assert request.translate is False
+    assert request.output_language is Language.PORTUGUESE
 
 
 def test_translation_job_request_requires_a_spoken_language(
@@ -561,7 +572,7 @@ def test_translation_job_request_carries_the_language_pair(
     assert request.output_language is Language.ENGLISH
 
 
-def test_without_translation_the_target_follows_the_source(
+def test_without_translation_the_target_must_match_the_spoken_language(
     qtbot, tmp_path, media
 ) -> None:
     window = _window(
@@ -571,6 +582,10 @@ def test_without_translation_the_target_follows_the_source(
     window.output_edit.setText(str(tmp_path / "saida.srt"))
     window.source_combo.setCurrentIndex(window.source_combo.findData("en"))
 
+    with pytest.raises(InvalidInputError, match="Sem tradução"):
+        window._build_job()
+
+    window.target_combo.setCurrentIndex(window.target_combo.findData("en"))
     request, _label, _output = window._build_job()
 
     assert request.translate is False
@@ -898,3 +913,79 @@ def test_open_folder_without_a_publication_explains_the_state(qtbot, tmp_path) -
         "Nenhum SRT foi publicado nesta sessão ainda."
         in window.statusBar().currentMessage()
     )
+
+
+def test_local_validation_failure_is_shown_in_a_banner(qtbot, tmp_path) -> None:
+    """Achado 11: a falha aparece no topo, não só como linha do histórico."""
+
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+
+    window._render(window.view_model.report_error("destino inválido"))
+
+    assert window.alert_banner.isVisible()
+    assert window.alert_banner.text() == "destino inválido"
+    assert window.alert_banner.property("level") == "error"
+
+    window._render(window.view_model.reset())
+
+    assert not window.alert_banner.isVisible()
+
+
+def test_warning_uses_the_softer_banner_level(qtbot, tmp_path) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+
+    window._render(window.view_model.report_warning("cache lento"))
+
+    assert window.alert_banner.isVisible()
+    assert window.alert_banner.property("level") == "warning"
+
+
+def test_single_audio_stream_is_not_editable(qtbot, tmp_path) -> None:
+    """Achado 10: sem escolha real, o campo de faixa não deve aceitar edição."""
+
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+
+    window._on_media_inspected(make_media_info())
+
+    assert window.stream_combo.count() == 2
+    assert not window.stream_combo.isEnabled()
+    assert "apenas uma faixa" in window.stream_combo.toolTip()
+
+
+def test_content_height_stays_compact_without_the_log(qtbot, tmp_path) -> None:
+    """Achado 6: o formulário não deve exigir rolagem em 1280×800."""
+
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    window.resize(1280, 800)
+    window.log_toggle.setChecked(False)
+    qtbot.wait(20)
+
+    assert window.content_column.sizeHint().height() <= 900
+    assert window.content_column.maximumWidth() == 1180
+
+
+def test_narrow_window_stacks_the_form_without_clipping_labels(
+    qtbot, tmp_path
+) -> None:
+    """Achados 2/3/6: janela estreita empilha campos em vez de cortar texto."""
+
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+
+    window.resize(820, 760)
+    qtbot.wait(20)
+    assert window._form_side_by_side is False
+    assert window._language_stacked is True
+
+    window.resize(1280, 800)
+    qtbot.wait(20)
+    assert window._form_side_by_side is True
+    assert window._language_stacked is False
+
+
+def test_elapsed_labels_are_human_readable() -> None:
+    from legendar.presentation.qt.main_window import _format_elapsed
+
+    assert _format_elapsed(9) == "9 s"
+    assert _format_elapsed(65) == "1 min 05 s"
+    assert _format_elapsed(3_725) == "1 h 02 min"
+

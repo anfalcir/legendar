@@ -30,6 +30,27 @@
 | 22 | Testes | Suíte determinística sem rede/modelos; mídia real marcada como `integration`/`e2e` e pulada sem FFmpeg | CI instala FFmpeg para executá-los sempre |
 | 23 | Baseline legada | `main.py`, `core/` e `gui/` preservados e caracterizados | remoção exige política em [LEGACY_BASELINE.md](LEGACY_BASELINE.md) |
 | 24 | Integração das Fases 6–8 | Squash local, sem PR, por indisponibilidade de `gh`/token no ambiente | histórico detalhado permanece nas branches de fase |
+| 25 | Tema | Fusion + `QPalette` completa + QSS no `QApplication` (não na janela) | menus, tooltips, popups e estados desabilitados seguem o tema |
+| 26 | Geometria da janela | `QByteArray` de `saveGeometry()`, reencaixe na tela atual e `window/maximized` | tamanho e posição sobrevivem à reabertura e à troca de monitor |
+| 27 | Feedback de falhas | `notice_message`/`notice_level` no snapshot + banner no topo; log continua com o detalhe | erro deixa de existir apenas no histórico |
+| 28 | Idiomas | falado e final independentes; tradução opcional; “mesmo idioma” não consome etapa | o usuário decide o destino sem perder a escolha anterior |
+| 29 | Layout da janela | página única, duas colunas ≥ 940 px, largura útil máxima de 1180 px | conteúdo compacto em 1280×800 e sem esticar em 4K |
+| 30 | Cache e temporários | diretórios privados `0o700` criados/corrigidos na inicialização | NLTK aceita baixar `punkt_tab` mesmo com `umask 002` |
+
+## Decisões da Fase 10 (D1–D6)
+
+Adotadas como padrão recomendado em [FASE_10_PLANO.md](FASE_10_PLANO.md) e
+implementadas em [HANDOFF_FASE_10.md](HANDOFF_FASE_10.md). Reverter qualquer uma
+exige atualizar este registro, os testes e o estado atual.
+
+| # | Tema | Decisão |
+|---|---|---|
+| D1 | Navegação | página única compacta, sem wizard |
+| D2 | Política de tradução | tradução opcional (AUTO); sem tradução a legenda sai no idioma falado |
+| D3 | Pares de idiomas | PT-BR e inglês |
+| D4 | Progresso | percentual quando medido; relógio de etapa quando não |
+| D5 | Notificações | banner persistente no topo + status bar |
+| D6 | Distribuição Linux | `.desktop` em `packaging/`; PyInstaller pendente |
 
 ## Decisões ainda abertas (dependem do usuário)
 

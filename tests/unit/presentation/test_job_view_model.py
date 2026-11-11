@@ -188,3 +188,39 @@ def test_reset_clears_everything() -> None:
     assert snapshot.state is JobState.IDLE
     assert snapshot.log_lines == ()
     assert snapshot.progress == 0.0
+
+
+def test_local_error_and_warning_become_visible_notices() -> None:
+    """Achado 11: erro e aviso precisam de destaque, não só de linha no log."""
+
+    vm = JobViewModel()
+
+    error = vm.report_error("destino inválido")
+    assert error.notice_message == "destino inválido"
+    assert error.notice_level == "error"
+
+    warning = vm.report_warning("cache de modelos lento")
+    assert warning.notice_message == "cache de modelos lento"
+    assert warning.notice_level == "warning"
+
+
+def test_notice_is_cleared_when_a_job_starts_and_set_on_failure() -> None:
+    vm = JobViewModel()
+    vm.report_error("falha local anterior")
+    vm.apply(_state(1, JobState.IDLE, JobState.VALIDATING_INPUT))
+
+    started = vm.apply(JobStarted("job-1", 2, source_label="aula.mp4"))
+    assert started.notice_message == ""
+    assert started.notice_level == ""
+
+    failed = vm.apply(JobFailed("job-1", 3, message="ffprobe não encontrado"))
+    assert failed.notice_message == "ffprobe não encontrado"
+    assert failed.notice_level == "error"
+
+    reset = vm.reset()
+    vm.apply(_state(1, JobState.IDLE, JobState.VALIDATING_INPUT))
+    restarted = vm.apply(JobStarted("job-2", 2, source_label="outra.mp4"))
+    assert reset.notice_message == ""
+    assert restarted.notice_message == ""
+    assert restarted.notice_level == ""
+

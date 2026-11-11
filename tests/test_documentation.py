@@ -44,6 +44,7 @@ REQUIRED_DOCUMENTS = (
     "docs/HANDOFF_FASE_7.md",
     "docs/HANDOFF_FASE_8.md",
     "docs/HANDOFF_FASE_9.md",
+    "docs/HANDOFF_FASE_10.md",
     "docs/RELATORIO_FASE_8.md",
     "docs/LEGACY_BASELINE.md",
 )

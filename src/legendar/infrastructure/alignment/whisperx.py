@@ -7,6 +7,7 @@ A interpolação automática do WhisperX é desativada para não criar timestamp
 
 from __future__ import annotations
 
+import contextlib
 import math
 import os
 import threading
@@ -31,6 +32,7 @@ from legendar.domain.errors.catalog import (
     UnsupportedLanguageError,
 )
 from legendar.domain.value_objects.time import TemporalError, TimelineMapping, TimeRange
+from legendar.infrastructure.filesystem.paths import ensure_private_directory
 from legendar.infrastructure.transcription.whisper import load_pcm_waveform
 
 SUPPORTED_DEVICES = frozenset({"auto", "cpu", "cuda"})
@@ -145,6 +147,10 @@ def _ensure_punkt_data(language_code: str, cache_dir: Path) -> None:
         raise ModelError("NLTK, exigido pelo WhisperX, não está instalado.") from exc
 
     cache_dir.mkdir(parents=True, exist_ok=True)
+    # O NLTK 3.10 recusa baixar em diretório gravável pelo grupo (umask 002 em
+    # várias distribuições). Garantir 0o700 aqui evita a falha que só aparecia
+    # no fim do alinhamento, depois de muitos minutos de trabalho.
+    ensure_private_directory(cache_dir)
     cache_value = str(cache_dir.resolve())
     if cache_value not in nltk.data.path:
         nltk.data.path.insert(0, cache_value)
@@ -176,6 +182,9 @@ def _ensure_punkt_data(language_code: str, cache_dir: Path) -> None:
             f"O pacote punkt_tab foi baixado, mas o recurso {punkt_language!r} "
             "não está disponível."
         ) from exc
+    for archive in cache_dir.glob("tokenizers/punkt_tab*.zip"):
+        with contextlib.suppress(OSError):
+            archive.unlink()
 
 
 def _finite_number(value: Any) -> float | None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QByteArray, QSettings
 
 from legendar.domain.value_objects.language import Language
 
@@ -19,7 +19,7 @@ class UiPreferences:
     theme: str = "system"
     output_dir: Path = Path.home()
     target_language: Language = Language.PORTUGUESE
-    log_expanded: bool = True
+    log_expanded: bool = False
 
     def __post_init__(self) -> None:
         if self.theme not in _VALID_THEMES:
@@ -50,7 +50,7 @@ def load_preferences(settings: QSettings, default_output_dir: Path) -> UiPrefere
         theme=theme,
         output_dir=output_dir,
         target_language=language,
-        log_expanded=settings.value("ui/log_expanded", True, type=bool),
+        log_expanded=settings.value("ui/log_expanded", False, type=bool),
     )
 
 
@@ -58,12 +58,15 @@ def save_preferences(
     settings: QSettings,
     preferences: UiPreferences,
     *,
-    geometry: bytes | None = None,
+    geometry: QByteArray | bytes | None = None,
+    maximized: bool | None = None,
 ) -> None:
     """Persiste somente tema, destino, idioma, log e geometria da janela.
 
     Caminho de mídia, conteúdo de transcrição, tokens e credenciais não fazem
-    parte do contrato persistido.
+    parte do contrato persistido. ``geometry`` deve ser o ``QByteArray`` de
+    ``QMainWindow.saveGeometry()``; ``bytes`` continua aceito por
+    compatibilidade com instalações que gravaram a forma antiga.
     """
 
     settings.setValue("ui/theme", preferences.theme)
@@ -72,4 +75,6 @@ def save_preferences(
     settings.setValue("ui/log_expanded", preferences.log_expanded)
     if geometry is not None:
         settings.setValue("window/geometry", geometry)
+    if maximized is not None:
+        settings.setValue("window/maximized", bool(maximized))
     settings.sync()

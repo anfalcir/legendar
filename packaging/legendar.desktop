@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Legendar
+GenericName=Gerador de legendas
+Comment=Transcreva, alinhe e publique legendas SRT localmente
+Exec=legendar
+TryExec=legendar
+Icon=legendar
+Terminal=false
+Categories=AudioVideo;Video;Utility;
+Keywords=legenda;legendas;subtitles;transcricao;whisper;
+StartupNotify=true
+StartupWMClass=Legendar

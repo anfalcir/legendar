@@ -2,13 +2,29 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt, QThread, QUrl, Slot
-from PySide6.QtGui import QCloseEvent, QDesktopServices
+from PySide6.QtCore import (
+    QByteArray,
+    QRect,
+    QSettings,
+    QSize,
+    Qt,
+    QThread,
+    QTimer,
+    QUrl,
+    Slot,
+)
+from PySide6.QtGui import (
+    QCloseEvent,
+    QDesktopServices,
+    QGuiApplication,
+    QResizeEvent,
+)
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -39,6 +55,7 @@ from legendar.domain.errors.catalog import InvalidInputError, JobCancelledError
 from legendar.domain.events.job_events import JobCompleted, JobEvent, JobFailed
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
+from legendar.presentation.qt.branding import app_icon
 from legendar.presentation.qt.dialogs import (
     JobConfirmationDialog,
     PreferencesDialog,
@@ -48,11 +65,12 @@ from legendar.presentation.qt.preferences import (
     load_preferences,
     save_preferences,
 )
-from legendar.presentation.qt.theme import stylesheet_for
+from legendar.presentation.qt.theme import apply_theme
 from legendar.presentation.qt.view_model.job_view_model import (
     JobViewModel,
     JobViewSnapshot,
 )
+from legendar.presentation.qt.widgets import prepare_combo
 from legendar.presentation.qt.workers.job_worker import JobWorker
 from legendar.presentation.qt.workers.media_inspection_worker import (
     MediaInspectionWorker,
@@ -67,6 +85,32 @@ _MEDIA_FILTER = (
 )
 _SRT_FILTER = "Legenda SRT (*.srt)"
 _CLOSE_WAIT_MS = 5000
+
+
+def _as_byte_array(value: object) -> QByteArray | None:
+    """Normaliza o que o ``QSettings`` devolve para ``window/geometry``.
+
+    Versões anteriores gravavam ``bytes(self.saveGeometry())``. O Qt só aceita
+    ``QByteArray`` em ``restoreGeometry``; com ``bytes`` a restauração falhava
+    silenciosamente. A conversão mantém compatibilidade com instalações antigas.
+    """
+
+    if isinstance(value, QByteArray):
+        return value
+    if isinstance(value, (bytes, bytearray)):
+        return QByteArray(bytes(value))
+    return None
+
+
+def _format_elapsed(seconds: float) -> str:
+    total = max(0, int(seconds))
+    minutes, remaining = divmod(total, 60)
+    if minutes >= 60:
+        hours, minutes = divmod(minutes, 60)
+        return f"{hours} h {minutes:02d} min"
+    if minutes:
+        return f"{minutes} min {remaining:02d} s"
+    return f"{remaining} s"
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,15 +164,19 @@ class MainWindow(QMainWindow):
         self._starting = False
         self._cancel_pending = False
         self._cancel_dialog_open = False
+        self._form_side_by_side: bool | None = None
+        self._last_state: JobState | None = None
+        self._state_started_at = time.monotonic()
+        self._heartbeat = QTimer(self)
+        self._heartbeat.setInterval(1000)
+        self._heartbeat.timeout.connect(self._refresh_elapsed_label)
 
         self.setObjectName("mainWindow")
         self.setWindowTitle("Legendar")
-        self.setMinimumSize(680, 620)
-        self.resize(900, 780)
-        self.setStyleSheet(stylesheet_for(self._preferences.theme))
+        self.setWindowIcon(app_icon())
         self._build_ui()
+        self._apply_minimum_size()
         self._wire_signals()
-        self._sync_translation_controls()
         self._apply_preferences()
         self._restore_geometry()
         self._render(self._view_model.snapshot)
@@ -157,15 +205,42 @@ class MainWindow(QMainWindow):
         scroll.setObjectName("mainScrollArea")
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         content = QWidget(scroll)
+        content.setObjectName("contentColumn")
+        # Em telas largas (4K) o formulário não deve esticar além do confortável.
+        content.setMaximumWidth(1180)
+        self.content_column = content
         root = QVBoxLayout(content)
-        root.setContentsMargins(30, 24, 30, 24)
-        root.setSpacing(16)
+        root.setContentsMargins(24, 18, 24, 18)
+        root.setSpacing(10)
+
+        self.alert_banner = QLabel(content)
+        self.alert_banner.setObjectName("alertBanner")
+        self.alert_banner.setWordWrap(True)
+        self.alert_banner.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.alert_banner.setVisible(False)
+        root.addWidget(self.alert_banner)
 
         root.addWidget(self._build_header())
         root.addWidget(self._build_input_panel())
-        root.addWidget(self._build_language_panel())
-        root.addWidget(self._build_output_panel())
+
+        # Idioma e destino dividem a linha; em janela estreita voltam a empilhar.
+        self.language_panel = self._build_language_panel()
+        self.output_panel = self._build_output_panel()
+        self.form_grid = QGridLayout()
+        self.form_grid.setContentsMargins(0, 0, 0, 0)
+        self.form_grid.setHorizontalSpacing(12)
+        self.form_grid.setVerticalSpacing(12)
+        self.form_grid.addWidget(self.language_panel, 0, 0)
+        self.form_grid.addWidget(self.output_panel, 0, 1)
+        self.form_grid.setColumnStretch(0, 1)
+        self.form_grid.setColumnStretch(1, 1)
+        self._form_side_by_side = True
+        root.addLayout(self.form_grid)
+
         root.addWidget(self._build_actions_panel())
         root.addWidget(self._build_progress_panel())
         root.addWidget(self._build_log_panel())
@@ -177,12 +252,76 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         self.statusBar().showMessage(f"Legendar {self._deps.app_version}".strip())
 
+    def _apply_minimum_size(self) -> None:
+        """Piso da janela derivado do layout, não um par fixo de números.
+
+        O valor antigo (680×620) era maior que o necessário em telas pequenas e
+        independente do conteúdo: com o piso artificial, compactar a janela
+        espremia os cartões em vez de rolar, e o gerenciador de janelas não
+        conseguia maximizar corretamente em monitores pequenos.
+        """
+
+        hint = self.centralWidget().minimumSizeHint()
+        self.setMinimumSize(
+            QSize(max(520, min(hint.width(), 760)), max(420, min(hint.height(), 640)))
+        )
+
+    def _reflow_language(self, stacked: bool) -> None:
+        """Empilha falado/final quando a coluna fica estreita, sem cortar texto."""
+
+        if not hasattr(self, "language_grid"):
+            return
+        if stacked == self._language_stacked:
+            return
+        self._language_stacked = stacked
+        widgets = (
+            self.source_label,
+            self.source_combo,
+            self.target_label,
+            self.target_combo,
+        )
+        for widget in widgets:
+            self.language_grid.removeWidget(widget)
+        positions = (
+            ((0, 0), (1, 0), (2, 0), (3, 0))
+            if stacked
+            else ((0, 0), (1, 0), (0, 1), (1, 1))
+        )
+        for widget, (row, column) in zip(widgets, positions, strict=True):
+            self.language_grid.addWidget(widget, row, column)
+        self.language_grid.setColumnStretch(0, 1)
+        self.language_grid.setColumnStretch(1, 0 if stacked else 1)
+
+    def _reflow_form(self, width: int) -> None:
+        """Alterna uma/duas colunas sem recriar widgets (idempotente)."""
+
+        if not hasattr(self, "form_grid"):
+            return
+        side_by_side = width >= 940
+        self._reflow_language(not side_by_side)
+        if side_by_side == self._form_side_by_side:
+            return
+        self._form_side_by_side = side_by_side
+        self.form_grid.removeWidget(self.output_panel)
+        if side_by_side:
+            self.form_grid.addWidget(self.output_panel, 0, 1)
+            self.form_grid.setColumnStretch(0, 1)
+            self.form_grid.setColumnStretch(1, 1)
+            return
+        self.form_grid.addWidget(self.output_panel, 1, 0, 1, 2)
+        self.form_grid.setColumnStretch(0, 1)
+        self.form_grid.setColumnStretch(1, 0)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802 - Qt
+        super().resizeEvent(event)
+        self._reflow_form(event.size().width())
+
     def _panel(self, name: str) -> tuple[QFrame, QVBoxLayout]:
         panel = QFrame(self)
         panel.setObjectName("panel")
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(20, 17, 20, 18)
-        layout.setSpacing(12)
+        layout.setContentsMargins(18, 12, 18, 12)
+        layout.setSpacing(8)
         title = QLabel(name, panel)
         title.setObjectName("sectionTitle")
         layout.addWidget(title)
@@ -197,7 +336,7 @@ class MainWindow(QMainWindow):
         card = QFrame(self)
         card.setObjectName("headerCard")
         layout = QHBoxLayout(card)
-        layout.setContentsMargins(20, 17, 20, 17)
+        layout.setContentsMargins(18, 13, 18, 13)
         layout.setSpacing(14)
 
         mark = QFrame(card)
@@ -215,15 +354,8 @@ class MainWindow(QMainWindow):
         eyebrow.setObjectName("eyebrow")
         title = QLabel("Legendas com clareza.", card)
         title.setObjectName("pageTitle")
-        subtitle = QLabel(
-            "Prepare sua mídia e acompanhe cada etapa do trabalho.",
-            card,
-        )
-        subtitle.setObjectName("pageSubtitle")
-        subtitle.setWordWrap(True)
         title_column.addWidget(eyebrow)
         title_column.addWidget(title)
-        title_column.addWidget(subtitle)
 
         self.status_pill = QLabel(card)
         self.status_pill.setObjectName("statusPill")
@@ -244,15 +376,8 @@ class MainWindow(QMainWindow):
 
     def _build_input_panel(self) -> QFrame:
         panel, layout = self._panel("Origem da mídia")
-        description = QLabel(
-            "Use um arquivo local ou informe a URL de um único vídeo do YouTube.",
-            panel,
-        )
-        description.setObjectName("sectionSubtitle")
-        description.setWordWrap(True)
-        layout.addWidget(description)
 
-        self.media_kind_combo = QComboBox(panel)
+        self.media_kind_combo = prepare_combo(QComboBox(panel))
         self.media_kind_combo.setObjectName("mediaKindCombo")
         self.media_kind_combo.addItem("Arquivo local", MediaKind.LOCAL_FILE.value)
         self.media_kind_combo.addItem("YouTube", MediaKind.YOUTUBE.value)
@@ -284,7 +409,7 @@ class MainWindow(QMainWindow):
         self.inspect_cancel_button.setVisible(False)
         self.inspect_cancel_button.setEnabled(False)
 
-        self.stream_combo = QComboBox(panel)
+        self.stream_combo = prepare_combo(QComboBox(panel))
         self.stream_combo.setObjectName("audioStreamCombo")
         self.stream_combo.addItem("Usar faixa padrão da mídia", None)
         self.stream_combo.setAccessibleName("Faixa de áudio selecionada")
@@ -295,25 +420,22 @@ class MainWindow(QMainWindow):
         inspection_row.addWidget(self.inspect_cancel_button)
         layout.addLayout(inspection_row)
 
-        self.media_info_label = QLabel(
-            "A faixa padrão será usada automaticamente. Inspecione para escolher outra.",
-            panel,
-        )
+        self.media_info_label = QLabel(panel)
         self.media_info_label.setObjectName("sectionSubtitle")
         self.media_info_label.setWordWrap(True)
+        # O texto padrão ("a faixa padrão será usada…") era ruído cinza fixo:
+        # fica no tooltip e só aparece quando há informação real de faixa/erro.
+        self.media_info_label.setVisible(False)
         layout.addWidget(self.media_info_label)
+        self.stream_combo.setToolTip(
+            "A faixa padrão da mídia é usada automaticamente. "
+            "Inspecione para escolher outra."
+        )
         self._sync_source_controls()
         return panel
 
     def _build_language_panel(self) -> QFrame:
         panel, layout = self._panel("Idioma da legenda")
-        description = QLabel(
-            "O idioma falado pode ser detectado automaticamente ou informado.",
-            panel,
-        )
-        description.setObjectName("sectionSubtitle")
-        description.setWordWrap(True)
-        layout.addWidget(description)
 
         grid = QGridLayout()
         grid.setHorizontalSpacing(14)
@@ -321,14 +443,14 @@ class MainWindow(QMainWindow):
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
 
-        self.source_combo = QComboBox(panel)
+        self.source_combo = prepare_combo(QComboBox(panel))
         self.source_combo.setObjectName("sourceLanguageCombo")
         self.source_combo.addItem("Detectar automaticamente", None)
         for language in Language:
             self.source_combo.addItem(language.label_pt, language.value)
         self.source_combo.setAccessibleName("Idioma falado na mídia")
 
-        self.target_combo = QComboBox(panel)
+        self.target_combo = prepare_combo(QComboBox(panel))
         self.target_combo.setObjectName("targetLanguageCombo")
         for language in Language:
             self.target_combo.addItem(language.label_pt, language.value)
@@ -337,11 +459,15 @@ class MainWindow(QMainWindow):
         )
         self.target_combo.setAccessibleName("Idioma final da legenda")
 
-        grid.addWidget(self._field_label("Idioma falado", panel), 0, 0)
-        grid.addWidget(self._field_label("Idioma final", panel), 0, 1)
+        self.source_label = self._field_label("Idioma falado", panel)
+        self.target_label = self._field_label("Idioma final", panel)
+        grid.addWidget(self.source_label, 0, 0)
+        grid.addWidget(self.target_label, 0, 1)
         grid.addWidget(self.source_combo, 1, 0)
         grid.addWidget(self.target_combo, 1, 1)
         layout.addLayout(grid)
+        self.language_grid = grid
+        self._language_stacked = False
 
         self.translate_check = QCheckBox("Traduzir a fala para o idioma final", panel)
         self.translate_check.setObjectName("translateCheck")
@@ -353,20 +479,19 @@ class MainWindow(QMainWindow):
             )
         else:
             self.translate_check.setToolTip(
-                "Traduz PT-BR ↔ EN localmente com NLLB-200, preservando os tempos."
+                "Traduz PT-BR ↔ EN localmente com NLLB-200, preservando os tempos. "
+                "Com a opção desmarcada, a legenda sai no idioma falado."
             )
         layout.addWidget(self.translate_check)
+
+        self.language_hint = QLabel(panel)
+        self.language_hint.setObjectName("fieldHint")
+        self.language_hint.setWordWrap(True)
+        layout.addWidget(self.language_hint)
         return panel
 
     def _build_output_panel(self) -> QFrame:
         panel, layout = self._panel("Destino do arquivo")
-        description = QLabel(
-            "O arquivo será salvo como SRT UTF-8 na pasta escolhida.",
-            panel,
-        )
-        description.setObjectName("sectionSubtitle")
-        description.setWordWrap(True)
-        layout.addWidget(description)
 
         self.output_edit = QLineEdit(panel)
         self.output_edit.setObjectName("outputEdit")
@@ -381,6 +506,7 @@ class MainWindow(QMainWindow):
         row.addWidget(self.output_edit, stretch=1)
         row.addWidget(self.output_browse_button)
         layout.addLayout(row)
+        layout.addStretch(1)
         self.output_edit.setText(str(self._default_output_path("legenda")))
         return panel
 
@@ -478,6 +604,8 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout(panel)
         layout.setContentsMargins(4, 2, 4, 2)
         self.readiness_icon = QLabel("●", panel)
+        self.readiness_icon.setObjectName("readinessIcon")
+        self.readiness_icon.setProperty("state", "ok")
         self.readiness_label = QLabel(panel)
         self.readiness_label.setObjectName("readinessDetail")
         self.readiness_label.setAccessibleName("Estado das ferramentas externas")
@@ -557,13 +685,10 @@ class MainWindow(QMainWindow):
             self._inspection_thread is not None and not self._inspection_cancel_pending
         )
         self.stream_combo.setEnabled(
-            local
-            and self._media_info is not None
-            and bool(self._media_info.audio_streams)
-            and not self.is_running
+            local and self._stream_choice_available() and not self.is_running
         )
         if not local:
-            self.media_info_label.setText(
+            self._show_media_info(
                 "O áudio do vídeo será obtido automaticamente. "
                 "A seleção manual de faixa local não se aplica ao download."
             )
@@ -572,14 +697,24 @@ class MainWindow(QMainWindow):
                 "Faixa de áudio selecionada automaticamente", None
             )
 
+    def _show_media_info(self, text: str) -> None:
+        """Mostra o estado real da mídia; texto vazio recolhe o rótulo."""
+
+        self.media_info_label.setText(text)
+        self.media_info_label.setVisible(bool(text))
+
+    def _stream_choice_available(self) -> bool:
+        """True só quando existe mais de uma faixa de áudio para escolher."""
+
+        info = self._media_info
+        return info is not None and len(info.audio_streams) > 1
+
     def _invalidate_media_inspection(self) -> None:
         self._media_info = None
         self.stream_combo.clear()
         self.stream_combo.addItem("Usar faixa padrão da mídia", None)
         self.stream_combo.setEnabled(False)
-        self.media_info_label.setText(
-            "Inspecione a mídia para consultar as faixas de áudio disponíveis."
-        )
+        self._show_media_info("")
         self._sync_source_controls()
 
     def _on_media_kind_changed(self, _index: int) -> None:
@@ -691,11 +826,19 @@ class MainWindow(QMainWindow):
         for stream in info.audio_streams:
             suffix = " · padrão" if stream.is_default else ""
             self.stream_combo.addItem(f"{stream.label_pt}{suffix}", stream.index)
-        if info.audio_streams:
+        if len(info.audio_streams) > 1:
             default = info.default_stream()
             default_index = self.stream_combo.findData(default.index)
             if default_index >= 0:
                 self.stream_combo.setCurrentIndex(default_index)
+            self.stream_combo.setToolTip("Escolha a faixa de áudio do trabalho.")
+            self._on_stream_selection_changed(self.stream_combo.currentIndex())
+        elif info.audio_streams:
+            # Faixa única: não há escolha a fazer, então o campo não é editável.
+            self.stream_combo.setCurrentIndex(0)
+            self.stream_combo.setToolTip(
+                "A mídia tem apenas uma faixa de áudio; ela será usada."
+            )
             self._on_stream_selection_changed(self.stream_combo.currentIndex())
         else:
             duration = (
@@ -703,7 +846,7 @@ class MainWindow(QMainWindow):
                 if info.duration_seconds is not None
                 else "duração não informada"
             )
-            self.media_info_label.setText(
+            self._show_media_info(
                 f"{info.container} · {duration} · mídia sem faixa de áudio."
             )
         self._sync_source_controls()
@@ -725,7 +868,7 @@ class MainWindow(QMainWindow):
         )
         selection = "Faixa padrão" if selected is None else "Faixa escolhida"
         title = f" · {stream.title}" if stream.title else ""
-        self.media_info_label.setText(
+        self._show_media_info(
             f"{self._media_info.container} · {duration} · {selection}: "
             f"faixa {stream.index}{title} ({stream.codec}, "
             f"{stream.channels} canais, {stream.sample_rate_hz} Hz; "
@@ -735,14 +878,14 @@ class MainWindow(QMainWindow):
     @Slot(object)
     def _on_media_inspection_failed(self, error: Exception) -> None:
         if isinstance(error, JobCancelledError):
-            self.media_info_label.setText("Inspeção de mídia cancelada.")
+            self._show_media_info("Inspeção de mídia cancelada.")
             return
         message = (
             error.message
             if isinstance(error, DomainError)
             else f"Não foi possível inspecionar a mídia: {error}"
         )
-        self.media_info_label.setText(message)
+        self._show_media_info(message)
         self.statusBar().showMessage(message, 10000)
 
     @Slot()
@@ -762,7 +905,7 @@ class MainWindow(QMainWindow):
         self.inspect_cancel_button.setEnabled(False)
         self.inspect_button.setEnabled(False)
         self._inspection_worker.request_cancel()
-        self.media_info_label.setText("Cancelando a inspeção de mídia…")
+        self._show_media_info("Cancelando a inspeção de mídia…")
 
     def _on_output_edited(self, _text: str) -> None:
         self._output_touched = True
@@ -780,20 +923,48 @@ class MainWindow(QMainWindow):
         self._sync_translation_controls()
 
     def _sync_translation_controls(self) -> None:
+        """Mantém falado e final independentes e explica o efeito na legenda.
+
+        Antes, escolher o idioma falado reescrevia e travava o idioma final: o
+        campo parecia quebrado porque o usuário não conseguia mais mudá-lo. Os
+        dois campos agora conservam a própria escolha e a consequência aparece
+        em uma frase curta abaixo da caixa de tradução.
+        """
+
+        if not hasattr(self, "language_hint"):
+            return
         translating = (
             self.translate_check.isChecked() and self._deps.translate_available
         )
         source = self._source_language()
-        if translating:
-            self.target_combo.setEnabled(not self.is_running)
-            return
-        if source is not None:
-            index = self.target_combo.findData(source.value)
-            if index >= 0:
-                self.target_combo.setCurrentIndex(index)
-            self.target_combo.setEnabled(False)
+        target = self._target_language()
+        self.target_combo.setEnabled(not self.is_running)
+        self.target_combo.setToolTip(
+            "Idioma final do arquivo. O texto só muda quando a tradução está marcada."
+        )
+        if translating and source is None:
+            hint = (
+                "Tradução marcada: o idioma falado será detectado e depois "
+                f"traduzido para {target.label_pt}."
+            )
+        elif translating and source is target:
+            hint = (
+                f"Origem e destino são {target.label_pt}: não há o que traduzir. "
+                "A legenda sai no idioma falado."
+            )
+        elif translating:
+            hint = (
+                f"Tradução {source.label_pt} → {target.label_pt} com NLLB-200, "
+                "preservando os tempos originais."
+            )
+        elif source is None:
+            hint = "Sem tradução: a legenda sai no idioma detectado na fala."
         else:
-            self.target_combo.setEnabled(not self.is_running)
+            hint = (
+                f"Sem tradução: a legenda sai em {source.label_pt}. "
+                "Marque a tradução para publicar em outro idioma."
+            )
+        self.language_hint.setText(hint)
 
     def _source_language(self) -> Language | None:
         value = self.source_combo.currentData()
@@ -828,7 +999,8 @@ class MainWindow(QMainWindow):
         self._sync_translation_controls()
 
     def _apply_preferences(self) -> None:
-        self.setStyleSheet(stylesheet_for(self._preferences.theme))
+        apply_theme(self._preferences.theme)
+        self.setWindowIcon(app_icon())
         self.log_toggle.setChecked(self._preferences.log_expanded)
         self._set_log_expanded(self._preferences.log_expanded)
 
@@ -925,6 +1097,12 @@ class MainWindow(QMainWindow):
         return request, source_label, output_path
 
     def _resolved_languages(self) -> tuple[Language | None, Language, bool]:
+        """Resolve o par de idiomas antes de qualquer trabalho começar.
+
+        Toda combinação impossível é recusada no pré-voo — com a janela ainda
+        respondendo — em vez de depois de minutos de transcrição.
+        """
+
         source = self._source_language()
         target = self._target_language()
         translate = self.translate_check.isChecked() and self._deps.translate_available
@@ -933,12 +1111,12 @@ class MainWindow(QMainWindow):
                 "Para traduzir, informe também o idioma falado na mídia."
             )
         if translate and source is target:
-            raise InvalidInputError(
-                "Origem e destino são o mesmo idioma; desmarque a tradução."
-            )
+            # Nada a traduzir: publica no idioma declarado, sem etapa extra.
+            return source, target, False
         if not translate and source is not None and target is not source:
             raise InvalidInputError(
-                "Sem tradução, o idioma da legenda deve ser o mesmo da fala."
+                f"Sem tradução, o idioma final precisa ser {source.label_pt}. "
+                "Marque 'Traduzir a fala para o idioma final' para converter o texto."
             )
         return source, target, translate
 
@@ -1178,10 +1356,15 @@ class MainWindow(QMainWindow):
         busy = self.is_running
         worker_running = self._thread is not None
         inspection_running = self._inspection_thread is not None
+        if snapshot.state is not self._last_state:
+            self._last_state = snapshot.state
+            self._state_started_at = time.monotonic()
+        self._update_alert_banner(snapshot)
         self.open_folder_button.setEnabled(
             not busy and self._published_folder(snapshot) is not None
         )
         if inspection_running:
+            self._heartbeat.stop()
             self.status_label.setText("Inspecionando mídia com ffprobe…")
             self.progress_meta.setText("Lendo contêineres e faixas")
             self.progress_bar.setRange(0, 0)
@@ -1197,8 +1380,10 @@ class MainWindow(QMainWindow):
                 and not snapshot.is_finished
             ):
                 self.progress_bar.setRange(0, 0)
-                self.progress_meta.setText("Etapa em andamento · sem percentual medido")
+                self._heartbeat.start()
+                self._refresh_elapsed_label()
             else:
+                self._heartbeat.stop()
                 self.progress_bar.setRange(0, 100)
                 self.progress_bar.setValue(snapshot.progress_percent)
                 if snapshot.progress_known:
@@ -1268,10 +1453,6 @@ class MainWindow(QMainWindow):
         self.status_pill.style().unpolish(self.status_pill)
         self.status_pill.style().polish(self.status_pill)
 
-        tool_details = " ".join(self._deps.readiness_details)
-        whisper_details = " ".join(self._deps.transcription_readiness_details)
-        alignment_details = " ".join(self._deps.alignment_readiness_details)
-        publishing_details = " ".join(self._deps.publishing_readiness_details)
         media_requirement = (
             "FFmpeg e ffprobe precisam estar instalados. "
             if not self._deps.readiness_ok
@@ -1292,45 +1473,96 @@ class MainWindow(QMainWindow):
             if not self._deps.publishing_available
             else ""
         )
-        model_details = f"{whisper_details} {alignment_details} {publishing_details}"
+        youtube_requirement = (
+            ""
+            if self._deps.youtube_available
+            else "yt-dlp e um runtime EJS compatível são necessários. "
+        )
 
+        # O rodapé diz o essencial em uma frase; o inventário técnico completo
+        # fica no tooltip e no log, em vez de virar um parágrafo cinza fixo.
+        details = [
+            *self._deps.readiness_details,
+            *self._deps.transcription_readiness_details,
+            *self._deps.alignment_readiness_details,
+            *self._deps.publishing_readiness_details,
+        ]
         if local_source:
             if source_ready:
-                self.readiness_icon.setStyleSheet("color: #16845b;")
-                self.readiness_label.setText(
-                    f"FFmpeg, ffprobe, Whisper, WhisperX e publicação SRT prontos. "
-                    f"{tool_details} {model_details}"
-                )
+                summary = "Ambiente pronto para gerar legendas neste computador."
             else:
-                self.readiness_icon.setStyleSheet("color: #a96712;")
-                self.readiness_label.setText(
-                    f"Geração local indisponível. {media_requirement}"
-                    f"{whisper_requirement}{alignment_requirement}"
-                    f"{publishing_requirement}{tool_details} {model_details}"
+                summary = (
+                    "Geração local indisponível. "
+                    f"{media_requirement}{whisper_requirement}"
+                    f"{alignment_requirement}{publishing_requirement}"
                 )
-            return
-
-        online_details = " ".join(self._deps.youtube_readiness_details)
-        if source_ready:
-            self.readiness_icon.setStyleSheet("color: #16845b;")
-            self.readiness_label.setText(
-                "YouTube, Whisper, WhisperX e publicação SRT prontos. "
-                f"FFmpeg/ffprobe verificados. {tool_details} "
-                f"{model_details} {online_details}"
-            )
         else:
-            youtube_requirement = (
-                ""
-                if self._deps.youtube_available
-                else "yt-dlp e um runtime EJS compatível são necessários. "
-            )
-            self.readiness_icon.setStyleSheet("color: #a96712;")
-            self.readiness_label.setText(
-                f"YouTube indisponível. {media_requirement}"
-                f"{whisper_requirement}{alignment_requirement}"
-                f"{publishing_requirement}{youtube_requirement}"
-                f"{tool_details} {model_details} {online_details}"
-            )
+            details.extend(self._deps.youtube_readiness_details)
+            if source_ready:
+                summary = "Ambiente pronto para gerar legendas do YouTube."
+            else:
+                summary = (
+                    "YouTube indisponível. "
+                    f"{media_requirement}{whisper_requirement}"
+                    f"{alignment_requirement}{publishing_requirement}"
+                    f"{youtube_requirement}"
+                )
+        self._update_readiness_footer(summary, details, ok=source_ready)
+        self.status_pill.setToolTip(" ".join(part for part in details if part))
+
+    def _update_readiness_footer(
+        self, summary: str, details: list[str], *, ok: bool
+    ) -> None:
+        state = "ok" if ok else "warning"
+        if state != self.readiness_icon.property("state"):
+            self.readiness_icon.setProperty("state", state)
+            self.readiness_icon.style().unpolish(self.readiness_icon)
+            self.readiness_icon.style().polish(self.readiness_icon)
+        self.readiness_label.setText(summary)
+        tooltip = " ".join(part for part in details if part).strip()
+        self.readiness_label.setToolTip(tooltip or summary)
+
+    def _refresh_elapsed_label(self) -> None:
+        """Diz há quanto tempo a etapa sem percentual está rodando.
+
+        Transcrição e alinhamento não expõem progresso medido. Sem um relógio
+        visível, quinze minutos de trabalho parecem travamento; com ele, o
+        usuário vê que o processo continua avançando.
+        """
+
+        snapshot = self._view_model.snapshot
+        if (
+            self._thread is None
+            or snapshot.progress_known
+            or snapshot.is_finished
+        ):
+            self._heartbeat.stop()
+            return
+        stage = (
+            snapshot.state.label_pt
+            if snapshot.state is not JobState.IDLE
+            else "Preparando"
+        )
+        elapsed = _format_elapsed(time.monotonic() - self._state_started_at)
+        self.progress_meta.setText(f"{stage} · {elapsed} · sem percentual medido")
+
+    def _update_alert_banner(self, snapshot: JobViewSnapshot) -> None:
+        """Destaca falhas e avisos no topo, em vez de só empurrá-los ao log."""
+
+        message = snapshot.notice_message
+        if not message:
+            self.alert_banner.setVisible(False)
+            return
+        level = snapshot.notice_level or "error"
+        if self.alert_banner.property("level") != level:
+            self.alert_banner.setProperty("level", level)
+            self.alert_banner.style().unpolish(self.alert_banner)
+            self.alert_banner.style().polish(self.alert_banner)
+        self.alert_banner.setText(message)
+        self.alert_banner.setToolTip(
+            "Detalhes técnicos em ~/.cache/legendar/logs/legendar.log"
+        )
+        self.alert_banner.setVisible(True)
 
     def _set_inputs_enabled(self, enabled: bool) -> None:
         self.media_kind_combo.setEnabled(enabled)
@@ -1346,8 +1578,7 @@ class MainWindow(QMainWindow):
         self.stream_combo.setEnabled(
             enabled
             and self._source_kind() is MediaKind.LOCAL_FILE
-            and self._media_info is not None
-            and bool(self._media_info.audio_streams)
+            and self._stream_choice_available()
         )
         self.output_edit.setEnabled(enabled)
         self.output_browse_button.setEnabled(enabled)
@@ -1361,15 +1592,61 @@ class MainWindow(QMainWindow):
     # -- geometria e encerramento -----------------------------------------
 
     def _restore_geometry(self) -> None:
-        geometry = self._settings.value("window/geometry")
-        if geometry:
-            self.restoreGeometry(geometry)
+        """Restaura geometria tipada e devolve a janela para dentro da tela.
+
+        O valor era salvo como ``bytes``, mas ``restoreGeometry`` só aceita
+        ``QByteArray``: a chamada devolvia ``False`` e a janela voltava sempre
+        no tamanho padrão. O estado salvo agora é convertido, validado contra a
+        tela atual e reencaixado quando o monitor mudou de tamanho.
+        """
+
+        available = self._available_geometry()
+        default = QSize(
+            min(1120, max(720, available.width() - 120)),
+            min(820, max(560, available.height() - 120)),
+        )
+        geometry = _as_byte_array(self._settings.value("window/geometry"))
+        restored = (
+            geometry is not None
+            and not geometry.isEmpty()
+            and self.restoreGeometry(geometry)
+        )
+        if restored:
+            self._clamp_to_available(available)
+        else:
+            self.resize(default)
+        if self._settings.value("window/maximized", False, type=bool):
+            self.setWindowState(self.windowState() | Qt.WindowState.WindowMaximized)
+
+    def _available_geometry(self) -> QRect:
+        screen = self.screen() or QGuiApplication.primaryScreen()
+        if screen is None:
+            return QRect(0, 0, 1280, 800)
+        return screen.availableGeometry()
+
+    def _clamp_to_available(self, available: QRect) -> None:
+        width = min(max(self.width(), self.minimumWidth()), available.width())
+        height = min(max(self.height(), self.minimumHeight()), available.height())
+        if (width, height) != (self.width(), self.height()):
+            self.resize(width, height)
+        frame = self.frameGeometry()
+        x = min(
+            max(frame.left(), available.left()),
+            available.right() - frame.width() + 1,
+        )
+        y = min(
+            max(frame.top(), available.top()),
+            available.bottom() - frame.height() + 1,
+        )
+        if (x, y) != (frame.left(), frame.top()):
+            self.move(x, y)
 
     def _save_settings(self) -> None:
         save_preferences(
             self._settings,
             self._preferences,
-            geometry=bytes(self.saveGeometry()),
+            geometry=self.saveGeometry(),
+            maximized=bool(self.windowState() & Qt.WindowState.WindowMaximized),
         )
 
     def closeEvent(self, event: QCloseEvent) -> None:
@@ -1390,7 +1667,7 @@ class MainWindow(QMainWindow):
                 self._save_settings()
                 super().closeEvent(event)
             else:
-                self.media_info_label.setText(
+                self._show_media_info(
                     "A inspeção ainda está encerrando; aguarde para fechar."
                 )
                 event.ignore()

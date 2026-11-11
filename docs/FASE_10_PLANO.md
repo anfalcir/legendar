@@ -1,6 +1,7 @@
 # Plano operacional — Fase 10: correções e endurecimento pós-homologação
 
-- **Status:** proposta de execução; nenhuma mudança de código aplicada ainda.
+- **Status:** executado em 11/11/2026; evidências, decisões e roteiro de
+  verificação em [HANDOFF_FASE_10.md](HANDOFF_FASE_10.md).
 - **Fronteira:** eliminar os 13 achados da homologação de 11/11/2026 tratando causas
   sistêmicas (não apenas os sintomas), sem regredir as Fases 0–9.
 - **Dependências:** Fases 0–9 integradas à `main` (ver [ESTADO_ATUAL.md](ESTADO_ATUAL.md)).
