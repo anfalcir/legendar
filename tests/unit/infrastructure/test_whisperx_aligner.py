@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from legendar.application.job.context import CancellationTokenImpl
 from legendar.domain.entities.media import AudioAsset
@@ -10,7 +11,6 @@ from legendar.domain.errors.catalog import JobCancelledError, ModelError
 from legendar.domain.value_objects.language import Language
 from legendar.domain.value_objects.time import TimeRange
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
-
 
 DEFAULT_ALIGNMENT_WINDOW = TimeRange(0.0, 2.0)
 
