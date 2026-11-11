@@ -182,7 +182,10 @@ class FasterWhisperTranscriber:
         device = os.environ.get("LEGENDAR_WHISPER_DEVICE", "auto")
         compute_type = os.environ.get("LEGENDAR_FASTER_WHISPER_COMPUTE_TYPE")
         raw_threads = os.environ.get("LEGENDAR_FASTER_WHISPER_CPU_THREADS", "4")
-        raw_beam = os.environ.get("LEGENDAR_FASTER_WHISPER_BEAM_SIZE", "5")
+        raw_beam = os.environ.get(
+            "LEGENDAR_WHISPER_BEAM_SIZE",
+            os.environ.get("LEGENDAR_FASTER_WHISPER_BEAM_SIZE", "5"),
+        )
         raw_vad = os.environ.get("LEGENDAR_FASTER_WHISPER_VAD_FILTER", "false")
         try:
             cpu_threads = int(raw_threads)
