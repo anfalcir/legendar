@@ -148,4 +148,4 @@ Nesta amostra mínima, o modelo small foi melhor em PT-BR, empatou com base em W
 
 ## 8. Próximo checkpoint
 
-A Fase 4 está integrada à `main` pela PR #5. A Fase 5 está em execução na branch `phase-5/temporal-alignment`; ela consome `TranscriptSegment.alignment_window` como janela aproximada e grava timestamps finais apenas após WhisperX. Antes de recomendar definitivamente um perfil de reconhecimento, executar inventário atualizado e benchmark local no computador-alvo, além de avaliação com pregações representativas; `base` permanece apenas padrão provisório.
+A Fase 4 está integrada à `main` pela PR #5. A Fase 5 foi concluída e integrada pela PR #6; ela consome `TranscriptSegment.alignment_window` como janela aproximada e grava timestamps finais apenas após WhisperX. Antes de recomendar definitivamente um perfil de reconhecimento, executar inventário atualizado e benchmark local no computador-alvo, além de avaliação com pregações representativas; `base` permanece apenas padrão provisório.

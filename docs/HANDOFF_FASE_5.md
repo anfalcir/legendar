@@ -1,7 +1,7 @@
 # Handoff técnico — Fase 5: alinhamento temporal WhisperX
 
-- **Status:** implementação em execução na branch `phase-5/temporal-alignment`
-- **Base:** `main` pós-Fase 4, HEAD inicial `13af311e3469493e4f69e3faa62f2be043d43839`
+- **Status:** implementação concluída e integrada à `main` pela PR [#6](https://github.com/anfalcir/legendar/pull/6), squash `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`
+- **CI:** push [#42935484072](https://github.com/anfalcir/legendar/actions/runs/42935484072) e PR [#42935490648](https://github.com/anfalcir/legendar/actions/runs/42935490648), ambos 5/5; gates herdados Fases 0/1/3/4 aprovados
 - **Plano operacional:** [FASE_5_PLANO.md](FASE_5_PLANO.md)
 - **Fronteira:** forced alignment local PT-BR/EN, sem tradução ou publicação SRT
 
@@ -95,14 +95,14 @@ uv run --locked --group dev --group phase0 --extra runtime-cpu \
 
 Relatório sanitizado sem caminho/áudio/texto. Métricas por início e fim, mediana/P95, cobertura e não alinhadas. Metas do plano mestre: mediana ≤150 ms, P95 ≤350 ms, zero intervalos inválidos e não alinhadas visíveis. Não declarar aceitação automática.
 
-## 6. Pendências antes de homologar o produto
+## 6. Pendências de homologação do produto (não bloqueiam o início da Fase 6)
 
 1. Executar benchmark com amostras autorizadas de pregações PT-BR e inglês, após revisão humana da transcrição e fronteiras.
 2. Atualizar inventário e executar os modelos no computador-alvo; observar RAM, latência, cache e comportamento ao alternar idiomas.
 3. Inspecionar manualmente casos com overlap, nomes próprios, números, fala rápida, pausas, música e ruído.
 4. Aprovar os limites median/P95 com dados suficientes; a pequena amostra FLEURS não comprova precisão de pregação.
-5. Manter exportação final bloqueada até implementação do publicador SRT.
+5. Manter exportação final bloqueada até implementação do publicador SRT na Fase 6/7.
 
 ## 7. Próxima fronteira
 
-Após CI/revisão/merge, a Fase 6 pode tratar tradução/segmentação/SRT consumindo `AlignmentResult`. A integração GUI ponta a ponta continua sendo a Fase 7. Não deslocar publicação SRT para este adaptador.
+A Fase 5 já está integrada à `main`. A Fase 6 está preparada para consumir `AlignmentResult` e implementar tradução, segmentação e SRT; a decisão de provedor/custo/privacidade deve ser tomada no checkpoint inicial da Fase 6. A integração GUI ponta a ponta continua sendo a Fase 7. Não deslocar publicação SRT para este adaptador. A homologação de precisão temporal em pregações e no computador-alvo permanece gate de produto.

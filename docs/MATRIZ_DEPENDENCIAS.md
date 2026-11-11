@@ -111,6 +111,7 @@ Um conflito identificado na prova de avaliação: `datasets>=5.2` exige `hugging
 - Offset de stream pode ser negativo; intervalos finais continuam sujeitos ao invariante não negativo de `TimeRange`.
 - Score do alinhador não é probabilidade calibrada; não usar sozinho como medida de confiança de produto.
 - O smoke FLEURS PT-BR/EN valida execução, WER lexical, cobertura e limites; erro temporal só é calculado com manifesto local e fronteiras humanas revisadas (`scripts/phase5_alignment_evaluation.py`).
+- Evidência da CI PR #42935490648: Whisper `tiny` + WhisperX 3.8.6 CPU, uma amostra por idioma. PT-BR: WER 0,083333, 12/12 palavras, cobertura 100%; EN: WER 0,352941, 14/15 palavras, cobertura 93,333%, uma palavra não alinhada preservada. Bounds válidos para todas as palavras alinhadas. Resultado é smoke pequeno de fala lida, não valida erro temporal humano nem desempenho no hardware-alvo.
 
 
 FFmpeg/ffprobe não são substituídos por pacotes Python com nomes semelhantes. O aplicativo deverá apresentar orientações para instalar ferramentas ausentes, sem alterar o sistema operacional silenciosamente.

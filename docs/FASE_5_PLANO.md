@@ -1,7 +1,7 @@
 # Plano operacional — Fase 5: alinhamento temporal
 
-- **Status:** implementação em execução na branch `phase-5/temporal-alignment`
-- **Base:** `main` com Fase 4 integrada; HEAD inicial `13af311e3469493e4f69e3faa62f2be043d43839`
+- **Status:** implementação concluída e integrada à `main` pela PR [#6](https://github.com/anfalcir/legendar/pull/6), squash `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`
+- **Base:** `main` pós-Fase 4; implementação final validada em CI push/PR, matriz Python 3.10–3.13 e smoke real Whisper + WhisperX CPU
 - **Escopo:** forced alignment local PT-BR/EN, timestamps por palavra, offset global, cobertura, anomalias e avaliação contra fronteiras humanas
 - **Fora do escopo:** tradução, segmentação editorial final, publicação SRT e integração completa da GUI (Fases 6/7)
 
@@ -138,10 +138,15 @@ Esses números são metas de engenharia provisórias, não garantias universais.
 - [x] Preflight GUI e bloqueio de geração quando WhisperX está ausente.
 - [x] Geração final bloqueada enquanto o publicador SRT das Fases 6/7 não existe.
 - [x] Smoke automatizado FLEURS e avaliador local com referência humana.
-- [ ] CI push e PR aprovadas em todos os jobs.
-- [ ] Smoke real Whisper + WhisperX executado e artefato conferido.
+- [x] CI push e PR aprovadas: Fase 5 push [#42935484072](https://github.com/anfalcir/legendar/actions/runs/42935484072) e PR [#42935490648](https://github.com/anfalcir/legendar/actions/runs/42935490648), 5/5 jobs cada; gates herdados Fases 0/1/3/4 também verdes.
+- [x] Matriz Python 3.10–3.13: 303 passed por ambiente, 2 skips esperados, cobertura 85%, Ruff check e format aprovados.
+- [x] Smoke real Whisper + WhisperX executado e artefato [legendar-phase5-alignment-smoke](https://github.com/anfalcir/legendar/actions/runs/42935490648) conferido: PT-BR 12/12 palavras alinhadas; EN 14/15, uma palavra explicitamente não alinhada; bounds válidos para todas as palavras alinhadas.
 - [ ] Benchmark com corpus autorizado de pregações no computador-alvo.
 - [ ] Precisão temporal homologada contra fronteiras humanas com mediana/P95.
+
+### Evidência do smoke real da Fase 5
+
+A CI executou Whisper `tiny` + WhisperX 3.8.6 em CPU, com uma amostra FLEURS por idioma (fala lida, split `test`, dataset/revision fixados). PT-BR: WER 0,083333, 12/12 palavras reconhecidas/alinhadas, cobertura 100%, RTF 2,871. Inglês: WER 0,352941, 14/15 palavras reconhecidas/alinhadas, cobertura 93,333%, uma palavra sem timestamp preservada, RTF 0,445. Todas as 26 palavras alinhadas tiveram bounds válidos. O artefato foi produzido na CI; esses números são smoke estrutural/lexical, não precisão contra fronteiras humanas nem previsão de desempenho no computador-alvo.
 
 ## 6. Riscos e limites
 
@@ -155,4 +160,4 @@ Esses números são metas de engenharia provisórias, não garantias universais.
 
 ## 7. Próximo checkpoint
 
-Depois de CI, revisão e merge, a próxima fase do roadmap é a Fase 6 — tradução, segmentação e SRT (a composição final GUI/pipeline permanece na Fase 7). A homologação temporal do computador-alvo/corpus humano continua como gate de produto.
+A Fase 5 está concluída e integrada à `main`. A próxima fase do roadmap é a Fase 6 — tradução, segmentação e SRT (a composição final GUI/pipeline permanece na Fase 7), consumindo `AlignmentResult`. A homologação temporal em corpus autorizado e no computador-alvo continua como gate de produto antes de declarar precisão final; não foi confundida com o smoke FLEURS.

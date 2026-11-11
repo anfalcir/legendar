@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem é executada por fases. As Fases 0–4 estão validadas e integradas à `main`; a Fase 5 — alinhamento temporal com WhisperX — está em implementação na branch `phase-5/temporal-alignment`. A Fase 4 foi integrada por squash pela PR [#5](https://github.com/anfalcir/legendar/pull/5), commit `2f9751139616591e31a0ec73902265b38b040d41`. A Fase 5 distingue janelas aproximadas do Whisper de timestamps finais alinhados, preserva palavras sem alinhamento e acrescenta avaliação temporal contra referências humanas. A homologação no computador-alvo e com pregações permanece gate de produto. A aplicação anterior permanece preservada como baseline.
+A remodelagem é executada por fases. As Fases 0–5 estão implementadas, validadas por CI e integradas à `main`. A Fase 5 foi integrada por squash pela PR [#6](https://github.com/anfalcir/legendar/pull/6), commit `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`. O forced alignment WhisperX 3.8.6 em PT-BR/EN separa janelas aproximadas do Whisper de timestamps finais, preserva palavras não alinhadas e aplica offsets globais uma única vez. CI push/PR aprovada em Python 3.10–3.13 e smoke real CPU executado. A precisão temporal em pregações e no computador-alvo continua como gate de homologação do produto. A aplicação anterior permanece preservada como baseline.
 
 ## Documentação do projeto
 
@@ -35,7 +35,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–4 integradas; a Fase 5 está em desenvolvimento na branch `phase-5/temporal-alignment`, conectando forced alignment WhisperX à transcrição local da Fase 4. A saída ainda não é SRT final; tradução, segmentação editorial e publicação permanecem nas Fases 6/7. O botão de geração final segue bloqueado enquanto não há publicador SRT. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_5_PLANO.md](docs/FASE_5_PLANO.md) e [docs/HANDOFF_FASE_5.md](docs/HANDOFF_FASE_5.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–5 integradas; a Fase 5 conecta forced alignment WhisperX à transcrição local da Fase 4 por meio de `AlignmentResult`. A tradução, a segmentação editorial e a publicação SRT permanecem nas Fases 6/7; o botão de geração final segue bloqueado enquanto não há publicador. A próxima etapa de implementação é a Fase 6, que deve consumir os timestamps alinhados sem reintroduzir janelas aproximadas como tempos finais. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_5_PLANO.md](docs/FASE_5_PLANO.md) e [docs/HANDOFF_FASE_5.md](docs/HANDOFF_FASE_5.md).
 
 ## Licença
 
