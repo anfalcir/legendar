@@ -27,7 +27,9 @@ from jiwer import wer
 from legendar.domain.entities.media import AudioAsset
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
-from legendar.infrastructure.transcription.faster_whisper import FasterWhisperTranscriber
+from legendar.infrastructure.transcription.faster_whisper import (
+    FasterWhisperTranscriber,
+)
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 
 DATASET = "google/fleurs"
