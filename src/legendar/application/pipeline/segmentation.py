@@ -36,6 +36,7 @@ CHARS_PER_SECOND = 17.0
 SENTENCE_BREAK_RATIO = 0.5
 MIN_WORDS_PER_SPLIT_PART = 2
 MAX_SPLIT_DEPTH = 6
+DISPLAY_SAFETY_MARGIN_SECONDS = 0.08
 _MIN_WINDOW_SECONDS = 1e-3
 _SENTENCE_ENDINGS = (".", "!", "?", "…")
 _CLAUSE_ENDINGS = (*_SENTENCE_ENDINGS, ",", ";", ":", "—", "-")
@@ -181,11 +182,21 @@ def segment_alignment(
     events.sort(key=lambda item: (item[0].start, item[0].end))
     cues: list[SubtitleCue] = []
     last_end = 0.0
-    for window, text, sources in events:
+    for event_index, (window, text, sources) in enumerate(events):
         clipped = _clip_to_previous(window, last_end)
         if clipped is None:
             dropped.extend(sources)
             continue
+        next_start = (
+            events[event_index + 1][0].start
+            if event_index + 1 < len(events)
+            else None
+        )
+        clipped = _extend_into_safe_silence(
+            clipped,
+            next_start=next_start,
+            policy=policy,
+        )
         last_end = clipped.end
         cue = SubtitleCue(
             index=len(cues) + 1,
@@ -224,6 +235,34 @@ def segment_alignment(
         unmatched_words=tuple(unmatched_words),
         diagnostics=tuple(dict.fromkeys(diagnostics)),
     )
+
+
+def _extend_into_safe_silence(
+    window: TimeRange,
+    *,
+    next_start: float | None,
+    policy: SegmentationPolicy,
+) -> TimeRange:
+    """Estende cue curta somente no silêncio antes da próxima fala/cue.
+
+    A margem de segurança impede que a exibição invada a próxima palavra.
+    A última cue não é estendida porque a segmentação não conhece o fim real
+    da mídia nem dispõe de evidência de silêncio após a última palavra.
+    """
+    if next_start is None or window.duration >= policy.min_cue_duration:
+        return window
+    safe_end = min(
+        next_start - DISPLAY_SAFETY_MARGIN_SECONDS,
+        window.start + policy.max_cue_duration,
+    )
+    target_end = min(
+        safe_end,
+        window.start + policy.min_cue_duration,
+    )
+    if target_end <= window.end:
+        return window
+    return TimeRange(start=window.start, end=target_end)
+
 
 def _clip_to_previous(window: TimeRange, last_end: float) -> TimeRange | None:
     """Remove sobreposição com a cue anterior sem inventar tempo novo.
