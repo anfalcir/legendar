@@ -350,7 +350,9 @@ def test_gemini_backend_reports_missing_api_key_without_crashing(
     )
 
     assert not dependencies.translate_available
-    assert isinstance(dependencies.pipeline_factory()._ports.translator, GeminiTranslator)
+    assert isinstance(
+        dependencies.pipeline_factory()._ports.translator, GeminiTranslator
+    )
     assert "GEMINI_API_KEY ausente" in dependencies.translate_readiness_details[3]
 
 
@@ -369,4 +371,7 @@ def test_unknown_translation_backend_is_not_silently_accepted(
     )
 
     assert not dependencies.translate_available
-    assert "LEGENDAR_TRANSLATION_BACKEND inválido" in dependencies.translate_readiness_details[0]
+    assert (
+        "LEGENDAR_TRANSLATION_BACKEND inválido"
+        in dependencies.translate_readiness_details[0]
+    )
