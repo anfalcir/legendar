@@ -62,7 +62,7 @@ en-US	./sample-en.wav	Reviewed human reference.
 Execução recomendada no computador de referência:
 
 ```bash
-uv run --locked --group dev --group phase0 --extra runtime-cpu \
+PYTHONPATH=src uv run --locked --group dev --group phase0 --extra runtime-cpu \
   python scripts/phase5_asr_benchmark.py \
   --backends openai-whisper,faster-whisper \
   --models base \
