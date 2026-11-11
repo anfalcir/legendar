@@ -621,17 +621,19 @@ Versões, licenças, wheels, modelos, requisitos de runtime e combinações de b
 | 1 | Reestruturação arquitetural | Camadas, modelos de domínio, pipeline, estados, configurações, tratamento de erros, testes e CI | **Concluída e integrada à `main` pela PR #2 (squash, commit `de31ddd`):** arquitetura executável e testada; baseline legada caracterizada/preservada; CI Python 3.10–3.13 verde (196 testes por ambiente); critérios do [plano operacional da Fase 1](FASE_1_PLANO.md) aprovados |
 | 2 | Interface profissional | Janela, identidade visual, diálogos, máquina de estados, workers simulados, progresso e log | **Concluída e integrada à `main` pela PR #3 (squash, commit `4129f0a`):** temas claro/escuro/sistema, confirmações seguras, proteção contra reentrância, preferências QSettings, acessibilidade, logs e progresso honesto; CI 4/4 em Python 3.10–3.13, 218 testes por ambiente, cobertura 88% |
 | 3 | Entrada e preparação de mídia | YouTube, áudio/vídeo local, ffprobe, FFmpeg, faixas, normalização e temporários | **Concluída e integrada à `main` pela PR #4 (squash, commit `dfa440b`):** aquisição local/YouTube, inspeção, seleção de faixa e normalização; CI 4/4 em Python 3.10–3.13, 249 testes por ambiente, cobertura 87%, gates herdados aprovados |
-| 4 | Reconhecimento Whisper | Serviço de transcrição, idioma, perfis, cache, erros e worker | Transcrição original reproduzível em PT-BR/EN |
+| 4 | Reconhecimento Whisper | Adaptador local, detecção/seleção de idioma, perfis, cache, erros, worker e benchmark lexical | Transcrição original reproduzível em PT-BR/EN; comparação WER/CER/RTF documentada e perfil-alvo avaliado |
 | 5 | Alinhamento temporal | WhisperX, VAD, offsets, chunks, validação, fallback se aprovado e métricas | Base de referência atendendo aos limites aprovados ou limitações documentadas |
 | 6 | Tradução, segmentação e SRT | Tradução, vínculo temporal, regras de leitura, writer e validator | SRT original e traduzido válidos nos casos de referência |
 | 7 | Integração de ponta a ponta | GUI conectada ao pipeline, progresso real, cancelamento, logs e recuperação | Fluxo completo com estados e erros controlados |
 | 8 | Testes e homologação | Unitários, integração, GUI, E2E, regressão e relatório | Critérios de aceite atendidos e falhas críticas resolvidas |
 | 9 | Documentação e finalização | Guias, arquitetura, operação, instalação, decisões e revisão final | Documentação coerente com código e instalação reproduzível |
 
-A execução e as evidências das Fases 1–3 estão registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md),
+A execução e as evidências das Fases 1–4 estão registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md),
 [FASE_1_PLANO.md](FASE_1_PLANO.md), [FASE_2_PLANO.md](FASE_2_PLANO.md), [FASE_3_PLANO.md](FASE_3_PLANO.md),
-[HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md) e [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md).
-As Fases 1–3 estão concluídas, validadas e integradas à `main`. A Fase 3 foi integrada pela PR #4 (squash); o próximo checkpoint para a Fase 4 depende de aprovação explícita.
+[FASE_4_PLANO.md](FASE_4_PLANO.md), [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md),
+[HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md) e
+[HANDOFF_FASE_4.md](HANDOFF_FASE_4.md). A Fase 4 está sendo implementada na branch
+`phase-4/whisper-recognition`; sua conclusão será registrada após CI, revisão e integração na `main`.
 
 ### 12.1. Regras de execução das fases
 
@@ -670,7 +672,7 @@ O projeto remodelado somente será considerado pronto quando:
 | Alinhador primário | WhisperX estável 3.8.6 é o primeiro candidato/adaptador; compatibilidade de instalação e POC smoke PT-BR/EN passaram | Precisão temporal, cobertura e tolerância a casos difíceis serão avaliadas na Fase 5 contra timestamps humanos |
 | Alternativa | stable-ts não foi incluído como dependência nem como fallback automático | Reconsiderar na Fase 5 somente se houver evidência mensurável de limitação do alinhador primário |
 | Tradução | Porta/adaptador independente; preservar original e não enviar áudio ao fornecedor | Selecionar provedor e aprovar preço, privacidade, retenção, limites e falhas antes da Fase 6 |
-| Modelo Whisper | Whisper multilingue é o motor candidato; `tiny` foi usado apenas para smoke benchmark de compatibilidade | Comparar modelos e perfis com corpus PT-BR/EN representativo e no computador-alvo nas Fases 4/8 |
+| Modelo Whisper | OpenAI Whisper local; perfil inicial `base`, com `tiny`, `small`, `medium`, `large` e `turbo` disponíveis | Comparar WER/CER/RTF e memória em corpus PT-BR/EN; validar no computador-alvo e em fala representativa antes de declarar recomendação |
 | Normalização | WAV PCM signed 16-bit, mono, 16 kHz; conversão sintética e preservação de offset foram aprovadas | Homologar codecs, contêineres, streams, qualidade de áudio e fixtures reais na Fase 3 |
 | Idiomas | PT-BR e EN passaram pela POC pública mínima | Não declarar qualidade ou suporte de alinhamento homologado antes das Fases 4/5/8 |
 | Parâmetros SRT | Regras e faixas iniciais documentadas na seção 5.6 | Calibrar com leitura real, segmentação e critérios de aceite nas Fases 6/8 |

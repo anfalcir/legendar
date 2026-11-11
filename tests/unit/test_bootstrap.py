@@ -12,6 +12,7 @@ from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus
 from legendar.infrastructure.media.youtube import YtDlpDownloader
+from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 
 
 def _settings(tmp_path: Path) -> AppSettings:
@@ -74,6 +75,7 @@ def test_pipeline_composes_real_media_adapters_and_future_stage_placeholders(
     assert isinstance(pipeline._ports.inspector, FfprobeInspector)
     assert isinstance(pipeline._ports.audio_preparer, FfmpegAudioPreparer)
     assert isinstance(pipeline._ports.downloader, YtDlpDownloader)
+    assert isinstance(pipeline._ports.transcriber, WhisperTranscriber)
     assert not dependencies.translate_available
     assert dependencies.youtube_readiness_details[1].startswith(
         "Runtime EJS selecionado: deno"
@@ -138,3 +140,28 @@ def test_suggested_output_stays_under_the_configured_directory(tmp_path) -> None
     suggestion = dependencies.output_path_factory("aula", Language.PORTUGUESE)
 
     assert suggestion == tmp_path / "fora" / "aula.srt"
+
+
+def test_missing_whisper_is_reported_without_crashing_application(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "legendar.bootstrap.app.importlib.util.find_spec", lambda _name: None
+    )
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert dependencies.readiness_ok
+    assert not dependencies.transcription_available
+    assert (
+        "openai-whisper não instalado"
+        in dependencies.transcription_readiness_details[0]
+    )
+    assert isinstance(
+        dependencies.pipeline_factory()._ports.transcriber, WhisperTranscriber
+    )
