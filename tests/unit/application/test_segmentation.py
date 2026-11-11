@@ -363,3 +363,23 @@ def test_global_stream_rejects_out_of_order_fallback_segment_ranges():
 
     with pytest.raises(SrtValidationError, match="Segmentos.*ordem cronológica"):
         segment_alignment(_alignment(aligned, fallback))
+
+
+def test_fallback_segment_is_preserved_and_blocks_cross_segment_grouping():
+    first = _segment(_word("antes", 0.0, 0.3))
+    fallback = TranscriptSegment(text="intermediário", range=TimeRange(0.5, 0.8))
+    last = _segment(_word("depois", 1.0, 1.3))
+
+    result = segment_alignment(_alignment(first, fallback, last))
+
+    assert [cue.text for cue in result.track.cues] == [
+        "antes",
+        "intermediário",
+        "depois",
+    ]
+    assert [cue.source_segments for cue in result.track.cues] == [
+        (0,),
+        (1,),
+        (2,),
+    ]
+    assert result.dropped_segments == ()
