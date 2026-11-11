@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1, 2, 3 e 4 concluídas e integradas à `main`. Fase 4 integrada pela PR #11, squash `32f20c3a5455dcc16f48e78a742ba4c7018339b5`.
+- **Status:** Fases 1–5 com implementação integrada à `main`; Fase 5 integrada pela PR #12, squash `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. Fase 6 em implementação na branch `phase-6/gemini-translation`. A homologação operacional de ASR permanece na Fase 8.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -13,7 +13,7 @@ Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITET
 
 ## 1. Resumo executivo
 
-O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e é o principal alvo da futura Fase 6. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
+O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e é o principal alvo da Fase 6 em execução. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
 
 O trabalho será conduzido em duas frentes coordenadas:
 
