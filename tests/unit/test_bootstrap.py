@@ -12,6 +12,7 @@ from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus
 from legendar.infrastructure.media.youtube import YtDlpDownloader
+from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 
 
@@ -76,6 +77,7 @@ def test_pipeline_composes_real_media_adapters_and_future_stage_placeholders(
     assert isinstance(pipeline._ports.audio_preparer, FfmpegAudioPreparer)
     assert isinstance(pipeline._ports.downloader, YtDlpDownloader)
     assert isinstance(pipeline._ports.transcriber, WhisperTranscriber)
+    assert isinstance(pipeline._ports.aligner, WhisperXAligner)
     assert not dependencies.translate_available
     assert dependencies.youtube_readiness_details[1].startswith(
         "Runtime EJS selecionado: deno"
@@ -157,10 +159,17 @@ def test_missing_whisper_is_reported_without_crashing_application(
     )
 
     assert dependencies.readiness_ok
+    assert not dependencies.publishing_available
+    assert "Fases 6/7" in dependencies.publishing_readiness_details[0]
     assert not dependencies.transcription_available
+    assert not dependencies.alignment_available
     assert (
         "openai-whisper não instalado"
         in dependencies.transcription_readiness_details[0]
+    )
+    assert (
+        "WhisperX não instalado"
+        in dependencies.alignment_readiness_details[0]
     )
     assert isinstance(
         dependencies.pipeline_factory()._ports.transcriber, WhisperTranscriber

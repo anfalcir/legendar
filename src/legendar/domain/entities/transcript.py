@@ -34,12 +34,18 @@ class TranscriptWord:
 
 @dataclass(frozen=True, slots=True)
 class TranscriptSegment:
-    """Trecho contínuo reconhecido pelo Whisper, no idioma de origem."""
+    """Trecho reconhecido; alignment_window nunca é um timestamp final.
+
+    alignment_window é a janela aproximada do decoder utilizada apenas para
+    limitar a busca do forced alignment. Somente range contém o intervalo
+    temporal final produzido pelo alinhador.
+    """
 
     text: str
     range: TimeRange | None = None
     words: tuple[TranscriptWord, ...] = field(default_factory=tuple)
     confidence: float | None = None
+    alignment_window: TimeRange | None = None
 
     def __post_init__(self) -> None:
         if not (self.text or "").strip():

@@ -22,6 +22,8 @@ from legendar.application.pipeline.serial_pipeline import (
 )
 from legendar.domain.entities.media import MediaKind, MediaSource
 from legendar.domain.entities.transcript import (
+    AlignmentDiagnostics,
+    AlignmentResult,
     Transcript,
     TranscriptSegment,
     TranscriptWord,
@@ -253,3 +255,21 @@ def test_publish_failure_propagates_as_domain_error(job_context):
     pipeline, _ = _pipeline(publisher=FailingPublisher())
     with pytest.raises(PublicationError):
         pipeline.execute(_request(), job_context)
+
+
+
+def test_alignment_diagnostics_are_propagated_as_pipeline_warnings(job_context):
+    transcript = make_transcript(language=Language.PORTUGUESE)
+    alignment = AlignmentResult(
+        transcript=transcript,
+        diagnostics=AlignmentDiagnostics(
+            aligned_words=len(transcript.segments[0].words),
+            issues=("overlap",),
+        ),
+        model_name="whisperx-test",
+    )
+    pipeline, _ = _pipeline(aligner=FakeAligner(alignment=alignment))
+
+    result = pipeline.execute(_request(), job_context)
+
+    assert "Anomalias no alinhamento: overlap." in result.warnings

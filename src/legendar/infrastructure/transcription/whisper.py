@@ -6,6 +6,7 @@ carregado somente quando o primeiro job solicita uma transcrição.
 
 from __future__ import annotations
 
+import math
 import os
 import threading
 import wave
@@ -23,6 +24,8 @@ from legendar.domain.errors.catalog import (
     UnsupportedLanguageError,
 )
 from legendar.domain.value_objects.language import Language
+from legendar.domain.value_objects.time import TemporalError, TimeRange
+from legendar.infrastructure.media.waveform import load_pcm_waveform
 
 SUPPORTED_MODELS = frozenset({"tiny", "base", "small", "medium", "large", "turbo"})
 SUPPORTED_DEVICES = frozenset({"auto", "cpu", "cuda", "mps"})
@@ -88,49 +91,8 @@ def _load_openai_model(model_name: str, device: str, download_root: Path) -> Any
     )
 
 
-def _load_pcm_wave(audio: AudioAsset) -> Any:
-    """Lê o WAV PCM s16le mono/16 kHz produzido pela Fase 3."""
-    if (
-        audio.sample_rate_hz != 16_000
-        or audio.channels != 1
-        or audio.sample_format.lower() not in {"pcm_s16le", "s16"}
-    ):
-        raise ModelError(
-            "O Whisper recebeu áudio fora do contrato WAV PCM s16le mono/16 kHz."
-        )
-
-    try:
-        with wave.open(str(audio.path), "rb") as source:
-            if (
-                source.getnchannels() != 1
-                or source.getframerate() != 16_000
-                or source.getsampwidth() != 2
-                or source.getcomptype() != "NONE"
-            ):
-                raise ModelError(
-                    "O arquivo de áudio não é WAV PCM signed 16-bit mono/16 kHz."
-                )
-            frame_count = source.getnframes()
-            payload = source.readframes(frame_count)
-    except (OSError, wave.Error) as exc:
-        raise ModelError(f"Não foi possível ler o WAV normalizado: {exc}") from exc
-
-    if frame_count < 1 or len(payload) != frame_count * 2:
-        raise ModelError("O WAV normalizado está vazio ou truncado.")
-
-    try:
-        import numpy as np
-    except ImportError as exc:
-        raise ModelError("NumPy não está disponível no runtime Whisper.") from exc
-
-    waveform = np.frombuffer(payload, dtype="<i2").astype(np.float32) / 32768.0
-    if (
-        waveform.ndim != 1
-        or waveform.size != frame_count
-        or not np.isfinite(waveform).all()
-    ):
-        raise ModelError("O WAV produziu uma forma de onda inválida.")
-    return waveform
+# Compatibilidade com os testes e callers internos existentes.
+_load_pcm_wave = load_pcm_waveform
 
 
 class WhisperTranscriber:
@@ -313,13 +275,48 @@ class WhisperTranscriber:
                     )
                 normalized_text = text.strip()
                 if normalized_text:
-                    # O início/fim aproximado do decoder não é forced alignment.
-                    segments.append(TranscriptSegment(text=normalized_text))
+                    # A janela do decoder limita a busca, mas não é tempo final.
+                    raw_start = raw_segment.get("start")
+                    raw_end = raw_segment.get("end")
+                    alignment_window = None
+                    if (
+                        isinstance(raw_start, (int, float))
+                        and not isinstance(raw_start, bool)
+                        and isinstance(raw_end, (int, float))
+                        and not isinstance(raw_end, bool)
+                        and math.isfinite(float(raw_start))
+                        and math.isfinite(float(raw_end))
+                        and 0.0 <= float(raw_start) < float(raw_end)
+                        <= audio.duration_seconds
+                    ):
+                        try:
+                            alignment_window = TimeRange(
+                                start=float(raw_start),
+                                end=float(raw_end),
+                            )
+                        except TemporalError:
+                            alignment_window = None
+                    segments.append(
+                        TranscriptSegment(
+                            text=normalized_text,
+                            alignment_window=alignment_window,
+                        )
+                    )
 
         if not segments:
             full_text = result.get("text")
             if isinstance(full_text, str) and full_text.strip():
-                segments.append(TranscriptSegment(text=full_text.strip()))
+                # Sem limites por segmento, a mídia inteira é somente janela
+                # de busca; o alinhador ainda aplica seu limite de segurança.
+                segments.append(
+                    TranscriptSegment(
+                        text=full_text.strip(),
+                        alignment_window=TimeRange(
+                            start=0.0,
+                            end=audio.duration_seconds,
+                        ),
+                    )
+                )
 
         if not segments:
             raise ModelError(

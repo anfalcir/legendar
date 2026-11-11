@@ -195,6 +195,15 @@ class SerialPipeline:
             warnings.append(
                 f"{len(alignment.diagnostics.unmatched_words)} palavra(s) sem alinhamento."
             )
+        additional_issues = tuple(
+            issue
+            for issue in alignment.diagnostics.issues
+            if issue != "unmatched_word"
+        )
+        if additional_issues:
+            warnings.append(
+                "Anomalias no alinhamento: " + ", ".join(additional_issues) + "."
+            )
         stage.report(1.0, "Alinhamento concluído")
 
         # 5. Segmentação visual (regra pura, sem porta)
