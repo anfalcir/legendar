@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 import soundfile as sf
-
 from scripts.phase5_alignment_smoke import _write_audio
 
 
