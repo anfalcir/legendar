@@ -211,7 +211,13 @@ def _extract_segment_alignment(
     timeline: TimelineMapping,
     window: TimeRange,
     previous_global_end: float | None,
-) -> tuple[TranscriptSegment, tuple[TranscriptWord, ...], tuple[str, ...], int, float | None]:
+) -> tuple[
+    TranscriptSegment,
+    tuple[TranscriptWord, ...],
+    tuple[str, ...],
+    int,
+    float | None,
+]:
     """Converte uma resposta WhisperX em palavras, sem preencher lacunas."""
     raw_words = result.get("word_segments")
     if not isinstance(raw_words, (list, tuple)):
@@ -284,14 +290,21 @@ def _extract_segment_alignment(
         try:
             local_range = TimeRange(start=start, end=end)
             global_range = timeline.range_to_global(local_range)
-            word = TranscriptWord(text=expected_text, range=global_range, confidence=score)
+            word = TranscriptWord(
+                text=expected_text,
+                range=global_range,
+                confidence=score,
+            )
         except (TemporalError, ValueError):
             unmatched_words.append(TranscriptWord(text=expected_text))
             segment_words.append(TranscriptWord(text=expected_text))
             issues.append("out_of_bounds")
             continue
 
-        if current_previous_end is not None and global_range.start < current_previous_end - 0.05:
+        if (
+            current_previous_end is not None
+            and global_range.start < current_previous_end - 0.05
+        ):
             issues.append("overlap")
         current_previous_end = (
             global_range.end
@@ -320,7 +333,13 @@ def _extract_segment_alignment(
         confidence=source_segment.confidence,
         alignment_window=window,
     )
-    return segment, tuple(unmatched_words), tuple(dict.fromkeys(issues)), aligned_word_count, current_previous_end
+    return (
+        segment,
+        tuple(unmatched_words),
+        tuple(dict.fromkeys(issues)),
+        aligned_word_count,
+        current_previous_end,
+    )
 
 
 class WhisperXAligner:
@@ -697,7 +716,10 @@ class WhisperXAligner:
                     window.end + self._recovery_padding_seconds,
                 )
                 recovery_window = TimeRange(start=recovery_start, end=recovery_end)
-                if recovery_window.duration <= self._max_window_seconds and recovery_window != window:
+                if (
+                    recovery_window.duration <= self._max_window_seconds
+                    and recovery_window != window
+                ):
                     recovery_started = time.perf_counter()
                     self._record_metric("recovery_attempts", 1)
                     recovery_segment = {
@@ -722,7 +744,9 @@ class WhisperXAligner:
                         if token is not None:
                             token.raise_if_cancelled()
                         if not isinstance(recovery_result, Mapping):
-                            raise ModelError("WhisperX retornou recuperação em formato inválido.")
+                            raise ModelError(
+                                "WhisperX retornou recuperação em formato inválido."
+                            )
                         (
                             recovered_segment,
                             recovered_unmatched,
@@ -738,7 +762,9 @@ class WhisperXAligner:
                             previous_global_end=previous_global_end,
                         )
                         if len(recovered_unmatched) < len(selected_unmatched):
-                            recovered_count = len(selected_unmatched) - len(recovered_unmatched)
+                            recovered_count = (
+                                len(selected_unmatched) - len(recovered_unmatched)
+                            )
                             selected_segment = recovered_segment
                             selected_unmatched = recovered_unmatched
                             selected_issues = recovered_issues
