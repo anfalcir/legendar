@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-11-11T18:11:32.975702+00:00",
+  "runtime": {
+    "python_version": "3.12.3",
+    "python_implementation": "CPython",
+    "executable_name": "python"
+  },
+  "system": {
+    "os": "Linux",
+    "release": "7.0.0-42-generic",
+    "distribution": {
+      "name": "Linux Mint",
+      "id": "linuxmint",
+      "pretty_name": "Linux Mint 22.3",
+      "version_id": "22.3"
+    },
+    "architecture": "x86_64",
+    "cpu_model": "AMD Ryzen 3 2200G with Radeon Vega Graphics",
+    "logical_cpu_count": 4,
+    "graphics_adapters": [
+      {
+        "vendor": "AMD",
+        "vendor_id": "0x1002",
+        "device_id": "0x15dd",
+        "class_id": "0x030000",
+        "driver": "amdgpu"
+      }
+    ],
+    "memory_total_bytes": 13521129472,
+    "memory_available_bytes": 8090898432,
+    "disk_total_bytes": 234622398464,
+    "disk_free_bytes": 167583358976
+  },
+  "media_tools": {
+    "ffmpeg": {
+      "available": true,
+      "version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers",
+      "returncode": 0,
+      "details": [
+        "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers",
+        "built with gcc 8 (Debian 8.3.0-6)",
+        "configuration: --enable-gpl --enable-version3 --enable-static --disable-debug --disable-ffplay --disable-indev=sndio --disable-outdev=sndio --cc=gcc --enable-fontconfig --enable-frei0r --enable-gnutls --enable-gmp --enable-libgme --enable-gray --enable-libaom --enable-libfribidi --enable-libass --enable-libvmaf --enable-libfreetype --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-librubberband --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libvorbis --enable-libopus --enable-libtheora --enable-libvidstab --enable-libvo-amrwbenc --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libdav1d --enable-libxvid --enable-libzvbi --enable-libzimg",
+        "libavutil      59.  8.100 / 59.  8.100",
+        "libavcodec     61.  3.100 / 61.  3.100",
+        "libavformat    61.  1.100 / 61.  1.100",
+        "libavdevice    61.  1.100 / 61.  1.100",
+        "libavfilter    10.  1.100 / 10.  1.100",
+        "libswscale      8.  1.100 /  8.  1.100",
+        "libswresample   5.  1.100 /  5.  1.100",
+        "libpostproc    58.  1.100 / 58.  1.100"
+      ]
+    },
+    "ffprobe": {
+      "available": true,
+      "version": "ffprobe version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2007-2024 the FFmpeg developers",
+      "returncode": 0,
+      "details": [
+        "ffprobe version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2007-2024 the FFmpeg developers",
+        "built with gcc 8 (Debian 8.3.0-6)",
+        "configuration: --enable-gpl --enable-version3 --enable-static --disable-debug --disable-ffplay --disable-indev=sndio --disable-outdev=sndio --cc=gcc --enable-fontconfig --enable-frei0r --enable-gnutls --enable-gmp --enable-libgme --enable-gray --enable-libaom --enable-libfribidi --enable-libass --enable-libvmaf --enable-libfreetype --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-librubberband --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libvorbis --enable-libopus --enable-libtheora --enable-libvidstab --enable-libvo-amrwbenc --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libdav1d --enable-libxvid --enable-libzvbi --enable-libzimg",
+        "libavutil      59.  8.100 / 59.  8.100",
+        "libavcodec     61.  3.100 / 61.  3.100",
+        "libavformat    61.  1.100 / 61.  1.100",
+        "libavdevice    61.  1.100 / 61.  1.100",
+        "libavfilter    10.  1.100 / 10.  1.100",
+        "libswscale      8.  1.100 /  8.  1.100",
+        "libswresample   5.  1.100 /  5.  1.100",
+        "libpostproc    58.  1.100 / 58.  1.100"
+      ]
+    },
+    "deno": {
+      "available": false,
+      "version": null,
+      "error": "not_found"
+    },
+    "node": {
+      "available": true,
+      "version": "v22.23.4",
+      "returncode": 0
+    }
+  },
+  "nvidia_gpu_probe": {
+    "available": false,
+    "version": null,
+    "error": "not_found"
+  },
+  "packages": {
+    "openai-whisper": "20250625",
+    "whisperx": "3.8.6",
+    "stable-ts": null,
+    "torch": "2.8.0+cpu",
+    "torchaudio": "2.8.0+cpu",
+    "torchvision": "0.23.0+cpu",
+    "numpy": "2.5.4",
+    "PySide6": "6.12.0",
+    "yt-dlp": "2026.10.26",
+    "yt-dlp-ejs": "0.8.0"
+  },
+  "torch_runtime": {
+    "imported": true,
+    "version": "2.8.0+cpu",
+    "cuda_available": false,
+    "cuda_runtime_version": null,
+    "hip_runtime_version": null,
+    "cudnn_version": null,
+    "devices": []
+  }
+}

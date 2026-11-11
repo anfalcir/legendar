@@ -1,0 +1,347 @@
+{
+  "adapters": {
+    "alignment": {
+      "configuration": {
+        "adapter": "whisperx",
+        "alignment_models": {
+          "en": "WAV2VEC2_ASR_BASE_960H",
+          "pt": "jonatasgrosman/wav2vec2-large-xlsr-53-portuguese"
+        },
+        "dtype": "backend_default",
+        "interpolate_method": "ignore",
+        "loaded_device": "cpu",
+        "loaded_languages": [
+          "en"
+        ],
+        "max_window_seconds": 90.0,
+        "package_version": "3.8.6",
+        "pytorch_num_interop_threads": 4,
+        "pytorch_num_threads": 4,
+        "requested_device": "auto"
+      },
+      "counter_delta": {
+        "aligned_words": 2873.0,
+        "alignment_calls": 464.0,
+        "alignment_seconds": 240.2707276299043,
+        "input_segments": 464.0,
+        "model_load_attempts": 0.0,
+        "model_load_seconds": 0.0,
+        "model_load_successes": 0.0,
+        "punkt_preparation_seconds": 0.0,
+        "punkt_preparations": 0.0,
+        "unmatched_words": 0.0,
+        "waveform_load_seconds": 0.09822188600082882
+      },
+      "counters_after": {
+        "aligned_words": 5620,
+        "alignment_calls": 839,
+        "alignment_seconds": 450.0066734709835,
+        "input_segments": 839,
+        "model_load_attempts": 1,
+        "model_load_seconds": 16.756626205009525,
+        "model_load_successes": 1,
+        "punkt_preparation_seconds": 0.048441670995089225,
+        "punkt_preparations": 1,
+        "unmatched_words": 0,
+        "waveform_load_seconds": 0.19778586299798917
+      },
+      "loaded_after_job": true,
+      "loaded_before_job": true
+    },
+    "transcription": {
+      "configuration": {
+        "adapter": "openai-whisper",
+        "fp16": false,
+        "loaded_device": "cpu",
+        "model": "base",
+        "package_version": "20250625",
+        "pytorch_num_interop_threads": 4,
+        "pytorch_num_threads": 4,
+        "requested_device": "auto",
+        "word_timestamps": false
+      },
+      "counter_delta": {
+        "audio_load_seconds": 0.1715404560090974,
+        "inference_calls": 1.0,
+        "inference_seconds": 348.4458258079976,
+        "model_load_attempts": 0.0,
+        "model_load_seconds": 0.0,
+        "model_load_successes": 0.0,
+        "recognized_words": 2873.0,
+        "transcribed_segments": 464.0
+      },
+      "counters_after": {
+        "audio_load_seconds": 0.2816252710035769,
+        "inference_calls": 2,
+        "inference_seconds": 619.2437630049972,
+        "model_load_attempts": 1,
+        "model_load_seconds": 13.16184440899815,
+        "model_load_successes": 1,
+        "recognized_words": 5620,
+        "transcribed_segments": 839
+      },
+      "loaded_after_job": true,
+      "loaded_before_job": true
+    },
+    "translation": {
+      "configuration": {
+        "adapter": "nllb-transformers",
+        "batch_size": 16,
+        "dtype": "torch.float32",
+        "loaded_device": "cpu",
+        "max_input_tokens": 256,
+        "max_new_tokens": 256,
+        "model": "facebook/nllb-200-distilled-600M",
+        "num_beams": 4,
+        "package_version": "4.57.6",
+        "pytorch_num_interop_threads": 4,
+        "pytorch_num_threads": 4,
+        "requested_device": "auto"
+      },
+      "counter_delta": {
+        "batch_calls": 62.0,
+        "batch_decode_seconds": 1.7275648620270658,
+        "batch_inference_seconds": 784.9205567239551,
+        "batch_units": 982.0,
+        "device_transfer_seconds": 0.0008105680026346818,
+        "generated_tokens": 15038.0,
+        "generation_seconds": 782.9670864730433,
+        "input_tokens": 6290.0,
+        "max_batch_units": 0.0,
+        "model_load_attempts": 0.0,
+        "model_load_seconds": 0.0,
+        "model_load_successes": 0.0,
+        "padded_input_tokens": 13346.0,
+        "tokenization_seconds": 0.1775313059479231
+      },
+      "counters_after": {
+        "batch_calls": 116,
+        "batch_decode_seconds": 3.362485299963737,
+        "batch_inference_seconds": 1561.9464720719843,
+        "batch_units": 1843,
+        "device_transfer_seconds": 0.0015299080405384302,
+        "generated_tokens": 29756,
+        "generation_seconds": 1558.1842423850176,
+        "input_tokens": 11789,
+        "max_batch_units": 16,
+        "model_load_attempts": 1,
+        "model_load_seconds": 10.28312712800107,
+        "model_load_successes": 1,
+        "padded_input_tokens": 26060,
+        "tokenization_seconds": 0.33982359095534775
+      },
+      "loaded_after_job": true,
+      "loaded_before_job": true
+    }
+  },
+  "counts": {
+    "aligned_words": 2873,
+    "recognized_words": 2873,
+    "subtitle_cues": 982,
+    "transcript_segments": 464,
+    "translation_units": 982,
+    "unmatched_words": 0,
+    "warning_count": 4
+  },
+  "environment": {
+    "architecture": "x86_64",
+    "cpu_model": "AMD Ryzen 3 2200G with Radeon Vega Graphics",
+    "graphics_adapters": [
+      {
+        "device_id": "0x15dd",
+        "driver": "amdgpu",
+        "vendor": "AMD",
+        "vendor_id": "0x1002"
+      }
+    ],
+    "logical_cpu_count": 4,
+    "media_tools": {
+      "ffmpeg": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+      "ffprobe": "ffprobe version 6.1.1-3ubuntu5 Copyright (c) 2007-2023 the FFmpeg developers"
+    },
+    "memory_total_bytes": 13521129472,
+    "nvidia_devices": [],
+    "os": "Linux",
+    "os_release": "7.0.0-42-generic",
+    "packages": {
+      "ctranslate2": "4.8.5",
+      "numpy": "2.5.4",
+      "openai-whisper": "20250625",
+      "torch": "2.8.0+cu128",
+      "torchaudio": "2.8.0+cu128",
+      "transformers": "4.57.6",
+      "whisperx": "3.8.6"
+    },
+    "physical_cpu_count": 4,
+    "python_version": "3.12.3"
+  },
+  "generated_at_utc": "2026-11-11T19:00:35.657386+00:00",
+  "job_id": "2f6d8c3e5dad",
+  "metadata": {
+    "audio_duration_seconds": 2230.421313,
+    "final_language": "pt",
+    "media_duration_seconds": 2230.464,
+    "media_kind": "local_file",
+    "requested_source_language": "en",
+    "translation_requested": true
+  },
+  "schema_version": 1,
+  "stages": [
+    {
+      "name": "media_acquisition",
+      "process_cpu_seconds": 8.816599984129425e-05,
+      "resources_after": {
+        "process_peak_rss_bytes": 5356515328,
+        "process_rss_bytes": 4724293632,
+        "system_memory_available_bytes": 6369222656,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5356515328,
+        "process_rss_bytes": 4724293632,
+        "system_memory_available_bytes": 6369222656,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 8.847498975228518e-05
+    },
+    {
+      "name": "media_inspection",
+      "process_cpu_seconds": 0.012790928999947937,
+      "resources_after": {
+        "process_peak_rss_bytes": 5356515328,
+        "process_rss_bytes": 4724293632,
+        "system_memory_available_bytes": 6349381632,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5356515328,
+        "process_rss_bytes": 4724293632,
+        "system_memory_available_bytes": 6369222656,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.07075400299800094
+    },
+    {
+      "name": "audio_preparation",
+      "process_cpu_seconds": 0.04403643600016949,
+      "resources_after": {
+        "process_peak_rss_bytes": 5356515328,
+        "process_rss_bytes": 4724293632,
+        "system_memory_available_bytes": 6380085248,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5356515328,
+        "process_rss_bytes": 4724293632,
+        "system_memory_available_bytes": 6349381632,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 6.210918261000188
+    },
+    {
+      "name": "transcription",
+      "process_cpu_seconds": 911.5788028470001,
+      "resources_after": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4848111616,
+        "system_memory_available_bytes": 6549876736,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5356515328,
+        "process_rss_bytes": 4724293632,
+        "system_memory_available_bytes": 6377230336,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 348.6209405469999
+    },
+    {
+      "name": "alignment",
+      "process_cpu_seconds": 697.127487064,
+      "resources_after": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4843122688,
+        "system_memory_available_bytes": 6397435904,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4848111616,
+        "system_memory_available_bytes": 6549876736,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 240.4590490970004
+    },
+    {
+      "name": "segmentation",
+      "process_cpu_seconds": 0.041805623000072956,
+      "resources_after": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4843122688,
+        "system_memory_available_bytes": 6397435904,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4843122688,
+        "system_memory_available_bytes": 6397435904,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.03378285700455308
+    },
+    {
+      "name": "translation",
+      "process_cpu_seconds": 2384.073019108,
+      "resources_after": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4969574400,
+        "system_memory_available_bytes": 6270472192,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4843122688,
+        "system_memory_available_bytes": 6397435904,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 784.9324059130013
+    },
+    {
+      "name": "srt_validation",
+      "process_cpu_seconds": 0.0032207000003836583,
+      "resources_after": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4969574400,
+        "system_memory_available_bytes": 6270472192,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4969574400,
+        "system_memory_available_bytes": 6270472192,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.0014291560073615983
+    },
+    {
+      "name": "srt_publication",
+      "process_cpu_seconds": 0.03713127900027757,
+      "resources_after": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4969574400,
+        "system_memory_available_bytes": 6269726720,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5915766784,
+        "process_rss_bytes": 4969574400,
+        "system_memory_available_bytes": 6270472192,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.03851879001013003
+    }
+  ],
+  "status": "completed",
+  "total_process_cpu_seconds": 3992.9478768759996,
+  "total_wall_seconds": 1380.3905581569998
+}
