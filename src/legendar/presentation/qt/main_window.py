@@ -1531,11 +1531,7 @@ class MainWindow(QMainWindow):
         """
 
         snapshot = self._view_model.snapshot
-        if (
-            self._thread is None
-            or snapshot.progress_known
-            or snapshot.is_finished
-        ):
+        if self._thread is None or snapshot.progress_known or snapshot.is_finished:
             self._heartbeat.stop()
             return
         stage = (

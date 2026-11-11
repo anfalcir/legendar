@@ -73,4 +73,3 @@ def test_private_directory_fixes_a_group_writable_cache(tmp_path: Path) -> None:
     ensure_private_directory(target)
 
     assert stat.S_IMODE(target.stat().st_mode) == PRIVATE_DIRECTORY_MODE
-

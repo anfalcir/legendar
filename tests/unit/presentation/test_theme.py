@@ -55,4 +55,3 @@ def test_light_palette_matches_the_light_stylesheet() -> None:
 
     assert palette.color(QPalette.ColorRole.Window).name() == "#f4f6fa"
     assert palette.color(QPalette.ColorRole.Highlight).name() == "#4659d8"
-

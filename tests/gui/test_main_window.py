@@ -520,9 +520,7 @@ def test_translation_checkbox_explains_the_effect_on_the_target(
     assert "NLLB-200" in window.language_hint.text()
 
 
-def test_translation_to_the_same_language_is_skipped(
-    qtbot, tmp_path, media
-) -> None:
+def test_translation_to_the_same_language_is_skipped(qtbot, tmp_path, media) -> None:
     window = _window(
         qtbot, replace(_dependencies(tmp_path), translate_available=True), tmp_path
     )
@@ -964,9 +962,7 @@ def test_content_height_stays_compact_without_the_log(qtbot, tmp_path) -> None:
     assert window.content_column.maximumWidth() == 1180
 
 
-def test_narrow_window_stacks_the_form_without_clipping_labels(
-    qtbot, tmp_path
-) -> None:
+def test_narrow_window_stacks_the_form_without_clipping_labels(qtbot, tmp_path) -> None:
     """Achados 2/3/6: janela estreita empilha campos em vez de cortar texto."""
 
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
@@ -988,4 +984,3 @@ def test_elapsed_labels_are_human_readable() -> None:
     assert _format_elapsed(9) == "9 s"
     assert _format_elapsed(65) == "1 min 05 s"
     assert _format_elapsed(3_725) == "1 h 02 min"
-

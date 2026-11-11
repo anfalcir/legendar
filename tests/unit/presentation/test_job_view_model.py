@@ -223,4 +223,3 @@ def test_notice_is_cleared_when_a_job_starts_and_set_on_failure() -> None:
     assert reset.notice_message == ""
     assert restarted.notice_message == ""
     assert restarted.notice_level == ""
-
