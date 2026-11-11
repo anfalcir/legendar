@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1, 2 e 3 concluídas e integradas à `main`; Fase 4 em implementação na branch `phase-4/editorial-quality-gate`, aguardando CI e merge.
+- **Status:** Fases 1, 2, 3 e 4 concluídas e integradas à `main`. Fase 4 integrada pela PR #11, squash `32f20c3a5455dcc16f48e78a742ba4c7018339b5`.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -330,7 +330,7 @@ A detecção de repetição não deve remover texto automaticamente: repetição
 
 **Critério de conclusão:** os defeitos conhecidos geram alerta ou bloqueio verificável, com testes positivos e negativos; nenhum mecanismo de limpeza apaga fala legítima.
 
-**Implementação em andamento (11/11/2026):**
+**Implementação concluída e integrada à `main` (11/11/2026):**
 
 - Criado relatório estruturado `TrackValidationReport`, com estados `APPROVED`, `REVIEW_REQUIRED` e `BLOCKED`, issues identificáveis, severidade, índices das cues, contagem, CPS máximo e P95.
 - O gate classifica duração curta/longa, velocidade de leitura, largura, fragmentos após conectivos/preposições, sequências rápidas de cues curtas (flicker), duplicações consecutivas próximas, caracteres de controle/substituição e loops de palavras.
@@ -341,7 +341,7 @@ A detecção de repetição não deve remover texto automaticamente: repetição
 
 **Limites explícitos desta entrega:** o pipeline atual não dispõe de medição de energia/VAD no estágio editorial; portanto, o gate não afirma detectar texto pronunciado durante silêncio real. A consistência de nomes próprios e termos recorrentes exige glossário/avaliação contextual e continuará sendo validada no trabalho de tradução da Fase 6 e na homologação da Fase 8. Os alertas heurísticos são candidatos à revisão, não correções automáticas.
 
-**Status de integração:** implementação na branch; CI, revisão final, atualização de estado e merge ainda pendentes.
+**Integração e evidências:** PR [#11](https://github.com/anfalcir/legendar/pull/11), squash `32f20c3a5455dcc16f48e78a742ba4c7018339b5`. O workflow [Phase 4 quality](https://github.com/anfalcir/legendar/actions/runs/43114553749) passou integralmente: 506 testes aprovados, 10 testes E2E/integration ignorados nos jobs determinísticos sem FFmpeg, cobertura de 86%, Python 3.10–3.13, Ruff lint/format e smoke Whisper/WhisperX CPU PT-BR/EN. Os workflows relacionados das Fases 0, 1, 3, 5, 6 e 8 também passaram sobre o mesmo commit.
 
 ### Fase 5 — Benchmark e aceleração da transcrição (ASR)
 
