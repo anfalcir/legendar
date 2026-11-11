@@ -59,7 +59,7 @@ A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes.
 
 ## 3. Estado da Fase 3 — em andamento
 
-A branch `phase-3/global-segmentation` introduz fluxo global de palavras alinhadas, consolidação entre segmentos contíguos do Whisper, rastreabilidade `source_segments`, rejeição de cronologia inválida, respeito a fronteiras de frase significativas e extensão de cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). Testes unitários cobrem esses contratos. A avaliação audiovisual real, o resultado de CI e a validação quantitativa de legibilidade permanecem pendentes; portanto, a fase não está concluída.
+A branch `phase-3/global-segmentation` implementa fluxo global de palavras alinhadas, consolidação entre segmentos contíguos do Whisper, barreiras para segmentos fallback, rastreabilidade `source_segments`, rejeição de cronologia inválida, respeito a fronteiras de frase significativas e extensão de cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). O corpus determinístico cobre continuidade, pausas, pontuação, CPS, extensão segura, fallback intercalado e layout final de duas linhas. A CI da Fase 3 está em validação final; a homologação audiovisual com a mídia real fica na Fase 8.
 
 ## 4. Estado do repositório
 
