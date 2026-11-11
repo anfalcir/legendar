@@ -348,10 +348,10 @@ class GeminiTranslator:
         for attempt in range(self.max_retries + 1):
             started = time.perf_counter()
             try:
+                self._record("requests", 1)
                 response = self._requester(
                     self.model, payload, self.api_key, self.timeout_seconds
                 )
-                self._record("requests", 1)
                 self._record("request_seconds", time.perf_counter() - started)
                 usage = response.get("usageMetadata", {})
                 if isinstance(usage, Mapping):
@@ -397,7 +397,10 @@ class GeminiTranslator:
                 "Gemini interrompeu a geração antes de concluir o lote "
                 f"({candidate.get('finishReason')})."
             )
-        parts = candidate.get("content", {}).get("parts", [])
+        content = candidate.get("content")
+        if not isinstance(content, Mapping):
+            raise TranslationError("Gemini retornou conteúdo estruturado inválido.")
+        parts = content.get("parts", [])
         if not isinstance(parts, list):
             raise TranslationError("Gemini retornou conteúdo estruturado inválido.")
         text_parts = [part.get("text", "") for part in parts if isinstance(part, Mapping)]
