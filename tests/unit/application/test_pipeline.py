@@ -257,7 +257,6 @@ def test_publish_failure_propagates_as_domain_error(job_context):
         pipeline.execute(_request(), job_context)
 
 
-
 def test_alignment_diagnostics_are_propagated_as_pipeline_warnings(
     job_context,
 ):

@@ -246,7 +246,9 @@ def _audio_asset(sample: dict[str, Any]) -> AudioAsset:
             compression = source.getcomptype()
             frames = source.getnframes()
     except (OSError, wave.Error) as exc:
-        raise ValueError(f"Áudio inválido para a amostra {sample['sample_id']}.") from exc
+        raise ValueError(
+            f"Áudio inválido para a amostra {sample['sample_id']}."
+        ) from exc
 
     if (
         channels != 1
@@ -333,13 +335,12 @@ def evaluate_manifest(
 
             for word_index, expected in enumerate(expected_words):
                 actual = (
-                    actual_words[word_index]
-                    if word_index < len(actual_words)
-                    else None
+                    actual_words[word_index] if word_index < len(actual_words) else None
                 )
                 if (
                     actual is None
-                    or _normalized_word(actual.text) != _normalized_word(expected["word"])
+                    or _normalized_word(actual.text)
+                    != _normalized_word(expected["word"])
                     or actual.range is None
                 ):
                     continue
@@ -364,7 +365,12 @@ def evaluate_manifest(
         end_errors_by_language[language_code].extend(sample_end_errors)
         language_summary = aggregate_by_language.setdefault(
             language_code,
-            {"samples": 0, "reference_words": 0, "matched_words": 0, "invalid_timestamps": 0},
+            {
+                "samples": 0,
+                "reference_words": 0,
+                "matched_words": 0,
+                "invalid_timestamps": 0,
+            },
         )
         language_summary["samples"] += 1
         language_summary["reference_words"] += reference_words

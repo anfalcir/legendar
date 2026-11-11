@@ -729,7 +729,6 @@ def test_youtube_readiness_also_requires_ffmpeg_and_ffprobe(qtbot, tmp_path) -> 
     assert "FFmpeg e ffprobe precisam estar instalados" in window.readiness_label.text()
 
 
-
 def test_final_generation_stays_disabled_until_srt_publisher_is_available(
     qtbot, tmp_path, media
 ) -> None:

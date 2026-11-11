@@ -382,7 +382,6 @@ def test_invalid_device_is_rejected(tmp_path: Path) -> None:
         WhisperXAligner(tmp_path, device="mps")
 
 
-
 def test_missing_word_does_not_shift_following_alignment_to_wrong_token(
     tmp_path: Path,
 ) -> None:

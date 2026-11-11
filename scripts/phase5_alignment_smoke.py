@@ -328,7 +328,9 @@ def main() -> int:
     parser.add_argument("--samples-per-language", type=int, default=1)
     parser.add_argument("--cache-dir", type=Path, default=Path(".cache/phase5"))
     parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="cpu")
-    parser.add_argument("--output", type=Path, default=Path("phase5-alignment-smoke.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("phase5-alignment-smoke.json")
+    )
     args = parser.parse_args()
 
     try:
