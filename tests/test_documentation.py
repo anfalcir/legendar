@@ -34,6 +34,7 @@ REQUIRED_DOCUMENTS = (
     "docs/FASE_7_PLANO.md",
     "docs/FASE_8_PLANO.md",
     "docs/FASE_9_PLANO.md",
+    "docs/FASE_10_PLANO.md",
     "docs/HANDOFF_FASE_1.md",
     "docs/HANDOFF_FASE_2.md",
     "docs/HANDOFF_FASE_3.md",

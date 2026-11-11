@@ -4,8 +4,8 @@
 - **Repositório:** anfalcir/legendar
 - **Branch padrão / base de integração:** `main`
 - **Fases concluídas e integradas:** 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9
-- **Fase em execução:** nenhuma — roadmap do plano mestre encerrado
-- **Próxima etapa:** homologação do usuário com mídia real, modelos completos e computador-alvo — roteiro em [HOMOLOGACAO.md](HOMOLOGACAO.md)
+- **Fase em execução:** Fase 10 — correções e endurecimento pós-homologação; plano aprovado para execução em [FASE_10_PLANO.md](FASE_10_PLANO.md) (implementação ainda não iniciada)
+- **Próxima etapa:** homologação do usuário com mídia real, modelos completos e computador-alvo — roteiro em [HOMOLOGACAO.md](HOMOLOGACAO.md); os 13 achados da rodada de 11/11/2026 estão mapeados no plano da Fase 10
 - **Suíte determinística:** 452 testes aprovados e 86% de cobertura com FFmpeg/ffprobe no `PATH`; 442 aprovados e 10 skips explícitos sem as ferramentas
 - **Documentação:** guias de arquitetura, operação, instalação e decisões publicados; links relativos verificados automaticamente
 - **Manifestos:** `pyproject.toml` e `uv.lock`; o `requirements.txt` legado foi removido
