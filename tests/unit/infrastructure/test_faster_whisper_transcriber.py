@@ -116,6 +116,7 @@ def test_transcribes_and_consumes_the_complete_generator(tmp_path: Path) -> None
     assert model.calls[0]["language"] == "pt"
     assert model.calls[0]["beam_size"] == 5
     assert model.calls[0]["word_timestamps"] is False
+    assert model.calls[0].get("best_of") is None
     assert model.calls[0]["vad_filter"] is False
     assert progress.reports == [(1.0, "Reconhecimento faster-whisper base concluído")]
 
