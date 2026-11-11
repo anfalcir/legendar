@@ -249,6 +249,10 @@ def test_cues_never_exceed_the_character_limit_per_cue():
     result = segment_alignment(_alignment(segment))
 
     assert all(len(cue.text) <= 84 for cue in result.track.cues)
+    assert all(len(cue.lines()) <= 2 for cue in result.track.cues)
+    assert all(
+        len(line) <= 42 for cue in result.track.cues for line in cue.lines()
+    )
 
 
 def test_continuous_speech_merges_across_asr_segment_boundaries():
