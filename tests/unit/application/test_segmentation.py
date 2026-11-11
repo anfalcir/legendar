@@ -333,3 +333,24 @@ def test_short_cue_uses_available_silence_to_reach_reading_time():
     first_cue = result.track.cues[0]
     assert first_cue.range.duration >= len(first_cue.text) / 17.0
     assert first_cue.range.end <= second.range.start - 0.08
+
+
+def test_meaningful_short_sentence_boundary_is_not_merged_with_next_sentence():
+    first = _segment(
+        _word("Isso", 0.0, 0.25),
+        _word("é", 0.3, 0.45),
+        _word("muito", 0.5, 0.8),
+        _word("bom.", 0.85, 1.2),
+    )
+    second = _segment(
+        _word("Agora", 1.3, 1.65),
+        _word("vamos", 1.7, 2.0),
+        _word("seguir.", 2.05, 2.4),
+    )
+
+    result = segment_alignment(_alignment(first, second))
+
+    assert [cue.text for cue in result.track.cues] == [
+        "Isso é muito bom.",
+        "Agora vamos seguir.",
+    ]
