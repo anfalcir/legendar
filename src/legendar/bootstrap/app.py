@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import re
 import sys
 from collections.abc import Callable, Mapping, Sequence
@@ -136,7 +137,7 @@ def build_ui_dependencies(
         *runtime_details,
     )
 
-    asr_backend = __import__("os").environ.get(
+    asr_backend = os.environ.get(
         "LEGENDAR_ASR_BACKEND", "whisper"
     ).strip().casefold()
     transcription_configuration_ok = asr_backend in {"whisper", "faster-whisper"}
