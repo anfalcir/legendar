@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
+from pathlib import Path
 
 from legendar.application.job.context import CancellationTokenImpl
 from legendar.domain.entities.media import AudioAsset

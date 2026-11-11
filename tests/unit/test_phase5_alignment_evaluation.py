@@ -5,7 +5,6 @@ import wave
 from pathlib import Path
 
 import pytest
-
 from scripts.phase5_alignment_evaluation import (
     _error_summary,
     _percentile,
