@@ -253,7 +253,7 @@ def _extend_into_safe_silence(
     A última cue não é estendida porque a segmentação não conhece o fim real
     da mídia nem dispõe de evidência de silêncio após a última palavra.
     """
-    if next_start is None or window.duration >= policy.min_cue_duration:
+    if next_start is None or window.duration >= required_duration:
         return window
     safe_end = min(
         next_start - DISPLAY_SAFETY_MARGIN_SECONDS,
