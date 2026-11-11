@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem é executada por fases. As Fases 0–3 foram implementadas, validadas e integradas à `main` pelas PRs #1–#4. A Fase 4 (reconhecimento Whisper) está em implementação na branch `phase-4/whisper-recognition`: conecta o motor local à porta `Transcriber`, preserva a separação do alinhamento e acrescenta benchmark PT-BR/EN. A aplicação anterior permanece preservada como baseline. Consulte o estado vivo para distinguir entregas integradas de mudanças ainda em revisão.
+A remodelagem é executada por fases. As Fases 0–4 foram implementadas, validadas e integradas à `main` pelas PRs #1–#5. A Fase 4 foi integrada por squash pela PR [#5](https://github.com/anfalcir/legendar/pull/5), commit `2f9751139616591e31a0ec73902265b38b040d41`. O reconhecimento Whisper local suporta PT-BR/EN, perfis configuráveis, cache e benchmark WER/CER/RTF; a homologação no computador-alvo e com fala representativa de pregações permanece pendente. A aplicação anterior permanece preservada como baseline.
 
 ## Documentação do projeto
 
@@ -33,7 +33,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–3 integradas; a branch da Fase 4 conecta o adaptador local OpenAI Whisper ao pipeline, com detecção de idioma PT/EN, cache de modelos e execução no worker. WhisperX/alinhamento por palavra, tradução e publicação SRT permanecem em fases posteriores. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_4_PLANO.md](docs/FASE_4_PLANO.md) e [docs/HANDOFF_FASE_4.md](docs/HANDOFF_FASE_4.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–4 integradas. O pipeline já realiza aquisição/preparação de mídia e reconhecimento local Whisper; a saída desta etapa é textual e não substitui forced alignment. WhisperX/alinhamento por palavra, tradução, segmentação final e publicação SRT permanecem nas fases 5–7. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_4_PLANO.md](docs/FASE_4_PLANO.md) e [docs/HANDOFF_FASE_4.md](docs/HANDOFF_FASE_4.md).
 
 ## Licença
 

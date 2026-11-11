@@ -1,6 +1,7 @@
 # Plano operacional — Fase 4: reconhecimento Whisper
 
-- **Status:** implementação concluída na branch `phase-4/whisper-recognition`; integração depende de CI e PR
+- **Status:** **concluída, validada e integrada à `main` pela PR #5 (squash)**
+- **Commit de integração:** `2f9751139616591e31a0ec73902265b38b040d41`
 - **Base:** `main` após Fase 3 (HEAD inicial `cbba552a9b72d2dee3f4daed59607c39eda21d7a`)
 - **Escopo:** transcrição local em idioma original, suporte PT-BR/EN, perfis Whisper, cache, erros, worker e benchmark
 - **Fora do escopo:** forced alignment, timestamps por palavra, tradução, segmentação final e publicação SRT
@@ -115,12 +116,27 @@ O relatório guarda WER/CER, duração, tempo de transcrição, RTF, RSS máximo
 - [x] Execução em worker e prontidão Whisper refletida na GUI.
 - [x] Testes unitários determinísticos sem download de pesos/rede.
 - [x] Benchmark com FLEURS e manifesto local, WER/CER/RTF/RSS.
-- [ ] Workflow da Fase 4 aprovado em todos os jobs.
+- [x] Workflow push da Fase 4 [#42928902822](https://github.com/anfalcir/legendar/actions/runs/42928902822) e workflow PR [#42928909751](https://github.com/anfalcir/legendar/actions/runs/42928909751) aprovados; matriz Python 3.10–3.13 (4/4) em cada execução.
+- [x] Instalação CPU do Whisper, testes do adaptador e benchmark real tiny/base/small em PT-BR/EN; artefato [legendar-phase4-whisper-benchmark](https://github.com/anfalcir/legendar/actions/runs/42928902822).
 - [ ] Execução do benchmark no computador-alvo com inventário atualizado.
 - [ ] Avaliação com fala representativa de pregações e transcrições de referência revisadas.
 
 Os dois últimos itens são gates de qualidade/hardware: CI em runner GitHub comprova execução do código, não desempenho no computador-alvo nem qualidade em conteúdo real. Não aprovar perfil recomendado apenas por uma amostra FLEURS pequena.
 
+### Resultado do smoke benchmark CI (runner CPU)
+
+A execução real foi concluída em Python 3.12.16, PyTorch 2.8.0+cpu, OpenAI Whisper 20250625, quatro CPUs lógicas e pico de RSS de 2.022.543.360 bytes (aprox. 1,88 GiB). Foram usadas duas amostras FLEURS por idioma. Médias observadas:
+
+| Modelo | Idioma | WER médio | CER médio | RTF médio | Tempo médio por áudio |
+|---|---|---:|---:|---:|---:|
+| tiny | PT-BR | 37,50% | 16,32% | 0,062 | 0,572 s |
+| tiny | EN | 23,90% | 16,76% | 0,111 | 1,174 s |
+| base | PT-BR | 6,67% | 2,30% | 0,094 | 0,869 s |
+| base | EN | 14,89% | 11,67% | 0,094 | 0,760 s |
+| small | PT-BR | 0,00% | 0,00% | 0,313 | 2,894 s |
+| small | EN | 14,89% | 11,67% | 0,329 | 2,659 s |
+
+Nesta amostra mínima, o modelo small foi melhor em PT-BR, empatou com base em WER/CER de inglês e levou mais tempo. base mostrou o compromisso mais equilibrado entre os dois idiomas; permanece o padrão provisório. Não converter quatro áudios de fala lida em afirmação de qualidade de sermões ou recomendação definitiva. O relatório JSON completo e reproduzível está anexado ao workflow de push; ele não contém áudio nem transcrições.
 ## 7. Riscos e limites
 
 - O primeiro download de pesos depende de internet, espaço livre e disponibilidade upstream.
@@ -132,4 +148,4 @@ Os dois últimos itens são gates de qualidade/hardware: CI em runner GitHub com
 
 ## 8. Próximo checkpoint
 
-Após workflow e revisão da PR, integrar esta fase à `main`. Antes de declarar um perfil ideal para o computador-alvo, executar inventário atualizado e benchmark local; a aplicação pode usar `base` como padrão provisório, mas a recomendação final deve seguir evidências.
+A fase está integrada à `main` pela PR #5. A próxima etapa do roadmap é a Fase 5 (alinhamento temporal), sujeita ao checkpoint próprio. Antes de recomendar definitivamente um perfil, executar inventário atualizado e benchmark local no computador-alvo, além de avaliação com pregações representativas; `base` permanece apenas padrão provisório.

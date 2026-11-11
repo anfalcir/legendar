@@ -621,7 +621,7 @@ Versões, licenças, wheels, modelos, requisitos de runtime e combinações de b
 | 1 | Reestruturação arquitetural | Camadas, modelos de domínio, pipeline, estados, configurações, tratamento de erros, testes e CI | **Concluída e integrada à `main` pela PR #2 (squash, commit `de31ddd`):** arquitetura executável e testada; baseline legada caracterizada/preservada; CI Python 3.10–3.13 verde (196 testes por ambiente); critérios do [plano operacional da Fase 1](FASE_1_PLANO.md) aprovados |
 | 2 | Interface profissional | Janela, identidade visual, diálogos, máquina de estados, workers simulados, progresso e log | **Concluída e integrada à `main` pela PR #3 (squash, commit `4129f0a`):** temas claro/escuro/sistema, confirmações seguras, proteção contra reentrância, preferências QSettings, acessibilidade, logs e progresso honesto; CI 4/4 em Python 3.10–3.13, 218 testes por ambiente, cobertura 88% |
 | 3 | Entrada e preparação de mídia | YouTube, áudio/vídeo local, ffprobe, FFmpeg, faixas, normalização e temporários | **Concluída e integrada à `main` pela PR #4 (squash, commit `dfa440b`):** aquisição local/YouTube, inspeção, seleção de faixa e normalização; CI 4/4 em Python 3.10–3.13, 249 testes por ambiente, cobertura 87%, gates herdados aprovados |
-| 4 | Reconhecimento Whisper | Adaptador local, detecção/seleção de idioma, perfis, cache, erros, worker e benchmark lexical | Transcrição original reproduzível em PT-BR/EN; comparação WER/CER/RTF documentada e perfil-alvo avaliado |
+| 4 | Reconhecimento Whisper | Adaptador local, detecção/seleção de idioma, perfis, cache, erros, worker e benchmark lexical | **Concluída e integrada pela PR #5 (squash, commit `2f975113`):** Whisper local PT-BR/EN, cache e worker; CI 4/4 Python 3.10–3.13 em push/PR e smoke CPU tiny/base/small com WER/CER/RTF publicados. Inventário e corpus representativo no computador-alvo permanecem como homologação de produto |
 | 5 | Alinhamento temporal | WhisperX, VAD, offsets, chunks, validação, fallback se aprovado e métricas | Base de referência atendendo aos limites aprovados ou limitações documentadas |
 | 6 | Tradução, segmentação e SRT | Tradução, vínculo temporal, regras de leitura, writer e validator | SRT original e traduzido válidos nos casos de referência |
 | 7 | Integração de ponta a ponta | GUI conectada ao pipeline, progresso real, cancelamento, logs e recuperação | Fluxo completo com estados e erros controlados |
@@ -632,8 +632,7 @@ A execução e as evidências das Fases 1–4 estão registradas em [ESTADO_ATUA
 [FASE_1_PLANO.md](FASE_1_PLANO.md), [FASE_2_PLANO.md](FASE_2_PLANO.md), [FASE_3_PLANO.md](FASE_3_PLANO.md),
 [FASE_4_PLANO.md](FASE_4_PLANO.md), [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md),
 [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md) e
-[HANDOFF_FASE_4.md](HANDOFF_FASE_4.md). A Fase 4 está sendo implementada na branch
-`phase-4/whisper-recognition`; sua conclusão será registrada após CI, revisão e integração na `main`.
+[HANDOFF_FASE_4.md](HANDOFF_FASE_4.md). As Fases 0–4 estão concluídas e integradas à `main`. A próxima etapa planejada é a Fase 5 — alinhamento temporal —, que permanece sujeita a checkpoint explícito.
 
 ### 12.1. Regras de execução das fases
 

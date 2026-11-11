@@ -1,6 +1,8 @@
 # Handoff técnico — Fase 4: reconhecimento Whisper
 
-- **Status:** implementação concluída na branch `phase-4/whisper-recognition`; validação automatizada/merge em andamento
+- **Status:** **concluída, validada e integrada à `main` pela PR #5 (squash)**
+- **PR:** https://github.com/anfalcir/legendar/pull/5
+- **Commit de integração:** `2f9751139616591e31a0ec73902265b38b040d41`
 - **Base:** `main` após integração da Fase 3
 - **Fronteira:** reconhecimento lexical local; não implementa forced alignment, tradução ou SRT
 - **Plano operacional:** [FASE_4_PLANO.md](FASE_4_PLANO.md)
@@ -70,7 +72,10 @@ Revisar os dados de hardware antes de compartilhar o inventário. Benchmark em r
 - Testes do adaptador usam `model_loader`, `device_resolver` e `audio_loader` injetados.
 - Cobrem idioma forçado/detectado, texto/segmentos, ausência de timestamps, cache em memória, perfis inválidos, erro de carga/inferência, resposta vazia/inválida e cancelamento.
 - Testes do benchmark cobrem aliases PT/EN, validação do manifesto, caminhos relativos e normalização.
-- O job CPU de CI usa modelos `tiny`, `base` e `small`, duas amostras FLEURS por idioma e publica JSON de métricas. Registrar aqui o run final após CI.
+- O job CPU de CI usa modelos `tiny`, `base` e `small`, duas amostras FLEURS por idioma e publica JSON de métricas.
+- CI push [#42928902822](https://github.com/anfalcir/legendar/actions/runs/42928902822) e CI PR [#42928909751](https://github.com/anfalcir/legendar/actions/runs/42928909751): ambos concluídos com sucesso; matriz 4/4 Python 3.10–3.13, runtime CPU real, testes do adaptador e benchmark publicados.
+- Gates herdados da PR: [Fase 0 #42928909662](https://github.com/anfalcir/legendar/actions/runs/42928909662), [Fase 1 #42928909729](https://github.com/anfalcir/legendar/actions/runs/42928909729) e [Fase 3 #42928909702](https://github.com/anfalcir/legendar/actions/runs/42928909702), todos aprovados.
+- Resultado consolidado: `base` WER PT-BR 0,066667 / EN 0,148897; `small` PT-BR 0,0 / EN 0,148897; `tiny` PT-BR 0,375 / EN 0,238971. Peak RSS ~1,88 GiB no runner CPU, quatro CPUs lógicas. Amostragem: duas falas lidas por idioma; não equivale a homologação de produção.
 
 ## 6. Pendências de homologação
 
@@ -82,4 +87,4 @@ Revisar os dados de hardware antes de compartilhar o inventário. Benchmark em r
 
 ## 7. Próxima fronteira
 
-Após merge, a Fase 5 pode consumir `Transcript` original e realizar forced alignment com WhisperX. Não mover alinhamento para este adaptador nem adicionar word timestamps aproximados nesta fronteira.
+A Fase 4 está integrada à `main`. A próxima fronteira é a Fase 5: consumir `Transcript` original e realizar forced alignment com WhisperX. Não mover alinhamento para este adaptador nem adicionar word timestamps aproximados nesta fronteira.
