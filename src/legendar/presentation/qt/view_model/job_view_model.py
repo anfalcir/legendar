@@ -183,9 +183,7 @@ class JobViewModel:
                     else ""
                 ),
                 notice_level=(
-                    "warning"
-                    if event.quality_status == "REVIEW_REQUIRED"
-                    else ""
+                    "warning" if event.quality_status == "REVIEW_REQUIRED" else ""
                 ),
                 progress_known=True,
                 log_lines=_append_text(
