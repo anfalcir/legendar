@@ -141,7 +141,8 @@ jobs:
           uv run --locked --group dev --group phase0 --extra runtime-cpu pytest -q \
             tests/unit/infrastructure/test_whisperx_aligner.py \
             tests/unit/infrastructure/test_whisper_transcriber.py \
-            tests/unit/test_phase5_alignment_evaluation.py
+            tests/unit/test_phase5_alignment_evaluation.py \
+            tests/unit/test_phase5_alignment_smoke.py
 
       - name: Run real multilingual Whisper + WhisperX alignment smoke
         env:
