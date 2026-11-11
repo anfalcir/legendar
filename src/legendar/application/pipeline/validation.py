@@ -328,9 +328,7 @@ def _find_flicker_cues(track: SubtitleTrack) -> tuple[int, ...]:
     previous_end: float | None = None
     for cue in track.cues:
         is_fast = cue.range.duration <= 0.6
-        is_contiguous = (
-            previous_end is None or cue.range.start - previous_end <= 0.15
-        )
+        is_contiguous = previous_end is None or cue.range.start - previous_end <= 0.15
         if is_fast and is_contiguous:
             run.append(cue.index)
         else:
