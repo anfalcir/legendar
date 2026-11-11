@@ -322,3 +322,14 @@ def test_short_final_cue_is_not_extended_without_silence_evidence():
 
     assert result.track.cues[0].range == TimeRange(0.0, 0.2)
     assert result.short_cues == (1,)
+
+
+def test_short_cue_uses_available_silence_to_reach_reading_time():
+    first = _segment(_word("texto", 0.0, 0.2), _word("mais", 0.21, 0.4))
+    second = _segment(_word("próxima", 2.0, 2.4))
+
+    result = segment_alignment(_alignment(first, second))
+
+    first_cue = result.track.cues[0]
+    assert first_cue.range.duration >= len(first_cue.text) / 17.0
+    assert first_cue.range.end <= second.range.start - 0.08
