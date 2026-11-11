@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1 e 2 concluídas e integradas à `main`; Fase 3 em implementação na branch `phase-3/global-segmentation`.
+- **Status:** Fases 1, 2 e 3 concluídas e integradas à `main`; Fase 4 é a próxima etapa.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -297,7 +297,7 @@ Entregas:
 
 **Critério de conclusão:** corpus determinístico de alinhamentos comprova redução de fragmentação artificial, conservação textual, estabilidade temporal, tratamento de pausas/frases e respeito aos limites editoriais; CI completa verde. A homologação audiovisual com mídia real, player e comparação humana fica concentrada na Fase 8, para não confundir a validação do algoritmo puro com a validação ponta a ponta do modelo e do áudio.
 
-**Implementação em andamento (11/11/2026):**
+**Implementação concluída e integrada à `main` (11/11/2026, PR #10):**
 
 - A segmentação passou a construir um fluxo global cronológico de palavras alinhadas, em vez de reiniciar o agrupamento em cada segmento do Whisper. Segmentos sem timestamps por palavra são preservados em sua própria janela e funcionam como barreiras, impedindo que cues alinhadas de antes/depois os absorvam.
 - As cues podem atravessar limites artificiais do ASR quando há continuidade temporal e textual; pausas, pontuação, limite de caracteres e duração continuam determinando fronteiras.
@@ -309,7 +309,7 @@ Entregas:
 - O alinhador atual não oferece diarização confiável de falantes. A Fase 3 não infere mudança de interlocutor: usa cronologia, pausas e pontuação, mantendo essa limitação documentada.
 - Testes foram adicionados para consolidação entre segmentos, pausas, rastreabilidade, cronologia inválida em segmentos alinhados e fallback, preservação de segmentos fallback intercalados, fronteira de frase e extensão segura.
 
-**Estado da implementação:** o corpus determinístico agora cobre continuidade entre segmentos, pausas, fronteiras de frase, divisão por CPS, extensão segura, segmentos fallback intercalados, rastreabilidade e rejeição de cronologia inválida. A redução de fragmentação artificial é verificada por cenários em que dois segmentos contíguos do ASR passam a formar uma cue única, enquanto pausas e fronteiras de frase continuam gerando cues separadas. A homologação audiovisual com o arquivo real de 37min10s será executada na Fase 8; ela não é substituta para os testes puros da segmentação.
+**Resultado e evidências:** corpus determinístico cobre continuidade entre segmentos, pausas, fronteiras de frase, divisão por CPS, extensão segura, segmentos fallback intercalados, rastreabilidade e rejeição de cronologia inválida. A redução de fragmentação artificial é comprovada por cenários em que dois segmentos contíguos do ASR passam a formar uma cue única, enquanto pausas e fronteiras de frase continuam gerando cues separadas. PR #10 foi integrada à `main` por squash no commit `10f6d6d428a1fa5a45a7c7fd13870f48bdf67019`. A CI específica da Fase 3 passou em Python 3.10–3.13, com 506 testes aprovados, cobertura global de 86%, Ruff lint/formatação e FFmpeg/Qt/E2E aprovados. Workflows das Fases 4, 5, 6 e 8 também passaram no mesmo head. A homologação audiovisual com o arquivo real de 37min10s permanece planejada na Fase 8.
 
 ### Fase 4 — Gate editorial e diagnóstico de texto
 
