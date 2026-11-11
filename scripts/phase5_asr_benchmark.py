@@ -24,7 +24,6 @@ from typing import Any
 try:
     from scripts.phase4_model_benchmark import (
         _load_fleurs_rows,
-        _load_manifest_rows,
         _normalize_text,
         _peak_rss_bytes,
         _read_audio,
@@ -32,7 +31,6 @@ try:
 except ModuleNotFoundError:
     from phase4_model_benchmark import (
         _load_fleurs_rows,
-        _load_manifest_rows,
         _normalize_text,
         _peak_rss_bytes,
         _read_audio,
