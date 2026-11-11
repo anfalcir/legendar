@@ -745,7 +745,6 @@ class WhisperXAligner:
                             selected_aligned_count = recovered_aligned_count
                             selected_previous_end = recovered_previous_end
                             self._record_metric("recovered_words", recovered_count)
-                            selected_issues = (*selected_issues, "alignment_recovered")
                         else:
                             selected_issues = (*selected_issues, "alignment_recovery_no_improvement")
                     except JobCancelledError:
