@@ -200,3 +200,17 @@ def test_translation_invariant_numbers_and_acronyms_are_checked() -> None:
     )
     assert "número 3" in issue.message
     assert "sigla NASA" in issue.message
+
+
+def test_rapid_sequence_of_short_cues_is_reported_as_flicker() -> None:
+    track = _track(
+        _cue(1, "oi", 0.0, 0.4),
+        _cue(2, "sim", 0.5, 0.9),
+        _cue(3, "não", 1.0, 1.4),
+    )
+
+    report = validate_track(track)
+
+    assert report.flicker_cues == (1, 2, 3)
+    assert any(issue.code == "FLICKER" for issue in report.issues)
+    assert report.status.value == "REVIEW_REQUIRED"
