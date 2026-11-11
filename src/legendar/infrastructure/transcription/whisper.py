@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 import os
 import threading
+import time
 from collections.abc import Callable, Mapping
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -138,6 +139,17 @@ class WhisperTranscriber:
         self._revision: str | None = None
         self._load_lock = threading.Lock()
         self._inference_lock = threading.Lock()
+        self._metrics_lock = threading.Lock()
+        self._metrics: dict[str, int | float] = {
+            "model_load_attempts": 0,
+            "model_load_successes": 0,
+            "model_load_seconds": 0.0,
+            "audio_load_seconds": 0.0,
+            "inference_calls": 0,
+            "inference_seconds": 0.0,
+            "transcribed_segments": 0,
+            "recognized_words": 0,
+        }
 
     @classmethod
     def from_environment(cls, models_dir: Path) -> WhisperTranscriber:
@@ -160,6 +172,28 @@ class WhisperTranscriber:
     def revision(self) -> str | None:
         return self._revision
 
+    def performance_snapshot(self) -> dict[str, Any]:
+        """Snapshot acumulado de tempos/contagens; não contém áudio nem transcrição."""
+        with self._metrics_lock:
+            counters = dict(self._metrics)
+        return {
+            "loaded": self.is_loaded,
+            "configuration": {
+                "adapter": "openai-whisper",
+                "model": self.model_name,
+                "package_version": self._revision or self._version_provider(),
+                "requested_device": self.requested_device,
+                "loaded_device": self._device,
+                "fp16": self._device not in (None, "cpu"),
+                "word_timestamps": False,
+            },
+            "counters": counters,
+        }
+
+    def _record_metric(self, name: str, value: int | float) -> None:
+        with self._metrics_lock:
+            self._metrics[name] = self._metrics.get(name, 0) + value
+
     def _get_model(self) -> tuple[Any, str]:
         if self._model is not None and self._device is not None:
             return self._model, self._device
@@ -168,6 +202,8 @@ class WhisperTranscriber:
             if self._model is not None and self._device is not None:
                 return self._model, self._device
 
+            load_started = time.perf_counter()
+            self._record_metric("model_load_attempts", 1)
             try:
                 device = self._device_resolver(self.requested_device)
                 self.download_root.mkdir(parents=True, exist_ok=True)
@@ -184,7 +220,12 @@ class WhisperTranscriber:
                     f"Não foi possível carregar o modelo Whisper "
                     f"{self.model_name!r}: {exc}"
                 ) from exc
+            finally:
+                self._record_metric(
+                    "model_load_seconds", time.perf_counter() - load_started
+                )
 
+            self._record_metric("model_load_successes", 1)
             self._model = model
             self._device = device
             self._revision = revision
@@ -205,18 +246,25 @@ class WhisperTranscriber:
         if token is not None:
             token.raise_if_cancelled()
 
+        audio_load_started = time.perf_counter()
         try:
             waveform = self._audio_loader(audio)
         except ModelError:
             raise
         except Exception as exc:
             raise ModelError(f"Falha ao carregar o áudio normalizado: {exc}") from exc
+        finally:
+            self._record_metric(
+                "audio_load_seconds", time.perf_counter() - audio_load_started
+            )
         if getattr(waveform, "size", None) == 0 or (
             getattr(waveform, "__len__", None) is not None and len(waveform) == 0
         ):
             raise ModelError("O áudio normalizado não contém amostras.")
 
         language_code = language.value if language is not None else None
+        inference_started = time.perf_counter()
+        self._record_metric("inference_calls", 1)
         try:
             # Um único modelo é reutilizado e a inferência é serializada. A UI
             # executa esta chamada na QThread do job, nunca na thread principal.
@@ -241,6 +289,10 @@ class WhisperTranscriber:
             raise ModelError(
                 f"Falha durante o reconhecimento com Whisper {self.model_name}: {exc}"
             ) from exc
+        finally:
+            self._record_metric(
+                "inference_seconds", time.perf_counter() - inference_started
+            )
 
         if not isinstance(result, Mapping):
             raise ModelError("Whisper retornou uma resposta em formato inesperado.")
@@ -333,5 +385,10 @@ class WhisperTranscriber:
         )
         if token is not None:
             token.raise_if_cancelled()
+        self._record_metric("transcribed_segments", len(segments))
+        self._record_metric(
+            "recognized_words",
+            sum(len(segment.text.split()) for segment in segments),
+        )
         progress.report(1.0, f"Reconhecimento Whisper {self.model_name} concluído")
         return transcript

@@ -306,3 +306,27 @@ def test_audio_loader_failure_is_wrapped_as_domain_error(tmp_path: Path) -> None
             language=Language.PORTUGUESE,
             progress=ProgressRecorder(),
         )
+
+
+def test_performance_snapshot_separates_model_load_audio_load_and_inference(
+    tmp_path: Path,
+) -> None:
+    transcriber = make_transcriber(tmp_path)
+    transcriber.transcribe(
+        make_audio(tmp_path),
+        language=Language.PORTUGUESE,
+        progress=ProgressRecorder(),
+    )
+
+    snapshot = transcriber.performance_snapshot()
+
+    assert snapshot["loaded"] is True
+    assert snapshot["configuration"]["adapter"] == "openai-whisper"
+    assert snapshot["configuration"]["model"] == "base"
+    assert snapshot["counters"]["model_load_attempts"] == 1
+    assert snapshot["counters"]["model_load_successes"] == 1
+    assert snapshot["counters"]["inference_calls"] == 1
+    assert snapshot["counters"]["transcribed_segments"] == 2
+    assert snapshot["counters"]["recognized_words"] == 2
+    assert snapshot["counters"]["model_load_seconds"] >= 0
+    assert snapshot["counters"]["inference_seconds"] >= 0

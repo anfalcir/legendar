@@ -7,7 +7,7 @@ usa como fake. Não criar abstração sem consumidor.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import Any, Mapping, Protocol, runtime_checkable
 
 from legendar.application.job.context import JobContext
 from legendar.application.pipeline.translation import (
@@ -23,6 +23,19 @@ from legendar.domain.entities.media import (
 from legendar.domain.entities.subtitle import SubtitleTrack
 from legendar.domain.entities.transcript import AlignmentResult, Transcript
 from legendar.domain.value_objects.language import Language
+
+
+@runtime_checkable
+class PerformanceReporter(Protocol):
+    """Persistência opcional de medições sanitizadas do pipeline."""
+
+    def capture_resources(self) -> Mapping[str, int | float | None]:
+        """Devolve snapshot de memória/processo sem dados de usuário."""
+        ...
+
+    def write_report(self, report: Mapping[str, Any]) -> Path:
+        """Persiste o relatório local do job."""
+        ...
 
 
 @runtime_checkable

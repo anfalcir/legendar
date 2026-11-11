@@ -21,7 +21,7 @@ A arquitetura e a base de engenharia das Fases 0–10 estão integradas. Uma aud
 
 A prioridade agora é corrigir a integridade e a legibilidade do resultado antes de trocar motores ou reduzir configurações de qualidade. Em paralelo, o novo plano estabelece instrumentação para localizar os gargalos de desempenho e testar otimizações com comparação pareada.
 
-## 2. Estado do repositório
+## 3. Estado do repositório
 
 | Área | Estado |
 |---|---|

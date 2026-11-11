@@ -8,6 +8,7 @@ controlador de job.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -28,9 +29,14 @@ from legendar.application.ports.protocols import (
     CancellationToken,
     MediaDownloader,
     MediaInspector,
+    PerformanceReporter,
     SubtitlePublisher,
     Transcriber,
     Translator,
+)
+from legendar.application.pipeline.performance import (
+    PipelinePerformanceSession,
+    snapshot_adapter_metrics,
 )
 from legendar.application.progress.sink import MonotonicProgress, ScaledProgress
 from legendar.domain.entities.media import MediaInfo, MediaKind, MediaSource
@@ -38,6 +44,7 @@ from legendar.domain.entities.subtitle import SubtitleTrack
 from legendar.domain.entities.transcript import AlignmentResult
 from legendar.domain.errors.catalog import (
     AlignmentInsufficientError,
+    JobCancelledError,
     InvalidInputError,
     ModelError,
     TranslationError,
@@ -47,6 +54,9 @@ from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
 
 #: Faixas de progresso por etapa (somam 1.0 no caminho completo com tradução).
+LOGGER = logging.getLogger(__name__)
+
+
 _STAGE_RANGES: dict[JobState, tuple[float, float]] = {
     JobState.INSPECTING_MEDIA: (0.00, 0.05),
     JobState.PREPARING_AUDIO: (0.05, 0.15),
@@ -117,8 +127,14 @@ class PipelineResult:
 class SerialPipeline:
     """Executa as etapas na ordem canônica, reportando progresso e cancelando."""
 
-    def __init__(self, ports: PipelinePorts) -> None:
+    def __init__(
+        self,
+        ports: PipelinePorts,
+        *,
+        performance_reporter: PerformanceReporter | None = None,
+    ) -> None:
         self._ports = ports
+        self._performance_reporter = performance_reporter
 
     def execute(
         self,
@@ -128,9 +144,65 @@ class SerialPipeline:
         on_state: Callable[[JobState], None] | None = None,
         on_progress: Callable[[float, str], None] | None = None,
     ) -> PipelineResult:
+        reporter = self._performance_reporter
+        resource_provider = reporter.capture_resources if reporter is not None else None
+        performance = PipelinePerformanceSession(
+            context.job_id,
+            resource_provider=resource_provider,
+            adapter_metrics_before=snapshot_adapter_metrics(self._ports),
+        )
+        status = "failed"
+        error_type: str | None = None
+        try:
+            result = self._execute(
+                request,
+                context,
+                on_state=on_state,
+                on_progress=on_progress,
+                performance=performance,
+            )
+            status = "completed"
+            return result
+        except JobCancelledError:
+            status = "cancelled"
+            error_type = "JobCancelledError"
+            raise
+        except Exception as exc:
+            error_type = type(exc).__name__
+            raise
+        finally:
+            if reporter is not None:
+                report = performance.build_report(
+                    status=status,
+                    adapter_metrics_after=snapshot_adapter_metrics(self._ports),
+                    error_type=error_type,
+                )
+                try:
+                    reporter.write_report(report)
+                except Exception:
+                    # Telemetria é best-effort e nunca pode mudar o resultado do job.
+                    LOGGER.exception("Não foi possível persistir o relatório de desempenho.")
+
+    def _execute(
+        self,
+        request: JobRequest,
+        context: JobContext,
+        *,
+        on_state: Callable[[JobState], None] | None,
+        on_progress: Callable[[float, str], None] | None,
+        performance: PipelinePerformanceSession,
+    ) -> PipelineResult:
         token = context.token
         progress = MonotonicProgress(on_progress)
         warnings: list[str] = []
+        performance.set_metadata(
+            media_kind=request.source.kind.value,
+            requested_source_language=(
+                request.source_language.value if request.source_language else None
+            ),
+            final_language=request.output_language.value,
+            translation_requested=request.translate,
+        )
 
         def enter(state: JobState) -> ScaledProgress:
             token.raise_if_cancelled()
@@ -141,10 +213,13 @@ class SerialPipeline:
 
         # 1. Aquisição (download quando necessário) + inspeção
         stage = enter(JobState.INSPECTING_MEDIA)
-        media_path = self._acquire(request, context, stage, token)
-        media_info = self._ports.inspector.inspect(
-            _as_local_source(request.source, media_path), token=token
-        )
+        with performance.measure("media_acquisition"):
+            media_path = self._acquire(request, context, stage, token)
+        with performance.measure("media_inspection"):
+            media_info = self._ports.inspector.inspect(
+                _as_local_source(request.source, media_path), token=token
+            )
+        performance.set_metadata(media_duration_seconds=media_info.duration_seconds)
         token.raise_if_cancelled()
         if not media_info.has_audio:
             raise InvalidInputError("A mídia selecionada não possui áudio.")
@@ -157,20 +232,28 @@ class SerialPipeline:
 
         # 2. Preparação do áudio normalizado
         stage = enter(JobState.PREPARING_AUDIO)
-        audio = self._ports.audio_preparer.prepare(
-            media_path,
-            stream=stream,
-            destination_path=str(context.audio_cache_path),
-            token=token,
-            progress=stage,
-        )
+        with performance.measure("audio_preparation"):
+            audio = self._ports.audio_preparer.prepare(
+                media_path,
+                stream=stream,
+                destination_path=str(context.audio_cache_path),
+                token=token,
+                progress=stage,
+            )
+        performance.set_metadata(audio_duration_seconds=audio.duration_seconds)
         token.raise_if_cancelled()
         stage.report(1.0, "Áudio preparado")
 
         # 3. Transcrição no idioma de origem
         stage = enter(JobState.TRANSCRIBING)
-        transcript = self._ports.transcriber.transcribe(
-            audio, language=request.source_language, progress=stage, token=token
+        with performance.measure("transcription"):
+            transcript = self._ports.transcriber.transcribe(
+                audio, language=request.source_language, progress=stage, token=token
+            )
+        performance.set_count("transcript_segments", len(transcript.segments))
+        performance.set_count(
+            "recognized_words",
+            sum(len(segment.text.split()) for segment in transcript.segments),
         )
         token.raise_if_cancelled()
         if transcript.is_empty:
@@ -188,8 +271,13 @@ class SerialPipeline:
 
         # 4. Alinhamento por palavra
         stage = enter(JobState.ALIGNING)
-        alignment = self._ports.aligner.align(
-            audio, transcript, progress=stage, token=token
+        with performance.measure("alignment"):
+            alignment = self._ports.aligner.align(
+                audio, transcript, progress=stage, token=token
+            )
+        performance.set_count("aligned_words", alignment.diagnostics.aligned_words)
+        performance.set_count(
+            "unmatched_words", len(alignment.diagnostics.unmatched_words)
         )
         token.raise_if_cancelled()
         if not alignment.diagnostics.aligned_words:
@@ -211,7 +299,9 @@ class SerialPipeline:
 
         # 5. Segmentação visual (regra pura, sem porta)
         stage = enter(JobState.SEGMENTING)
-        segmentation = segment_alignment(alignment, policy=SegmentationPolicy())
+        with performance.measure("segmentation"):
+            segmentation = segment_alignment(alignment, policy=SegmentationPolicy())
+        performance.set_count("subtitle_cues", len(segmentation.track.cues))
         token.raise_if_cancelled()
         stage.report(1.0, "Legendas segmentadas")
         if segmentation.track.is_empty:
@@ -224,13 +314,22 @@ class SerialPipeline:
         # 6. Tradução opcional (preserva tempos)
         track = segmentation.track
         if request.translate:
-            track = self._translate(request, alignment, track, enter, warnings, token)
+            performance.set_count("translation_units", len(track.cues))
+            with performance.measure("translation"):
+                track = self._translate(
+                    request, alignment, track, enter, warnings, token
+                )
 
         # 7. Validação estrutural do trilho final
-        self._validate(track, media_info, enter, warnings)
+        with performance.measure("srt_validation"):
+            self._validate(track, media_info, enter, warnings)
+        performance.set_count("warning_count", len(warnings))
 
         # 8. Publicação atômica (ponto de não retorno)
-        return self._publish(context, track, alignment, segmentation, warnings, enter)
+        with performance.measure("srt_publication"):
+            return self._publish(
+                context, track, alignment, segmentation, warnings, enter
+            )
 
     # -- etapas auxiliares -------------------------------------------------
 

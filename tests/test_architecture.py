@@ -115,6 +115,7 @@ def test_ports_are_protocols_and_cover_the_pipeline():
         "Aligner",
         "Translator",
         "SubtitlePublisher",
+        "PerformanceReporter",
     }
     for name in expected:
         port = getattr(protocols, name)

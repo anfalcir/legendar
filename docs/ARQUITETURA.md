@@ -30,7 +30,7 @@ src/legendar/
     errors/{base,catalog}.py
   application/
     job/{context,controller}.py
-    pipeline/{serial_pipeline,segmentation,translation,validation}.py
+    pipeline/{serial_pipeline,performance,segmentation,translation,validation}.py
     ports/protocols.py
     progress/sink.py
   infrastructure/
@@ -40,6 +40,7 @@ src/legendar/
     translation/nllb.py
     filesystem/{srt,publisher,atomic,workspace,paths}.py
     config/settings.py
+    diagnostics/performance.py
     logging/setup.py
   presentation/qt/
     main_window.py
@@ -52,10 +53,11 @@ src/legendar/
 
 1. `MainWindow` monta `JobRequest` (origem, idiomas, tradução, faixa) e `JobContext` (job id, workspace, destino, token).
 2. `JobWorker` roda `JobController.run` em `QThread`; o controlador abre `VALIDATING_INPUT`.
-3. `SerialPipeline` executa, em ordem: inspeção, preparação de áudio, transcrição, alinhamento, segmentação, tradução opcional, validação e publicação.
+3. `SerialPipeline` executa, em ordem: aquisição, inspeção, preparação de áudio, transcrição, alinhamento, segmentação, tradução opcional, validação e publicação; a sessão de desempenho mede cada etapa sem interferir no fluxo.
 4. Cada etapa reporta progresso por `ScaledProgress`, que mapeia a fração local para a faixa global.
 5. O controlador converte transições e mensagens em eventos; o resultado é um único evento terminal.
 6. `JobViewModel` transforma eventos em snapshot; a janela apenas desenha, habilita controles e limpa o workspace.
+7. `PipelinePerformanceSession` acumula tempos monotônicos, CPU e recursos por etapa. Snapshots dos adaptadores separam carga dos modelos, inferência, chamadas de alinhamento e fases internas da tradução; `JsonPerformanceReporter` persiste JSON local privado, fora do fluxo de conteúdo.
 
 ## 4. Portas do pipeline
 
@@ -68,6 +70,7 @@ src/legendar/
 | `Aligner` | `align(audio, transcript, progress, token) -> AlignmentResult` |
 | `Translator` | `translate(units, source_language, target_language, progress, token) -> TranslationResult` |
 | `SubtitlePublisher` | `publish(track, destino) -> caminho publicado` |
+| `PerformanceReporter` | captura recursos e persiste relatório sanitizado local, opcional ao pipeline |
 | `CancellationToken` | `is_cancelled`, `raise_if_cancelled()` |
 
 ## 5. Máquina de estados

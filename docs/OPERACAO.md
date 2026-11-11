@@ -68,4 +68,24 @@ O cache dos modelos não é apagado ao cancelar um job. Somente o workspace temp
 4. Não apague manualmente cache de modelos durante o processamento.
 5. Para problemas de qualidade do SRT, registre a etapa, trecho/tempo da mídia e diagnóstico; não conclua que CI verde comprova qualidade audiovisual.
 
+### 6.1. Relatórios de desempenho da Fase 1
+
+A partir da versão instrumentada, cada job gera automaticamente um relatório JSON local em:
+
+```text
+~/.cache/legendar/logs/performance/job-<job-id>.json
+```
+
+O diretório é privado e os arquivos são gravados com permissão `0600`. O relatório contém somente duração, contagens, recursos do equipamento, versões e configuração técnica. Não contém mídia, transcrição, conteúdo SRT, URL, caminho da mídia ou credenciais; ele não é enviado para nenhum serviço externo.
+
+Para consultar os últimos jobs:
+
+```bash
+uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
+```
+
+O resumo apresenta tempo e RTF por etapa, estado de carga dos modelos (`cold`, `warm` ou `unused`) e throughput de geração NLLB quando disponível. Uma execução fria carrega o modelo sob demanda; a carga e eventual download são medidos separadamente da inferência.
+
+Para comparar o áudio de referência, mantenha constantes arquivo, idioma, tradução, modelo, cache e equipamento. Registre uma execução fria e depois faça pelo menos três execuções quentes. Evite usar o computador para tarefas pesadas durante as rodadas. O valor de RTF total deverá ser comparado com a mesma configuração e com o tempo de mídia idêntico.
+
 Consulte [homologação](HOMOLOGACAO.md) e [estado atual](ESTADO_ATUAL.md).
