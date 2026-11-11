@@ -50,8 +50,8 @@ from legendar.domain.errors.catalog import (
     InvalidInputError,
     JobCancelledError,
     ModelError,
-    TranslationError,
     SrtValidationError,
+    TranslationError,
     UnsupportedLanguageError,
 )
 from legendar.domain.state.machine import JobState
