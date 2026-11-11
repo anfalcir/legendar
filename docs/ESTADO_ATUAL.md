@@ -8,7 +8,8 @@
 - **Integração da organização documental e do plano vigente:** PR [#7](https://github.com/anfalcir/legendar/pull/7), squash `a62f4459b76b07aa86f00d22acf663a8f95b7368`, integrada à `main`.
 - **CI da Fase 1 (PR #8):** aprovada. Incluiu 492 testes, cobertura de 85,46%, E2E com FFmpeg/Qt em Python 3.10–3.13, smoke OpenAI Whisper PT-BR/EN, smoke NLLB real com Transformers em CPU, matriz multiplataforma, validação documental e os workflows determinísticos relacionados. Os checks de WhisperX benchmark/CUDA foram marcados como skipped pelos critérios do runner, não como falha.
 - **Remodelação arquitetural anterior:** Fases 0–10 integradas à `main`.
-- **Nova frente:** instrumentação da Fase 1 integrada à `main`; baseline de desempenho com a mídia real de 37 minutos ainda pendente no equipamento de homologação.
+- **Fase 1:** concluída e integrada à `main`; baseline real da mídia de 37min10s consolidado em 11/11/2026.
+- **Fase 2:** implementação de integridade textual e alinhamento recuperável em andamento na branch `phase-2/alignment-integrity`.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
@@ -22,7 +23,7 @@ A arquitetura e a base de engenharia das Fases 0–10 estão integradas. Uma aud
 
 A prioridade agora é corrigir a integridade e a legibilidade do resultado antes de trocar motores ou reduzir configurações de qualidade. Em paralelo, o novo plano estabelece instrumentação para localizar os gargalos de desempenho e testar otimizações com comparação pareada.
 
-## 2. Estado da Fase 1 — instrumentação integrada
+## 2. Estado da Fase 1 — concluída
 
 A instrumentação está integrada à `main` (PR #8, squash `12e3f40db5fe9b849f1a51715802eea7dba0449e`). Ela mede cada etapa do pipeline e expõe métricas internas dos adaptadores. Nenhum modelo ou parâmetro de qualidade foi trocado: Whisper, WhisperX, NLLB, beam, batch, dtype e política de alinhamento permanecem iguais.
 
@@ -42,7 +43,20 @@ uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
 
 **Validação automatizada:** 492 testes aprovados; cobertura global de 85,46%; E2E em quatro versões de Python; smoke de reconhecimento Whisper PT-BR/EN; smoke NLLB real em CPU; CI multiplataforma e documentação aprovadas.
 
-**Estado da evidência operacional:** a instrumentação está concluída e integrada, mas a baseline no equipamento real ainda não foi coletada. O tempo inicial de aproximadamente 60 minutos para 37 minutos de áudio continua sendo relato do usuário, não uma medição decomposta. Fase 1 só será considerada concluída após executar o inventário atualizado e as rodadas fria/quentes com a mesma mídia/configuração.
+**Evidência operacional consolidada (11/11/2026):** o inventário atualizado e quatro execuções da mídia real de 37min10s foram coletados: uma fria e três quentes. As três execuções quentes ficaram na faixa de ~23 minutos, com mediana de aproximadamente 23min21s (RTF ~0,63). A tradução NLLB foi o maior estágio isolado, em torno de 14 minutos por execução quente. Essa medição substitui o relato histórico de ~1 hora como baseline operacional para os próximos experimentos; não é necessário investigar o ambiente da medição histórica para avançar.
+## 3. Estado da Fase 2 — integridade textual e alinhamento recuperável
+
+A implementação atual da branch de Fase 2:
+
+- preserva explicitamente palavras sem alinhamento no diagnóstico da segmentação;
+- impede publicação quando qualquer palavra reconhecida permanece sem evidência temporal confiável;
+- executa uma segunda tentativa controlada somente em segmentos com palavras não alinhadas, ampliando a janela em até 0,75 s por lado;
+- mantém `interpolate_method="ignore"` e não fabrica timestamps;
+- registra tentativas, duração e palavras recuperadas nas métricas de performance;
+- possui testes unitários para perda explícita, bloqueio de publicação e recuperação.
+
+A Fase 2 só será considerada integrada após CI verde e merge na `main`. A homologação audiovisual real continua sendo gate posterior.
+
 ## 3. Estado do repositório
 
 | Área | Estado |
@@ -55,8 +69,8 @@ uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
 | Tradução | NLLB-200 distilled 600M via Transformers/PyTorch |
 | Publicação | SRT com round-trip e gravação atômica |
 | Gate editorial | Insuficiente: riscos de leitura podem continuar como avisos |
-| Benchmark por etapa | Instrumentação integrada; baseline real comparável ainda pendente |
-| Otimização de motores | Candidatos em avaliação; nenhum motor alternativo adotado |
+| Benchmark por etapa | Instrumentação integrada; baseline real consolidado em 11/11/2026 |
+| Otimização de motores | Próxima frente: Fase 5–7; Gemini é candidato de tradução a ser avaliado, sem adoção ainda |
 | Homologação audiovisual final | Pendente |
 
 ## 4. Evidências de qualidade e lacunas conhecidas
@@ -107,8 +121,8 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | Fase | Objetivo | Situação |
 |---|---|---|
 | 0 | Auditoria, organização documental e plano | Documentada nesta entrega |
-| 1 | Instrumentação e baseline por etapa | Próxima execução |
-| 2 | Integridade textual e alinhamento recuperável | Planejada |
+| 1 | Instrumentação e baseline por etapa | **Concluída** |
+| 2 | Integridade textual e alinhamento recuperável | **Implementação em execução** |
 | 3 | Segmentação global e legibilidade | Planejada |
 | 4 | Gate editorial e diagnóstico textual | Planejada |
 | 5 | Benchmark e aceleração da transcrição | Planejada |
