@@ -424,6 +424,18 @@ def test_audio_duration_mismatch_is_rejected_before_model_loading(
     assert loads == []
 
 
+def test_environment_enables_controlled_recovery_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("LEGENDAR_ALIGN_RECOVERY_PADDING_SECONDS", raising=False)
+
+    aligner = WhisperXAligner.from_environment(tmp_path / "models")
+
+    assert aligner.performance_snapshot()["configuration"][
+        "recovery_padding_seconds"
+    ] == pytest.approx(0.75)
+
+
 def test_invalid_device_is_rejected(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Dispositivo WhisperX inválido"):
         WhisperXAligner(tmp_path, device="mps")
