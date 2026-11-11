@@ -28,7 +28,9 @@ class NullProgress:
         pass
 
 
-def load_manifest(path: Path) -> tuple[tuple[TranslationUnit, ...], tuple[str, ...] | None]:
+def load_manifest(
+    path: Path,
+) -> tuple[tuple[TranslationUnit, ...], tuple[str, ...] | None]:
     """Carrega cues e referências humanas, sem normalizar ou reordenar IDs."""
     with path.open(encoding="utf-8-sig", newline="") as stream:
         reader = csv.DictReader(stream, delimiter="\t")
@@ -57,7 +59,9 @@ def load_manifest(path: Path) -> tuple[tuple[TranslationUnit, ...], tuple[str, .
     if not units:
         raise ValueError("Manifesto sem cues.")
     if any(reference_state) and not all(reference_state):
-        raise ValueError("Preencha reference_text em todas as linhas ou deixe todas vazias.")
+        raise ValueError(
+            "Preencha reference_text em todas as linhas ou deixe todas vazias."
+        )
     return tuple(units), tuple(references) if all(reference_state) else None
 
 
@@ -69,7 +73,9 @@ def _translator(backend: str, models_dir: Path) -> Any:
     raise ValueError(f"Backend desconhecido: {backend}")
 
 
-def _score(references: tuple[str, ...] | None, hypotheses: tuple[str, ...]) -> tuple[float | None, float | None]:
+def _score(
+    references: tuple[str, ...] | None, hypotheses: tuple[str, ...]
+) -> tuple[float | None, float | None]:
     if references is None:
         return None, None
     try:
@@ -157,7 +163,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--source-language", choices=("pt", "en"), required=True)
     parser.add_argument("--target-language", choices=("pt", "en"), required=True)
     parser.add_argument("--backends", default="nllb,gemini")
-    parser.add_argument("--models-dir", type=Path, default=Path.home() / ".cache/legendar/models")
+    parser.add_argument(
+        "--models-dir", type=Path, default=Path.home() / ".cache/legendar/models"
+    )
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
@@ -170,7 +178,11 @@ def main() -> int:
         return 2
     try:
         units, references = load_manifest(args.manifest)
-        backends = tuple(dict.fromkeys(part.strip() for part in args.backends.split(",") if part.strip()))
+        backends = tuple(
+            dict.fromkeys(
+                part.strip() for part in args.backends.split(",") if part.strip()
+            )
+        )
         if not backends or any(name not in {"nllb", "gemini"} for name in backends):
             raise ValueError("Use backends nllb,gemini.")
         result = run_benchmark(
@@ -188,7 +200,10 @@ def main() -> int:
             encoding="utf-8",
         )
     except Exception as exc:
-        print(f"Benchmark de tradução não concluído: {type(exc).__name__}: {exc}", file=sys.stderr)
+        print(
+            f"Benchmark de tradução não concluído: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
         return 1
     print(
         f"Benchmark concluído: {result['units']} cues, "
