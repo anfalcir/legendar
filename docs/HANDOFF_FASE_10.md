@@ -1,6 +1,7 @@
 # Handoff — Fase 10: correções pós-homologação
 
 - **Status:** implementado e verificado localmente; aguarda homologação do usuário.
+- **CI:** run [#43030902623](https://github.com/anfalcir/legendar/actions/runs/43030902623) aprovado em 5/5 jobs (Python 3.10–3.13 + documentação).
 - **Origem:** 13 achados da rodada de 11/11/2026, registrados em
   [HOMOLOGACAO.md](HOMOLOGACAO.md) e provados em [FASE_10_PLANO.md](FASE_10_PLANO.md).
 - **Regra desta fase:** nenhuma correção de sintoma. Cada achado recebeu a causa
