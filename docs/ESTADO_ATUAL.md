@@ -215,7 +215,7 @@ As pendências acima são gates de produto alocados às fases responsáveis; ela
 
 ## 9. Próxima ação objetiva
 
-A Fase 5 está concluída e integrada pela PR #6 (squash `5c9a2ba`). A próxima etapa de engenharia é a Fase 6 — tradução, segmentação e SRT — consumindo `AlignmentResult`. O checkpoint inicial da Fase 6 deve decidir provedor de tradução e suas condições de custo/privacidade/retensão; o gate de precisão temporal com fronteiras humanas continua obrigatório para homologação do produto.
+A Fase 5 está concluída e integrada pela PR #6 (squash `5c9a2ba`). A próxima etapa de engenharia é a Fase 6 — tradução, segmentação e SRT — consumindo `AlignmentResult`. O checkpoint inicial da Fase 6 deve decidir provedor de tradução e suas condições de custo/privacidade/retenção; o gate de precisão temporal com fronteiras humanas continua obrigatório para homologação do produto.
 
 ---
 
