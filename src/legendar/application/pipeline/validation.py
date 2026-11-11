@@ -320,7 +320,6 @@ def validate_track(
     )
 
 
-
 def _find_flicker_cues(track: SubtitleTrack) -> tuple[int, ...]:
     """Marca sequências de três ou mais flashes curtos em intervalos próximos."""
     marked: list[int] = []
