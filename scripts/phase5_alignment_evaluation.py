@@ -412,9 +412,7 @@ def evaluate_manifest(
     all_starts = [
         value for errors in start_errors_by_language.values() for value in errors
     ]
-    all_ends = [
-        value for errors in end_errors_by_language.values() for value in errors
-    ]
+    all_ends = [value for errors in end_errors_by_language.values() for value in errors]
 
     return {
         "schema_version": 1,
@@ -441,9 +439,7 @@ def evaluate_manifest(
             "languages": sorted(summary),
             "reference_words": total_reference_words,
             "matched_words": total_matched_words,
-            "coverage": round(
-                total_matched_words / max(total_reference_words, 1), 6
-            ),
+            "coverage": round(total_matched_words / max(total_reference_words, 1), 6),
         },
         "overall_errors": _error_summary(all_starts, all_ends),
         "by_language": summary,
@@ -466,7 +462,9 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--models-dir", type=Path, default=Path(".cache/phase5"))
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
-    parser.add_argument("--output", type=Path, default=Path("phase5-annotated-alignment.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("phase5-annotated-alignment.json")
+    )
     args = parser.parse_args()
 
     try:
