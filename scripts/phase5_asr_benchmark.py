@@ -50,7 +50,7 @@ def _load_local_manifest(manifest: Path) -> list[dict[str, Any]]:
         raise FileNotFoundError(f"Manifesto não encontrado: {manifest}")
     samples: list[dict[str, Any]] = []
     with manifest.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle, delimiter="\\t")
+        reader = csv.DictReader(handle, delimiter="\t")
         required = {"language", "audio"}
         headers = {
             (name or "").strip().casefold() for name in (reader.fieldnames or [])
