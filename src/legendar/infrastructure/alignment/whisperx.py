@@ -46,6 +46,7 @@ ALIGNMENT_MODELS = {
     "en": "WAV2VEC2_ASR_BASE_960H",
 }
 MAX_ALIGNMENT_WINDOW_SECONDS = 90.0
+DEFAULT_RECOVERY_PADDING_SECONDS = 0.75
 
 ModelLoader = Callable[[str, str, Path], tuple[Any, Mapping[str, Any]]]
 AlignFunction = Callable[..., Mapping[str, Any]]
@@ -202,6 +203,126 @@ def _normalized_word(value: str) -> str:
     return " ".join(value.split()).casefold()
 
 
+def _extract_segment_alignment(
+    source_segment: TranscriptSegment,
+    result: Mapping[str, Any],
+    *,
+    waveform_duration: float,
+    timeline: TimelineMapping,
+    window: TimeRange,
+    previous_global_end: float | None,
+) -> tuple[TranscriptSegment, tuple[TranscriptWord, ...], tuple[str, ...], int, float | None]:
+    """Converte uma resposta WhisperX em palavras, sem preencher lacunas."""
+    raw_words = result.get("word_segments")
+    if not isinstance(raw_words, (list, tuple)):
+        aligned_segments = result.get("segments", [])
+        if not isinstance(aligned_segments, (list, tuple)):
+            raise ModelError("WhisperX retornou segmentos em formato inválido.")
+        raw_words = [
+            word
+            for item in aligned_segments
+            if isinstance(item, Mapping)
+            for word in item.get("words", [])
+        ]
+
+    expected_words = source_segment.text.split()
+    segment_words: list[TranscriptWord] = []
+    local_ranges: list[TimeRange] = []
+    unmatched_words: list[TranscriptWord] = []
+    issues: list[str] = []
+    raw_word_cursor = 0
+    aligned_word_count = 0
+    current_previous_end = previous_global_end
+
+    for expected_text in expected_words:
+        matching_index = next(
+            (
+                candidate_index
+                for candidate_index in range(raw_word_cursor, len(raw_words))
+                if isinstance(raw_words[candidate_index], Mapping)
+                and isinstance(raw_words[candidate_index].get("word"), str)
+                and _normalized_word(raw_words[candidate_index]["word"])
+                == _normalized_word(expected_text)
+            ),
+            None,
+        )
+        if matching_index is None:
+            unmatched_words.append(TranscriptWord(text=expected_text))
+            segment_words.append(TranscriptWord(text=expected_text))
+            issues.append("unmatched_word")
+            continue
+
+        if matching_index > raw_word_cursor:
+            issues.append("unexpected_aligned_word")
+        raw_word_cursor = matching_index + 1
+        raw_word = raw_words[matching_index]
+
+        start = _finite_number(raw_word.get("start"))
+        end = _finite_number(raw_word.get("end"))
+        score = _finite_number(raw_word.get("score"))
+        if start is None or end is None:
+            unmatched_words.append(TranscriptWord(text=expected_text))
+            segment_words.append(TranscriptWord(text=expected_text))
+            issues.append("unmatched_word")
+            continue
+        if start < 0.0 or end > waveform_duration or end <= start:
+            unmatched_words.append(TranscriptWord(text=expected_text))
+            segment_words.append(TranscriptWord(text=expected_text))
+            issues.append("out_of_bounds")
+            continue
+        if start < window.start - 0.02 or end > window.end + 0.02:
+            unmatched_words.append(TranscriptWord(text=expected_text))
+            segment_words.append(TranscriptWord(text=expected_text))
+            issues.append("out_of_bounds")
+            continue
+        if score is None or not 0.0 <= score <= 1.0:
+            unmatched_words.append(TranscriptWord(text=expected_text))
+            segment_words.append(TranscriptWord(text=expected_text))
+            issues.append("invalid_word_score")
+            continue
+
+        try:
+            local_range = TimeRange(start=start, end=end)
+            global_range = timeline.range_to_global(local_range)
+            word = TranscriptWord(text=expected_text, range=global_range, confidence=score)
+        except (TemporalError, ValueError):
+            unmatched_words.append(TranscriptWord(text=expected_text))
+            segment_words.append(TranscriptWord(text=expected_text))
+            issues.append("out_of_bounds")
+            continue
+
+        if current_previous_end is not None and global_range.start < current_previous_end - 0.05:
+            issues.append("overlap")
+        current_previous_end = (
+            global_range.end
+            if current_previous_end is None
+            else max(current_previous_end, global_range.end)
+        )
+        local_ranges.append(global_range)
+        segment_words.append(word)
+        aligned_word_count += 1
+
+    if raw_word_cursor < len(raw_words):
+        issues.append("unexpected_aligned_word")
+
+    segment_range = (
+        TimeRange(
+            start=min(item.start for item in local_ranges),
+            end=max(item.end for item in local_ranges),
+        )
+        if local_ranges
+        else None
+    )
+    segment = TranscriptSegment(
+        text=source_segment.text,
+        range=segment_range,
+        words=tuple(segment_words),
+        confidence=source_segment.confidence,
+        alignment_window=window,
+    )
+    return segment, tuple(unmatched_words), tuple(dict.fromkeys(issues)), aligned_word_count, current_previous_end
+
+
 class WhisperXAligner:
     """Adaptador Aligner com cache persistente e modelos reutilizados por idioma."""
 
@@ -217,6 +338,7 @@ class WhisperXAligner:
         version_provider: VersionProvider = _package_version,
         punkt_preparer: PunktPreparer = _ensure_punkt_data,
         max_window_seconds: float = MAX_ALIGNMENT_WINDOW_SECONDS,
+        recovery_padding_seconds: float = DEFAULT_RECOVERY_PADDING_SECONDS,
     ) -> None:
         normalized_device = (device or "").strip().lower()
         if normalized_device not in SUPPORTED_DEVICES:
@@ -226,6 +348,8 @@ class WhisperXAligner:
             )
         if not math.isfinite(max_window_seconds) or max_window_seconds <= 0:
             raise ValueError("O limite de janela de alinhamento deve ser positivo.")
+        if not math.isfinite(recovery_padding_seconds) or recovery_padding_seconds < 0:
+            raise ValueError("O padding de recuperação deve ser finito e não negativo.")
 
         self.requested_device = normalized_device
         self.download_root = Path(models_dir).expanduser() / "whisperx-align"
@@ -236,6 +360,7 @@ class WhisperXAligner:
         self._version_provider = version_provider
         self._punkt_preparer = punkt_preparer
         self._max_window_seconds = float(max_window_seconds)
+        self._recovery_padding_seconds = float(recovery_padding_seconds)
         self._models: dict[str, tuple[Any, Mapping[str, Any]]] = {}
         self._device: str | None = None
         self._revision: str | None = None
@@ -256,6 +381,9 @@ class WhisperXAligner:
             "aligned_words": 0,
             "unmatched_words": 0,
             "input_segments": 0,
+            "recovery_attempts": 0,
+            "recovery_seconds": 0.0,
+            "recovered_words": 0,
         }
 
     @classmethod
@@ -291,6 +419,7 @@ class WhisperXAligner:
                 "loaded_languages": sorted(self._models),
                 "alignment_models": dict(ALIGNMENT_MODELS),
                 "max_window_seconds": self._max_window_seconds,
+                "recovery_padding_seconds": self._recovery_padding_seconds,
                 "interpolate_method": "ignore",
                 "dtype": "backend_default",
                 **collect_torch_thread_settings(),
@@ -540,126 +669,106 @@ class WhisperXAligner:
 
             if not isinstance(result, Mapping):
                 raise ModelError("WhisperX retornou alinhamento em formato inválido.")
-            raw_words = result.get("word_segments")
-            if not isinstance(raw_words, (list, tuple)):
-                aligned_segments = result.get("segments", [])
-                if not isinstance(aligned_segments, (list, tuple)):
-                    raise ModelError("WhisperX retornou segmentos em formato inválido.")
-                raw_words = [
-                    word
-                    for item in aligned_segments
-                    if isinstance(item, Mapping)
-                    for word in item.get("words", [])
-                ]
 
-            expected_words = source_segment.text.split()
-            segment_words: list[TranscriptWord] = []
-            local_ranges: list[TimeRange] = []
-            raw_word_cursor = 0
-
-            for expected_text in expected_words:
-                matching_index = next(
-                    (
-                        candidate_index
-                        for candidate_index in range(raw_word_cursor, len(raw_words))
-                        if isinstance(raw_words[candidate_index], Mapping)
-                        and isinstance(raw_words[candidate_index].get("word"), str)
-                        and _normalized_word(raw_words[candidate_index]["word"])
-                        == _normalized_word(expected_text)
-                    ),
-                    None,
-                )
-                if matching_index is None:
-                    unmatched_words.append(TranscriptWord(text=expected_text))
-                    segment_words.append(TranscriptWord(text=expected_text))
-                    issues.append("unmatched_word")
-                    continue
-
-                if matching_index > raw_word_cursor:
-                    # O WhisperX pode omitir tokens sem caracteres alinháveis.
-                    # Não deslocar os tempos da palavra seguinte para preencher
-                    # a lacuna: a associação é feita pelo texto e pela ordem.
-                    issues.append("unexpected_aligned_word")
-                raw_word_cursor = matching_index + 1
-                raw_word = raw_words[matching_index]
-
-                start = _finite_number(raw_word.get("start"))
-                end = _finite_number(raw_word.get("end"))
-                score = _finite_number(raw_word.get("score"))
-                if start is None or end is None:
-                    unmatched_words.append(TranscriptWord(text=expected_text))
-                    segment_words.append(TranscriptWord(text=expected_text))
-                    issues.append("unmatched_word")
-                    continue
-                if start < 0.0 or end > waveform_duration or end <= start:
-                    unmatched_words.append(TranscriptWord(text=expected_text))
-                    segment_words.append(TranscriptWord(text=expected_text))
-                    issues.append("out_of_bounds")
-                    continue
-                if start < window.start - 0.02 or end > window.end + 0.02:
-                    unmatched_words.append(TranscriptWord(text=expected_text))
-                    segment_words.append(TranscriptWord(text=expected_text))
-                    issues.append("out_of_bounds")
-                    continue
-                if score is None or not 0.0 <= score <= 1.0:
-                    unmatched_words.append(TranscriptWord(text=expected_text))
-                    segment_words.append(TranscriptWord(text=expected_text))
-                    issues.append("invalid_word_score")
-                    continue
-
-                try:
-                    local_range = TimeRange(start=start, end=end)
-                    global_range = timeline.range_to_global(local_range)
-                    word = TranscriptWord(
-                        text=expected_text,
-                        range=global_range,
-                        confidence=score,
-                    )
-                except (TemporalError, ValueError):
-                    unmatched_words.append(TranscriptWord(text=expected_text))
-                    segment_words.append(TranscriptWord(text=expected_text))
-                    issues.append("out_of_bounds")
-                    continue
-
-                if (
-                    previous_global_end is not None
-                    and global_range.start < previous_global_end - 0.05
-                ):
-                    issues.append("overlap")
-                previous_global_end = (
-                    global_range.end
-                    if previous_global_end is None
-                    else max(previous_global_end, global_range.end)
-                )
-                local_ranges.append(global_range)
-                segment_words.append(word)
-                aligned_word_count += 1
-
-            if raw_word_cursor < len(raw_words):
-                issues.append("unexpected_aligned_word")
-
-            segment_range = (
-                TimeRange(
-                    start=min(item.start for item in local_ranges),
-                    end=max(item.end for item in local_ranges),
-                )
-                if local_ranges
-                else None
+            (
+                selected_segment,
+                selected_unmatched,
+                selected_issues,
+                selected_aligned_count,
+                selected_previous_end,
+            ) = _extract_segment_alignment(
+                source_segment,
+                result,
+                waveform_duration=waveform_duration,
+                timeline=timeline,
+                window=window,
+                previous_global_end=previous_global_end,
             )
-            output_segments.append(
-                TranscriptSegment(
-                    text=source_segment.text,
-                    range=segment_range,
-                    words=tuple(segment_words),
-                    confidence=source_segment.confidence,
-                    alignment_window=window,
+
+            # Recuperação controlada: somente segmentos com palavras sem âncora
+            # recebem uma segunda tentativa. A janela é ampliada em ambos os lados,
+            # mas nunca além do áudio nem do limite máximo configurado. Nenhum
+            # timestamp é interpolado; a resposta alternativa passa pelo mesmo
+            # validador textual/temporal da primeira tentativa.
+            if selected_unmatched and self._recovery_padding_seconds > 0:
+                recovery_start = max(0.0, window.start - self._recovery_padding_seconds)
+                recovery_end = min(
+                    waveform_duration,
+                    window.end + self._recovery_padding_seconds,
                 )
-            )
+                recovery_window = TimeRange(start=recovery_start, end=recovery_end)
+                if recovery_window.duration <= self._max_window_seconds and recovery_window != window:
+                    recovery_started = time.perf_counter()
+                    self._record_metric("recovery_attempts", 1)
+                    recovery_segment = {
+                        "start": recovery_window.start,
+                        "end": recovery_window.end,
+                        "text": source_segment.text,
+                    }
+                    try:
+                        with self._inference_lock:
+                            if token is not None:
+                                token.raise_if_cancelled()
+                            recovery_result = self._align_function(
+                                [recovery_segment],
+                                model,
+                                metadata,
+                                waveform,
+                                device,
+                                progress_callback=on_alignment_progress,
+                            )
+                        if token is not None:
+                            token.raise_if_cancelled()
+                        if not isinstance(recovery_result, Mapping):
+                            raise ModelError("WhisperX retornou recuperação em formato inválido.")
+                        (
+                            recovered_segment,
+                            recovered_unmatched,
+                            recovered_issues,
+                            recovered_aligned_count,
+                            recovered_previous_end,
+                        ) = _extract_segment_alignment(
+                            source_segment,
+                            recovery_result,
+                            waveform_duration=waveform_duration,
+                            timeline=timeline,
+                            window=recovery_window,
+                            previous_global_end=previous_global_end,
+                        )
+                        if len(recovered_unmatched) < len(selected_unmatched):
+                            selected_segment = recovered_segment
+                            selected_unmatched = recovered_unmatched
+                            selected_issues = recovered_issues
+                            selected_aligned_count = recovered_aligned_count
+                            selected_previous_end = recovered_previous_end
+                            self._record_metric(
+                                "recovered_words",
+                                len(selected_unmatched) - len(recovered_unmatched),
+                            )
+                            selected_issues = (*selected_issues, "alignment_recovered")
+                        else:
+                            selected_issues = (*selected_issues, "alignment_recovery_no_improvement")
+                    except JobCancelledError:
+                        raise
+                    except Exception:
+                        # A recovery failure never destroys a valid partial result
+                        # from the first attempt; it is retained and remains visible
+                        # through the unmatched diagnostics.
+                        selected_issues = (*selected_issues, "alignment_recovery_failed")
+                    finally:
+                        self._record_metric(
+                            "recovery_seconds", time.perf_counter() - recovery_started
+                        )
+
+            output_segments.append(selected_segment)
+            unmatched_words.extend(selected_unmatched)
+            issues.extend(selected_issues)
+            aligned_word_count += selected_aligned_count
+            previous_global_end = selected_previous_end
             progress.report(
                 (segment_index + 1) / total_segments,
                 f"Segmento {segment_index + 1}/{total_segments} alinhado",
             )
-
         if unmatched_words and "unmatched_word" not in issues:
             issues.append("unmatched_word")
         diagnostics = AlignmentDiagnostics(
