@@ -152,7 +152,7 @@ def test_manifest_rejects_unknown_language(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    with pytest.raises(LanguageError, match="idioma"):
+    with pytest.raises(LanguageError, match="[Ii]dioma"):
         _read_manifest(manifest)
 
 

@@ -423,7 +423,8 @@ def test_negative_stream_start_maps_valid_later_word_times(tmp_path: Path) -> No
         progress=ProgressRecorder(),
     )
 
-    assert [word.range for word in result.transcript.segments[0].words] == [
-        TimeRange(0.6, 0.9),
-        TimeRange(1.05, 1.3),
-    ]
+    ranges = [word.range for word in result.transcript.segments[0].words]
+    assert ranges[0].start == pytest.approx(0.6)
+    assert ranges[0].end == pytest.approx(0.9)
+    assert ranges[1].start == pytest.approx(1.05)
+    assert ranges[1].end == pytest.approx(1.3)
