@@ -4,9 +4,10 @@ from pathlib import Path
 
 import pytest
 
+from scripts import phase6_translation_benchmark as benchmark
+
 from legendar.application.pipeline.translation import TranslationResult, TranslationUnit
 from legendar.domain.value_objects.language import Language
-from scripts import phase6_translation_benchmark as benchmark
 
 
 def test_manifest_loads_units_and_optional_human_references(tmp_path: Path) -> None:
