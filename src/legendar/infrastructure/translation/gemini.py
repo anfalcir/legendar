@@ -414,7 +414,9 @@ class GeminiTranslator:
         parts = content.get("parts", [])
         if not isinstance(parts, list):
             raise TranslationError("Gemini retornou conteúdo estruturado inválido.")
-        text_parts = [part.get("text", "") for part in parts if isinstance(part, Mapping)]
+        text_parts = [
+            part.get("text", "") for part in parts if isinstance(part, Mapping)
+        ]
         raw = "".join(text_parts).strip()
         try:
             decoded = json.loads(raw)
@@ -445,7 +447,11 @@ class GeminiTranslator:
                 "Gemini alterou, duplicou ou reordenou os IDs das cues; "
                 "o lote foi rejeitado."
             )
-        empty = [cue_id for cue_id, text in zip(actual, outputs, strict=True) if not text]
+        empty = [
+            cue_id
+            for cue_id, text in zip(actual, outputs, strict=True)
+            if not text
+        ]
         if empty:
             raise TranslationError(
                 "Gemini retornou texto vazio para as cues: "
