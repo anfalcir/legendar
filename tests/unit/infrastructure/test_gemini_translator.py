@@ -176,8 +176,10 @@ def test_pt_br_instruction_and_entity_preservation_are_sent() -> None:
 
 
 def test_grounding_is_opt_in() -> None:
-    plain = _translator()
-    grounded = _translator(grounding=True)
+    plain_calls: list = []
+    grounded_calls: list = []
+    plain = _translator(calls=plain_calls)
+    grounded = _translator(calls=grounded_calls, grounding=True)
     unit = _units("The city is old.")
 
     plain.translate(
@@ -193,9 +195,9 @@ def test_grounding_is_opt_in() -> None:
         progress=ProgressRecorder(),
     )
 
-    assert "tools" not in plain.performance_snapshot()["configuration"]
+    assert "tools" not in plain_calls[0][1]
+    assert grounded_calls[0][1]["tools"] == [{"googleSearch": {}}]
     assert grounded.performance_snapshot()["configuration"]["grounding"]
-    assert grounded._requester is not None
 
 
 def test_environment_configuration_is_read_without_logging_secret(
@@ -287,8 +289,14 @@ def test_empty_translation_is_rejected() -> None:
 
 
 def test_truncated_or_blocked_generation_is_rejected() -> None:
+    translator = GeminiTranslator(
+        api_key="test",
+        requester=lambda *_args: _response(
+            [{"cue_id": 1, "text": "partial"}], finish="MAX_TOKENS"
+        ),
+    )
     with pytest.raises(TranslationError, match="interrompeu"):
-        _translator(items=[{"cue_id": 1, "text": "partial"}]).translate(
+        translator.translate(
             _units("bom dia"),
             source_language=Language.PORTUGUESE,
             target_language=Language.ENGLISH,
