@@ -333,7 +333,7 @@ A detecção de repetição não deve remover texto automaticamente: repetição
 **Implementação em andamento (11/11/2026):**
 
 - Criado relatório estruturado `TrackValidationReport`, com estados `APPROVED`, `REVIEW_REQUIRED` e `BLOCKED`, issues identificáveis, severidade, índices das cues, contagem, CPS máximo e P95.
-- O gate classifica duração curta/longa, velocidade de leitura, largura, fragmentos após conectivos/preposições, duplicações consecutivas próximas, caracteres de controle/substituição e loops de palavras.
+- O gate classifica duração curta/longa, velocidade de leitura, largura, fragmentos após conectivos/preposições, sequências rápidas de cues curtas (flicker), duplicações consecutivas próximas, caracteres de controle/substituição e loops de palavras.
 - Na tradução, compara números e siglas em relação ao trilho-fonte. O detector é conservador: nomes próprios e terminologia não são considerados validados automaticamente apenas por capitalização.
 - Segmentos de origem com texto que não chegaram ao SRT bloqueiam a publicação; segmentos vazios não são tratados como perda de conteúdo.
 - Problemas editoriais não críticos preservam o SRT, mas marcam o resultado como `REVIEW_REQUIRED`; a interface recebe um aviso final com detalhes das primeiras ocorrências. Nenhuma regra apaga ou reescreve fala.
