@@ -374,5 +374,5 @@ class JsonPerformanceReporter:
         except OSError:
             temporary.unlink(missing_ok=True)
             raise
-        LOGGER.info("Relatório de desempenho sanitizado salvo em %s", destination)
+        LOGGER.info("Relatório de desempenho sanitizado salvo: %s", destination.name)
         return destination

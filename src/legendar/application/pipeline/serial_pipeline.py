@@ -13,6 +13,10 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from legendar.application.job.context import JobContext
+from legendar.application.pipeline.performance import (
+    PipelinePerformanceSession,
+    snapshot_adapter_metrics,
+)
 from legendar.application.pipeline.segmentation import (
     SegmentationPolicy,
     SegmentationResult,
@@ -23,10 +27,6 @@ from legendar.application.pipeline.translation import (
     build_translation_units,
 )
 from legendar.application.pipeline.validation import validate_track
-from legendar.application.pipeline.performance import (
-    PipelinePerformanceSession,
-    snapshot_adapter_metrics,
-)
 from legendar.application.ports.protocols import (
     Aligner,
     AudioPreparer,
