@@ -88,7 +88,7 @@ jobs:
 
       - name: Verify formatting
         run: >-
-          uv run --locked --no-sync ruff format --diff
+          uv run --locked --no-sync ruff format --check
           src/legendar
           tests/unit
           tests/integration
