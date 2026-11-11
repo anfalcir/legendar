@@ -19,7 +19,6 @@ from dataclasses import dataclass, field
 from legendar.domain.entities.subtitle import SubtitleCue, SubtitleTrack
 from legendar.domain.entities.transcript import (
     AlignmentResult,
-    TranscriptSegment,
     TranscriptWord,
 )
 from legendar.domain.errors.catalog import SrtValidationError
