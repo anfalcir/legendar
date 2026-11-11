@@ -14,6 +14,9 @@ from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus
 from legendar.infrastructure.media.youtube import YtDlpDownloader
+from legendar.infrastructure.transcription.faster_whisper import (
+    FasterWhisperTranscriber,
+)
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.nllb import NllbTranslator
 
@@ -237,4 +240,68 @@ def test_missing_runtimes_are_reported_without_crashing_application(
     assert "transformers não instalado" in dependencies.translate_readiness_details[0]
     assert isinstance(
         dependencies.pipeline_factory()._ports.transcriber, WhisperTranscriber
+    )
+
+
+def test_faster_whisper_backend_is_selected_explicitly(tmp_path, monkeypatch) -> None:
+    _patch_modules(monkeypatch, "faster_whisper", "whisperx", "transformers")
+    monkeypatch.setenv("LEGENDAR_ASR_BACKEND", "faster-whisper")
+    monkeypatch.delenv("LEGENDAR_WHISPER_MODEL", raising=False)
+    monkeypatch.delenv("LEGENDAR_WHISPER_DEVICE", raising=False)
+
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+    pipeline = dependencies.pipeline_factory()
+
+    assert dependencies.transcription_available
+    assert "faster-whisper" in dependencies.transcription_readiness_details[0]
+    assert isinstance(pipeline._ports.transcriber, FasterWhisperTranscriber)
+    assert pipeline._ports.transcriber.requested_compute_type is None
+
+
+def test_faster_whisper_backend_reports_missing_dependency(
+    tmp_path, monkeypatch
+) -> None:
+    _patch_modules(monkeypatch)
+    monkeypatch.setenv("LEGENDAR_ASR_BACKEND", "faster-whisper")
+
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert not dependencies.transcription_available
+    assert (
+        "faster-whisper não instalado"
+        in dependencies.transcription_readiness_details[0]
+    )
+    assert isinstance(
+        dependencies.pipeline_factory()._ports.transcriber, WhisperTranscriber
+    )
+
+
+def test_unknown_asr_backend_is_not_silently_accepted(tmp_path, monkeypatch) -> None:
+    _patch_modules(monkeypatch, "whisper")
+    monkeypatch.setenv("LEGENDAR_ASR_BACKEND", "unknown-backend")
+
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert not dependencies.transcription_available
+    assert (
+        "LEGENDAR_ASR_BACKEND inválido"
+        in dependencies.transcription_readiness_details[0]
     )

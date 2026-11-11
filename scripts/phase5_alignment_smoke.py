@@ -27,6 +27,9 @@ from jiwer import wer
 from legendar.domain.entities.media import AudioAsset
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
+from legendar.infrastructure.transcription.faster_whisper import (
+    FasterWhisperTranscriber,
+)
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 
 DATASET = "google/fleurs"
@@ -173,11 +176,14 @@ def run_smoke(
     samples_per_language: int = 1,
     cache_dir: Path = Path(".cache/phase5"),
     device: str = "cpu",
+    backend: str = "openai-whisper",
 ) -> dict[str, Any]:
     if not 1 <= samples_per_language <= 10:
         raise ValueError("samples_per_language deve ficar entre 1 e 10.")
     if device not in {"cpu", "cuda", "auto"}:
         raise ValueError("device deve ser cpu, cuda ou auto.")
+    if backend not in {"openai-whisper", "faster-whisper"}:
+        raise ValueError("backend deve ser openai-whisper ou faster-whisper.")
 
     cache_dir = cache_dir.expanduser().resolve()
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -185,7 +191,10 @@ def run_smoke(
 
     started = time.perf_counter()
     samples = _load_samples(cache_dir / "dataset", samples_per_language)
-    transcriber = WhisperTranscriber(
+    transcriber_class = (
+        FasterWhisperTranscriber if backend == "faster-whisper" else WhisperTranscriber
+    )
+    transcriber = transcriber_class(
         cache_dir,
         model_name=model,
         device=device,
@@ -223,7 +232,7 @@ def run_smoke(
             hypothesis = _normalize_text(transcript.text)
             if not hypothesis:
                 raise RuntimeError(
-                    f"Whisper não reconheceu fala em {sample['sample_id']}."
+                    f"{backend} não reconheceu fala em {sample['sample_id']}."
                 )
 
             total_words = len(transcript.text.split())
@@ -308,7 +317,9 @@ def run_smoke(
             "python": platform.python_version(),
             "platform": platform.platform(),
             "torch": str(__import__("torch").__version__),
-            "whisper": version("openai-whisper"),
+            "asr_backend": backend,
+            "openai_whisper": version("openai-whisper"),
+            "faster_whisper": version("faster-whisper"),
             "whisperx": version("whisperx"),
             "asr_model": model,
             "alignment_device": aligner.loaded_device or device,
@@ -335,6 +346,11 @@ def main() -> int:
     parser.add_argument("--cache-dir", type=Path, default=Path(".cache/phase5"))
     parser.add_argument("--device", choices=("cpu", "cuda", "auto"), default="cpu")
     parser.add_argument(
+        "--backend",
+        choices=("openai-whisper", "faster-whisper"),
+        default="openai-whisper",
+    )
+    parser.add_argument(
         "--output", type=Path, default=Path("phase5-alignment-smoke.json")
     )
     args = parser.parse_args()
@@ -345,6 +361,7 @@ def main() -> int:
             samples_per_language=args.samples_per_language,
             cache_dir=args.cache_dir,
             device=args.device,
+            backend=args.backend,
         )
     except Exception as exc:  # noqa: BLE001 - CLI precisa materializar falha no artefato
         failure = {
@@ -352,14 +369,13 @@ def main() -> int:
             "status": "failed",
             "classification": "alignment_integration_smoke_not_product_acceptance",
             "error_type": type(exc).__name__,
-            "error": str(exc),
         }
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
             json.dumps(failure, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-        print(json.dumps(failure, ensure_ascii=False, indent=2), file=sys.stderr)
+        print(f"{type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

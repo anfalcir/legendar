@@ -112,6 +112,7 @@ class WhisperTranscriber:
         *,
         model_name: str = DEFAULT_MODEL,
         device: str = "auto",
+        beam_size: int = 5,
         model_loader: ModelLoader = _load_openai_model,
         device_resolver: DeviceResolver = _resolve_device,
         audio_loader: AudioLoader = _load_pcm_wave,
@@ -129,9 +130,16 @@ class WhisperTranscriber:
                 f"Dispositivo Whisper inválido: {device!r}. "
                 f"Opções: {', '.join(sorted(SUPPORTED_DEVICES))}."
             )
+        if (
+            isinstance(beam_size, bool)
+            or not isinstance(beam_size, int)
+            or not 1 <= beam_size <= 10
+        ):
+            raise ValueError("beam_size deve ficar entre 1 e 10.")
 
         self.model_name = normalized_model
         self.requested_device = normalized_device
+        self.beam_size = beam_size
         self.download_root = Path(models_dir).expanduser() / "whisper"
         self._model_loader = model_loader
         self._device_resolver = device_resolver
@@ -156,11 +164,16 @@ class WhisperTranscriber:
 
     @classmethod
     def from_environment(cls, models_dir: Path) -> WhisperTranscriber:
-        """Lê apenas os dois ajustes operacionais documentados do runtime."""
+        """Lê os ajustes operacionais documentados do runtime."""
+        try:
+            beam_size = int(os.environ.get("LEGENDAR_WHISPER_BEAM_SIZE", "5"))
+        except ValueError as exc:
+            raise ValueError("LEGENDAR_WHISPER_BEAM_SIZE deve ser inteiro.") from exc
         return cls(
             models_dir=models_dir,
             model_name=os.environ.get("LEGENDAR_WHISPER_MODEL", DEFAULT_MODEL),
             device=os.environ.get("LEGENDAR_WHISPER_DEVICE", "auto"),
+            beam_size=beam_size,
         )
 
     @property
@@ -188,6 +201,7 @@ class WhisperTranscriber:
                 "requested_device": self.requested_device,
                 "loaded_device": self._device,
                 "fp16": self._device not in (None, "cpu"),
+                "beam_size": self.beam_size,
                 "word_timestamps": False,
                 **collect_torch_thread_settings(),
             },
@@ -280,6 +294,7 @@ class WhisperTranscriber:
                     task="transcribe",
                     language=language_code,
                     fp16=device != "cpu",
+                    beam_size=self.beam_size,
                     verbose=None,
                     word_timestamps=False,
                 )

@@ -115,6 +115,7 @@ def test_transcribes_original_language_and_preserves_recognized_segments(
     assert model.calls[0]["language"] == "pt"
     assert model.calls[0]["word_timestamps"] is False
     assert model.calls[0]["fp16"] is False
+    assert model.calls[0]["beam_size"] == 5
     assert progress.reports == [(1.0, "Reconhecimento Whisper base concluído")]
 
 
@@ -330,3 +331,17 @@ def test_performance_snapshot_separates_model_load_audio_load_and_inference(
     assert snapshot["counters"]["recognized_words"] == 2
     assert snapshot["counters"]["model_load_seconds"] >= 0
     assert snapshot["counters"]["inference_seconds"] >= 0
+
+
+def test_beam_size_is_validated_and_reported(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="beam_size"):
+        WhisperTranscriber(tmp_path, beam_size=0)
+
+    transcriber = make_transcriber(tmp_path, beam_size=3)
+    transcriber.transcribe(
+        make_audio(tmp_path),
+        language=Language.PORTUGUESE,
+        progress=ProgressRecorder(),
+    )
+
+    assert transcriber.performance_snapshot()["configuration"]["beam_size"] == 3

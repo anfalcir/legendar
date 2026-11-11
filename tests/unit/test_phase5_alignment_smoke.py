@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import soundfile as sf
-from scripts.phase5_alignment_smoke import _write_audio
+from scripts.phase5_alignment_smoke import _write_audio, run_smoke
 
 
 def _float_wav(samples: np.ndarray) -> bytes:
@@ -68,3 +68,8 @@ def test_write_audio_rejects_wrong_sample_rate(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError, match="16 kHz"):
         _write_audio(stream.getvalue(), tmp_path / "wrong-rate.wav")
+
+
+def test_alignment_smoke_rejects_unknown_asr_backend(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="backend deve ser"):
+        run_smoke(cache_dir=tmp_path, backend="unknown")
