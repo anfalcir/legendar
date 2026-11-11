@@ -9,7 +9,9 @@
 - **CI da Fase 1 (PR #8):** aprovada. Incluiu 492 testes, cobertura de 85,46%, E2E com FFmpeg/Qt em Python 3.10–3.13, smoke OpenAI Whisper PT-BR/EN, smoke NLLB real com Transformers em CPU, matriz multiplataforma, validação documental e os workflows determinísticos relacionados. Os checks de WhisperX benchmark/CUDA foram marcados como skipped pelos critérios do runner, não como falha.
 - **Remodelação arquitetural anterior:** Fases 0–10 integradas à `main`.
 - **Fase 1:** concluída e integrada à `main`; baseline real da mídia de 37min10s consolidado em 11/11/2026.
-- **Fase 2:** concluída, validada pelo CI e integrada à `main` pela PR #9. A próxima frente é a Fase 3.
+- **Fase 2:** concluída, validada pelo CI e integrada à `main` pela PR #9.
+- **Fase 3:** concluída e integrada à `main` pela PR #10, squash `10f6d6d428a1fa5a45a7c7fd13870f48bdf67019`.
+- **Fase 4:** concluída e integrada à `main` pela PR [#11](https://github.com/anfalcir/legendar/pull/11), squash `32f20c3a5455dcc16f48e78a742ba4c7018339b5`. CI: 506 testes aprovados, cobertura de 86%, Python 3.10–3.13, Ruff e smoke Whisper/WhisperX CPU PT-BR/EN.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
@@ -19,9 +21,9 @@
 
 O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliza o áudio, transcreve com Whisper, alinha palavras com WhisperX, forma legendas, traduz localmente com NLLB-200 quando solicitado, valida o trilho e publica SRT por troca atômica.
 
-A arquitetura e a base de engenharia das Fases 0–10 estão integradas. A auditoria estática posterior identificou lacunas editoriais; as Fases 2 e 3 já corrigiram a integridade textual e a consolidação cronológica da segmentação. A Fase 4 está em implementação na branch `phase-4/editorial-quality-gate`: gate estruturado, diagnósticos editoriais e aviso de revisão na interface.
+A arquitetura e a base de engenharia das Fases 0–10 estão integradas. As Fases 2 e 3 corrigiram a integridade textual e a consolidação cronológica da segmentação. A Fase 4 agora adiciona gate editorial estruturado, diagnósticos de leitura/texto, bloqueio de perda de conteúdo e aviso de revisão na interface; tudo integrado à `main` pela PR #11.
 
-As Fases 1, 2 e 3 estão concluídas e integradas à `main`. A Fase 3 consolidou globalmente as palavras alinhadas, preservou segmentos fallback, reforçou fronteiras editoriais e adicionou extensão segura de exibição. A Fase 4 está em andamento; CI e merge ainda pendentes. O baseline real de 37min10s é ~23min21s; NLLB consome ~14min e será o foco da Fase 6, quando será avaliado Gemini com credencial fornecida pelo usuário via secret do GitHub.
+As Fases 1, 2, 3 e 4 estão concluídas e integradas à `main`. A Fase 3 consolidou globalmente as palavras alinhadas, preservou segmentos fallback, reforçou fronteiras editoriais e adicionou extensão segura de exibição. A Fase 4 estruturou o gate editorial e tornou explícitos os estados de aprovação, revisão necessária e bloqueio. A próxima etapa é a Fase 5. O baseline real de 37min10s é ~23min21s; NLLB consome ~14min e será o foco da Fase 6, quando será avaliado Gemini com credencial fornecida pelo usuário via secret do GitHub.
 
 ## 2. Estado da Fase 1 — concluída
 
@@ -128,7 +130,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 1 | Instrumentação e baseline por etapa | **Concluída** |
 | 2 | Integridade textual e alinhamento recuperável | **Concluída e integrada à `main`** |
 | 3 | Segmentação global e legibilidade | **Concluída e integrada à `main` (PR #10)** |
-| 4 | Gate editorial e diagnóstico textual | **Em implementação na branch `phase-4/editorial-quality-gate`; CI/merge pendentes** |
+| 4 | Gate editorial e diagnóstico textual | **Concluída e integrada à `main` (PR #11)** |
 | 5 | Benchmark e aceleração da transcrição | Planejada |
 | 6 | Benchmark e aceleração da tradução | Planejada |
 | 7 | Gestão de memória, threads e perfis de execução | Planejada |
@@ -147,11 +149,11 @@ Nenhuma dessas fases de código é declarada concluída por existir apenas no pl
 
 ## 9. Próximas ações
 
-1. Concluir CI, revisão e merge da Fase 4; confirmar que CPS, duração, fragmentação e integridade são critérios editoriais auditáveis.
-2. Executar a Fase 5 isoladamente, se o benchmark confirmar oportunidade de aceleração de ASR.
-3. Na Fase 6, comparar Gemini API com NLLB usando o mesmo corpus e revisão humana. Antes das chamadas reais, solicitar o cadastro de `GEMINI_API_KEY` como secret no GitHub.
-4. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
-5. Consolidar a Fase 8 com comparação do pipeline completo, homologação audiovisual com a mídia real, validação no hardware-alvo e evidências sanitizadas.
+1. Executar a Fase 5 isoladamente, validar oportunidades de aceleração de ASR e manter as métricas de qualidade como critério de aceite.
+2. Na Fase 6, comparar Gemini API com NLLB usando o mesmo corpus e revisão humana. Antes das chamadas reais, solicitar o cadastro de `GEMINI_API_KEY` como secret no GitHub.
+3. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
+4. Consolidar a Fase 8 com comparação do pipeline completo, homologação audiovisual com a mídia real, validação no hardware-alvo e evidências sanitizadas.
+5. Manter a Fase 7 como etapa de gestão de memória, threads e perfis de execução conforme o resultado dos benchmarks.
 
 ## 10. Histórico documental
 
