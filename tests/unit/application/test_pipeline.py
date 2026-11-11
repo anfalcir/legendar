@@ -364,7 +364,9 @@ def test_unmatched_alignment_words_block_publication(job_context):
     )
     pipeline, ports = _pipeline(aligner=FakeAligner(alignment=alignment))
 
-    with pytest.raises(AlignmentInsufficientError, match="evidência temporal confiável"):
+    with pytest.raises(
+        AlignmentInsufficientError, match="evidência temporal confiável"
+    ):
         pipeline.execute(_request(), job_context)
 
     assert ports["publisher"].calls == []
