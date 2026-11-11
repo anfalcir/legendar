@@ -31,7 +31,7 @@ from legendar.infrastructure.diagnostics.performance import (
 )
 from legendar.infrastructure.media.waveform import load_pcm_waveform
 
-SUPPORTED_MODELS = frozenset({"tiny", "base", "small", "medium", "large-v3", "turbo"})
+SUPPORTED_MODELS = frozenset({"tiny", "base", "small", "medium", "large", "large-v3", "turbo"})
 SUPPORTED_DEVICES = frozenset({"auto", "cpu", "cuda"})
 SUPPORTED_COMPUTE_TYPES = frozenset(
     {"default", "auto", "int8", "int8_float16", "int8_float32", "float16", "float32"}
