@@ -25,10 +25,14 @@ class ProgressRecorder:
 
 class FakeModel:
     def __init__(self, segments=None, *, error: Exception | None = None) -> None:
-        self.segments = segments if segments is not None else [
-            SimpleNamespace(start=0.0, end=0.4, text=" Olá,"),
-            SimpleNamespace(start=0.5, end=1.0, text=" mundo! "),
-        ]
+        self.segments = (
+            segments
+            if segments is not None
+            else [
+                SimpleNamespace(start=0.0, end=0.4, text=" Olá,"),
+                SimpleNamespace(start=0.5, end=1.0, text=" mundo! "),
+            ]
+        )
         self.error = error
         self.calls: list[dict] = []
         self.generator_consumed = False
@@ -42,9 +46,7 @@ class FakeModel:
             yield from self.segments
             self.generator_consumed = True
 
-        return generate(), SimpleNamespace(
-            language="pt", language_probability=0.99
-        )
+        return generate(), SimpleNamespace(language="pt", language_probability=0.99)
 
 
 def make_audio(tmp_path: Path) -> AudioAsset:
@@ -115,9 +117,7 @@ def test_transcribes_and_consumes_the_complete_generator(tmp_path: Path) -> None
     assert model.calls[0]["beam_size"] == 5
     assert model.calls[0]["word_timestamps"] is False
     assert model.calls[0]["vad_filter"] is False
-    assert progress.reports == [
-        (1.0, "Reconhecimento faster-whisper base concluído")
-    ]
+    assert progress.reports == [(1.0, "Reconhecimento faster-whisper base concluído")]
 
 
 def test_model_is_loaded_once_and_reused_between_jobs(tmp_path: Path) -> None:
