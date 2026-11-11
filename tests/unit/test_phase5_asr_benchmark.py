@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from scripts.phase5_asr_benchmark import run_benchmark
 
 
