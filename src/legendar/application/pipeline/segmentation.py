@@ -138,6 +138,8 @@ def segment_alignment(
     short: list[int] = []
     overflow: list[int] = []
     words: list[tuple[TranscriptWord, TimeRange, int]] = []
+    word_runs: list[list[tuple[TranscriptWord, TimeRange, int]]] = []
+    current_run: list[tuple[TranscriptWord, TimeRange, int]] = []
     previous_segment_start: float | None = None
 
     for position, segment in enumerate(alignment.transcript.segments):
@@ -163,12 +165,19 @@ def segment_alignment(
             previous_segment_start = segment_start
         if aligned:
             words.extend(aligned)
+            current_run.extend(aligned)
             continue
+        if current_run:
+            word_runs.append(current_run)
+            current_run = []
         text = " ".join(segment.text.split())
         if segment.range is None or not text:
             dropped.append(position)
             continue
         events.append((segment.range, text, (position,)))
+
+    if current_run:
+        word_runs.append(current_run)
 
     # A sequência global deve respeitar a cronologia. Ordenar silenciosamente
     # poderia alterar a ordem falada; portanto, inconsistência é erro explícito.
@@ -178,17 +187,21 @@ def segment_alignment(
                 "Palavras alinhadas fora da ordem cronológica da transcrição."
             )
 
-    plain_words = [(word, time_range) for word, time_range, _ in words]
-    groups = _split_words(plain_words, policy) if plain_words else []
-    refined = _refine_for_reading_speed(groups, policy)
-    split_applied = len(refined) > len(groups)
+    split_applied = False
     source_by_identity = {id(word): source for word, _, source in words}
 
-    for group in refined:
-        window = TimeRange(start=group[0][1].start, end=group[-1][1].end)
-        text = _text_of(group)
-        sources = tuple(sorted({source_by_identity[id(word)] for word, _ in group}))
-        events.append((window, text, sources))
+    for run in word_runs:
+        plain_words = [(word, time_range) for word, time_range, _ in run]
+        groups = _split_words(plain_words, policy)
+        refined = _refine_for_reading_speed(groups, policy)
+        split_applied = split_applied or len(refined) > len(groups)
+        for group in refined:
+            window = TimeRange(start=group[0][1].start, end=group[-1][1].end)
+            text = _text_of(group)
+            sources = tuple(
+                sorted({source_by_identity[id(word)] for word, _ in group})
+            )
+            events.append((window, text, sources))
 
     # Eventos de segmentos sem timestamps por palavra coexistem com as cues
     # globais, mas a publicação permanece cronológica e sem sobreposição.
