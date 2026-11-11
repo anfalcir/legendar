@@ -3,7 +3,7 @@
 Aplicação desktop para transcrever áudio, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução local opcional para inglês ou português brasileiro.
 
 - **Estado:** Fases 0–9 concluídas, validadas e integradas à `main`. O que resta é a homologação do usuário com mídia real e hardware próprio.
-- **Suíte:** 451 testes aprovados e 86% de cobertura no ambiente com FFmpeg (441 aprovados e 10 skips explícitos sem FFmpeg).
+- **Suíte:** 452 testes aprovados e 86% de cobertura no ambiente com FFmpeg (442 aprovados e 10 skips explícitos sem FFmpeg).
 - **Licença:** MIT, em [LICENSE](LICENSE).
 
 ## O que a aplicação faz

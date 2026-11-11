@@ -4,7 +4,7 @@
 - **Ambiente local:** Linux, Python 3.12.3, Qt offscreen (`QT_QPA_PLATFORM=offscreen`), FFmpeg/ffprobe 7.0.2 static em `./ffmpeg/bin` (ignorado pelo Git).
 - **Comando principal:** `PATH="$PWD/ffmpeg/bin:$PATH" QT_QPA_PLATFORM=offscreen uv run --locked --no-sync pytest -q --cov=legendar --cov-report=term`
 - **Resultado da Fase 8:** **443 testes aprovados, 0 falhas, 0 skips**, cobertura **86%** (4115 instruções, 577 não cobertas).
-- **Após a Fase 9:** a suíte passou a **451 testes** (441 sem FFmpeg), incluindo os testes de documentação e a verificação de que o `requirements.txt` legado foi retirado.
+- **Após a Fase 9:** a suíte passou a **452 testes** (442 sem FFmpeg), incluindo os testes de documentação e a verificação de que o `requirements.txt` legado foi retirado.
 - **Sem FFmpeg no `PATH`:** 10 skips explícitos (mídia real e integração FFmpeg).
 - **Documentação:** todos os arquivos Markdown verificados, nenhum link relativo quebrado.
 
@@ -26,7 +26,7 @@
 | GUI | `tests/gui` | 43 | janela offscreen, diálogos, fluxo completo |
 | E2E | `tests/e2e` | 24 | matriz de idiomas, falhas, cancelamento e mídia real |
 | Legado | `tests/legacy` | 9 | caracterização da baseline preservada |
-| **Total** | — | **443** (451 após a Fase 9) | confirmado por `pytest --collect-only` |
+| **Total** | — | **443** (452 após a Fase 9) | confirmado por `pytest --collect-only` |
 
 ## 2. Cobertura por área crítica
 

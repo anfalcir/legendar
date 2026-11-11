@@ -59,7 +59,7 @@ uv run --locked --no-sync pytest -q tests/test_documentation.py
 
 Resultado de referência no ambiente de desenvolvimento (Python 3.12.3, FFmpeg
 7.0.2 static): 443 testes aprovados, 0 skips, cobertura 86% na medição da Fase 8;
-após a Fase 9 a suíte tem 451 testes (441 sem FFmpeg).
+após a Fase 9 a suíte tem 452 testes (442 sem FFmpeg).
 
 ## 4. CI da fase
 

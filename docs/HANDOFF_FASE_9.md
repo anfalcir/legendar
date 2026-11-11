@@ -31,7 +31,7 @@
    `docs/ESTADO_ATUAL.md` e `docs/LEGACY_BASELINE.md` atualizados para refletir
    a remoção e o encerramento das fases.
 5. Nenhuma alteração de comportamento em `src/`: a suíte passou de 443 para
-   451 testes (441 sem FFmpeg), porque a fase acrescentou os testes de
+   452 testes (442 sem FFmpeg), porque a fase acrescentou os testes de
    documentação e a verificação da retirada do manifesto legado.
 
 ## 3. Evidências de verificação
@@ -44,7 +44,7 @@ uv run --locked --no-sync ruff format --check src/legendar tests
 uv run --locked --no-sync python scripts/check_doc_links.py
 ```
 
-Resultados registrados: suíte completa verde (451 testes com FFmpeg; 441 + 10
+Resultados registrados: suíte completa verde (452 testes com FFmpeg; 442 + 10
 skips sem FFmpeg), Ruff check e format limpos, lockfile válido e nenhum link
 relativo quebrado.
 

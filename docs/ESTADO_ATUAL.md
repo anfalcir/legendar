@@ -6,7 +6,7 @@
 - **Fases concluídas e integradas:** 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9
 - **Fase em execução:** nenhuma — roadmap do plano mestre encerrado
 - **Próxima etapa:** homologação do usuário com mídia real, modelos completos e computador-alvo — roteiro em [HOMOLOGACAO.md](HOMOLOGACAO.md)
-- **Suíte determinística:** 451 testes aprovados e 86% de cobertura com FFmpeg/ffprobe no `PATH`; 441 aprovados e 10 skips explícitos sem as ferramentas
+- **Suíte determinística:** 452 testes aprovados e 86% de cobertura com FFmpeg/ffprobe no `PATH`; 442 aprovados e 10 skips explícitos sem as ferramentas
 - **Documentação:** guias de arquitetura, operação, instalação e decisões publicados; links relativos verificados automaticamente
 - **Manifestos:** `pyproject.toml` e `uv.lock`; o `requirements.txt` legado foi removido
 
@@ -43,7 +43,7 @@ completos, hardware do usuário e julgamento editorial, listada na seção 6.
 | Fase 8 | Branch `phase-8/validation`; squash `e9e2a18` |
 | Fase 9 | Branch `phase-9/documentation`; squash local `8f82e83` (fast-forward à `main`) |
 | CI da fase 8/9 | `phase8-quality.yml` roda em pushes para `main`, `phase-8/**` e `phase-9/**` e em PRs para `main`; commit de CI `ad8383f` |
-| `main` (HEAD local e `origin/main`) | `ad8383f4abebb9b0069b456c32b45d2e322e61b7` |
+| `main` (HEAD local e `origin/main`) | Sincronizados; `ad8383f` foi o commit de CI da Fase 9 e o histórico completo está em `git log` |
 | Motivo do squash local (6–9) | criação de PR indisponível no ambiente de execução (sem `gh` e sem token) |
 | Manifestos | `pyproject.toml` (canônico) + `uv.lock` (198 pacotes resolvidos) |
 | Lockfile | validado com `uv lock --check` |
@@ -65,8 +65,8 @@ Detalhes em [ARQUITETURA.md](ARQUITETURA.md).
 
 | Evidência | Resultado |
 |---|---|
-| Suíte completa com FFmpeg 7.0.2 static e Qt offscreen | **451 testes aprovados, 0 skips, cobertura 86%** |
-| Suíte completa sem FFmpeg/ffprobe | **441 aprovados, 10 skips explícitos** |
+| Suíte completa com FFmpeg 7.0.2 static e Qt offscreen | **452 testes aprovados, 0 skips, cobertura 86%** |
+| Suíte completa sem FFmpeg/ffprobe | **442 aprovados, 10 skips explícitos** |
 | Ruff check (`src/legendar`, `tests`, `scripts`) | limpo |
 | Ruff format check (arquivos mantidos) | limpo |
 | `uv lock --check` | 198 pacotes, sem divergência |
