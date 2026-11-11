@@ -8,7 +8,6 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-
 ResourceSnapshot = Mapping[str, int | float | None]
 ResourceProvider = Callable[[], ResourceSnapshot]
 
