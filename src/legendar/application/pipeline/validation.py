@@ -4,6 +4,7 @@ Falhas estruturais ou perda de conteúdo bloqueiam a publicação. Riscos
 editoriais preservam o SRT, mas classificam o resultado como revisão necessária.
 Nenhuma regra remove, reescreve ou corrige texto automaticamente.
 """
+
 from __future__ import annotations
 
 import re
@@ -19,11 +20,48 @@ MEDIA_DURATION_TOLERANCE_SECONDS = 0.5
 _LIST_LIMIT = 8
 _REPEATED_WORD_LIMIT = 4
 _CONNECTORS = {
-    "a", "ao", "aos", "as", "com", "da", "das", "de", "do", "dos",
-    "e", "em", "na", "nas", "no", "nos", "ou", "para", "pela",
-    "pelas", "pelo", "pelos", "por", "que", "se", "sem", "sob",
-    "sobre", "the", "an", "and", "at", "by", "for",
-    "from", "in", "into", "of", "on", "or", "to", "with",
+    "a",
+    "ao",
+    "aos",
+    "as",
+    "com",
+    "da",
+    "das",
+    "de",
+    "do",
+    "dos",
+    "e",
+    "em",
+    "na",
+    "nas",
+    "no",
+    "nos",
+    "ou",
+    "para",
+    "pela",
+    "pelas",
+    "pelo",
+    "pelos",
+    "por",
+    "que",
+    "se",
+    "sem",
+    "sob",
+    "sobre",
+    "the",
+    "an",
+    "and",
+    "at",
+    "by",
+    "for",
+    "from",
+    "in",
+    "into",
+    "of",
+    "on",
+    "or",
+    "to",
+    "with",
 }
 _NUMBER_RE = re.compile(r"(?<!\w)\d+(?:[.,:/-]\d+)*(?!\w)")
 _ACRONYM_RE = re.compile(r"\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{2,}\b")
@@ -77,7 +115,9 @@ class TrackValidationReport:
 
     @property
     def review_cue_indices(self) -> tuple[int, ...]:
-        return tuple(sorted({index for issue in self.issues for index in issue.cue_indices}))
+        return tuple(
+            sorted({index for issue in self.issues for index in issue.cue_indices})
+        )
 
     @property
     def approved_cue_count(self) -> int:
@@ -165,33 +205,73 @@ def validate_track(
             ):
                 fragmented.append(cue.index)
 
-    _append_issue(issues, warnings, "SHORT_CUE", short,
-                  f"Abaixo da duração mínima de {_seconds(policy.min_cue_duration)} s")
-    _append_issue(issues, warnings, "LONG_CUE", long,
-                  f"Acima da duração máxima de {_seconds(policy.max_cue_duration)} s")
-    _append_issue(issues, warnings, "READING_SPEED", overflow,
-                  f"Acima da velocidade de leitura de {policy.chars_per_second:g} CPS")
-    _append_issue(issues, warnings, "CUE_WIDTH", wide,
-                  f"Acima de {policy.max_chars_per_cue} caracteres por cue")
-    _append_issue(issues, warnings, "REPEATED_CUE", duplicates,
-                  "Texto idêntico em cues consecutivas próximas; confirmar repetição")
-    _append_issue(issues, warnings, "SUSPICIOUS_TEXT", suspicious,
-                  "Caracteres de controle, substituição ou repetição anômala")
-    _append_issue(issues, warnings, "SYNTACTIC_FRAGMENT", fragmented,
-                  "Cue anterior termina em conectivo/preposição; revisar a quebra")
+    _append_issue(
+        issues,
+        warnings,
+        "SHORT_CUE",
+        short,
+        f"Abaixo da duração mínima de {_seconds(policy.min_cue_duration)} s",
+    )
+    _append_issue(
+        issues,
+        warnings,
+        "LONG_CUE",
+        long,
+        f"Acima da duração máxima de {_seconds(policy.max_cue_duration)} s",
+    )
+    _append_issue(
+        issues,
+        warnings,
+        "READING_SPEED",
+        overflow,
+        f"Acima da velocidade de leitura de {policy.chars_per_second:g} CPS",
+    )
+    _append_issue(
+        issues,
+        warnings,
+        "CUE_WIDTH",
+        wide,
+        f"Acima de {policy.max_chars_per_cue} caracteres por cue",
+    )
+    _append_issue(
+        issues,
+        warnings,
+        "REPEATED_CUE",
+        duplicates,
+        "Texto idêntico em cues consecutivas próximas; confirmar repetição",
+    )
+    _append_issue(
+        issues,
+        warnings,
+        "SUSPICIOUS_TEXT",
+        suspicious,
+        "Caracteres de controle, substituição ou repetição anômala",
+    )
+    _append_issue(
+        issues,
+        warnings,
+        "SYNTACTIC_FRAGMENT",
+        fragmented,
+        "Cue anterior termina em conectivo/preposição; revisar a quebra",
+    )
 
     if source_track is not None:
         missing = _missing_invariants(source_track, track)
         if missing:
             indexes = tuple(cue.index for cue in track.cues)
-            issues.append(QualityIssue(
-                "TRANSLATION_INVARIANT", "warning",
-                "A tradução pode ter alterado números ou siglas: " + ", ".join(missing),
-                indexes,
-            ))
+            issues.append(
+                QualityIssue(
+                    "TRANSLATION_INVARIANT",
+                    "warning",
+                    "A tradução pode ter alterado números ou siglas: "
+                    + ", ".join(missing),
+                    indexes,
+                )
+            )
             warnings.append(
                 "Possível alteração de números/siglas na tradução: "
-                + ", ".join(missing[:_LIST_LIMIT]) + "."
+                + ", ".join(missing[:_LIST_LIMIT])
+                + "."
             )
 
     blocked_reasons = (
@@ -200,14 +280,14 @@ def validate_track(
         else ()
     )
     if blocked_reasons:
-        issues.append(QualityIssue(
-            "CONTENT_LOSS", "critical", blocked_reasons[0], ()
-        ))
+        issues.append(QualityIssue("CONTENT_LOSS", "critical", blocked_reasons[0], ()))
         warnings.append("Publicação bloqueada: " + blocked_reasons[0] + ".")
 
     status = (
-        QualityStatus.BLOCKED if blocked_reasons
-        else QualityStatus.REVIEW_REQUIRED if issues
+        QualityStatus.BLOCKED
+        if blocked_reasons
+        else QualityStatus.REVIEW_REQUIRED
+        if issues
         else QualityStatus.APPROVED
     )
     ordered_cps = sorted(cps_values)
@@ -269,10 +349,16 @@ def _has_suspicious_text(text: str) -> bool:
 def _missing_invariants(source: SubtitleTrack, target: SubtitleTrack) -> list[str]:
     source_text = " ".join(cue.normalized_text for cue in source.cues)
     target_text = " ".join(cue.normalized_text for cue in target.cues)
-    missing_numbers = sorted(set(_NUMBER_RE.findall(source_text)) - set(_NUMBER_RE.findall(target_text)))
-    missing_acronyms = sorted(set(_ACRONYM_RE.findall(source_text)) - set(_ACRONYM_RE.findall(target_text)))
-    return [*(f"número {item}" for item in missing_numbers),
-            *(f"sigla {item}" for item in missing_acronyms)]
+    missing_numbers = sorted(
+        set(_NUMBER_RE.findall(source_text)) - set(_NUMBER_RE.findall(target_text))
+    )
+    missing_acronyms = sorted(
+        set(_ACRONYM_RE.findall(source_text)) - set(_ACRONYM_RE.findall(target_text))
+    )
+    return [
+        *(f"número {item}" for item in missing_numbers),
+        *(f"sigla {item}" for item in missing_acronyms),
+    ]
 
 
 def _cue_list(indexes: list[int]) -> str:
