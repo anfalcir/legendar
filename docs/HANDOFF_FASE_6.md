@@ -1,6 +1,6 @@
 # Handoff técnico — Fase 6: tradução por cue, segmentação e SRT
 
-- **Status:** implementação concluída e publicada na branch `phase-6/translation-segmentation-srt`; CI de push [#42951041522](https://github.com/anfalcir/legendar/actions/runs/42951041522) verde em 5/5 jobs. Falta abrir a PR e integrar por squash.
+- **Status:** implementação concluída, validada e integrada à `main` por squash (a criação de PR não estava disponível no ambiente). CI de push da branch: [#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587), 5/5 jobs verdes.
 - **Plano operacional:** [FASE_6_PLANO.md](FASE_6_PLANO.md)
 - **Fronteira:** consumir `AlignmentResult`, publicar SRT de duas linhas e traduzir localmente por cue.
 - **Fora de escopo:** reintegrar a GUI ao job completo (Fase 7) e homologar qualidade tradutória (Fase 8).

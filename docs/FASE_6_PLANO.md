@@ -1,6 +1,6 @@
 # Plano operacional — Fase 6: tradução por cue, segmentação editorial e SRT
 
-- **Status:** implementada e publicada na branch `phase-6/translation-segmentation-srt`; CI de push [#42951041522](https://github.com/anfalcir/legendar/actions/runs/42951041522) verde em 5/5 jobs. Falta abrir a PR e integrar por squash.
+- **Status:** implementada, validada e integrada à `main` por squash na Fase 7 (a criação de PR não estava disponível no ambiente). CI de push da branch: [#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587), 5/5 jobs verdes.
 - **Fronteira:** consumir `AlignmentResult` da Fase 5, produzir cues de até duas linhas, traduzir localmente quando solicitado e publicar o SRT de forma atômica.
 - **Dependências:** Fases 4 (transcrição) e 5 (alinhamento) integradas à `main`.
 - **Decisão de tradução:** NLLB-200 distilled 600M local, executado pelo adaptador `NllbTranslator`; nenhum texto da legenda sai do computador.

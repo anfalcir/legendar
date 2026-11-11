@@ -7,7 +7,8 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QSettings, Qt
+from PySide6.QtCore import QSettings, Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QMessageBox, QScrollArea
 
 from legendar.application.pipeline.serial_pipeline import PipelinePorts, SerialPipeline
@@ -831,7 +832,7 @@ def test_final_generation_stays_disabled_until_srt_publisher_is_available(
         _dependencies(tmp_path),
         publishing_available=False,
         publishing_readiness_details=(
-            "O publicador SRT será conectado nas Fases 6/7.",
+            "O publicador SRT atômico deste ambiente não está configurado.",
         ),
     )
     window = _window(qtbot, dependencies, tmp_path)
@@ -839,9 +840,61 @@ def test_final_generation_stays_disabled_until_srt_publisher_is_available(
     window.output_edit.setText(str(tmp_path / "saida.srt"))
 
     assert not window.generate_button.isEnabled()
-    assert (
-        "publicação final SRT ainda não foi implementada"
-        in window.readiness_label.text()
-    )
+    assert "O publicador SRT não está disponível" in window.readiness_label.text()
     with pytest.raises(InvalidInputError, match="publicação final"):
         window._build_job()
+
+
+def test_open_folder_is_enabled_only_after_a_published_job(
+    qtbot, tmp_path, media, monkeypatch
+) -> None:
+    opened: list[QUrl] = []
+
+    def fake_open(url: QUrl) -> bool:
+        opened.append(url)
+        return True
+
+    monkeypatch.setattr(QDesktopServices, "openUrl", fake_open)
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    assert not window.open_folder_button.isEnabled()
+
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+    qtbot.mouseClick(window.generate_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
+
+    assert window.view_model.snapshot.state is JobState.COMPLETED
+    assert window.open_folder_button.isEnabled()
+
+    qtbot.mouseClick(window.open_folder_button, Qt.MouseButton.LeftButton)
+
+    assert len(opened) == 1
+    assert opened[0].toLocalFile() == str(tmp_path)
+
+
+def test_open_folder_reports_failure_without_crashing(
+    qtbot, tmp_path, media, monkeypatch
+) -> None:
+    monkeypatch.setattr(QDesktopServices, "openUrl", lambda _url: False)
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+    window.file_edit.setText(str(media))
+    window.output_edit.setText(str(tmp_path / "saida.srt"))
+    qtbot.mouseClick(window.generate_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
+
+    window.open_folder_button.click()
+
+    assert "Não foi possível abrir a pasta" in window.statusBar().currentMessage()
+    assert window.view_model.snapshot.state is JobState.COMPLETED
+
+
+def test_open_folder_without_a_publication_explains_the_state(qtbot, tmp_path) -> None:
+    window = _window(qtbot, _dependencies(tmp_path), tmp_path)
+
+    window._open_output_folder()
+
+    assert not window.open_folder_button.isEnabled()
+    assert (
+        "Nenhum SRT foi publicado nesta sessão ainda."
+        in window.statusBar().currentMessage()
+    )

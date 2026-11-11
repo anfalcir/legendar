@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio de vídeos, alinhar a fala ao tempo da mídia e produzir legendas SRT, com tradução opcional para inglês ou português brasileiro.
 
-A remodelagem é executada por fases. As Fases 0–5 estão implementadas, validadas por CI e integradas à `main`. A Fase 5 foi integrada por squash pela PR [#6](https://github.com/anfalcir/legendar/pull/6), commit `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`. O forced alignment WhisperX 3.8.6 em PT-BR/EN separa janelas aproximadas do Whisper de timestamps finais, preserva palavras não alinhadas e aplica offsets globais uma única vez. CI push/PR aprovada em Python 3.10–3.13 e smoke real CPU executado. A Fase 6 está implementada e publicada na branch `phase-6/translation-segmentation-srt`, com CI de push verde em 5/5 jobs, e aguarda abertura de PR e integração: segmentação editorial limitada a duas linhas de 42 caracteres, tradução local por cue com NLLB-200 distilled 600M, validação do trilho e publicação SRT atômica com verificação de ida e volta. A precisão temporal e a qualidade tradutória em pregações, no computador-alvo, continuam como gates de homologação do produto. A aplicação anterior permanece preservada como baseline.
+A remodelagem é executada por fases. As Fases 0–7 estão implementadas, validadas por CI e integradas à `main`. A Fase 6 entregou a segmentação editorial de duas linhas, a tradução local por cue com NLLB-200 distilled 600M, a validação do trilho e a publicação SRT atômica com roundtrip; seu CI de push passou 5/5 jobs. A Fase 7 conectou a janela ao pipeline real: o botão de geração dispara o trabalho em `QThread`, com progresso honesto, cancelamento cooperativo, log recolhível, recuperação de erro e abertura da pasta do SRT publicado. A Fase 8 (matriz de testes, E2E e homologação) é a fronteira atual. A precisão temporal e a qualidade tradutória em pregações, no computador-alvo, continuam como gates de homologação do produto. A aplicação anterior permanece preservada como baseline.
 
 ## Documentação do projeto
 
@@ -23,6 +23,8 @@ A remodelagem é executada por fases. As Fases 0–5 estão implementadas, valid
 - [Handoff da Fase 5](docs/HANDOFF_FASE_5.md) — adaptador, cache, diagnósticos, testes e homologação.
 - [Plano operacional da Fase 6](docs/FASE_6_PLANO.md) — segmentação editorial, tradução por cue, validação e publicação SRT.
 - [Handoff da Fase 6](docs/HANDOFF_FASE_6.md) — contratos, regras congeladas, runtime NLLB, testes e limites conhecidos.
+- [Plano operacional da Fase 7](docs/FASE_7_PLANO.md) — integração da GUI ao pipeline, progresso, cancelamento, log e recuperação.
+- [Handoff da Fase 7](docs/HANDOFF_FASE_7.md) — modelo de threads, estados, encerramento seguro, resultado publicado e testes.
 
 ## Direção do produto
 
@@ -37,7 +39,7 @@ Consulte o [plano de remodelagem](docs/PLANO_REMODELAGEM.md) para distinguir fun
 
 ## Estado da implementação atual
 
-A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–5 integradas; a Fase 5 conecta forced alignment WhisperX à transcrição local da Fase 4 por meio de `AlignmentResult`. A Fase 6 está implementada na branch `phase-6/translation-segmentation-srt`: a segmentação editorial consome as palavras alinhadas, o SRT é publicado com no máximo duas linhas por cue, a tradução PT↔EN roda localmente por cue e o trilho é validado antes da troca atômica do arquivo. A GUI ainda não dispara o pipeline completo; o botão de geração final permanece bloqueado até a Fase 7. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md), [docs/FASE_6_PLANO.md](docs/FASE_6_PLANO.md) e [docs/HANDOFF_FASE_6.md](docs/HANDOFF_FASE_6.md).
+A aplicação anterior em `main.py`, `core/` e `gui/` permanece preservada como baseline de compatibilidade, com contratos caracterizados. A `main` contém as Fases 0–7 integradas. O fluxo atual cobre entrada local/YouTube, inspeção e normalização de mídia, transcrição Whisper, alinhamento WhisperX por palavra, segmentação de duas linhas, tradução local PT↔EN por cue, validação do trilho e publicação SRT atômica — tudo disparado pela janela com progresso, cancelamento e recuperação controlados. Consulte [docs/ESTADO_ATUAL.md](docs/ESTADO_ATUAL.md) para o estado vivo e [docs/FASE_7_PLANO.md](docs/FASE_7_PLANO.md) para a integração da interface.
 
 ## Licença
 

@@ -12,3 +12,11 @@ __pycache__/
 .cache/
 phase0-model-poc.json
 legendar-phase0-environment.json
+
+# Saída local de comandos executados em background
+/nohup.out
+
+# Artefatos locais de cobertura
+.coverage
+coverage.xml
+htmlcov/

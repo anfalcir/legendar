@@ -7,8 +7,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt, QThread, Slot
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtCore import QSettings, Qt, QThread, QUrl, Slot
+from PySide6.QtGui import QCloseEvent, QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -391,6 +391,17 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 2, 0, 2)
         layout.addStretch(1)
 
+        self.open_folder_button = QPushButton("Abrir pasta", panel)
+        self.open_folder_button.setObjectName("openFolderButton")
+        self.open_folder_button.setProperty("variant", "ghost")
+        self.open_folder_button.setEnabled(False)
+        self.open_folder_button.setToolTip(
+            "Disponível depois que o SRT for publicado nesta sessão."
+        )
+        self.open_folder_button.setAccessibleName(
+            "Abrir a pasta do arquivo SRT publicado"
+        )
+
         self.cancel_button = QPushButton("Cancelar trabalho", panel)
         self.cancel_button.setObjectName("cancelButton")
         self.cancel_button.setProperty("variant", "danger")
@@ -403,6 +414,7 @@ class MainWindow(QMainWindow):
         self.generate_button.setDefault(True)
         self.generate_button.setAccessibleName("Confirmar e iniciar geração da legenda")
 
+        layout.addWidget(self.open_folder_button)
         layout.addWidget(self.cancel_button)
         layout.addWidget(self.generate_button)
         return panel
@@ -490,6 +502,7 @@ class MainWindow(QMainWindow):
         self.log_toggle.toggled.connect(self._on_log_toggled)
         self.generate_button.clicked.connect(self._start_job)
         self.cancel_button.clicked.connect(self._cancel_job)
+        self.open_folder_button.clicked.connect(self._open_output_folder)
 
         # Ordem explícita e previsível para navegação sem mouse.
         self.setTabOrder(self.preferences_button, self.media_kind_combo)
@@ -502,7 +515,8 @@ class MainWindow(QMainWindow):
         self.setTabOrder(self.target_combo, self.translate_check)
         self.setTabOrder(self.translate_check, self.output_edit)
         self.setTabOrder(self.output_edit, self.output_browse_button)
-        self.setTabOrder(self.output_browse_button, self.cancel_button)
+        self.setTabOrder(self.output_browse_button, self.open_folder_button)
+        self.setTabOrder(self.open_folder_button, self.cancel_button)
         self.setTabOrder(self.cancel_button, self.generate_button)
         self.setTabOrder(self.generate_button, self.log_toggle)
 
@@ -1133,12 +1147,40 @@ class MainWindow(QMainWindow):
                 )
             )
 
+    # -- resultado publicado ----------------------------------------------
+
+    def _published_folder(self, snapshot: JobViewSnapshot | None = None) -> Path | None:
+        """Pasta do SRT publicado nesta sessão, quando ela ainda existe."""
+        snapshot = snapshot or self._view_model.snapshot
+        output = snapshot.output_path
+        if not output:
+            return None
+        folder = Path(output).expanduser().parent
+        return folder if folder.is_dir() else None
+
+    @Slot()
+    def _open_output_folder(self) -> None:
+        """Abre a pasta do SRT publicado, sem bloquear a thread da interface."""
+        folder = self._published_folder()
+        if folder is None:
+            self.statusBar().showMessage(
+                "Nenhum SRT foi publicado nesta sessão ainda.", 8000
+            )
+            return
+        if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder))):
+            self.statusBar().showMessage(
+                f"Não foi possível abrir a pasta: {folder}", 8000
+            )
+
     # -- renderização de estados ------------------------------------------
 
     def _render(self, snapshot: JobViewSnapshot) -> None:
         busy = self.is_running
         worker_running = self._thread is not None
         inspection_running = self._inspection_thread is not None
+        self.open_folder_button.setEnabled(
+            not busy and self._published_folder(snapshot) is not None
+        )
         if inspection_running:
             self.status_label.setText("Inspecionando mídia com ffprobe…")
             self.progress_meta.setText("Lendo contêineres e faixas")
@@ -1246,7 +1288,7 @@ class MainWindow(QMainWindow):
             else ""
         )
         publishing_requirement = (
-            "A publicação final SRT ainda não foi implementada. "
+            "O publicador SRT não está disponível neste ambiente. "
             if not self._deps.publishing_available
             else ""
         )

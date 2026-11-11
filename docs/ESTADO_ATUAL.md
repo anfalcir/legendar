@@ -8,12 +8,13 @@
 - **Branch de implementação da Fase 2:** `phase-2/professional-ui` (integrada)
 - **Branch de implementação da Fase 3:** `phase-3/media-ingestion` (integrada pela PR #4)
 - **Branch de implementação da Fase 5:** `phase-5/temporal-alignment` (integrada)
-- **Branch de implementação da Fase 6:** `phase-6/translation-segmentation-srt`, enviada ao `origin`; aguardando abertura da PR
+- **Branch de implementação da Fase 6:** `phase-6/translation-segmentation-srt` (integrada à `main` por squash)
+- **Branch de implementação da Fase 7:** `phase-7/gui-pipeline-integration` (integrada à `main` por squash)
 - **Branch padrão:** `main`
-- **Fases concluídas e integradas:** Fases 0–5
-- **Fase em execução:** Fase 6 — tradução, segmentação e SRT (implementação concluída e CI de push verde; falta abrir a PR e integrar)
-- **Fase concluída mais recente integrada:** Fase 5 — alinhamento temporal WhisperX
-- **Implementação mais recente:** tradução local por cue com NLLB-200 distilled 600M, segmentação editorial de duas linhas, validação do trilho e publicação SRT atômica
+- **Fases concluídas e integradas:** Fases 0–7
+- **Fase em execução:** Fase 8 — testes, end-to-end e homologação
+- **Fase concluída mais recente integrada:** Fase 7 — GUI conectada ao pipeline completo
+- **Implementação mais recente:** janela dispara o `SerialPipeline` real com progresso, cancelamento cooperativo, log recolhível, recuperação de erro e abertura da pasta do SRT publicado
 - **Última integração na `main`:** PR [#6](https://github.com/anfalcir/legendar/pull/6), squash em `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`
 - **PR da Fase 0:** [#1](https://github.com/anfalcir/legendar/pull/1), integrada por squash
 - **PR da Fase 1:** [#2](https://github.com/anfalcir/legendar/pull/2), merged por squash em 10/11/2026
@@ -27,15 +28,15 @@
 - **Commit de integração da Fase 3:** `dfa440b39e7623356388c774834e23ee53fc1d09`
 - **Commit de integração da Fase 4:** `2f9751139616591e31a0ec73902265b38b040d41`
 - **Commit de integração da Fase 5:** `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`
-- **Documentos de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md), [HANDOFF_FASE_4.md](HANDOFF_FASE_4.md), [HANDOFF_FASE_5.md](HANDOFF_FASE_5.md) e [HANDOFF_FASE_6.md](HANDOFF_FASE_6.md)
+- **Documentos de handoff:** [HANDOFF_FASE_1.md](HANDOFF_FASE_1.md), [HANDOFF_FASE_2.md](HANDOFF_FASE_2.md), [HANDOFF_FASE_3.md](HANDOFF_FASE_3.md), [HANDOFF_FASE_4.md](HANDOFF_FASE_4.md), [HANDOFF_FASE_5.md](HANDOFF_FASE_5.md), [HANDOFF_FASE_6.md](HANDOFF_FASE_6.md) e [HANDOFF_FASE_7.md](HANDOFF_FASE_7.md)
 
-> As Fases 0–5 estão concluídas e integradas à `main`. A Fase 5 foi integrada pela PR [#6](https://github.com/anfalcir/legendar/pull/6), squash no commit `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c`. CI push [#42935484072](https://github.com/anfalcir/legendar/actions/runs/42935484072) e PR [#42935490648](https://github.com/anfalcir/legendar/actions/runs/42935490648) passaram com 5/5 jobs cada; gates herdados Fases 0, 1, 3 e 4 também passaram. A suíte determinística aprovou 303 testes por ambiente em Python 3.10–3.13, com 2 skips esperados e cobertura de 85%; Ruff check e format passaram. O smoke real CPU Whisper + WhisperX 3.8.6 executou PT-BR/EN e publicou artefato. A Fase 6 está implementada e publicada na branch `phase-6/translation-segmentation-srt`: a suíte determinística local aprovou 387 testes com 2 skips esperados (FFmpeg/ffprobe ausentes no ambiente de desenvolvimento), e Ruff check, Ruff format e `uv lock --check` estão limpos. O workflow `phase6-quality.yml` valida a matriz Python 3.10–3.13 e um smoke do adaptador NLLB com o runtime CPU real, sem baixar pesos. A branch foi enviada ao `origin` e o workflow push [#42951041522](https://github.com/anfalcir/legendar/actions/runs/42951041522) passou com 5/5 jobs (Python 3.10–3.13 determinísticos e NLLB adapter com `transformers` real em CPU); falta abrir a PR e integrar. A precisão temporal e a qualidade tradutória em corpus autorizado de pregações e no computador-alvo permanecem como homologação de produto, não como bloqueio de engenharia.
+> As Fases 0–7 estão concluídas e integradas à `main`. As Fases 1–5 foram integradas por PRs squash (#2 a #6). As Fases 6 e 7 foram integradas por squash local, porque a criação de pull request não estava disponível no ambiente de execução (sem `gh` e sem token); o histórico detalhado de cada fase permanece nas branches `phase-6/translation-segmentation-srt` e `phase-7/gui-pipeline-integration`. A Fase 6 entregou segmentação de duas linhas, tradução local por cue com NLLB-200 distilled 600M, validação do trilho e publicação SRT atômica; o CI de push da branch passou 5/5 jobs ([#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587)). A Fase 7 conectou a janela ao pipeline real, com progresso, cancelamento cooperativo, log, recuperação e abertura da pasta publicada. A precisão temporal, a qualidade tradutória e a leitura em mídia real continuam como homologação de produto atribuída à Fase 8 e ao usuário, não como bloqueio de engenharia.
 
 ---
 
 ## 1. Resumo executivo
 
-A aplicação nova tem camadas `domain`, `application`, `infrastructure`, `presentation` e `bootstrap`; inclui entidades/invariantes, máquina de estados, pipeline serial, cancelamento e workspaces isolados. A Fase 2 acrescentou interface Qt profissional com temas, confirmações, preferências, progresso honesto, log, acessibilidade e proteção contra ações acidentais. A Fase 3 integrou aquisição local/YouTube, ffprobe, seleção de faixa, FFmpeg e inspeção assíncrona. A Fase 4 integrou Whisper local atrás da porta `Transcriber`. A Fase 5 integrou WhisperX atrás da porta `Aligner`, com palavras em timeline global, diagnóstico explícito e métricas. A Fase 6 integrou segmentação editorial, tradução local por cue atrás da porta `Translator`, validação do trilho e publicação SRT de duas linhas. A GUI ainda não dispara o pipeline completo: conectar a janela ao job real é o escopo da Fase 7. O legado `main.py`/`core/`/`gui/` continua preservado.
+A aplicação nova tem camadas `domain`, `application`, `infrastructure`, `presentation` e `bootstrap`; inclui entidades/invariantes, máquina de estados, pipeline serial, cancelamento e workspaces isolados. A Fase 2 acrescentou interface Qt profissional com temas, confirmações, preferências, progresso honesto, log, acessibilidade e proteção contra ações acidentais. A Fase 3 integrou aquisição local/YouTube, ffprobe, seleção de faixa, FFmpeg e inspeção assíncrona. A Fase 4 integrou Whisper local atrás da porta `Transcriber`. A Fase 5 integrou WhisperX atrás da porta `Aligner`, com palavras em timeline global, diagnóstico explícito e métricas. A Fase 6 integrou segmentação editorial, tradução local por cue atrás da porta `Translator`, validação do trilho e publicação SRT de duas linhas. A Fase 7 conectou a janela ao pipeline completo: o botão de geração dispara o job real em `QThread`, consome eventos de domínio, bloqueia campos, cancela em ponto seguro, limpa o workspace e abre a pasta do SRT publicado. O legado `main.py`/`core/`/`gui/` continua preservado.
 
 A Fase 0 estabeleceu e documentou a direção técnica: governança de dependências, perfis de runtime, coletor de ambiente, prova sintética de mídia/offset, script de POC PT-BR/EN e contrato arquitetural. O plano operacional e o handoff da Fase 1 foram atualizados para registrar o checkpoint, as evidências e as pendências.
 
@@ -46,15 +47,16 @@ A Fase 0 estabeleceu e documentou a direção técnica: governança de dependên
 | Item | Estado |
 |---|---|
 | Repositório | `anfalcir/legendar` |
-| PRs de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1), [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), [#3 — Fase 2](https://github.com/anfalcir/legendar/pull/3), [#4 — Fase 3](https://github.com/anfalcir/legendar/pull/4), [#5 — Fase 4](https://github.com/anfalcir/legendar/pull/5) e [#6 — Fase 5](https://github.com/anfalcir/legendar/pull/6); todas integradas por squash. A Fase 6 está na branch `phase-6/translation-segmentation-srt`, já enviada ao `origin`, e a PR ainda precisa ser aberta |
+| PRs de execução | [#1 — Fase 0](https://github.com/anfalcir/legendar/pull/1), [#2 — Fase 1](https://github.com/anfalcir/legendar/pull/2), [#3 — Fase 2](https://github.com/anfalcir/legendar/pull/3), [#4 — Fase 3](https://github.com/anfalcir/legendar/pull/4), [#5 — Fase 4](https://github.com/anfalcir/legendar/pull/5) e [#6 — Fase 5](https://github.com/anfalcir/legendar/pull/6); todas integradas por squash. As Fases 6 e 7 foram integradas por squash local porque a criação de PR não estava disponível no ambiente de execução |
 | Branch de conclusão da Fase 0 | `phase-0/technical-inventory` |
 | Branch de implementação da Fase 1 | `phase-1/architecture`, integrada na `main` pela PR #2 |
 | Branch de implementação da Fase 2 | `phase-2/professional-ui`, integrada na `main` pela PR #3 |
 | Branch de implementação da Fase 3 | `phase-3/media-ingestion`, integrada na main pela PR #4 |
 | Branch de implementação da Fase 4 | `phase-4/whisper-recognition`, integrada à `main` pela PR #5 |
 | Branch de implementação da Fase 5 | `phase-5/temporal-alignment`, integrada à `main` pela PR #6 |
-| Branch de implementação da Fase 6 | `phase-6/translation-segmentation-srt`, enviada ao `origin`; CI push [#42951041522](https://github.com/anfalcir/legendar/actions/runs/42951041522) verde |
-| `main` | Contém as entregas integrais das Fases 0–5; HEAD de integração da Fase 5: `5c9a2ba48a7e2d16d2099511c3c1456c59ae299c` |
+| Branch de implementação da Fase 6 | `phase-6/translation-segmentation-srt`, integrada à `main` por squash; CI push [#42951451587](https://github.com/anfalcir/legendar/actions/runs/42951451587) verde |
+| Branch de implementação da Fase 7 | `phase-7/gui-pipeline-integration`, integrada à `main` por squash |
+| `main` | Contém as entregas integrais das Fases 0–7; o histórico detalhado de cada fase permanece nas branches correspondentes |
 | Fonte de dependências | `pyproject.toml` |
 | Lock | `uv.lock` regenerado pela CI e integrado à `main`; invariantes, fontes e exports CPU/CUDA aprovados no workflow #113 |
 | Coletor | `scripts/phase0_inventory.py` |
