@@ -13,7 +13,6 @@ import csv
 import gc
 import io
 import json
-import math
 import os
 import platform
 import re
@@ -114,12 +113,12 @@ def _load_fleurs_rows(
     cache_dir: Path,
     samples_per_language: int,
 ) -> list[dict[str, Any]]:
+    from huggingface_hub import hf_hub_download
+
     try:
-        from huggingface_hub import hf_hub_download
         from scripts.phase0_fleurs import parse_reference_rows
-    except ImportError:
+    except ModuleNotFoundError:
         # Execução direta de scripts/: o diretório do script já está em sys.path.
-        from huggingface_hub import hf_hub_download
         from phase0_fleurs import parse_reference_rows
 
     samples: list[dict[str, Any]] = []
@@ -275,7 +274,7 @@ def run_benchmark(
             download_root=str(model_dir),
         )
         model_results: list[dict[str, Any]] = []
-        for index, sample in enumerate(samples, start=1):
+        for sample in samples:
             waveform, duration = _read_audio(sample, sf, np)
             transcribe_started = time.perf_counter()
             result = model.transcribe(
