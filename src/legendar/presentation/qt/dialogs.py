@@ -131,6 +131,10 @@ class PreferencesDialog(QDialog):
         self.setModal(True)
         self.setMinimumWidth(500)
         self._initial = preferences
+        from legendar.infrastructure.config.credentials import gemini_api_key_configured
+
+        self._gemini_key_configured = gemini_api_key_configured()
+        self._gemini_key_remove_requested = False
 
         root = QVBoxLayout(self)
         root.setContentsMargins(24, 22, 24, 20)
@@ -190,11 +194,55 @@ class PreferencesDialog(QDialog):
         self.log_expanded_check.setObjectName("logExpandedPreference")
         self.log_expanded_check.setChecked(preferences.log_expanded)
 
+        self.translation_backend_combo = prepare_combo(QComboBox(self))
+        self.translation_backend_combo.setObjectName("translationBackendCombo")
+        self.translation_backend_combo.addItem("NLLB-200 (local)", "nllb")
+        self.translation_backend_combo.addItem("Gemini (API)", "gemini")
+        self.translation_backend_combo.setCurrentIndex(
+            max(
+                0,
+                self.translation_backend_combo.findData(
+                    preferences.translation_backend
+                ),
+            )
+        )
+
+        api_key_row = QHBoxLayout()
+        self.gemini_api_key_edit = QLineEdit(self)
+        self.gemini_api_key_edit.setObjectName("geminiApiKeyEdit")
+        self.gemini_api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.gemini_api_key_edit.setPlaceholderText(
+            "Chave já configurada — deixe vazio para manter"
+            if self._gemini_key_configured
+            else "Cole aqui sua chave Gemini"
+        )
+        self.gemini_api_key_edit.setClearButtonEnabled(True)
+        self.gemini_api_key_edit.setAccessibleName("Chave da API Gemini")
+        self.gemini_show_key_check = QCheckBox("Mostrar", self)
+        self.gemini_show_key_check.setObjectName("showGeminiApiKey")
+        self.gemini_remove_key_button = QPushButton("Remover", self)
+        self.gemini_remove_key_button.setObjectName("removeGeminiApiKey")
+        self.gemini_remove_key_button.setVisible(self._gemini_key_configured)
+        api_key_row.addWidget(self.gemini_api_key_edit, stretch=1)
+        api_key_row.addWidget(self.gemini_show_key_check)
+        api_key_row.addWidget(self.gemini_remove_key_button)
+
         form.addRow("Aparência", self.theme_combo)
         form.addRow("Idioma final padrão", self.language_combo)
+        form.addRow("Motor de tradução", self.translation_backend_combo)
+        form.addRow("Chave Gemini", api_key_row)
         form.addRow("Pasta padrão de saída", output_container)
         root.addLayout(form)
         root.addWidget(self.log_expanded_check)
+
+        note = QLabel(
+            "NLLB funciona localmente e permanece disponível como alternativa. "
+            "Gemini usa a chave configurada neste computador e envia o texto das "
+            "cues para a API do Google quando selecionado."
+        )
+        note.setObjectName("fieldHint")
+        note.setWordWrap(True)
+        root.addWidget(note)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Cancel
@@ -213,6 +261,14 @@ class PreferencesDialog(QDialog):
         root.addWidget(buttons)
 
         self.output_browse_button.clicked.connect(self._choose_output_directory)
+        self.gemini_show_key_check.toggled.connect(
+            lambda visible: self.gemini_api_key_edit.setEchoMode(
+                QLineEdit.EchoMode.Normal
+                if visible
+                else QLineEdit.EchoMode.Password
+            )
+        )
+        self.gemini_remove_key_button.clicked.connect(self._remove_gemini_key)
 
     @property
     def preferences(self) -> UiPreferences:
@@ -226,7 +282,23 @@ class PreferencesDialog(QDialog):
             output_dir=output_dir,
             target_language=Language(str(self.language_combo.currentData())),
             log_expanded=self.log_expanded_check.isChecked(),
+            translation_backend=str(self.translation_backend_combo.currentData()),
         )
+
+    @property
+    def gemini_api_key_input(self) -> str:
+        """Retorna somente a nova chave digitada; nunca a chave já salva."""
+        return self.gemini_api_key_edit.text().strip()
+
+    @property
+    def gemini_key_cleared(self) -> bool:
+        """Indica que o usuário solicitou a remoção da chave salva."""
+        return self._gemini_key_remove_requested
+
+    def _remove_gemini_key(self) -> None:
+        self.gemini_api_key_edit.clear()
+        self._gemini_key_remove_requested = True
+        self.gemini_remove_key_button.setVisible(False)
 
     def _choose_output_directory(self) -> None:
         selected = QFileDialog.getExistingDirectory(

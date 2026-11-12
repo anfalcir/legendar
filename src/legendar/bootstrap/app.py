@@ -8,6 +8,7 @@ import re
 import sys
 from collections.abc import Callable, Mapping, Sequence
 
+from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
 from legendar import __version__
@@ -17,6 +18,7 @@ from legendar.application.pipeline.serial_pipeline import (
 )
 from legendar.application.ports.protocols import Aligner, Transcriber, Translator
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
+from legendar.infrastructure.config.credentials import load_gemini_api_key
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
 from legendar.infrastructure.diagnostics.performance import JsonPerformanceReporter
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
@@ -34,6 +36,7 @@ from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.presentation.qt.branding import app_icon
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
+from legendar.presentation.qt.preferences import load_preferences
 
 ToolLocator = Callable[[tuple[str, ...]], Mapping[str, ToolStatus]]
 _JS_RUNTIME_MINIMUMS = {"deno": (2, 3, 0), "node": (22, 0, 0)}
@@ -114,6 +117,8 @@ def build_ui_dependencies(
     settings: AppSettings,
     *,
     tool_locator: ToolLocator = locate_tools,
+    translation_backend: str | None = None,
+    gemini_api_key: str | None = None,
 ) -> UiDependencies:
     """Monta dependências da janela e executáveis observáveis pelo preflight."""
 
@@ -234,20 +239,37 @@ def build_ui_dependencies(
         )
     alignment_available = whisperx_installed and alignment_configuration_ok
 
-    translation_backend = (
+    env_translation_backend = (
         os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "nllb").strip().casefold()
     )
-    translation_configuration_ok = True
 
-    if translation_backend == "gemini":
-        try:
-            translator = GeminiTranslator.from_environment(settings.models_dir)
-        except ValueError as exc:
-            translator = GeminiTranslator()
-            translation_configuration_ok = False
-            translation_details = (f"Configuração Gemini inválida: {exc}",)
-        else:
-            translation_details = (
+    def _configure_translation(
+        backend: str,
+        api_key: str | None,
+    ) -> tuple[Translator, bool, tuple[str, ...]]:
+        backend = backend.strip().casefold()
+        if backend == "gemini":
+            try:
+                translator = GeminiTranslator(
+                    api_key=api_key,
+                    model=os.environ.get("LEGENDAR_GEMINI_MODEL", "gemini-3.8-flash"),
+                    batch_size=int(
+                        os.environ.get("LEGENDAR_GEMINI_BATCH_SIZE", "32")
+                    ),
+                    timeout_seconds=float(
+                        os.environ.get("LEGENDAR_GEMINI_TIMEOUT", "120")
+                    ),
+                    max_retries=int(
+                        os.environ.get("LEGENDAR_GEMINI_MAX_RETRIES", "3")
+                    ),
+                    grounding=os.environ.get(
+                        "LEGENDAR_GEMINI_GROUNDING", "true"
+                    ).strip().casefold()
+                    in {"1", "true", "yes", "on"},
+                )
+            except (ValueError, TypeError) as exc:
+                return GeminiTranslator(), False, (f"Configuração Gemini inválida: {exc}",)
+            details = (
                 f"Gemini API · modelo {translator.model}",
                 f"Lote: {translator.batch_size} cues · timeout: "
                 f"{translator.timeout_seconds:g}s · retries: {translator.max_retries}",
@@ -257,46 +279,65 @@ def build_ui_dependencies(
                     else "Grounding Google Search desabilitado."
                 ),
                 (
-                    "GEMINI_API_KEY configurada no ambiente."
-                    if translator.is_configured
-                    else "GEMINI_API_KEY ausente; configure a chave para traduzir."
+                    "GEMINI_API_KEY configurada localmente."
+                    if api_key and api_key == load_gemini_api_key()
+                    else "GEMINI_API_KEY configurada no ambiente."
+                    if api_key
+                    else "GEMINI_API_KEY ausente; configure-a em Preferências."
                 ),
             )
-        translation_available = (
-            translation_configuration_ok and translator.is_configured
-        )
-    elif translation_backend == "nllb":
-        try:
-            transformers_installed = (
-                importlib.util.find_spec("transformers") is not None
-            )
-        except (ImportError, ValueError):
-            transformers_installed = False
+            return translator, translator.is_configured, details
 
-        try:
-            translator = NllbTranslator.from_environment(settings.models_dir)
-        except ValueError as exc:
-            translator = NllbTranslator(settings.models_dir)
-            translation_configuration_ok = False
-            translation_details = (f"Configuração NLLB inválida: {exc}",)
-        else:
-            translation_details = (
+        if backend == "nllb":
+            try:
+                transformers_installed = (
+                    importlib.util.find_spec("transformers") is not None
+                )
+            except (ImportError, ValueError):
+                transformers_installed = False
+            try:
+                translator = NllbTranslator.from_environment(settings.models_dir)
+            except ValueError as exc:
+                translator = NllbTranslator(settings.models_dir)
+                return translator, False, (f"Configuração NLLB inválida: {exc}",)
+            details = (
                 f"NLLB-200 distilled · modelo {translator.model_name}",
                 f"Dispositivo de tradução: {translator.requested_device}",
                 f"Pesos no cache local: {translator.download_root}",
             )
+            if not transformers_installed:
+                details = (
+                    "transformers não instalado; sincronize runtime-cpu ou runtime-cu128.",
+                )
+            return translator, transformers_installed, details
 
-        if not transformers_installed:
-            translation_details = (
-                "transformers não instalado; sincronize runtime-cpu ou runtime-cu128.",
-            )
-        translation_available = transformers_installed and translation_configuration_ok
-    else:
-        translator = NllbTranslator(settings.models_dir)
-        translation_available = False
-        translation_details = (
-            "LEGENDAR_TRANSLATION_BACKEND inválido; use nllb ou gemini.",
+        return (
+            NllbTranslator(settings.models_dir),
+            False,
+            ("LEGENDAR_TRANSLATION_BACKEND inválido; use nllb ou gemini.",),
         )
+
+    local_gemini_key = load_gemini_api_key()
+    configured_backend = (
+        translation_backend
+        if translation_backend is not None
+        else env_translation_backend
+    ).strip().casefold()
+    translator, translation_available, translation_details = _configure_translation(
+        configured_backend,
+        gemini_api_key
+        or local_gemini_key
+        or os.environ.get("GEMINI_API_KEY"),
+    )
+    translator_holder: dict[str, Translator] = {"translator": translator}
+
+    def reconfigure_translation(
+        backend: str,
+        api_key: str | None,
+    ) -> tuple[bool, tuple[str, ...]]:
+        selected, available, details = _configure_translation(backend, api_key)
+        translator_holder["translator"] = selected
+        return available, details
 
     inspector = FfprobeInspector()
     downloader = YtDlpDownloader(
@@ -313,12 +354,14 @@ def build_ui_dependencies(
             downloader,
             transcriber,
             aligner,
-            translator,
+            translator_holder["translator"],
             performance_reporter,
         ),
         output_path_factory=lambda stem, _language: suggest_output_path(settings, stem),
         translate_available=translation_available,
         translate_readiness_details=translation_details,
+        translation_backend=configured_backend,
+        translation_reconfigure=reconfigure_translation,
         readiness_ok=readiness_ok,
         readiness_details=readiness_details,
         app_version=__version__,
@@ -344,10 +387,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     settings.ensure_directories()
     configure_logging(settings.logs_dir)
 
+    qt_settings = QSettings("Legendar", "Legendar")
+    preferences = load_preferences(qt_settings, settings.output_dir)
+    selected_backend = preferences.translation_backend
+    if not qt_settings.contains("translation/backend"):
+        selected_backend = os.environ.get(
+            "LEGENDAR_TRANSLATION_BACKEND", selected_backend
+        ).strip().casefold()
+    gemini_key = load_gemini_api_key()
+
     app = QApplication(list(argv) if argv is not None else sys.argv)
     app.setApplicationName("Legendar")
     app.setApplicationVersion(__version__)
     app.setWindowIcon(app_icon())
-    window = MainWindow(build_ui_dependencies(settings))
+    window = MainWindow(
+        build_ui_dependencies(
+            settings,
+            translation_backend=selected_backend,
+            gemini_api_key=gemini_key,
+        ),
+        settings=qt_settings,
+    )
     window.show()
     return int(app.exec())

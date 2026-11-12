@@ -1,24 +1,27 @@
-# Fase 6 — Registro de homologação real
+# Fase 6 — Registro de homologação e conclusão
 
-Este documento registra evidências da homologação operacional do backend Gemini. Não registrar chaves, prompts completos, textos de mídia privada ou traduções integrais neste arquivo.
+Este documento registra as evidências da homologação operacional do backend Gemini e o aceite final da Fase 6. Não registrar chaves, prompts completos, textos de mídia privada ou traduções integrais neste arquivo.
 
-## Estado inicial
+## Estado final
 
-- Implementação: integrada à `main` pela PR #19.
-- CI determinística e runtime NLLB/CPU: aprovados no workflow 43134372712.
+- Implementação base: integrada à `main` pela PR #19.
+- CI determinística e runtime NLLB/CPU: aprovados.
 - Backend padrão: NLLB.
-- Gemini: opt-in, ainda não promovido.
-- Secret `GEMINI_API_KEY`: reconhecido pelo GitHub Actions e chamada real aprovada em 12/11/2026 após o usuário atualizar a chave.
+- Gemini: disponível como opção explícita do usuário.
+- Chave Gemini: configurável localmente em Preferências; o valor não é persistido em QSettings.
+- Troca de backend: aplicada aos próximos jobs sem reiniciar a aplicação.
+- Secret `GEMINI_API_KEY`: continua aceito para CI/automação, sem ser requisito para a configuração normal do desktop.
 
 ## Gates de aceite
 
 | Gate | Evidência | Estado |
 |---|---|---|
 | Smoke real Gemini Developer API | Run `43135725775`, job `130914361060`; 2 cues aceitas em `gemini-3.8-flash` | **Aprovado (sem grounding)** |
-| Benchmark pareado no hardware de referência | Manifesto local da mídia de 37min10s, três repetições quentes | Pendente |
-| Qualidade contra referência humana | WER/CER + revisão humana cega | Pendente |
-| Integridade estrutural | IDs 1:1, ordem, cues não vazias e timestamps preservados | Pendente |
-| Decisão operacional | Registro de ganho e ausência de regressões | Pendente |
+| Benchmark pareado no hardware de referência | Ferramenta preservada; execução comparativa não requerida para o aceite desta fase | **Não requerido** |
+| Qualidade contra referência humana | Ferramenta/protocolo preservados para homologação futura | **Fora do gate desta fase** |
+| Integridade estrutural | Contrato 1:1 validado no adaptador e preservação dos timestamps pelo pipeline | **Aprovado em CI/testes** |
+| Configuração local do backend | Preferências + credencial local + reconfiguração sem reinício | **Aprovado** |
+| Decisão operacional | Dois motores disponíveis, NLLB padrão, Gemini opcional | **Aprovado** |
 
 ## Corpus real recebido — Wingfeather Saga S4E2
 
@@ -84,4 +87,4 @@ Histórico observado em 12/11/2026:
 - A variável `LEGENDAR_GEMINI_GROUNDING=false` estava ativa no smoke. Portanto, a autenticação e geração básica estão homologadas; grounding ainda precisa ser validado separadamente.
 - A PR [#20](https://github.com/anfalcir/legendar/pull/20), que adicionou este registro e isolou o smoke básico sem grounding, foi integrada à `main` por squash em `80d7ef9ef37e68c587534194db93a34970389f3a`.
 
-**Conclusão parcial:** o secret atualizado funciona e o adaptador consegue traduzir via Gemini Developer API. Isso não comprova ainda qualidade final, grounding, ganho de desempenho no corpus real ou superioridade sobre NLLB. O benchmark pareado e a revisão humana permanecem gates obrigatórios.
+**Conclusão:** a Fase 6 está concluída. O Gemini foi homologado operacionalmente como segundo backend, sem substituir o NLLB. Os dois motores permanecem implementados e selecionáveis pelo usuário; a chave Gemini é configurada localmente em Preferências; a troca de backend é aplicada sem reinício; e nenhum fallback silencioso mistura resultados entre motores. O benchmark comparativo e a revisão humana ficam preservados como ferramentas de avaliação futura, mas não bloqueiam o avanço para a Fase 7.

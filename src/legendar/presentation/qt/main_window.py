@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from PySide6.QtCore import (
@@ -55,6 +55,11 @@ from legendar.domain.errors.catalog import InvalidInputError, JobCancelledError
 from legendar.domain.events.job_events import JobCompleted, JobEvent, JobFailed
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
+from legendar.infrastructure.config.credentials import (
+    delete_gemini_api_key,
+    load_gemini_api_key,
+    save_gemini_api_key,
+)
 from legendar.presentation.qt.branding import app_icon
 from legendar.presentation.qt.dialogs import (
     JobConfirmationDialog,
@@ -136,6 +141,10 @@ class UiDependencies:
     alignment_readiness_details: tuple[str, ...] = ()
     publishing_available: bool = True
     publishing_readiness_details: tuple[str, ...] = ()
+    translation_backend: str = "nllb"
+    translation_reconfigure: (
+        Callable[[str, str | None], tuple[bool, tuple[str, ...]]] | None
+    ) = None
 
 
 class MainWindow(QMainWindow):
@@ -474,12 +483,20 @@ class MainWindow(QMainWindow):
         self.translate_check.setEnabled(self._deps.translate_available)
         if not self._deps.translate_available:
             details = " ".join(self._deps.translate_readiness_details)
+            backend_label = (
+                "Gemini" if self._deps.translation_backend == "gemini" else "NLLB-200"
+            )
             self.translate_check.setToolTip(
-                "A tradução local NLLB não está pronta neste ambiente. " + details
+                f"A tradução {backend_label} não está pronta neste ambiente. " + details
             )
         else:
+            backend_label = (
+                "Gemini (API)"
+                if self._deps.translation_backend == "gemini"
+                else "NLLB-200 (local)"
+            )
             self.translate_check.setToolTip(
-                "Traduz PT-BR ↔ EN localmente com NLLB-200, preservando os tempos. "
+                f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
                 "Com a opção desmarcada, a legenda sai no idioma falado."
             )
         layout.addWidget(self.translate_check)
@@ -953,8 +970,13 @@ class MainWindow(QMainWindow):
                 "A legenda sai no idioma falado."
             )
         elif translating:
+            backend_label = (
+                "Gemini (API)"
+                if self._deps.translation_backend == "gemini"
+                else "NLLB-200"
+            )
             hint = (
-                f"Tradução {source.label_pt} → {target.label_pt} com NLLB-200, "
+                f"Tradução {source.label_pt} → {target.label_pt} com {backend_label}, "
                 "preservando os tempos originais."
             )
         elif source is None:
@@ -982,14 +1004,45 @@ class MainWindow(QMainWindow):
         dialog = PreferencesDialog(self._preferences, self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
-        self._preferences = dialog.preferences
+        new_preferences = dialog.preferences
+        api_key_input = dialog.gemini_api_key_input
+        try:
+            if api_key_input:
+                save_gemini_api_key(api_key_input)
+            elif dialog.gemini_key_cleared:
+                delete_gemini_api_key()
+        except (OSError, RuntimeError, ValueError) as exc:
+            QMessageBox.critical(
+                self,
+                "Não foi possível salvar a chave Gemini",
+                f"A chave não foi alterada. Verifique as permissões do perfil do usuário.\n\n{exc}",
+            )
+            return
+
+        self._preferences = new_preferences
         self._settings.setValue("ui/theme", self._preferences.theme)
         self._settings.setValue(
             "ui/target_language", self._preferences.target_language.value
         )
         self._settings.setValue("paths/output_dir", str(self._preferences.output_dir))
         self._settings.setValue("ui/log_expanded", self._preferences.log_expanded)
+        self._settings.setValue(
+            "translation/backend", self._preferences.translation_backend
+        )
         self._settings.sync()
+
+        api_key = load_gemini_api_key()
+        if self._deps.translation_reconfigure is not None:
+            available, details = self._deps.translation_reconfigure(
+                self._preferences.translation_backend,
+                api_key,
+            )
+            self._deps = replace(
+                self._deps,
+                translate_available=available,
+                translate_readiness_details=details,
+                translation_backend=self._preferences.translation_backend,
+            )
         self._apply_preferences()
         if not self._output_touched:
             self.output_edit.setText(str(self._default_output_path("legenda")))
