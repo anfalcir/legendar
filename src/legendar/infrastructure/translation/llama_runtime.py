@@ -1,9 +1,9 @@
 """Gerenciamento do processo local llama.cpp para TranslateGemma.
 
-O módulo não instala binários nem baixa pesos: essas operações exigem um fluxo
-explícito de consentimento e serão orquestradas pela camada de aplicação/UI.
-Ele garante que o servidor iniciado pelo Legendar seja privado, reutilizável
-durante a sessão e encerrado sem tocar em processos externos.
+O módulo não instala o binário llama.cpp. O download do GGUF é explícito,
+retomável e validado por SHA-256; a camada de aplicação/UI deve solicitar
+consentimento antes de chamá-lo. O servidor iniciado pelo Legendar é privado,
+reutilizável durante a sessão e encerrado sem tocar em processos externos.
 """
 
 from __future__ import annotations
