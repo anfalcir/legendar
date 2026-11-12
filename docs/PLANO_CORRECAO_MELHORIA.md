@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1–6 com implementação técnica integrada à `main`. Fase 5 integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. Fase 6 integrada pela PR [#19](https://github.com/anfalcir/legendar/pull/19), squash `7f337bc10cf210336fbf2367b56aea7e767bce32`; CI específica aprovada. O smoke real Gemini, benchmark pareado e revisão humana permanecem pendentes. A promoção operacional de faster-whisper e Gemini a padrões continua condicionada aos respectivos benchmarks locais e gates de qualidade.
+- **Status:** Fases 1–6 concluídas na implementação e integradas à `main`. A Fase 6 mantém NLLB e Gemini como backends opcionais, seleção persistente em Preferências e chave Gemini configurável localmente. O smoke real Gemini foi aprovado. O benchmark comparativo NLLB × Gemini permanece como ferramenta futura e não é gate desta fase por decisão de produto.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -13,7 +13,7 @@ Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITET
 
 ## 1. Resumo executivo
 
-O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e foi o principal alvo da Fase 6, cuja implementação técnica já está integrada; o ganho real do Gemini ainda precisa ser medido. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
+O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e foi o principal alvo da Fase 6. A Fase 6 foi encerrada com os dois backends disponíveis e selecionáveis; medições comparativas futuras não bloqueiam a sequência do plano. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
 
 O trabalho será conduzido em duas frentes coordenadas:
 
@@ -403,92 +403,23 @@ A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, t
 
 ### Fase 6 — Benchmark e aceleração da tradução
 
-**Objetivo:** reduzir o custo do NLLB sem degradar o sentido, a terminologia ou a consistência. O Gemini será avaliado como candidato de tradução via API, sem pressupor que será automaticamente superior ao NLLB.
+**Objetivo:** reduzir o custo da tradução sem degradar sentido, terminologia, consistência ou integridade das cues.
 
-**Implementação integrada pela PR #19:** `GeminiTranslator` via Gemini Developer API, atrás da porta `Translator`, com lotes contextuais, cues vizinhas, histórico recente traduzido, saída JSON estruturada e validação 1:1 de IDs/ordem. NLLB permanece padrão; Gemini exige seleção explícita e `GEMINI_API_KEY`, sem fallback silencioso. Benchmark pareado e smoke real opt-in foram adicionados. CI específica aprovada no run [43134372712](https://github.com/anfalcir/legendar/actions/runs/43134372712), incluindo runtime real NLLB/CPU e matriz determinística Python 3.10–3.13. O job de smoke Gemini foi skipped porque o secret não estava disponível. Benchmark real e revisão humana permanecem pendentes.
+**Status:** **concluída**. A implementação mantém `NllbTranslator` e `GeminiTranslator` atrás da mesma porta `Translator`, com NLLB como padrão e Gemini como opção explícita. O usuário escolhe o motor em Preferências e configura a chave Gemini localmente; a troca é aplicada aos próximos jobs sem reinício. O smoke real Gemini foi aprovado. O benchmark comparativo permanece disponível, mas não é gate desta fase por decisão de produto.
 
-**Diretriz obrigatória de tradução contextual (requisito do usuário, 11/11/2026):**
+**Diretriz de tradução contextual:** permanece integralmente implementada no `GeminiTranslator`, incluindo PT-BR idiomático, preservação de nomes/entidades, contexto entre cues, grounding opcional, JSON estruturado e validação 1:1.
 
-O prompt de sistema/instruções do tradutor Gemini deverá:
+**Entregas concluídas:**
+- adaptador Gemini contextual via Developer API;
+- NLLB preservado como backend local padrão;
+- seleção persistente do backend em Preferências;
+- configuração, substituição e remoção da chave Gemini pela GUI;
+- armazenamento local da chave fora do QSettings, logs e relatórios;
+- reconfiguração do tradutor sem reinício;
+- testes unitários da credencial local e persistência da preferência;
+- documentação e critérios de aceite atualizados.
 
-1. Produzir **português brasileiro (PT-BR)** natural, contemporâneo e idiomático, respeitando concordância, regência, pontuação e registro oral do contexto.
-2. Traduzir o significado e a intenção da fala, não fazer substituição literal palavra por palavra. Interpretar a frase com apoio das cues vizinhas e do contexto fornecido, preservando sujeito, negação, tempo verbal, tom e relações entre ideias.
-3. **Preservar nomes próprios e entidades nomeadas**, incluindo pessoas, personagens, cidades, lugares, povos, raças, clãs, famílias, facções, organizações, títulos próprios e nomes de obras/universos ficcionais. Não traduzir, transliterar, adaptar foneticamente nem normalizar esses nomes; preservar a grafia canônica original. Se houver provável erro de reconhecimento de um nome, usar contexto e pesquisa para inferir a grafia original somente com evidência forte; na dúvida, manter a forma da transcrição.
-4. Preservar termos de universo (fantasia, ficção, jogos, história, religião e cultura) quando funcionarem como nomes ou conceitos específicos. Não converter nomes de raças/clãs/povos em substantivos genéricos nem traduzir automaticamente uma palavra ambígua sem identificar seu uso no contexto.
-5. Usar contexto e pesquisa/grounding quando habilitados e pertinentes para identificar referências, personagens, locais, terminologia e sentido de expressões. Pesquisa deve apoiar a interpretação, não autorizar a inclusão de fatos ausentes da fala. Na ausência de evidência suficiente, preservar o termo original em vez de inventar uma tradução.
-6. Manter consistência terminológica ao longo de toda a mídia, usando glossário/contexto acumulado e registrando decisões de termos recorrentes.
-7. Não acrescentar explicações, notas, informações externas ou conteúdo que não tenha sido pronunciado. Retornar somente o texto traduzido por unidade, preservando a correspondência 1:1 e a ordem das cues.
-8. Preservar números, datas, siglas, referências, nomes de usuário e elementos estruturados; não alterar timestamps.
-9. Adaptar contrações, expressões idiomáticas e construções pouco naturais para PT-BR fluente, sem resumir, suavizar, censurar ou alterar a intenção do falante.
-
-A avaliação humana deverá incluir nomes próprios, cidades, raças/clãs/povos, termos ambíguos, expressões idiomáticas, referências culturais, negações, números e contexto entre cues. Uma tradução literal correta isoladamente, mas incoerente com o universo ou com o discurso, deverá ser considerada regressão.
-
-A capacidade de pesquisa do modelo deve ser verificada por modelo e configurada explicitamente. A documentação oficial consultada em 11/11/2026 confirma Search grounding no `gemini-3.8-flash`; o recurso fica habilitado por padrão no fluxo Gemini e pode ser desativado explicitamente. O experimento deve registrar ferramentas habilitadas, fontes consultadas e latência/custo adicional. Grounding apoia a identificação de referências, mas não autoriza acrescentar fatos à fala.
-
-Baseline atual:
-- `facebook/nllb-200-distilled-600M`;
-- Transformers/PyTorch;
-- `num_beams=4`;
-- lote de 16 cues;
-- tokenização com padding, truncamento e limite de 256 tokens.
-
-**A. Medir antes de alterar**
-
-Separar:
-- tokenização;
-- padding e preparação de tensores;
-- transferência para dispositivo;
-- geração;
-- batch decode;
-- quantidade de cues e tokens por lote;
-- throughput de tokens gerados por segundo.
-
-**B. CTranslate2 para NLLB**
-
-A documentação CTranslate2 demonstra conversão de modelos Transformers NLLB com `ct2-transformers-converter` e execução via `translate_batch`.
-
-Experimento proposto:
-1. Converter o checkpoint atual com versão de ferramenta fixada.
-2. Preservar tokenizer, códigos `por_Latn` / `eng_Latn` e prefixo de idioma de destino.
-3. Comparar pesos float32 e quantizados `int8` onde o backend realmente suportar.
-4. Validar a decodificação de tokens especiais e a correspondência exata entre unidade de entrada e saída.
-5. Manter o adaptador Transformers como fallback até a aprovação.
-
-O suporte INT8 em CPU depende da arquitetura e do backend disponibilizado pelo binário. A documentação CTranslate2 destaca MKL/oneDNN em x86-64; portanto, no Ryzen AMD, a disponibilidade e o ganho precisam ser medidos no ambiente real. Não presumir aceleração apenas porque a opção `int8` existe.
-
-**C. Batch e tokenização**
-
-- O sistema já processa 16 unidades por lote; não tratar batching como recurso ausente.
-- Comparar batch 8, 16, 32 e tamanho dinâmico, respeitando RAM.
-- Agrupar cues por comprimento aproximado em tokens (*length bucketing*) para reduzir padding.
-- Restaurar rigorosamente a ordem original após agrupar.
-- Avaliar orçamento de tokens por lote em vez de apenas contagem fixa de cues.
-- Não permitir truncamento silencioso de conteúdo; qualquer limite de entrada deve gerar diagnóstico e teste.
-
-**D. Beam search e geração**
-
-- Comparar `num_beams=4`, 2 e 1.
-- Beam menor pode reduzir tempo, mas pode mudar qualidade e escolhas lexicais.
-- A configuração mais rápida só será aceita após revisão humana e métrica comparativa.
-- Não reduzir `max_new_tokens` apenas para acelerar se houver cortes na tradução.
-
-**E. Contexto e consistência**
-
-A tradução atual recebe uma unidade por cue, agrupada em batches. Isso mantém a correspondência 1:1, mas limita o contexto linguístico entre cues vizinhas.
-
-Avaliar, sem adoção antecipada:
-- contexto anterior/posterior como referência adicional;
-- glossário local de nomes próprios e termos recorrentes;
-- preservação de números, referências e siglas;
-- agrupamento contextual sem perder mapeamento de saída por cue.
-
-Não concatenar cues com delimitadores arbitrários e assumir que o modelo preservará a segmentação. O experimento precisa provar retorno 1:1, ausência de mistura de falas e preservação temporal.
-
-**F. Licença e governança**
-
-O model card do NLLB-200 distilled 600M declara licença CC-BY-NC-4.0 e limitações de uso, incluindo domínio específico e uso em produção. A licença do código Legendar (MIT) não substitui a licença do modelo. Antes de distribuir o aplicativo ou adotar outro checkpoint, revisar licença, finalidade e obrigações aplicáveis.
-
-**Critério de conclusão:** o candidato tem throughput superior, tradução não inferior na revisão humana, preserva unidades/ordem e timestamps e possui licença/versão documentadas.
+**Ferramenta preservada para avaliação futura:** `scripts/phase6_translation_benchmark.py` continua disponível para comparar tempo, throughput, tokens e qualidade quando houver decisão de executar esse experimento. Nenhuma execução comparativa é exigida para iniciar a Fase 7.
 
 ### Fase 7 — Gestão de memória, threads e perfis
 
