@@ -188,14 +188,16 @@ def segment_alignment(
             )
 
     split_applied = False
+    recomposition_applied = False
     source_by_identity = {id(word): source for word, _, source in words}
 
     for run in word_runs:
         plain_words = [(word, time_range) for word, time_range, _ in run]
         groups = _split_words(plain_words, policy)
-        groups = _recompose_weak_fragments(groups, policy)
-        refined = _refine_for_reading_speed(groups, policy)
-        split_applied = split_applied or len(refined) > len(groups)
+        recomposed = _recompose_weak_fragments(groups, policy)
+        recomposition_applied = recomposition_applied or len(recomposed) < len(groups)
+        refined = _refine_for_reading_speed(recomposed, policy)
+        split_applied = split_applied or len(refined) > len(recomposed)
         for group in refined:
             window = TimeRange(start=group[0][1].start, end=group[-1][1].end)
             text = _text_of(group)
@@ -250,6 +252,8 @@ def segment_alignment(
         diagnostics.append("reading_speed_overflow")
     if split_applied:
         diagnostics.append("reading_speed_split")
+    if recomposition_applied:
+        diagnostics.append("weak_fragment_merge")
     if any(len(cue.source_segments) > 1 for cue in cues):
         diagnostics.append("cross_segment_merge")
 
