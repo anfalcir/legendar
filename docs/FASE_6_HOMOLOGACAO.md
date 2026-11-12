@@ -20,6 +20,29 @@ Este documento registra evidências da homologação operacional do backend Gemi
 | Integridade estrutural | IDs 1:1, ordem, cues não vazias e timestamps preservados | Pendente |
 | Decisão operacional | Registro de ganho e ausência de regressões | Pendente |
 
+## Corpus real recebido — Wingfeather Saga S4E2
+
+Arquivo-fonte em inglês recebido em `logs/EN-Watch The Wingfeather Saga S4E2 Home at Chimney Hill on Angel.srt`.
+
+- 967 cues, IDs sequenciais de 1 a 967, sem duplicidades.
+- Primeiro cue: `00:00:14,677`; último cue termina em `00:37:02,879`.
+- O SRT português histórico tem 944 cues e timestamps diferentes. Ele **não** é referência humana nem deve ser pareado cue a cue com este arquivo.
+- O benchmark de desempenho deve executar NLLB e Gemini sobre as mesmas 967 unidades inglesas. A integridade do resultado deve validar 967 saídas para 967 entradas, preservando os IDs/ordem do contrato de tradução.
+- Não versionar o manifesto gerado, pois ele contém o texto-fonte da mídia.
+
+### Gerar o manifesto local
+
+A partir da raiz do repositório:
+
+```bash
+PYTHONPATH=src uv run --locked --group dev --group phase0 \
+  python scripts/phase6_build_manifest.py \
+  --source "logs/EN-Watch The Wingfeather Saga S4E2 Home at Chimney Hill on Angel.srt" \
+  --output ./corpus/traducao-37min.tsv
+```
+
+O gerador valida estrutura, timestamps, duração positiva, texto não vazio, IDs sequenciais e duplicidades. Escreve `reference_text` vazio em todas as linhas e imprime o SHA-256 do SRT de origem para rastreabilidade local. Não cria nem presume referência humana.
+
 ## Protocolo do benchmark local
 
 O manifesto TSV deve conter `cue_id`, `source_text` e, quando disponíveis, `reference_text`. As referências humanas devem estar completas em todas as linhas ou ausentes em todas. Manter o corpus privado/local.
