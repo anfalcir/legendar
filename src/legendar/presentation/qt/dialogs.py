@@ -196,7 +196,8 @@ class PreferencesDialog(QDialog):
 
         self.translation_backend_combo = prepare_combo(QComboBox(self))
         self.translation_backend_combo.setObjectName("translationBackendCombo")
-        self.translation_backend_combo.addItem("NLLB-200 (local)", "nllb")
+        self.translation_backend_combo.addItem("TranslateGemma 4B (local)", "translategemma")
+        self.translation_backend_combo.addItem("NLLB-200 (local, legado)", "nllb")
         self.translation_backend_combo.addItem("Gemini (API)", "gemini")
         self.translation_backend_combo.setCurrentIndex(
             max(
@@ -236,9 +237,9 @@ class PreferencesDialog(QDialog):
         root.addWidget(self.log_expanded_check)
 
         note = QLabel(
-            "NLLB funciona localmente e permanece disponível como alternativa. "
-            "Gemini usa a chave configurada neste computador e envia o texto das "
-            "cues para a API do Google quando selecionado."
+            "TranslateGemma é o novo motor local em homologação. O modelo exige "
+            "aceite dos termos Gemma e download inicial. NLLB permanece como "
+            "alternativa temporária; Gemini envia as cues à API do Google."
         )
         note.setObjectName("fieldHint")
         note.setWordWrap(True)
