@@ -235,6 +235,7 @@ class GeminiTranslator:
             "configuration": {
                 "adapter": "gemini-developer-api",
                 "model": self.model,
+                "thinking_level": "LOW" if self.model.startswith("gemini-3") else None,
                 "batch_size": self.batch_size,
                 "timeout_seconds": self.timeout_seconds,
                 "max_retries": self.max_retries,
