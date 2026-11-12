@@ -211,6 +211,22 @@ class FasterWhisperTranscriber:
     def is_loaded(self) -> bool:
         return self._model is not None
 
+    def release_resources(self) -> None:
+        """Descarta o modelo residente sem apagar os pesos em disco."""
+        with self._inference_lock:
+            with self._load_lock:
+                model = self._model
+                self._model = None
+                self._device = None
+                self._compute_type = None
+                self._revision = None
+            if model is not None:
+                from legendar.infrastructure.resources.lifecycle import (
+                    release_model_resources,
+                )
+
+                release_model_resources(model)
+
     @property
     def loaded_device(self) -> str | None:
         return self._device
