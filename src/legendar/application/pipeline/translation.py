@@ -79,8 +79,7 @@ def build_translation_units(track: SubtitleTrack) -> tuple[TranslationUnit, ...]
     units: list[TranslationUnit] = []
     for position, cue in enumerate(track.cues):
         before = tuple(
-            item.normalized_text
-            for item in track.cues[max(0, position - 2) : position]
+            item.normalized_text for item in track.cues[max(0, position - 2) : position]
         )
         after = tuple(
             item.normalized_text for item in track.cues[position + 1 : position + 3]
