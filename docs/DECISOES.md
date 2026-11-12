@@ -37,6 +37,7 @@
 | 29 | Layout da janela | Página única compacta, duas colunas em largura suficiente | interface se adapta a janelas menores |
 | 30 | Cache privado | Diretórios privados `0o700` | NLTK pode preparar `punkt_tab` em cache privado |
 | 31 | Telemetria de desempenho | Instrumentação local via porta `PerformanceReporter`; relatório JSON privado, sem mídia ou texto e sem envio externo | Não afeta o resultado do job; métricas servem à baseline comparável da Fase 1 |
+| 32 | ASR alternativo | `FasterWhisperTranscriber` via faster-whisper/CTranslate2 disponível por seleção explícita; OpenAI Whisper permanece padrão | Sem fallback silencioso; promoção do candidato depende de benchmark no hardware/corpus de referência e gate lexical/temporal |
 
 ## Decisões da Fase 10 (D1–D6)
 
@@ -57,7 +58,7 @@ As linhas abaixo são opções para benchmark, não novas dependências ou decis
 
 | Tema | Opção em avaliação | Condição para adoção |
 |---|---|---|
-| ASR | faster-whisper/CTranslate2 | WER/CER equivalente, alinhamento aprovado e ganho medido |
+| ASR | Otimizar faster-whisper/CTranslate2 e comparar configurações | Backend alternativo já implementado; promover a padrão somente após WER/CER, alinhamento e ganho medidos no hardware de referência |
 | ASR CPU | INT8 e ajuste de threads | suporte real no hardware e ausência de regressão |
 | Tradução | NLLB convertido para CTranslate2 | revisão humana equivalente, tokens/segundo maior e licença validada |
 | Tradução CPU | INT8, beam 2/1 e token-bucketing | comparação com beam 4 e NLLB Transformers, sem erro crítico |
@@ -75,5 +76,5 @@ As linhas abaixo são opções para benchmark, não novas dependências ou decis
 | Preservação do texto original junto ao SRT traduzido | Não implementada | decisão de produto futura |
 | Backends oficialmente suportados | CI cobre Ubuntu; homologação multiplataforma pendente | após benchmark/homologação |
 | Empacotamento distribuível | PyInstaller declarado, fluxo não homologado | frente futura |
-| Adaptador de ASR alternativo | Nenhum adotado | Fase 5 |
+| Adoção operacional de ASR alternativo | Implementado e integrado; não é padrão | Benchmark local pareado, revisão humana e homologação da Fase 8 |
 | Backend de tradução otimizado | NLLB Transformers segue baseline | Fase 6 |
