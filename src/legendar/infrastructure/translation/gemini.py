@@ -565,9 +565,7 @@ class GeminiTranslator:
             source_language=source_language,
             target_language=target_language,
         )
-        input_estimate, output_reserve = self._estimate_payload_budget(
-            payload, batch
-        )
+        input_estimate, output_reserve = self._estimate_payload_budget(payload, batch)
         self._record("estimated_input_tokens", input_estimate)
         self._record("estimated_output_tokens", output_reserve)
         response = self._request_with_retry(payload, token=token)
@@ -577,9 +575,7 @@ class GeminiTranslator:
         except _GeminiResponseFailure as exc:
             self._record("response_failures", 1)
             self._record(f"response_failure_{exc.category}", 1)
-            if (
-                exc.split and len(batch) > 1 and split_depth < MAX_SPLIT_DEPTH
-            ):
+            if exc.split and len(batch) > 1 and split_depth < MAX_SPLIT_DEPTH:
                 self._record("split_batches", 1)
                 midpoint = len(batch) // 2
                 left = self._translate_batch(
