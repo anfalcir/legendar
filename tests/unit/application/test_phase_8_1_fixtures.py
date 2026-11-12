@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
-FIXTURE_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "phase_8_1"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+FIXTURE_DIR = REPOSITORY_ROOT / "tests" / "fixtures" / "phase_8_1"
 
 
 def _load(name: str) -> dict:
@@ -72,3 +74,22 @@ def test_human_reference_template_does_not_masquerade_as_reviewed_corpus() -> No
     assert data["reference_status"] == "pending-human-review"
     assert data["audio_sha256"] == ""
     assert data["reviewer"] == ""
+
+
+def test_frozen_evidence_manifest_matches_repository_bytes() -> None:
+    manifest_path = REPOSITORY_ROOT / "temporario" / "manifesto-fase-8.1.0.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["checksum_algorithm"] == "SHA-256"
+    assert len(manifest["artifacts"]) == 10
+
+    for artifact in manifest["artifacts"]:
+        source = REPOSITORY_ROOT / artifact["path"]
+        raw = source.read_bytes()
+        git_blob = hashlib.sha1(
+            b"blob " + str(len(raw)).encode("ascii") + b"\\0" + raw
+        ).hexdigest()
+
+        assert len(raw) == artifact["bytes"], artifact["path"]
+        assert hashlib.sha256(raw).hexdigest() == artifact["sha256"], artifact["path"]
+        assert git_blob == artifact["git_blob_sha1"], artifact["path"]
