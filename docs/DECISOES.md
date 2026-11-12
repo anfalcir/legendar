@@ -6,8 +6,8 @@
 
 | # | Tema | Decisão | Consequência |
 |---|---|---|---|
-| 1 | Tradução atual | NLLB-200 distilled 600M local, por cue, atrás da porta `Translator` | nenhum texto sai do computador; pesos baixados para o cache |
-| 2 | Mecanismo de tradução | Tokenizador SentencePiece, origem `por_Latn`/`eng_Latn`, destino por `forced_bos_token_id` | dependências `transformers` + `sentencepiece` diretas |
+| 1 | Tradução local histórica (superada pela decisão 37) | NLLB-200 distilled 600M local, por cue, atrás da porta `Translator` | registro histórico; substituição aprovada por TranslateGemma na decisão 37 |
+| 2 | Mecanismo local histórico (superado pela decisão 37) | Tokenizador SentencePiece, origem `por_Latn`/`eng_Latn`, destino por `forced_bos_token_id` | dependências serão removidas na etapa 8.1.6 após integração substituta |
 | 3 | Escopo de idiomas | Somente PT-BR e inglês | idiomas fora da matriz são recusados |
 | 4 | Reconhecimento atual | Whisper local no idioma de origem; não usar tarefa de tradução do Whisper | timestamps do reconhecimento são aproximados até o alinhamento |
 | 5 | Alinhamento | WhisperX 3.8.6 como alinhador primário atual; stable-ts não é fallback | trocar exige avaliação em corpus anotado |
@@ -38,7 +38,7 @@
 | 30 | Cache privado | Diretórios privados `0o700` | NLTK pode preparar `punkt_tab` em cache privado |
 | 31 | Telemetria de desempenho | Instrumentação local via porta `PerformanceReporter`; relatório JSON privado, sem mídia ou texto e sem envio externo | Não afeta o resultado do job; métricas servem à baseline comparável da Fase 1 |
 | 32 | ASR alternativo | `FasterWhisperTranscriber` via faster-whisper/CTranslate2 disponível por seleção explícita; OpenAI Whisper permanece padrão | Sem fallback silencioso; promoção do candidato depende de benchmark no hardware/corpus de referência e gate lexical/temporal |
-| 33 | Tradução Gemini | `GeminiTranslator` via REST/urllib, opt-in; NLLB permanece padrão e alternativa local; grounding contextual habilitado por padrão no Gemini | sem fallback silencioso; chave e texto externo exigem escolha/configuração explícitas |
+| 33 | Tradução Gemini | `GeminiTranslator` via REST/urllib, opt-in; TranslateGemma será a rota local padrão após a etapa 8.1.6; grounding contextual habilitado por padrão no Gemini | sem fallback silencioso; chave e texto externo exigem escolha/configuração explícitas |
 | 34 | Configuração Gemini no desktop | Motor e chave são configuráveis em Preferências; a chave fica fora do QSettings em armazenamento local privado | troca de backend aplicada aos próximos jobs sem reinício; chave não entra em logs/relatórios |
 | 35 | Aceite da Fase 6 | NLLB e Gemini permanecem implementados e opcionais; benchmark comparativo não é gate desta fase | ambos ficam disponíveis para homologação futura sem bloquear a Fase 7 |
 | 37 | Motor local de tradução | Substituir integralmente NLLB por TranslateGemma 4B Instruct Q4_K_M; runtime candidato llama.cpp com servidor loopback e códigos de idioma por requisição. Gemini permanece remoto e independente. | Remover NLLB apenas após smoke real, CI, corpus-ouro e homologação E2E; aplicar Gemma Terms aos pesos/derivados. Ver [decisão técnica](DECISAO_TRANSLATEGEMMA.md). |\n| 36 | Perfil de recursos da Fase 7 | \\`auto\\` é padrão; <16 GiB usa perfil conservador de memória; hardware maior mantém modelos para favorecer jobs repetidos | não declarar ganho de desempenho sem benchmark pareado; evicção altera apenas residência em memória, nunca o cache em disco |
