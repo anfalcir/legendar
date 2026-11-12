@@ -17,9 +17,6 @@ LIVING_DOCUMENTS = (
     "README.md",
     "docs/README.md",
     "docs/PLANO_CORRECAO_MELHORIA.md",
-    "docs/FASE_5_PLANO.md",
-    "docs/FASE_6_PLANO.md",
-    "docs/FASE_6_HOMOLOGACAO.md",
     "docs/ESTADO_ATUAL.md",
     "docs/ARQUITETURA.md",
     "docs/OPERACAO.md",
@@ -31,6 +28,10 @@ LIVING_DOCUMENTS = (
 
 ARCHIVED_DOCUMENTS = (
     "docs/archive/README.md",
+    "docs/archive/completed-phases/README.md",
+    "docs/archive/completed-phases/FASE_5_PLANO.md",
+    "docs/archive/completed-phases/FASE_6_PLANO.md",
+    "docs/archive/completed-phases/FASE_6_HOMOLOGACAO.md",
     "docs/archive/previous-remodeling/README.md",
     "docs/archive/previous-remodeling/PLANO_REMODELAGEM.md",
     "docs/archive/previous-remodeling/FASE_0_PROTOCOLO.md",
@@ -61,9 +62,6 @@ ARCHIVED_DOCUMENTS = (
 DOCS_ROOT_LIVING_FILES = {
     "README.md",
     "PLANO_CORRECAO_MELHORIA.md",
-    "FASE_5_PLANO.md",
-    "FASE_6_PLANO.md",
-    "FASE_6_HOMOLOGACAO.md",
     "ESTADO_ATUAL.md",
     "ARQUITETURA.md",
     "OPERACAO.md",
