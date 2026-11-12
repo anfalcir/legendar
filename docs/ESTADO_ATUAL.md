@@ -25,7 +25,7 @@
 
 > Este documento separa comportamento observado no código, resultados confirmados por CI e medições ainda pendentes. Um teste verde de software não equivale a homologação de qualidade audiovisual.
 
-A Fase 8.1.6 também passou a exigir operação autônoma e idempotente do TranslateGemma: diagnóstico leve ao abrir, instalação assistida sob demanda, download do modelo após consentimento, inicialização e health check automáticos antes da tradução, reutilização sem duplicação e encerramento seguro apenas do processo gerenciado. A primeira fatia de lifecycle está em desenvolvimento na PR #36 (gerenciador de processo local, download do modelo com consentimento/retomada/SHA-256 e testes simulados), e a PR #36 já conecta o adaptador e o bootstrap/Preferências. Permanecem pendentes a instalação assistida do binário, a autorização/download integrado à interface, CI da nova fatia e homologação real; os locks entre processos para download e servidor estão implementados e testados.
+A Fase 8.1.6 também passou a exigir operação autônoma e idempotente do TranslateGemma: diagnóstico leve ao abrir, instalação assistida sob demanda, download do modelo após consentimento, inicialização e health check automáticos antes da tradução, reutilização sem duplicação e encerramento seguro apenas do processo gerenciado. A primeira fatia de lifecycle está em desenvolvimento na PR #36 (gerenciador de processo local, download do modelo com consentimento/retomada/SHA-256 e testes simulados), e a PR #36 já conecta o adaptador e o bootstrap/Preferências. Permanecem pendentes a instalação assistida do binário, batching/contexto editorial, CI da nova fatia e homologação real; os locks entre processos para download e servidor estão implementados e testados.
 
 ## 1. Resumo executivo
 
