@@ -427,6 +427,21 @@ class WhisperXAligner:
     def loaded_languages(self) -> tuple[str, ...]:
         return tuple(sorted(self._models))
 
+    def release_resources(self) -> None:
+        """Descarta modelos residentes sem apagar o cache em disco."""
+        with self._model_lock:
+            models = tuple(model for model, _metadata in self._models.values())
+            self._models.clear()
+            self._device = None
+            self._revision = None
+        if models:
+            from legendar.infrastructure.resources.lifecycle import (
+                release_model_resources,
+            )
+
+            for model in models:
+                release_model_resources(model)
+
     @property
     def loaded_device(self) -> str | None:
         return self._device
