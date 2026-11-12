@@ -411,6 +411,7 @@ def _is_weak_fragment(
 def _ends_sentence(text: str) -> bool:
     return text.rstrip().endswith(_SENTENCE_ENDINGS)
 
+
 def _refine_for_reading_speed(
     groups: list[list[tuple[TranscriptWord, TimeRange]]],
     policy: SegmentationPolicy,
