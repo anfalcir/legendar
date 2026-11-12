@@ -8,13 +8,13 @@ Este documento registra evidências da homologação operacional do backend Gemi
 - CI determinística e runtime NLLB/CPU: aprovados no workflow 43134372712.
 - Backend padrão: NLLB.
 - Gemini: opt-in, ainda não promovido.
-- Secret `GEMINI_API_KEY`: usuário informou que foi configurado no GitHub Actions em 12/11/2026; a presença efetiva será comprovada pelo job de smoke real.
+- Secret `GEMINI_API_KEY`: reconhecido pelo GitHub Actions e chamada real aprovada em 12/11/2026 após o usuário atualizar a chave.
 
 ## Gates de aceite
 
 | Gate | Evidência | Estado |
 |---|---|---|
-| Smoke real Gemini Developer API | Workflow Phase 6, job Optional live Gemini Developer API smoke | Aguardando execução |
+| Smoke real Gemini Developer API | Run `43135725775`, job `130914361060`; 2 cues aceitas em `gemini-3.8-flash` | **Aprovado (sem grounding)** |
 | Benchmark pareado no hardware de referência | Manifesto local da mídia de 37min10s, três repetições quentes | Pendente |
 | Qualidade contra referência humana | WER/CER + revisão humana cega | Pendente |
 | Integridade estrutural | IDs 1:1, ordem, cues não vazias e timestamps preservados | Pendente |
@@ -33,7 +33,7 @@ PYTHONPATH=src uv run --locked --group dev --group phase0 \
   --source-language en \
   --target-language pt \
   --backends nllb,gemini \
-  --repeats 3 \
+  --repeats 4 \
   --output ./phase6-translation-benchmark.json
 ```
 
@@ -41,9 +41,13 @@ A execução mede apenas o estágio de tradução. Comparar a mediana das execu�
 
 ## Resultado do smoke real
 
-- 12/11/2026 — secret reconhecido pelo GitHub Actions (`GEMINI_API_KEY` foi mascarado nos logs e a etapa condicional de ausência da chave foi ignorada).
-- A chamada real ao modelo `gemini-3.8-flash` retornou HTTP 429 após as tentativas configuradas. O smoke **falhou**; não há evidência de tradução aceita.
-- O log não expõe o corpo de erro do Google, portanto ainda não é possível distinguir limite RPM, TPM, RPD, quota de grounding ou limite baseado em gasto. Consultar o painel de limites/uso do AI Studio para o projeto e modelo escolhidos antes de repetir.
-- Workflow: [Phase 6 quality — run 43135567777](https://github.com/anfalcir/legendar/actions/runs/43135567777).
+Histórico observado em 12/11/2026:
 
-O resultado acima comprova que o secret foi injetado no job, mas não comprova quota suficiente nem funcionamento bem-sucedido da API.
+- Run [43135567777](https://github.com/anfalcir/legendar/actions/runs/43135567777): secret reconhecido; API retornou HTTP 429. Smoke reprovado.
+- Run [43135725775](https://github.com/anfalcir/legendar/actions/runs/43135725775), primeira tentativa sem grounding: API retornou HTTP 503. Smoke reprovado.
+- Após o usuário atualizar a chave da API, o job `130914361060` do mesmo workflow foi reexecutado e **aprovado**. O smoke confirmou tradução real de 2 cues com `gemini-3.8-flash`, em uma requisição, sem retries, em 1,5656 s; 556 tokens de entrada, 36 de saída e zero consultas de grounding.
+- Os jobs determinísticos Python 3.10, 3.11, 3.12 e 3.13, além do job NLLB/Transformers CPU, também foram aprovados nessa execução.
+- A variável `LEGENDAR_GEMINI_GROUNDING=false` estava ativa no smoke. Portanto, a autenticação e geração básica estão homologadas; grounding ainda precisa ser validado separadamente.
+- A PR [#20](https://github.com/anfalcir/legendar/pull/20), que adicionou este registro e isolou o smoke básico sem grounding, foi integrada à `main` por squash em `80d7ef9ef37e68c587534194db93a34970389f3a`.
+
+**Conclusão parcial:** o secret atualizado funciona e o adaptador consegue traduzir via Gemini Developer API. Isso não comprova ainda qualidade final, grounding, ganho de desempenho no corpus real ou superioridade sobre NLLB. O benchmark pareado e a revisão humana permanecem gates obrigatórios.
