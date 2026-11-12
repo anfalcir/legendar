@@ -57,7 +57,9 @@ def test_physical_cpu_count_handles_unavailable_count(monkeypatch) -> None:
 def test_total_memory_uses_posix_sysconf(monkeypatch) -> None:
     monkeypatch.setattr(resource_profile.os, "name", "posix")
     values = {"SC_PHYS_PAGES": 4096, "SC_PAGE_SIZE": 4096}
-    monkeypatch.setattr(resource_profile.os, "sysconf", lambda key: values[key])
+    monkeypatch.setattr(
+        resource_profile.os, "sysconf", lambda key: values[key], raising=False
+    )
 
     assert resource_profile._total_memory_bytes() == 4096 * 4096
 
@@ -68,7 +70,7 @@ def test_total_memory_falls_back_when_sysconf_fails(monkeypatch) -> None:
     def unavailable(_key: str) -> int:
         raise OSError("sysconf unavailable")
 
-    monkeypatch.setattr(resource_profile.os, "sysconf", unavailable)
+    monkeypatch.setattr(resource_profile.os, "sysconf", unavailable, raising=False)
 
     assert resource_profile._total_memory_bytes() is None
 
