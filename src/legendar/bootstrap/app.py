@@ -371,6 +371,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     qt_settings = QSettings("Legendar", "Legendar")
     preferences = load_preferences(qt_settings, settings.output_dir)
+    selected_backend = preferences.translation_backend
+    if not qt_settings.contains("translation/backend"):
+        selected_backend = os.environ.get(
+            "LEGENDAR_TRANSLATION_BACKEND", selected_backend
+        ).strip().casefold()
     gemini_key = load_gemini_api_key()
 
     app = QApplication(list(argv) if argv is not None else sys.argv)
@@ -380,7 +385,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     window = MainWindow(
         build_ui_dependencies(
             settings,
-            translation_backend=preferences.translation_backend,
+            translation_backend=selected_backend,
             gemini_api_key=gemini_key,
         ),
         settings=qt_settings,
