@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1–5 com implementação concluída e integrada à `main`. Fase 5 integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. A promoção operacional de faster-whisper a padrão permanece condicionada ao benchmark local pareado e à revisão humana; o Whisper original continua padrão.
+- **Status:** Fases 1–5 com implementação concluída e integrada à `main`. Fase 5 integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. Fase 6 em validação na PR [#14](https://github.com/anfalcir/legendar/pull/13); a promoção operacional de faster-whisper a padrão permanece condicionada ao benchmark local pareado e à revisão humana.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -13,7 +13,7 @@ Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITET
 
 ## 1. Resumo executivo
 
-O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e é o principal alvo da futura Fase 6. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
+O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e é o principal alvo da Fase 6 em execução. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
 
 O trabalho será conduzido em duas frentes coordenadas:
 
@@ -405,6 +405,8 @@ A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, t
 
 **Objetivo:** reduzir o custo do NLLB sem degradar o sentido, a terminologia ou a consistência. O Gemini será avaliado como candidato de tradução via API, sem pressupor que será automaticamente superior ao NLLB.
 
+**Implementação em validação na PR #14:** `GeminiTranslator` via Gemini Developer API, atrás da porta `Translator`, com lotes contextuais, cues vizinhas, histórico recente traduzido, saída JSON estruturada e validação 1:1 de IDs/ordem. NLLB permanece padrão; Gemini exige seleção explícita e `GEMINI_API_KEY`, sem fallback silencioso. Benchmark pareado e smoke real opt-in foram adicionados. CI determinística aprovada; chamada real e avaliação humana permanecem pendentes.
+
 **Diretriz obrigatória de tradução contextual (requisito do usuário, 11/11/2026):**
 
 O prompt de sistema/instruções do tradutor Gemini deverá:
@@ -421,7 +423,7 @@ O prompt de sistema/instruções do tradutor Gemini deverá:
 
 A avaliação humana deverá incluir nomes próprios, cidades, raças/clãs/povos, termos ambíguos, expressões idiomáticas, referências culturais, negações, números e contexto entre cues. Uma tradução literal correta isoladamente, mas incoerente com o universo ou com o discurso, deverá ser considerada regressão.
 
-A capacidade de pesquisa do modelo não será presumida como disponível por padrão: o experimento deverá documentar o modelo Gemini, ferramentas de grounding habilitadas, fontes consultadas e latência/custo adicional. Se grounding não estiver disponível, o prompt deverá instruir o modelo a usar apenas o contexto recebido e a preservar termos incertos.
+A capacidade de pesquisa do modelo deve ser verificada por modelo e configurada explicitamente. A documentação oficial consultada em 11/11/2026 confirma Search grounding no `gemini-3.8-flash`; o recurso fica habilitado por padrão no fluxo Gemini e pode ser desativado explicitamente. O experimento deve registrar ferramentas habilitadas, fontes consultadas e latência/custo adicional. Grounding apoia a identificação de referências, mas não autoriza acrescentar fatos à fala.
 
 Baseline atual:
 - `facebook/nllb-200-distilled-600M`;
@@ -688,7 +690,7 @@ Fase 7 — memória, threads e perfis
 Fase 8 — regressão e homologação final
 ```
 
-**Próxima execução:** Fase 5 implementada e integrada; seguir com a Fase 6 (tradução contextual e desempenho), mantendo o Whisper como padrão até homologar o candidato faster-whisper no hardware de referência. Antes de executar chamadas reais ao Gemini, solicitar ao usuário que cadastre `GEMINI_API_KEY` como secret no GitHub Actions. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos de configuração versionados.
+**Execução vigente:** Fase 5 implementada e integrada; Fase 6 em validação na PR [#14](https://github.com/anfalcir/legendar/pull/13). NLLB continua padrão e Gemini é opt-in até benchmark pareado e revisão humana. Antes das chamadas reais, cadastrar `GEMINI_API_KEY` como secret no GitHub Actions e no ambiente local de homologação. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos versionados.
 
 ### Definition of Done de cada fase
 
