@@ -14,7 +14,7 @@
 - **Fase 3:** concluída e integrada à `main` pela PR #10, squash `10f6d6d428a1fa5a45a7c7fd13870f48bdf67019`.
 - **Fase 4:** concluída e integrada à `main` pela PR [#11](https://github.com/anfalcir/legendar/pull/11), squash `32f20c3a5455dcc16f48e78a742ba4c7018339b5`. CI: 506 testes aprovados, cobertura de 86%, Python 3.10–3.13, Ruff e smoke Whisper/WhisperX CPU PT-BR/EN.
 - **Fase 5:** implementação concluída e integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`; backend faster-whisper/CTranslate2 opt-in, benchmark pareado e smoke de alinhamento para ambos os motores. A homologação no hardware de referência permanece pendente; Whisper continua padrão.
-- **Fase 6:** implementação em validação na PR [#14](https://github.com/anfalcir/legendar/pull/13), branch `phase-6/gemini-translation-clean`. `GeminiTranslator` contextual via Developer API está opt-in; NLLB continua padrão. CI determinística aprovada; smoke com API real e benchmark/revisão humana permanecem pendentes.
+- **Fase 6:** implementação em validação na PR [#14](https://github.com/anfalcir/legendar/pull/14), branch `phase-6/gemini-translation-clean`. `GeminiTranslator` contextual via Developer API está opt-in; NLLB continua padrão. CI determinística aprovada no head anterior; validação do head atual em andamento. Smoke com API real e benchmark/revisão humana permanecem pendentes.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
@@ -81,7 +81,7 @@ A Fase 3 foi integrada pela PR #10, squash commit `10f6d6d428a1fa5a45a7c7fd13870
 | Publicação | SRT com round-trip e gravação atômica |
 | Gate editorial | Relatório estruturado com estados `APPROVED`, `REVIEW_REQUIRED` e `BLOCKED`, bloqueio de perda e avisos de revisão; integrado pela PR #11 |
 | Benchmark por etapa | Instrumentação integrada; baseline real consolidado em 11/11/2026 |
-| Otimização de motores | Fase 5 implementada e integrada; benchmark de hardware pendente para promover faster-whisper. Fase 6 em validação na PR [#14](https://github.com/anfalcir/legendar/pull/13); Fase 7 planejada |
+| Otimização de motores | Fase 5 implementada e integrada; benchmark de hardware pendente para promover faster-whisper. Fase 6 em validação na PR [#14](https://github.com/anfalcir/legendar/pull/14); Fase 7 planejada |
 | Homologação audiovisual final | Pendente |
 
 ## 5. Evidências de qualidade e lacunas conhecidas
