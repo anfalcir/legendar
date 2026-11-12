@@ -266,6 +266,7 @@ def test_standalone_llama_server_uses_server_cli_arguments(tmp_path) -> None:
         model_path=model,
         popen_factory=popen,
         opener=lambda *_args, **_kwargs: FakeResponse(),
+        model_sha256=hashlib.sha256(b"model").hexdigest(),
     )
 
     manager.ensure_running()
