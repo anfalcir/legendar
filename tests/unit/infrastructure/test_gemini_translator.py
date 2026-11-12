@@ -156,6 +156,8 @@ def test_contextual_batches_keep_ids_and_use_prior_translations() -> None:
     assert "O capitão chegou." in second_prompt
     assert "cues_anteriores" in second_prompt
     assert calls[0][1]["generationConfig"]["responseMimeType"] == "application/json"
+    assert calls[0][1]["generationConfig"]["thinkingConfig"] == {"thinkingLevel": "LOW"}
+    assert "temperature" not in calls[0][1]["generationConfig"]
 
 
 def test_pt_br_instruction_and_entity_preservation_are_sent() -> None:
@@ -180,7 +182,7 @@ def test_grounding_is_opt_in() -> None:
     grounded_calls: list = []
     plain = _translator(calls=plain_calls)
     grounded = _translator(
-        calls=grounded_calls, grounding=True, model="gemini-3.5-flash-lite"
+        calls=grounded_calls, grounding=True, model="gemini-3.8-flash"
     )
     unit = _units("The city is old.")
 
@@ -199,6 +201,7 @@ def test_grounding_is_opt_in() -> None:
 
     assert "tools" not in plain_calls[0][1]
     assert grounded_calls[0][1]["tools"] == [{"googleSearch": {}}]
+    assert grounded_calls[0][1]["generationConfig"]["thinkingConfig"] == {"thinkingLevel": "LOW"}
     assert grounded.performance_snapshot()["configuration"]["grounding"]
 
 
@@ -450,4 +453,4 @@ def test_environment_numeric_configuration_is_validated(
 
 def test_grounding_rejects_models_without_search_support() -> None:
     with pytest.raises(ValueError, match="grounding não está disponível"):
-        GeminiTranslator(api_key="test", grounding=True, model="gemini-3.8-flash")
+        GeminiTranslator(api_key="test", grounding=True, model="gemini-2.5-flash")
