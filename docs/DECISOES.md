@@ -39,6 +39,8 @@
 | 31 | Telemetria de desempenho | Instrumentação local via porta `PerformanceReporter`; relatório JSON privado, sem mídia ou texto e sem envio externo | Não afeta o resultado do job; métricas servem à baseline comparável da Fase 1 |
 | 32 | ASR alternativo | `FasterWhisperTranscriber` via faster-whisper/CTranslate2 disponível por seleção explícita; OpenAI Whisper permanece padrão | Sem fallback silencioso; promoção do candidato depende de benchmark no hardware/corpus de referência e gate lexical/temporal |
 | 33 | Tradução Gemini | `GeminiTranslator` via REST/urllib, opt-in; NLLB permanece padrão e alternativa local; grounding contextual habilitado por padrão no Gemini | sem fallback silencioso; chave e texto externo exigem escolha/configuração explícitas |
+| 34 | Configuração Gemini no desktop | Motor e chave são configuráveis em Preferências; a chave fica fora do QSettings em armazenamento local privado | troca de backend aplicada aos próximos jobs sem reinício; chave não entra em logs/relatórios |
+| 35 | Aceite da Fase 6 | NLLB e Gemini permanecem implementados e opcionais; benchmark comparativo não é gate desta fase | ambos ficam disponíveis para homologação futura sem bloquear a Fase 7 |
 
 ## Decisões da Fase 10 (D1–D6)
 
@@ -74,9 +76,9 @@ As linhas abaixo são opções para benchmark, não novas dependências ou decis
 | Tema | Situação | Onde será decidido |
 |---|---|---|
 | Precisão temporal em corpus real | Metas provisórias: mediana 150 ms / P95 350 ms | Fases 1, 2 e 8 do [plano](PLANO_CORRECAO_MELHORIA.md) |
-| Qualidade tradutória PT↔EN | Não medida em corpus autorizado comparativo | Fase 6 e homologação |
+| Qualidade tradutória PT↔EN | Benchmark comparativo não executado por decisão de produto; ferramenta preservada | homologação futura, se desejada |
 | Preservação do texto original junto ao SRT traduzido | Não implementada | decisão de produto futura |
 | Backends oficialmente suportados | CI cobre Ubuntu; homologação multiplataforma pendente | após benchmark/homologação |
 | Empacotamento distribuível | PyInstaller declarado, fluxo não homologado | frente futura |
 | Adoção operacional de ASR alternativo | Implementado e integrado; não é padrão | Benchmark local pareado, revisão humana e homologação da Fase 8 |
-| Backend de tradução otimizado | NLLB Transformers segue padrão; Gemini em avaliação técnica | Fase 6 e benchmark/homologação real |
+| Backend de tradução otimizado | NLLB Transformers segue padrão; Gemini disponível como opção operacional | benchmark/homologação futura, sem bloquear a Fase 6 |
