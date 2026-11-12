@@ -64,3 +64,38 @@ uv run --locked --no-sync python scripts/phase8_1_translategemma_smoke.py \
 ```
 
 O smoke usa apenas a API local, envia os códigos de idioma por requisição em chat_template_kwargs e imprime somente o texto retornado. Ele não inicia o servidor nem baixa pesos. O adaptador de produção deverá gerenciar essas duas responsabilidades; este script é exclusivamente uma prova de protocolo. Ainda é necessário executar o smoke com o modelo real antes de declarar compatibilidade.
+
+
+## Operação autônoma e idempotente do runtime
+
+**Requisito de produto aprovado em 12/11/2026:** o usuário não deve precisar instalar, iniciar, monitorar ou encerrar manualmente o llama.cpp para usar a tradução local. O Legendar será responsável por preparar e gerenciar o runtime.
+
+### Comportamento esperado
+
+1. **Verificação leve na abertura:** inspecionar versão/compatibilidade do executável, presença e integridade básica do modelo em cache, permissões e espaço disponível. A verificação não baixa o modelo nem bloqueia a abertura da janela.
+2. **Preparação sob demanda:** ao selecionar tradução local ou iniciar um job que a utiliza, executar novamente o preflight. Se faltar runtime, oferecer instalação assistida; se faltar modelo, informar tamanho/origem/licença e solicitar a autorização necessária antes do download. A instalação/download só ocorre após consentimento explícito.
+3. **Inicialização automática:** imediatamente antes da etapa TRANSLATING, iniciar o servidor gerenciado pelo próprio Legendar, em loopback, com parâmetros compatíveis e porta alocada sem colisão. Aguardar readiness por health check com timeout e diagnóstico acionável.
+4. **Reutilização:** se o processo gerenciado e o modelo/versionamento esperados já estiverem saudáveis, reutilizá-los. Chamadas repetidas de ensure/install/start devem convergir para o mesmo estado, sem reinstalação, downloads redundantes ou processos duplicados.
+5. **Concorrência e propriedade:** proteger instalação, download e inicialização com lock entre threads/processos; distinguir processo próprio de qualquer servidor externo. Nunca encerrar nem adotar silenciosamente processo desconhecido que apenas responda na mesma porta.
+6. **Falhas e cancelamento:** downloads devem ser retomáveis/atômicos, validar checksum quando publicado e nunca deixar artefato parcial como modelo instalado. Inicialização, health check e tradução devem respeitar cancelamento e timeouts; falhas devem explicar a ação necessária sem registrar tokens ou conteúdo das legendas.
+7. **Encerramento:** reutilizar o servidor durante a vida do aplicativo e encerrar graciosamente apenas o processo filho iniciado pelo Legendar quando a aplicação fechar. Em seguida, aguardar e aplicar encerramento forçado apenas como último recurso. Preservar pesos e cache.
+8. **Interface:** apresentar estados claros (verificando, aguardando autorização, instalando, baixando, iniciando, pronto, falha), progresso real quando disponível e ações explícitas para tentar novamente/abrir instruções. Toda operação demorada ocorre fora da thread visual.
+
+### Política de segurança e instalação
+
+- O endpoint deve escutar somente em `127.0.0.1`; não usar `0.0.0.0`, exposição LAN ou servidor persistente externo.
+- Preferir distribuição oficial e versão fixada do llama.cpp por plataforma, com metadados de versão e verificação de integridade. Não executar scripts remotos arbitrários com privilégios elevados.
+- Se a instalação exigir gerenciador do sistema, senha administrativa, termos de uso ou autenticação Hugging Face, parar e orientar/solicitar a ação do usuário; nunca elevar privilégios nem aceitar termos em seu nome.
+- Não persistir tokens Hugging Face em QSettings, logs ou relatórios. Usar autenticação local já configurada pelo usuário ou fluxo seguro documentado.
+- Não baixar pesos automaticamente na abertura. O download pesado só começa após a escolha de tradução local e autorização informada.
+- A instalação e o modelo ficam no diretório privado do Legendar, salvo quando uma instalação gerenciada pelo sistema for explicitamente escolhida pelo usuário.
+
+### Critérios de aceite adicionais
+
+- Duas ou mais chamadas concorrentes de preflight/start resultam em no máximo uma instalação/download e um processo gerenciado.
+- Reabrir o aplicativo com runtime/modelo íntegros não altera arquivos nem baixa novamente.
+- Reiniciar o aplicativo encerra o processo filho anterior quando possível e inicia um novo somente quando tradução for solicitada.
+- Servidor externo, porta ocupada, processo morto, download interrompido, modelo corrompido, espaço insuficiente, ausência de autenticação e cancelamento têm testes de falha determinísticos.
+- A GUI permanece responsiva durante verificação, instalação, download e inicialização.
+- A tradução só começa após readiness confirmada; nenhum SRT parcial é publicado em falha.
+- Nenhum fallback silencioso para Gemini ou NLLB. Gemini continua sendo uma escolha explícita independente.
