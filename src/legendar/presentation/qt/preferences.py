@@ -76,7 +76,7 @@ def save_preferences(
     geometry: QByteArray | bytes | None = None,
     maximized: bool | None = None,
 ) -> None:
-    """Persiste somente tema, destino, idioma, log e geometria da janela.
+    """Persiste somente preferências não secretas de tema, destino, idioma, log, motor e geometria da janela.
 
     Caminho de mídia, conteúdo de transcrição, tokens e credenciais não fazem
     parte do contrato persistido. ``geometry`` deve ser o ``QByteArray`` de
