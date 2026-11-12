@@ -14,28 +14,53 @@ from dataclasses import dataclass, field
 from legendar.domain.entities.subtitle import SubtitleCue, SubtitleTrack
 from legendar.domain.errors.catalog import InvalidInputError, TranslationError
 from legendar.domain.value_objects.language import Language
+from legendar.domain.value_objects.time import TimeRange
+
+
+@dataclass(frozen=True, slots=True)
+class TranslationContext:
+    """Contexto textual explícito que acompanha uma unidade de tradução."""
+
+    before: tuple[str, ...] = ()
+    after: tuple[str, ...] = ()
+    protected_terms: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class TranslationUnit:
-    """Uma cue pronta para tradução, com o índice final preservado."""
+    """Unidade contextualizada com rastreabilidade temporal explícita."""
 
     index: int
     text: str
+    source_cue_ids: tuple[int, ...] = ()
+    source_range: TimeRange | None = None
+    context: TranslationContext = field(default_factory=TranslationContext)
 
     def __post_init__(self) -> None:
         if self.index < 1:
             raise TranslationError("Unidade de tradução sem índice válido.")
         if not (self.text or "").strip():
             raise TranslationError(f"Unidade de tradução {self.index} sem texto.")
+        if any(cue_id < 1 for cue_id in self.source_cue_ids):
+            raise TranslationError(
+                f"Unidade de tradução {self.index} contém ID de origem inválido."
+            )
+        if (
+            self.source_range is not None
+            and self.source_range.end <= self.source_range.start
+        ):
+            raise TranslationError(
+                f"Unidade de tradução {self.index} possui intervalo temporal inválido."
+            )
 
 
 @dataclass(frozen=True, slots=True)
 class TranslationResult:
-    """Textos traduzidos, na mesma ordem das unidades enviadas."""
+    """Resultado com IDs explícitos das unidades que foram traduzidas."""
 
     language: Language
     texts: tuple[str, ...]
+    unit_indexes: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,9 +76,25 @@ def build_translation_units(track: SubtitleTrack) -> tuple[TranslationUnit, ...]
     """Extrai uma unidade por cue, preservando índices e ordem."""
     if track.is_empty:
         raise InvalidInputError("Nenhuma legenda segmentada para traduzir.")
-    return tuple(
-        TranslationUnit(index=cue.index, text=cue.normalized_text) for cue in track.cues
-    )
+    units: list[TranslationUnit] = []
+    for position, cue in enumerate(track.cues):
+        before = tuple(
+            item.normalized_text
+            for item in track.cues[max(0, position - 2) : position]
+        )
+        after = tuple(
+            item.normalized_text for item in track.cues[position + 1 : position + 3]
+        )
+        units.append(
+            TranslationUnit(
+                index=cue.index,
+                text=cue.normalized_text,
+                source_cue_ids=(cue.index,),
+                source_range=cue.range,
+                context=TranslationContext(before=before, after=after),
+            )
+        )
+    return tuple(units)
 
 
 def apply_translation(
@@ -72,9 +113,15 @@ def apply_translation(
         raise TranslationError("Idioma da tradução inválido.")
     if track.is_empty:
         raise InvalidInputError("Nenhuma legenda segmentada para traduzir.")
+    expected_indexes = tuple(cue.index for cue in track.cues)
+    if result.unit_indexes and result.unit_indexes != expected_indexes:
+        raise TranslationError(
+            "A tradução não manteve a correspondência por ID com as legendas "
+            f"(esperado {expected_indexes}, recebido {result.unit_indexes})."
+        )
     if len(result.texts) != len(track.cues):
         raise TranslationError(
-            "A tradução não manteve a correspondência 1:1 com as legendas "
+            "A tradução não manteve a cardinalidade das unidades "
             f"({len(result.texts)} textos para {len(track.cues)} cues)."
         )
 
