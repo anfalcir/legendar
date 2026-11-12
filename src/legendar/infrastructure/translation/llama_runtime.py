@@ -145,8 +145,10 @@ class LlamaCppRuntimeManager:
         if startup_timeout <= 0:
             raise ValueError("O timeout de inicialização deve ser positivo.")
         self.models_dir = Path(models_dir).expanduser()
-        self.model_path = Path(model_path) if model_path else (
-            self.models_dir / "translategemma" / DEFAULT_MODEL_FILENAME
+        self.model_path = (
+            Path(model_path)
+            if model_path
+            else (self.models_dir / "translategemma" / DEFAULT_MODEL_FILENAME)
         )
         self.host = host
         self.context_size = context_size
@@ -253,9 +255,7 @@ class LlamaCppRuntimeManager:
                     "Ele não será sobrescrito automaticamente."
                 )
 
-            partial_path = self.model_path.with_suffix(
-                self.model_path.suffix + ".part"
-            )
+            partial_path = self.model_path.with_suffix(self.model_path.suffix + ".part")
             offset = partial_path.stat().st_size if partial_path.is_file() else 0
             headers = {"Range": f"bytes={offset}-"} if offset else {}
             request = Request(MODEL_DOWNLOAD_URL, headers=headers, method="GET")
@@ -285,9 +285,7 @@ class LlamaCppRuntimeManager:
                             "A resposta de retomada não corresponde ao trecho "
                             "solicitado; o arquivo parcial foi preservado."
                         )
-                    content_length = self._response_header(
-                        response, "Content-Length"
-                    )
+                    content_length = self._response_header(response, "Content-Length")
                     try:
                         remaining = int(content_length or "")
                     except ValueError:
@@ -367,9 +365,7 @@ class LlamaCppRuntimeManager:
         return str(value) if value is not None else None
 
     @staticmethod
-    def _sha256_prefix(
-        path: Path, size: int, token: CancellationToken | None
-    ) -> Any:
+    def _sha256_prefix(path: Path, size: int, token: CancellationToken | None) -> Any:
         import hashlib
 
         digest = hashlib.sha256()
@@ -388,9 +384,7 @@ class LlamaCppRuntimeManager:
         return digest
 
     @staticmethod
-    def _sha256_file(
-        path: Path, token: CancellationToken | None
-    ) -> str:
+    def _sha256_file(path: Path, token: CancellationToken | None) -> str:
         import hashlib
 
         digest = hashlib.sha256()
