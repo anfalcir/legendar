@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1–5 com implementação concluída e integrada à `main`. Fase 5 integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. Fase 6 em validação técnica; a promoção operacional de faster-whisper a padrão permanece condicionada ao benchmark local pareado e à revisão humana.
+- **Status:** Fases 1–6 com implementação técnica integrada à `main`. Fase 5 integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. Fase 6 integrada pela PR [#19](https://github.com/anfalcir/legendar/pull/19), squash `7f337bc10cf210336fbf2367b56aea7e767bce32`; CI específica aprovada. O smoke real Gemini, benchmark pareado e revisão humana permanecem pendentes. A promoção operacional de faster-whisper e Gemini a padrões continua condicionada aos respectivos benchmarks locais e gates de qualidade.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -13,7 +13,7 @@ Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITET
 
 ## 1. Resumo executivo
 
-O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e é o principal alvo da Fase 6 em execução. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
+O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e foi o principal alvo da Fase 6, cuja implementação técnica já está integrada; o ganho real do Gemini ainda precisa ser medido. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
 
 O trabalho será conduzido em duas frentes coordenadas:
 
@@ -405,7 +405,7 @@ A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, t
 
 **Objetivo:** reduzir o custo do NLLB sem degradar o sentido, a terminologia ou a consistência. O Gemini será avaliado como candidato de tradução via API, sem pressupor que será automaticamente superior ao NLLB.
 
-**Implementação em validação na PR #14:** `GeminiTranslator` via Gemini Developer API, atrás da porta `Translator`, com lotes contextuais, cues vizinhas, histórico recente traduzido, saída JSON estruturada e validação 1:1 de IDs/ordem. NLLB permanece padrão; Gemini exige seleção explícita e `GEMINI_API_KEY`, sem fallback silencioso. Benchmark pareado e smoke real opt-in foram adicionados. CI determinística aprovada; chamada real e avaliação humana permanecem pendentes.
+**Implementação integrada pela PR #19:** `GeminiTranslator` via Gemini Developer API, atrás da porta `Translator`, com lotes contextuais, cues vizinhas, histórico recente traduzido, saída JSON estruturada e validação 1:1 de IDs/ordem. NLLB permanece padrão; Gemini exige seleção explícita e `GEMINI_API_KEY`, sem fallback silencioso. Benchmark pareado e smoke real opt-in foram adicionados. CI específica aprovada no run [43134372712](https://github.com/anfalcir/legendar/actions/runs/43134372712), incluindo runtime real NLLB/CPU e matriz determinística Python 3.10–3.13. O job de smoke Gemini foi skipped porque o secret não estava disponível. Benchmark real e revisão humana permanecem pendentes.
 
 **Diretriz obrigatória de tradução contextual (requisito do usuário, 11/11/2026):**
 
@@ -598,120 +598,3 @@ Investigar primeiro:
 7. contexto e glossário sem perda de correspondência 1:1.
 
 O lote atual de 16 cues já é uma otimização existente. A hipótese de ganho está no backend, no decoding, na quantização e na formação de batches mais eficientes.
-
-### Alinhamento
-
-Apesar de não ser o principal gargalo reportado, o alinhador chama WhisperX por segmento. A Fase 1 deverá medir o número de chamadas, tempo médio por segmento e custo fixo de chamada. Só então avaliar alinhar múltiplos segmentos juntos ou consolidar janelas sem misturar conteúdo e sem deslocar timestamps.
-
-### Memória e CPU
-
-- Evitar modelos grandes residentes ao mesmo tempo em máquinas com RAM limitada, caso o benchmark demonstre swapping.
-- Controlar threads para não sobrecarregar CPUs com poucos núcleos.
-- Evitar paralelismo entre dois modelos pesados no mesmo CPU sem medir.
-- Preferir execução serial eficiente quando a concorrência aumenta contenção.
-- Armazenar e reutilizar pesos do disco, sem recarregar entre jobs quando a política de memória permitir.
-
----
-
-## 8. Testes obrigatórios
-
-| Camada | O que precisa provar |
-|---|---|
-| Domínio | Regras de tempo, ordenação, conservação do texto e estados de qualidade |
-| Segmentação | Consolidação entre segmentos, pausas, sintaxe, duração, CPS e ausência de fragmentação artificial |
-| Alinhamento | Palavras não alinhadas, repetidas, offsets, sobreposições e tentativas de recuperação |
-| Tradução | 1:1, ordem, idioma, nomes/números, texto completo e timestamps preservados |
-| Validação | bloqueios, avisos, exceções legítimas e diagnóstico reproduzível |
-| Integração | pipeline completo e publicação atômica |
-| E2E determinístico | pipeline com dublês, sem depender de rede ou modelos |
-| E2E real | Whisper/faster-whisper, WhisperX, NLLB e FFmpeg reais em corpus local |
-| Performance | mediana por estágio, RTF, tokens/s, RSS e hardware |
-| Homologação | player real e avaliação humana de sincronização, leitura e tradução |
-
-A CI comum não deverá baixar pesos de vários modelos nem executar benchmark longo em todo push. Testes determinísticos e de contrato permanecem rápidos; smokes reais e benchmarks ficam em workflows opt-in ou agendados, com dependências e dados explicitamente controlados.
-
----
-
-## 9. Riscos e controles
-
-| Risco | Controle |
-|---|---|
-| Modelo mais rápido reconhece diferente | WER/CER pareado e revisão de trechos críticos |
-| INT8 muda escolhas lexicais | comparação com o baseline e rejeição por qualidade |
-| VAD remove fala baixa | teste específico de cobertura e timestamps |
-| Beam menor piora tradução | revisão humana, termos críticos e comparação cega |
-| Batch maior esgota RAM | medição de pico e limite por perfil |
-| Vários modelos provocam swapping | política de retenção baseada em RSS/memória livre |
-| Agrupar segmentos cruza pausa/turno | limites temporais, gaps e teste de fala contínua |
-| Extender cue invade fala seguinte | limite pelo início da próxima cue e margem de segurança |
-| Palavra não alinhada perde conteúdo | contrato de conservação e gate bloqueante |
-| Detectar repetição apaga repetição legítima | detecção sinaliza; remoção automática proibida |
-| Trocar dependências quebra lock | POC isolada, versão fixada, matriz Python e CI |
-| Modelo tem licença incompatível | revisão de licença antes de distribuição/adoção |
-
----
-
-## 10. Regras de mudança e aceite
-
-1. Uma hipótese deve ser transformada em benchmark antes de virar decisão.
-2. Alterar um fator por vez nos experimentos de desempenho.
-3. Não remover o motor baseline enquanto o candidato não passar.
-4. Atualizar `pyproject.toml`, `uv.lock`, matriz e testes somente quando uma dependência for aprovada.
-5. Manter as portas de aplicação para permitir troca de adaptador sem reescrever o pipeline.
-6. Mudanças em thresholds editoriais exigem corpus, decisão registrada e testes.
-7. Não fabricar timestamps, não truncar texto e não descartar palavra sem diagnóstico.
-8. Uma PR não será considerada concluída apenas porque CI está verde; também é necessário comprovar os gates de qualidade pertinentes à fase.
-9. Atualizar [ESTADO_ATUAL.md](ESTADO_ATUAL.md) no fechamento de cada fase.
-10. Manter a raiz de `docs/` com documentos vivos; evidências concluídas vão para `docs/archive/`.
-
-## 11. Ordem de execução e próximo passo
-
-A ordem de dependência será:
-
-```text
-Fase 0 — auditoria e plano (documentada)
-          |
-Fase 1 — instrumentação / baseline
-          |
-Fase 2 — integridade / alinhamento
-          |
-Fase 3 — segmentação / legibilidade
-          |
-Fase 4 — gate editorial
-          |
-          +--------------------+
-          |                    |
-Fase 5 — ASR              Fase 6 — tradução
-          |                    |
-          +---------+----------+
-                    |
-Fase 7 — memória, threads e perfis
-                    |
-Fase 8 — regressão e homologação final
-```
-
-**Execução vigente:** Fase 5 implementada e integrada; Fase 6 em validação técnica. NLLB continua padrão e Gemini é opt-in até benchmark pareado e revisão humana. Antes das chamadas reais, cadastrar `GEMINI_API_KEY` como secret no GitHub Actions e no ambiente local de homologação. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos versionados.
-
-### Definition of Done de cada fase
-
-- escopo implementado e revisado;
-- testes unitários e de integração cobrindo o comportamento;
-- regressões e casos de erro tratados;
-- Ruff, formatação, links documentais, lock e CI aprovados;
-- documentação viva atualizada;
-- evidências e métricas registradas;
-- merge na `main` somente após validação.
-
----
-
-## 12. Referências técnicas externas
-
-As referências abaixo sustentam opções de investigação, não decisões de dependência já adotadas:
-
-- [faster-whisper — uso, CPU INT8, GPU FP16, timestamps por palavra e VAD](https://github.com/SYSTRAN/faster-whisper)
-- [CTranslate2 — dicas de desempenho](https://opennmt.net/CTranslate2/performance.html)
-- [CTranslate2 — quantização e tipos suportados](https://opennmt.net/CTranslate2/quantization.html)
-- [CTranslate2 — conversão e execução de NLLB](https://opennmt.net/CTranslate2/guides/transformers.html)
-- [Model card NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-distilled-600M)
-
-**Nota de licença:** o model card do NLLB-200 distilled 600M informa CC-BY-NC-4.0 e descreve limites de uso. A licença do código Legendar e a licença dos pesos são artefatos distintos; validar o uso pretendido antes de distribuir.
