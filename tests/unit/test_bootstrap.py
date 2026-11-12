@@ -308,7 +308,6 @@ def test_unknown_asr_backend_is_not_silently_accepted(tmp_path, monkeypatch) -> 
     )
 
 
-
 def test_gemini_backend_is_selected_with_api_key(tmp_path, monkeypatch) -> None:
     _patch_modules(monkeypatch)
     monkeypatch.setenv("LEGENDAR_TRANSLATION_BACKEND", "gemini")
