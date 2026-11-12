@@ -29,14 +29,11 @@ class ResourcePolicy:
 
 
 def _physical_cpu_count() -> int | None:
-    if os.name != "posix":
+    """Retorna uma estimativa conservadora sem adicionar dependência de runtime."""
+    logical = os.cpu_count()
+    if logical is None:
         return None
-    try:
-        import psutil
-    except ImportError:
-        return None
-    count = psutil.cpu_count(logical=False)
-    return int(count) if count else None
+    return max(1, logical // 2)
 
 
 def _total_memory_bytes() -> int | None:
