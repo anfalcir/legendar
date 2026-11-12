@@ -101,13 +101,24 @@ O smoke usa apenas a API local, envia os códigos de idioma por requisição em 
 - Nenhum fallback silencioso para Gemini ou NLLB. Gemini continua sendo uma escolha explícita independente.
 
 
+## Artefato GGUF fixado para instalação reproduzível
+
+- Repositório: `bullerwins/translategemma-4b-it-GGUF`
+- Revisão imutável: `7c938465a870d8624bcfa98a8e4a3510053c19a8`
+- Arquivo: `translategemma-4b-it-Q4_K_M.gguf`
+- Tamanho publicado: aproximadamente 2,49 GB.
+- SHA-256: `7f7357c14abd9da4eb200b38b05da502cd6e10d7e1d403fbc9f78c19f3209b72`
+- Download: URL `resolve/{revision}/{filename}`, sem depender do branch mutável `main`.
+
+A referência do arquivo e seu checksum foram conferidos na página do artefato Hugging Face. O arquivo GGUF é uma quantização comunitária derivada do TranslateGemma; a licença Gemma continua aplicável. O instalador deverá exibir essa informação antes de solicitar consentimento.
+
 ## Implementação incremental — primeira fatia do lifecycle
 
 A PR #36 adiciona `infrastructure/translation/llama_runtime.py` com:
-- inspeção local rápida de executável e arquivo GGUF, sem rede/download;
+- inspeção local rápida de executável e arquivo GGUF, sem rede; download do GGUF após consentimento explícito, com retomada HTTP Range, arquivo parcial separado, SHA-256 fixado e publicação atômica;
 - início do subcomando `llama serve` com loopback exclusivo, porta dinâmica, contexto de 2K e um slot;
 - health check `/health` com timeout, cancelamento e detecção de saída prematura;
 - serialização concorrente dentro da instância do aplicativo, reutilização apenas do processo filho próprio e encerramento gracioso/forçado desse filho;
 - preservação do modelo/cache e testes unitários determinísticos com processo/HTTP simulados.
 
-**Limites desta fatia:** não instala llama.cpp, não baixa pesos, não faz lock entre processos, não integra ainda o bootstrap/GUI nem implementa o adaptador Translator. A disponibilidade real do modelo, o nome exato do artefato GGUF, o protocolo com pesos reais e a compatibilidade do executável continuam gates obrigatórios. Portanto, não declarar autonomia operacional completa nem remover NLLB com base nesta entrega isolada.
+**Limites desta fatia:** não instala o binário llama.cpp, não faz lock entre processos, não integra ainda o bootstrap/GUI nem implementa o adaptador Translator. A disponibilidade real do modelo, o nome exato do artefato GGUF, o protocolo com pesos reais e a compatibilidade do executável continuam gates obrigatórios. Portanto, não declarar autonomia operacional completa nem remover NLLB com base nesta entrega isolada.
