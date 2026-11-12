@@ -1,7 +1,7 @@
 # Estado atual do Legendar
 
 - **Última atualização:** 12/11/2026
-- **Última atualização da Fase 8:** avaliador estrutural de SRT integrado à `main` pela PR #27. A homologação real de mídia, cold/warm, player, PT-BR e fragmentação permanece pendente.
+- **Última atualização da Fase 8:** avaliador estrutural de SRT integrado pela PR #27; correções de CI e governança documental integradas pela PR #28 (`b2932190e01453b6c7beb617c3321f91d3c5fcd1`). A homologação real de mídia, cold/warm, player, PT-BR e fragmentação permanece pendente.
 - **Commit da implementação Gemini:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19).
 - **Commit de registro da homologação inicial:** `80d7ef9ef37e68c587534194db93a34970389f3a` (PR #20).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
@@ -18,7 +18,7 @@
 - **Fase 5:** implementação concluída e integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`; backend faster-whisper/CTranslate2 opt-in, benchmark pareado e smoke de alinhamento para ambos os motores. A homologação no hardware de referência permanece pendente; Whisper continua padrão.
 - **Fase 6:** concluída e integrada à `main` pela PR #25, squash `9c0923e33e0a46692a0dee75d709a48273b3bbf0`. NLLB local e Gemini API permanecem opcionais; o usuário seleciona o backend e configura, substitui ou remove a chave Gemini localmente em Preferências. A chave não é armazenada em QSettings, logs ou relatórios. Por decisão do usuário, o benchmark comparativo Gemini × NLLB não será executado agora; ambos os caminhos permanecem disponíveis.
 - **Fase 7:** implementação concluída e integrada à `main` pela PR #26, squash `05db38d43ee70ef8f5ef331bd5d221c47bf05b44`. Inclui perfis `auto`, `low-memory`, `balanced` e `performance`, política de threads CPU e liberação segura de modelos entre etapas. O aceite de desempenho continua dependente da medição no hardware de referência.
-- **CI:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212) é evidência histórica de 5/5 jobs aprovados. A execução posterior no commit `f101775` revelou fixture de CPS incorreta e cobertura de 84,75%. A PR #28 corrige a fixture, amplia os testes do avaliador e reorganiza a documentação; só declarar CI atual verde após a matriz completa passar.
+- **CI atual:** [run 43228762263](https://github.com/anfalcir/legendar/actions/runs/43228762263) passou na `main`, com quatro matrizes Python 3.10–3.13, E2E, Ruff, formatação e documentação. Na validação completa da PR #28, foram aprovados 621 testes, cobertura global de 85,11% e 24 testes E2E por versão; os sete workflows de qualidade passaram. O benchmark comparativo Gemini × NLLB não foi executado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
 > Este documento separa comportamento observado no código, resultados confirmados por CI e medições ainda pendentes. Um teste verde de software não equivale a homologação de qualidade audiovisual.
@@ -69,7 +69,7 @@ A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes.
 
 A Fase 3 foi integrada pela PR #10, squash commit `10f6d6d428a1fa5a45a7c7fd13870f48bdf67019`. A implementação usa fluxo global cronológico de palavras alinhadas, consolida segmentos contíguos do Whisper, preserva segmentos fallback como barreiras, mantém rastreabilidade `source_segments`, rejeita cronologia inválida, respeita fronteiras de frase significativas e estende cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). O corpus determinístico cobre continuidade, pausas, pontuação, CPS, extensão segura, fallback intercalado, rastreabilidade e layout final de duas linhas.
 
-**Validação histórica:** CI específica verde em Python 3.10–3.13; 506 testes aprovados e cobertura global de 86% em execução anterior. Na primeira execução sobre a integração da PR #27, as quatro matrizes falharam por uma expectativa incorreta de CPS no teste novo e cobertura global de 84,75%; o job documental passou. A correção está sendo preparada em PR de manutenção, e a matriz só será declarada verde após nova execução completa.
+**Validação histórica:** CI específica verde em Python 3.10–3.13; 506 testes aprovados e cobertura global de 86% em execução anterior. A primeira execução da PR #27 expôs uma expectativa de CPS incorreta e cobertura de 84,75%; a PR #28 corrigiu a fixture, adicionou cobertura para casos vazios e perfis de recursos, ajustou Ruff e organizou a documentação. A matriz atual foi reexecutada e passou integralmente.
 
 ## 4. Estado do repositório
 
