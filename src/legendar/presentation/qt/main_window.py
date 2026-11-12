@@ -146,6 +146,8 @@ class UiDependencies:
         Callable[[str, str | None], tuple[bool, tuple[str, ...]]] | None
     ) = None
     runtime_shutdown: Callable[[], None] | None = None
+    translation_authorization_required: Callable[[], bool] | None = None
+    translation_authorize: Callable[[], None] | None = None
 
 
 class MainWindow(QMainWindow):
