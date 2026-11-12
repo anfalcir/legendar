@@ -634,7 +634,7 @@ def test_metrics_are_sanitized_and_include_token_counts() -> None:
 
 @pytest.mark.parametrize(
     ("batch_size", "expected_requests"),
-    [(64, 15), (96, 10), (100, 10)],
+    [(32, 29), (64, 15), (96, 10), (100, 10)],
 )
 def test_larger_gemini_batches_reduce_requests_for_927_cues(
     batch_size: int,
