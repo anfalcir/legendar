@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import subprocess
+import sys
 from pathlib import Path
 
 from scripts.phase8_1_translation_review import (
@@ -137,3 +139,37 @@ def test_cli_creates_review_csv_from_srt_files(tmp_path: Path, capsys) -> None:
     )
     assert output.exists()
     assert "confira cada linha fonte com o áudio" in capsys.readouterr().out
+
+def test_direct_script_execution_resolves_local_quality_parser(tmp_path: Path) -> None:
+    source = tmp_path / "source.srt"
+    translated = tmp_path / "translated.srt"
+    output = tmp_path / "review.csv"
+    source.write_text(
+        "1\\n00:00:00,000 --> 00:00:01,000\\nThank you.\\n",
+        encoding="utf-8",
+    )
+    translated.write_text(
+        "1\\n00:00:00,000 --> 00:00:01,000\\nObrigado.\\n",
+        encoding="utf-8",
+    )
+    repository_root = Path(__file__).resolve().parents[2]
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/phase8_1_translation_review.py",
+            str(source),
+            str(translated),
+            "--output",
+            str(output),
+            "--samples",
+            "1",
+        ],
+        cwd=repository_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert output.exists()
