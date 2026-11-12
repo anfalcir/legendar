@@ -41,6 +41,7 @@
 | 33 | Tradução Gemini | `GeminiTranslator` via REST/urllib, opt-in; NLLB permanece padrão e alternativa local; grounding contextual habilitado por padrão no Gemini | sem fallback silencioso; chave e texto externo exigem escolha/configuração explícitas |
 | 34 | Configuração Gemini no desktop | Motor e chave são configuráveis em Preferências; a chave fica fora do QSettings em armazenamento local privado | troca de backend aplicada aos próximos jobs sem reinício; chave não entra em logs/relatórios |
 | 35 | Aceite da Fase 6 | NLLB e Gemini permanecem implementados e opcionais; benchmark comparativo não é gate desta fase | ambos ficam disponíveis para homologação futura sem bloquear a Fase 7 |
+| 36 | Perfil de recursos da Fase 7 | \\`auto\\` é padrão; <16 GiB usa perfil conservador de memória; hardware maior mantém modelos para favorecer jobs repetidos | não declarar ganho de desempenho sem benchmark pareado; evicção altera apenas residência em memória, nunca o cache em disco |
 
 ## Decisões da Fase 10 (D1–D6)
 
