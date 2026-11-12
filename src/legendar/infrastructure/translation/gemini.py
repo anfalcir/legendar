@@ -35,8 +35,8 @@ DEFAULT_BATCH_SIZE = 32
 DEFAULT_TIMEOUT_SECONDS = 120
 DEFAULT_MAX_RETRIES = 3
 SUPPORTED_LANGUAGES = frozenset({Language.PORTUGUESE, Language.ENGLISH})
-# Gemini 3.8 Flash currently does not expose Google Search grounding.
-GROUNDING_SUPPORTED_MODELS = frozenset({"gemini-3.5-flash-lite"})
+# Gemini 3.8 Flash and 3.5 Flash-Lite expose Google Search grounding.
+GROUNDING_SUPPORTED_MODELS = frozenset({"gemini-3.8-flash", "gemini-3.5-flash-lite"})
 SYSTEM_INSTRUCTION = """Você é um tradutor profissional de legendas.
 Traduza para o idioma de destino solicitado, preservando integralmente o
 significado, a intenção, a negação, o sujeito, o tempo verbal, o tom e o
@@ -164,7 +164,7 @@ class GeminiTranslator:
         if grounding and normalized_model not in GROUNDING_SUPPORTED_MODELS:
             raise ValueError(
                 "Google Search grounding não está disponível para este modelo; "
-                "use gemini-3.5-flash-lite ou desative LEGENDAR_GEMINI_GROUNDING."
+                "use gemini-3.8-flash ou gemini-3.5-flash-lite, ou desative LEGENDAR_GEMINI_GROUNDING."
             )
         self.api_key = (api_key or "").strip() or None
         self.model = normalized_model
@@ -337,12 +337,13 @@ class GeminiTranslator:
             "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
-                "temperature": 1.0 if self.grounding else 0.2,
                 "maxOutputTokens": 8192,
                 "responseMimeType": "application/json",
                 "responseJsonSchema": _response_schema(),
             },
         }
+        if self.model.startswith("gemini-3"):
+            payload["generationConfig"]["thinkingConfig"] = {"thinkingLevel": "LOW"}
         if self.grounding:
             payload["tools"] = [{"googleSearch": {}}]
         return payload
