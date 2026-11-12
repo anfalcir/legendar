@@ -168,6 +168,7 @@ class LlamaCppRuntimeManager:
         self._runtime_lock: _InterProcessLock | None = None
         self._process: Any | None = None
         self._port: int | None = None
+        self._validated_model_signature: tuple[int, int, int] | None = None
 
     @staticmethod
     def discover_executable(models_dir: Path) -> Path | None:
@@ -250,10 +251,11 @@ class LlamaCppRuntimeManager:
                     if progress is not None:
                         progress.report(1.0, "Modelo TranslateGemma já está íntegro")
                     return self.model_path
-                raise ModelError(
-                    "Já existe um arquivo TranslateGemma com hash inválido. "
-                    "Ele não será sobrescrito automaticamente."
+                quarantine = self.model_path.with_name(
+                    f"{self.model_path.name}.invalid.{time.time_ns()}"
                 )
+                os.replace(self.model_path, quarantine)
+                self._validated_model_signature = None
 
             partial_path = self.model_path.with_suffix(self.model_path.suffix + ".part")
             offset = partial_path.stat().st_size if partial_path.is_file() else 0
@@ -345,9 +347,41 @@ class LlamaCppRuntimeManager:
             os.replace(partial_path, self.model_path)
             if os.name != "nt":
                 os.chmod(self.model_path, 0o600)
+            self._remember_validated_model()
             if progress is not None:
                 progress.report(1.0, "Modelo TranslateGemma baixado e validado")
             return self.model_path
+
+    def _remember_validated_model(self) -> None:
+        stat = self.model_path.stat()
+        self._validated_model_signature = (
+            stat.st_size,
+            stat.st_mtime_ns,
+            getattr(stat, "st_ino", 0),
+        )
+
+    def _validate_model_integrity(
+        self, token: CancellationToken | None
+    ) -> None:
+        """Valida o GGUF antes do spawn e evita re-hash durante a mesma sessão."""
+        try:
+            stat = self.model_path.stat()
+        except OSError as exc:
+            raise ModelError("Não foi possível acessar os pesos TranslateGemma.") from exc
+        signature = (
+            stat.st_size,
+            stat.st_mtime_ns,
+            getattr(stat, "st_ino", 0),
+        )
+        if signature == self._validated_model_signature:
+            return
+        if stat.st_size <= 0 or self._sha256_file(self.model_path, token) != MODEL_SHA256:
+            self._validated_model_signature = None
+            raise ModelError(
+                "O arquivo local TranslateGemma não corresponde ao SHA-256 "
+                "do modelo aprovado. Faça novamente o download autorizado."
+            )
+        self._validated_model_signature = signature
 
     @staticmethod
     def _response_status(response: Any) -> int:
@@ -441,6 +475,8 @@ class LlamaCppRuntimeManager:
                         progress.report(1.0, "Servidor TranslateGemma já está pronto")
                     return f"http://{self.host}:{self._port}"
                 self._stop_process_locked()
+
+            self._validate_model_integrity(token)
 
             port = self._available_port()
             executable_name = inspection.executable.name.casefold()
