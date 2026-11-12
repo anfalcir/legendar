@@ -578,9 +578,7 @@ class GeminiTranslator:
             self._record("response_failures", 1)
             self._record(f"response_failure_{exc.category}", 1)
             if (
-                exc.split
-                and len(batch) > 1
-                and split_depth < MAX_SPLIT_DEPTH
+                exc.split and len(batch) > 1 and split_depth < MAX_SPLIT_DEPTH
             ):
                 self._record("split_batches", 1)
                 midpoint = len(batch) // 2
