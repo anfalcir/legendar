@@ -106,6 +106,9 @@ def test_benchmark_uses_identical_units_and_emits_sanitized_metrics(
 
     assert created == ["nllb", "gemini"]
     assert [item["units"] for item in result["results"]] == [2, 2]
+    assert result["comparison"]["gemini_speedup_vs_nllb"] > 0
+    assert result["comparison"]["gemini_time_reduction_percent"] is not None
+    assert result["comparison"]["wer_delta_vs_nllb"] is None
     assert all(
         item["wer"] is None and item["cer"] is None for item in result["results"]
     )
