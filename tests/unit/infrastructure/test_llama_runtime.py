@@ -337,6 +337,7 @@ def test_model_download_reuses_existing_huggingface_token(tmp_path, monkeypatch)
 
     manager, _ = _manager(
         tmp_path,
+        model_path=tmp_path / "models" / "translategemma" / "model.gguf",
         opener=opener,
         token_provider=lambda: "local-test-token",
     )
@@ -358,6 +359,7 @@ def test_model_download_explains_huggingface_access_denial(tmp_path) -> None:
 
     manager, _ = _manager(
         tmp_path,
+        model_path=tmp_path / "models" / "translategemma" / "model.gguf",
         opener=opener,
         token_provider=lambda: None,
     )
