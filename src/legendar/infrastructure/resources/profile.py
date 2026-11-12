@@ -8,6 +8,7 @@ com pouca RAM.
 
 from __future__ import annotations
 
+import contextlib
 import os
 from dataclasses import dataclass
 from enum import Enum
@@ -111,12 +112,8 @@ def configure_torch_threads(policy: ResourcePolicy) -> ResourcePolicy:
     except ImportError:
         return policy
 
-    try:
+    with contextlib.suppress(RuntimeError):
         torch.set_num_threads(policy.cpu_threads)
-    except RuntimeError:
-        pass
-    try:
+    with contextlib.suppress(RuntimeError):
         torch.set_num_interop_threads(policy.cpu_interop_threads)
-    except RuntimeError:
-        pass
     return policy
