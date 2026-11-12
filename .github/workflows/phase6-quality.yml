@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - "src/**"
+      - "scripts/**"
       - "tests/**"
       - "pyproject.toml"
       - "uv.lock"
