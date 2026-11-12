@@ -25,6 +25,8 @@
 
 > Este documento separa comportamento observado no código, resultados confirmados por CI e medições ainda pendentes. Um teste verde de software não equivale a homologação de qualidade audiovisual.
 
+A Fase 8.1.6 também passou a exigir operação autônoma e idempotente do TranslateGemma: diagnóstico leve ao abrir, instalação assistida sob demanda, download do modelo após consentimento, inicialização e health check automáticos antes da tradução, reutilização sem duplicação e encerramento seguro apenas do processo gerenciado. Essa é uma especificação aprovada e ainda não uma funcionalidade já implementada; a homologação do runtime real continua pendente.
+
 ## 1. Resumo executivo
 
 O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliza o áudio, transcreve com Whisper, alinha palavras com WhisperX, forma legendas, traduz localmente com NLLB-200 quando solicitado, valida o trilho e publica SRT por troca atômica.
