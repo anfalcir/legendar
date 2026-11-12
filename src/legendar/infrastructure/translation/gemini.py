@@ -477,11 +477,7 @@ class GeminiTranslator:
         batch: Sequence[TranslationUnit],
     ) -> tuple[int, int]:
         source_bytes = sum(len(unit.text.encode("utf-8")) for unit in batch)
-        estimated = (
-            (source_bytes * 3 + 3) // 4
-            + 32 * len(batch)
-            + 256
-        )
+        estimated = (source_bytes * 3 + 3) // 4 + 32 * len(batch) + 256
         reserve = max(512, estimated)
         return estimated, reserve
 
