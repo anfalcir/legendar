@@ -1,6 +1,6 @@
-# Fase 8.1 — Auditoria de regressão, confiabilidade de tradução, legibilidade PT-BR e desempenho
+# Fase 8.1 — Auditoria de regressão, confiabilidade de tradução, legibilidade PT BR e desempenho
 
-- **Projeto:** Legendar — `anfalcir/legendar`
+  **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
 - **Base auditada:** `main`, commit `bd2a917b8f75045545c97848b10252a8253aa1ed`
 - **Status:** 8.1.0 (congelamento técnico), 8.1.1 (confiabilidade/batching Gemini) e 8.1.2 (topologia CPU/lifecycle) estão integrados à `main`. A CI completa do commit de 8.1.2 passou; permanece pendente a matriz real de desempenho 2/1, 3/1, 4/1, 4/2 e 4/4, três execuções quentes por configuração. A referência humana PT-BR e o snapshot real de ASR/alinhamento seguem pendentes e bloqueiam aceite comparativo/semântico.
