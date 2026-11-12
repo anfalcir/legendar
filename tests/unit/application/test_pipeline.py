@@ -607,6 +607,32 @@ def test_low_memory_releases_each_model_after_its_stage_and_reports_state(
     )
 
 
+def test_low_memory_releases_transcriber_after_cancellation(
+    job_context, monkeypatch
+) -> None:
+    monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "low-memory")
+
+    class CancellingTranscriber(FakeTranscriber):
+        def transcribe(self, audio, *, language=None, progress=None, token=None):
+            token.cancel("cancelamento no estágio de transcrição")
+            token.raise_if_cancelled()
+
+    transcriber = ReleasableAdapter(CancellingTranscriber())
+    reporter = PerformanceReporterFake()
+    pipeline, _ = _releasable_pipeline(
+        reporter=reporter,
+        transcriber=transcriber,
+    )
+
+    with pytest.raises(JobCancelledError, match="cancelamento no estágio"):
+        pipeline.execute(_request(), job_context)
+
+    assert transcriber.release_calls == 1
+    assert transcriber.is_loaded is False
+    assert reporter.reports[0]["status"] == "cancelled"
+    assert reporter.reports[0]["metadata"]["transcription_loaded_after_stage"] is False
+
+
 def test_balanced_profile_retains_models_after_job(job_context, monkeypatch) -> None:
     monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "balanced")
     transcriber = ReleasableAdapter(FakeTranscriber())
