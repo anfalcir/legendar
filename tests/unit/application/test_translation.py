@@ -69,7 +69,8 @@ def test_unit_requires_valid_index_and_text() -> None:
 def test_apply_translation_keeps_ranges_and_switches_language() -> None:
     track = _track("bom dia", "até logo")
     result = TranslationResult(
-        language=Language.ENGLISH, texts=("good morning", "see you soon")
+        language=Language.ENGLISH, texts=("good morning", "see you soon"),
+        unit_indexes=(1, 2)
     )
 
     application = apply_translation(track, result)
@@ -90,7 +91,11 @@ def test_apply_translation_keeps_ranges_and_switches_language() -> None:
 
 def test_apply_translation_normalizes_whitespace_of_model_output() -> None:
     track = _track("bom dia")
-    result = TranslationResult(language=Language.ENGLISH, texts=("  good \n morning ",))
+    result = TranslationResult(
+        language=Language.ENGLISH,
+        texts=("  good \n morning ",),
+        unit_indexes=(1,),
+    )
 
     application = apply_translation(track, result)
 
@@ -99,7 +104,7 @@ def test_apply_translation_normalizes_whitespace_of_model_output() -> None:
 
 def test_apply_translation_rejects_divergent_count() -> None:
     track = _track("um", "dois")
-    result = TranslationResult(language=Language.ENGLISH, texts=("one",))
+    result = TranslationResult(language=Language.ENGLISH, texts=("one",), unit_indexes=(1,))
 
     with pytest.raises(TranslationError, match="1:1"):
         apply_translation(track, result)
@@ -119,7 +124,7 @@ def test_apply_translation_rejects_mismatched_unit_ids() -> None:
 
 def test_apply_translation_rejects_empty_text() -> None:
     track = _track("um")
-    result = TranslationResult(language=Language.ENGLISH, texts=("   ",))
+    result = TranslationResult(language=Language.ENGLISH, texts=("   ",), unit_indexes=(1,))
 
     with pytest.raises(TranslationError, match="vazia"):
         apply_translation(track, result)
@@ -127,7 +132,7 @@ def test_apply_translation_rejects_empty_text() -> None:
 
 def test_apply_translation_rejects_a_fully_unchanged_track() -> None:
     track = _track("bom dia", "até logo")
-    result = TranslationResult(language=Language.ENGLISH, texts=("bom dia", "até logo"))
+    result = TranslationResult(language=Language.ENGLISH, texts=("bom dia", "até logo"), unit_indexes=(1, 2))
 
     with pytest.raises(TranslationError, match="não alterou nenhum texto"):
         apply_translation(track, result)
@@ -138,6 +143,7 @@ def test_partially_unchanged_cues_become_a_warning() -> None:
     result = TranslationResult(
         language=Language.ENGLISH,
         texts=("good morning", "OpenAI", "see you soon"),
+        unit_indexes=(1, 2, 3),
     )
 
     application = apply_translation(track, result)
@@ -158,7 +164,6 @@ def test_apply_translation_rejects_invalid_result_objects() -> None:
 
 def test_apply_translation_rejects_empty_track() -> None:
     empty = SubtitleTrack(language=Language.PORTUGUESE, cues=())
-    result = TranslationResult(language=Language.ENGLISH, texts=())
-
+    result = TranslationResult(language=Language.ENGLISH, texts=(), unit_indexes=())
     with pytest.raises(InvalidInputError):
         apply_translation(empty, result)
