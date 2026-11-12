@@ -358,3 +358,32 @@ def test_invalid_model_hash_discards_partial_download(tmp_path, monkeypatch) -> 
 
     assert not model_path.exists()
     assert not model_path.with_suffix(".gguf.part").exists()
+
+
+def test_interprocess_lock_prevents_duplicate_managed_servers(tmp_path) -> None:
+    first, first_processes = _manager(tmp_path)
+    second, second_processes = _manager(tmp_path)
+
+    first.ensure_running()
+
+    with pytest.raises(ModelError, match="Outra instância"):
+        second.ensure_running()
+
+    first.shutdown()
+    second.ensure_running()
+
+    assert len(first_processes) == 1
+    assert len(second_processes) == 1
+    second.shutdown()
+
+
+def test_dead_owned_process_releases_lock_before_restart(tmp_path) -> None:
+    manager, processes = _manager(tmp_path)
+    manager.ensure_running()
+    processes[0].returncode = 1
+
+    manager.ensure_running()
+
+    assert len(processes) == 2
+    assert manager.is_running
+    manager.shutdown()
