@@ -68,7 +68,7 @@ LOGGER = logging.getLogger(__name__)
 
 # O bootstrap cria um SerialPipeline por job, mas reutiliza os mesmos
 # adaptadores. Este lock torna explícita a serialização exigida pelo lifecycle.
-_PIPELINE_EXECUTION_LOCK = threading.RLock()
+_PIPELINE_EXECUTION_LOCK = threading.Lock()
 
 
 _STAGE_RANGES: dict[JobState, tuple[float, float]] = {
