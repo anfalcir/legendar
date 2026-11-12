@@ -608,10 +608,7 @@ class GeminiTranslator:
                 translated_by_id.update(right)
                 return {**left, **right}
 
-            if (
-                exc.retry_same
-                and content_attempt < MAX_CONTENT_RETRIES
-            ):
+            if exc.retry_same and content_attempt < MAX_CONTENT_RETRIES:
                 self._record("content_retries", 1)
                 self._record("retries", 1)
                 self._sleep_before_retry(min(2**content_attempt, 4), token=token)
