@@ -47,7 +47,6 @@ def test_performance_profile_retains_models(monkeypatch) -> None:
     assert policy.retain_models is True
 
 
-
 def test_physical_cpu_count_handles_unavailable_count(monkeypatch) -> None:
     monkeypatch.setattr(resource_profile.os, "cpu_count", lambda: None)
 
@@ -83,9 +82,7 @@ def test_non_posix_memory_detection_is_unavailable(monkeypatch) -> None:
 
 def test_auto_profile_uses_balanced_for_sufficient_memory(monkeypatch) -> None:
     monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "auto")
-    monkeypatch.setattr(
-        resource_profile, "_total_memory_bytes", lambda: 16 * 1024**3
-    )
+    monkeypatch.setattr(resource_profile, "_total_memory_bytes", lambda: 16 * 1024**3)
 
     assert resource_profile.detect_resource_profile() is ResourceProfile.BALANCED
 
