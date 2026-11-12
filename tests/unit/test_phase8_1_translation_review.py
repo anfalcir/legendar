@@ -140,6 +140,7 @@ def test_cli_creates_review_csv_from_srt_files(tmp_path: Path, capsys) -> None:
     assert output.exists()
     assert "confira cada linha fonte com o áudio" in capsys.readouterr().out
 
+
 def test_direct_script_execution_resolves_local_quality_parser(tmp_path: Path) -> None:
     source = tmp_path / "source.srt"
     translated = tmp_path / "translated.srt"
