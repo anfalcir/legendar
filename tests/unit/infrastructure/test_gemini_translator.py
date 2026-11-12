@@ -177,7 +177,7 @@ def test_pt_br_instruction_and_entity_preservation_are_sent() -> None:
     assert "português brasileiro (PT-BR)" in prompt
 
 
-def test_grounding_is_opt_in() -> None:
+def test_grounding_is_added_only_when_enabled_on_adapter() -> None:
     plain_calls: list = []
     grounded_calls: list = []
     plain = _translator(calls=plain_calls)
