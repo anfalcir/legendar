@@ -32,6 +32,8 @@ from legendar.domain.value_objects.language import Language
 
 DEFAULT_MODEL = "gemini-3.8-flash"
 DEFAULT_BATCH_SIZE = 32
+DEFAULT_MAX_INPUT_TOKENS = 200_000
+DEFAULT_MAX_OUTPUT_TOKENS = 8192
 DEFAULT_TIMEOUT_SECONDS = 120
 DEFAULT_MAX_RETRIES = 3
 SUPPORTED_LANGUAGES = frozenset({Language.PORTUGUESE, Language.ENGLISH})
@@ -182,6 +184,8 @@ class GeminiTranslator:
         api_key: str | None = None,
         model: str = DEFAULT_MODEL,
         batch_size: int = DEFAULT_BATCH_SIZE,
+        max_input_tokens: int = DEFAULT_MAX_INPUT_TOKENS,
+        max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
         max_retries: int = DEFAULT_MAX_RETRIES,
         grounding: bool = False,
@@ -193,6 +197,14 @@ class GeminiTranslator:
             raise ValueError("Modelo Gemini inválido.")
         if batch_size < 1 or batch_size > 100:
             raise ValueError("O lote Gemini deve conter entre 1 e 100 cues.")
+        if max_input_tokens < 4096 or max_input_tokens > 900_000:
+            raise ValueError(
+                "O orçamento de entrada Gemini deve ficar entre 4096 e 900000 tokens."
+            )
+        if max_output_tokens < 512 or max_output_tokens > 8192:
+            raise ValueError(
+                "O teto de saída Gemini deve ficar entre 512 e 8192 tokens."
+            )
         if timeout_seconds <= 0:
             raise ValueError("O timeout Gemini deve ser positivo.")
         if max_retries < 0 or max_retries > 8:
@@ -205,6 +217,8 @@ class GeminiTranslator:
         self.api_key = (api_key or "").strip() or None
         self.model = normalized_model
         self.batch_size = batch_size
+        self.max_input_tokens = max_input_tokens
+        self.max_output_tokens = max_output_tokens
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.grounding = grounding
@@ -225,6 +239,9 @@ class GeminiTranslator:
             "item_retries": 0,
             "recovered_units": 0,
             "response_failures": 0,
+            "estimated_input_tokens": 0,
+            "estimated_output_tokens": 0,
+            "token_budget_splits": 0,
         }
 
     @classmethod
@@ -238,6 +255,16 @@ class GeminiTranslator:
             timeout = float(
                 os.environ.get("LEGENDAR_GEMINI_TIMEOUT", DEFAULT_TIMEOUT_SECONDS)
             )
+            max_input_tokens = int(
+                os.environ.get(
+                    "LEGENDAR_GEMINI_MAX_INPUT_TOKENS", DEFAULT_MAX_INPUT_TOKENS
+                )
+            )
+            max_output_tokens = int(
+                os.environ.get(
+                    "LEGENDAR_GEMINI_MAX_OUTPUT_TOKENS", DEFAULT_MAX_OUTPUT_TOKENS
+                )
+            )
             retries = int(
                 os.environ.get("LEGENDAR_GEMINI_MAX_RETRIES", DEFAULT_MAX_RETRIES)
             )
@@ -247,6 +274,8 @@ class GeminiTranslator:
             api_key=os.environ.get("GEMINI_API_KEY"),
             model=os.environ.get("LEGENDAR_GEMINI_MODEL", DEFAULT_MODEL),
             batch_size=batch_size,
+            max_input_tokens=max_input_tokens,
+            max_output_tokens=max_output_tokens,
             timeout_seconds=timeout,
             max_retries=retries,
             grounding=grounding,
@@ -266,6 +295,8 @@ class GeminiTranslator:
                 "model": self.model,
                 "thinking_level": "LOW" if self.model.startswith("gemini-3") else None,
                 "batch_size": self.batch_size,
+                "max_input_tokens": self.max_input_tokens,
+                "max_output_tokens": self.max_output_tokens,
                 "timeout_seconds": self.timeout_seconds,
                 "max_retries": self.max_retries,
                 "grounding": self.grounding,
@@ -312,9 +343,17 @@ class GeminiTranslator:
         translated_by_id: dict[int, str] = {}
         positions = {unit.index: index for index, unit in enumerate(units)}
         total = len(units)
-        for start in range(0, total, self.batch_size):
+        start = 0
+        while start < total:
             self._check_cancelled(token)
-            batch = units[start : start + self.batch_size]
+            batch = self._select_batch(
+                units,
+                start=start,
+                positions=positions,
+                translated_by_id=translated_by_id,
+                source_language=source_language,
+                target_language=target_language,
+            )
             self._translate_batch(
                 batch,
                 all_units=units,
@@ -324,7 +363,8 @@ class GeminiTranslator:
                 target_language=target_language,
                 token=token,
             )
-            done = start + len(batch)
+            start += len(batch)
+            done = start
             self._record("translated_units", len(batch))
             progress.report(done / total, f"Legenda {done}/{total} traduzida")
 
@@ -343,6 +383,103 @@ class GeminiTranslator:
             raise TranslationError("Gemini deixou texto vazio após a recuperação.")
         return TranslationResult(language=target_language, texts=outputs)
 
+    def _select_batch(
+        self,
+        units: Sequence[TranslationUnit],
+        *,
+        start: int,
+        positions: Mapping[int, int],
+        translated_by_id: Mapping[int, str],
+        source_language: Language,
+        target_language: Language,
+    ) -> tuple[TranslationUnit, ...]:
+        """Escolhe o maior lote que cabe nos limites de itens e orçamento."""
+        selected: tuple[TranslationUnit, ...] = ()
+        stop = min(start + self.batch_size, len(units))
+        for end in range(start + 1, stop + 1):
+            candidate = units[start:end]
+            payload = self._prepare_payload(
+                candidate,
+                all_units=units,
+                positions=positions,
+                translated_by_id=translated_by_id,
+                source_language=source_language,
+                target_language=target_language,
+            )
+            input_estimate, output_reserve = self._estimate_payload_budget(
+                payload, candidate
+            )
+            fits = (
+                input_estimate <= self.max_input_tokens
+                and output_reserve <= self.max_output_tokens
+            )
+            if not fits:
+                self._record("token_budget_splits", 1)
+                if not selected:
+                    raise TranslationError(
+                        "A cue "
+                        f"{candidate[0].index} excede o orçamento de entrada/saída "
+                        "configurado para o Gemini."
+                    )
+                break
+            selected = tuple(candidate)
+        return selected
+
+    def _prepare_payload(
+        self,
+        batch: Sequence[TranslationUnit],
+        *,
+        all_units: Sequence[TranslationUnit],
+        positions: Mapping[int, int],
+        translated_by_id: Mapping[int, str],
+        source_language: Language,
+        target_language: Language,
+    ) -> dict[str, Any]:
+        before, after, translated_context = self._context_for_batch(
+            batch, all_units, positions, translated_by_id
+        )
+        _, output_reserve = self._estimate_output_reserve(batch)
+        return self._payload(
+            batch,
+            before=before,
+            after=after,
+            translated_context=translated_context,
+            source_language=source_language,
+            target_language=target_language,
+            max_output_tokens=output_reserve,
+        )
+
+    def _estimate_payload_budget(
+        self,
+        payload: Mapping[str, Any],
+        batch: Sequence[TranslationUnit],
+    ) -> tuple[int, int]:
+        """Estima entrada pelo tamanho UTF-8 e reserva saída com margem.
+
+        O tamanho em bytes UTF-8 é usado como limite superior conservador para
+        a quantidade de tokens de entrada. Não adiciona uma chamada remota de
+        contagem de tokens; o uso real da API continua registrado em usageMetadata.
+        """
+        serialized = json.dumps(
+            payload, ensure_ascii=False, separators=(",", ":")
+        ).encode("utf-8")
+        input_estimate = len(serialized)
+        output_reserve = self._estimate_output_reserve(batch)[1]
+        return input_estimate, output_reserve
+
+    def _estimate_output_reserve(
+        self,
+        batch: Sequence[TranslationUnit],
+    ) -> tuple[int, int]:
+        source_bytes = sum(len(unit.text.encode("utf-8")) for unit in batch)
+        estimated = (
+            (source_bytes * 3 + 3) // 4
+            + 32 * len(batch)
+            + 256
+        )
+        reserve = max(512, min(self.max_output_tokens, estimated))
+        return estimated, reserve
+
     def _payload(
         self,
         batch: Sequence[TranslationUnit],
@@ -352,6 +489,7 @@ class GeminiTranslator:
         translated_context: Sequence[tuple[str, str]],
         source_language: Language,
         target_language: Language,
+        max_output_tokens: int | None = None,
     ) -> dict[str, Any]:
         source_label = source_language.label_pt
         target_label = (
@@ -387,7 +525,7 @@ class GeminiTranslator:
             "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
-                "maxOutputTokens": 8192,
+                "maxOutputTokens": max_output_tokens or self.max_output_tokens,
                 "responseMimeType": "application/json",
                 "responseJsonSchema": _response_schema(),
             },
@@ -424,6 +562,11 @@ class GeminiTranslator:
             source_language=source_language,
             target_language=target_language,
         )
+        input_estimate, output_reserve = self._estimate_payload_budget(
+            payload, batch
+        )
+        self._record("estimated_input_tokens", input_estimate)
+        self._record("estimated_output_tokens", output_reserve)
         response = self._request_with_retry(payload, token=token)
 
         try:
