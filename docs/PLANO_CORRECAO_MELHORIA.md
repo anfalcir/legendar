@@ -359,16 +359,22 @@ Baseline:
 - PyTorch;
 - reconhecimento sem timestamps de palavra, pois o forced alignment é uma etapa posterior.
 
-Candidatos e experimentos:
+Implementação integrada pela Fase 5:
 
 **A. faster-whisper / CTranslate2**
 
-- Criar adaptador alternativo atrás da mesma porta `Transcriber`.
-- Comparar inicialmente o mesmo tamanho de modelo, idioma e estratégia de decodificação.
-- Medir CPU `int8`, GPU `float16` e, quando suportado, `int8_float16`.
-- Comparar beam search, fallback de temperatura, condicionamento de texto anterior e demais parâmetros equivalentes.
-- Confirmar consumo integral do generator de segmentos antes de finalizar a transcrição.
-- Validar que os intervalos de segmentos são locais ao WAV e compatíveis com o contrato de `alignment_window`.
+- `FasterWhisperTranscriber` implementado atrás da mesma porta `Transcriber`.
+- Seleção explícita por `LEGENDAR_ASR_BACKEND`; OpenAI Whisper permanece padrão.
+- CPU INT8 e CUDA FP16 como escolhas automáticas iniciais por dispositivo, com compute type configurável.
+- Threads limitadas/configuráveis e beam compartilhado entre os adaptadores para comparação justa.
+- Consumo integral do generator, cancelamento cooperativo e preservação de `alignment_window` local ao WAV.
+- Métricas separadas de carga, leitura de áudio e inferência.
+
+Benchmark/homologação ainda necessários para decisão operacional:
+- Comparar mesmo tamanho de modelo, idioma, corpus e estratégia de decodificação.
+- Medir CPU `int8`, GPU `float16` e, quando suportado, `int8_float16` no hardware real.
+- Revisar WER/CER, nomes, números, negações e trechos difíceis com referência humana.
+- Confirmar cobertura e qualidade do WhisperX após cada backend.
 
 A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, timestamps de palavra e VAD opcional. A adoção não é automática: os parâmetros de decoding e o comportamento do VAD precisam ser comparados com o Whisper atual.
 
