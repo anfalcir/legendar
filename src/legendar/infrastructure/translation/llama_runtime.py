@@ -377,7 +377,7 @@ class LlamaCppRuntimeManager:
         )
         if signature == self._validated_model_signature:
             return
-        if stat.st_size <= 0 or self._sha256_file(self.model_path, token) != MODEL_SHA256:
+        if stat.st_size <= 0 or self._sha256_file(self.model_path, token) != self.model_sha256:
             self._validated_model_signature = None
             raise ModelError(
                 "O arquivo local TranslateGemma não corresponde ao SHA-256 "
