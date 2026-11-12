@@ -2,8 +2,8 @@
 
 - **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
-- **Base auditada:** `main`, após integração da 8.1.4, commit `c30380adafb865eff7ae3d56e960d4f3f90350a4`
-- **Status:** 8.1.0 a 8.1.4 estão integradas à `main`. A PR #33 (8.1.4) foi integrada por squash no commit `c30380adafb865eff7ae3d56e960d4f3f90350a4`, após os sete workflows de CI passarem. A primeira implementação da 8.1.3 está integrada, mas seu gate quantitativo no corpus congelado permanece pendente. A referência humana PT-BR e o snapshot real de ASR/alinhamento também continuam pendentes; portanto, a aprovação semântica final ainda não foi concedida.
+- **Base auditada:** `main` após PR #34 (8.1.5), commit `9350438674d3e83537392e73c7e95e4dd27dad36`
+- **Status:** 8.1.0 a 8.1.5 estão integradas à `main`. A PR #34 (8.1.5) foi integrada por squash no commit `9350438674d3e83537392e73c7e95e4dd27dad36`, após os sete workflows passarem. A primeira implementação da 8.1.3 está integrada, mas seu gate quantitativo no corpus congelado permanece pendente. A referência humana PT-BR e o snapshot real de ASR/alinhamento também continuam pendentes; portanto, a aprovação semântica final ainda não foi concedida.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
 - **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
 
@@ -20,7 +20,7 @@ A Fase 8.1 transforma os resultados reais de 12/11/2026 em um plano cirúrgico d
 5. divergência entre formatação SRT, validador de produção e avaliador da Fase 8;
 6. oportunidades adicionais de desempenho, somente depois de estabilizar qualidade e recursos.
 
-**Esta fase é de correção dirigida por evidência. Não é autorização para reescrever a arquitetura, trocar o backend padrão, substituir modelos em lote ou alterar simultaneamente vários parâmetros.**
+**Esta fase é de correção dirigida por evidência. A substituição do motor local por TranslateGemma foi aprovada explicitamente e está isolada na etapa 8.1.6; não autoriza mudanças simultâneas não relacionadas nem substituição da rota remota Gemini.**
 
 A execução deve preservar a arquitetura e os contratos existentes sempre que possível. Mudanças em contratos de tradução ou no vínculo entre texto e timestamps precisam ser justificadas com testes de regressão e uma explicação explícita da rastreabilidade temporal.
 
@@ -295,7 +295,7 @@ Hoje a aplicação cria uma unidade para cada cue e exige uma saída 1:1. A trad
 
 **Restrição temporal essencial:** uma tradução de frase inteira pode ficar mais longa que o texto original. Não repartir a tradução em timestamps por proporção de palavras. Primeiro formar blocos de origem já temporizados; cada saída traduzida deve manter um vínculo claro com o bloco de origem. Quando o texto final não couber no limite visual, solicitar uma versão concisa e fiel dentro do mesmo bloco ou marcar revisão/bloqueio. Só subdividir a saída em duas cues quando existirem pontos de corte derivados de âncoras reais de origem e o mapeamento tiver sido validado. Na ausência dessa evidência, não inventar tempos.
 
-**Decisão de escopo:** esta fase não autoriza benchmark comparativo amplo Gemini × NLLB nem mudança automática do backend padrão. Cada caminho deve passar pelos critérios de confiabilidade e qualidade aplicáveis; qualquer troca de padrão ou comparação formal entre motores exige decisão explícita do responsável pelo produto, conforme a decisão vigente da Fase 6.
+**Decisão de escopo:** não executar benchmark amplo Gemini × NLLB. A substituição do motor local por TranslateGemma está aprovada e tem gates próprios; Gemini continua remoto e selecionável. A validação comparativa local deve usar o corpus-ouro e a evidência histórica, sem matriz extensa.
 
 ### 4.4. Formatação física e gate de publicação
 
