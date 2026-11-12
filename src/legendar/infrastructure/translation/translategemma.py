@@ -113,6 +113,7 @@ class TranslateGemmaTranslator:
 
         source_code = _LANGUAGE_CODES[source_language]
         target_code = _LANGUAGE_CODES[target_language]
+        self.runtime.ensure_model(token=token, progress=progress)
         base_url = self.runtime.ensure_running(token=token, progress=progress)
         translated: list[str] = []
         indexes: list[int] = []
