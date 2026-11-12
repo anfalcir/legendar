@@ -37,6 +37,19 @@ _LANGUAGE_CODES = {
 Requester = Callable[[str, dict[str, object], float], dict[str, object]]
 
 
+class _ProgressSlice:
+    """Mapeia uma subetapa para faixa monotônica do progresso total."""
+
+    def __init__(self, sink: ProgressSink, start: float, end: float) -> None:
+        self._sink = sink
+        self._start = start
+        self._span = end - start
+
+    def report(self, fraction: float, message: str = "") -> None:
+        bounded = min(1.0, max(0.0, fraction))
+        self._sink.report(self._start + self._span * bounded, message)
+
+
 def _chat_completion(
     base_url: str,
     payload: dict[str, object],
@@ -113,8 +126,14 @@ class TranslateGemmaTranslator:
 
         source_code = _LANGUAGE_CODES[source_language]
         target_code = _LANGUAGE_CODES[target_language]
-        self.runtime.ensure_model(token=token, progress=progress)
-        base_url = self.runtime.ensure_running(token=token, progress=progress)
+        self.runtime.ensure_model(
+            token=token,
+            progress=_ProgressSlice(progress, 0.0, 0.75),
+        )
+        base_url = self.runtime.ensure_running(
+            token=token,
+            progress=_ProgressSlice(progress, 0.75, 0.9),
+        )
         translated: list[str] = []
         indexes: list[int] = []
         total = len(units)
@@ -153,7 +172,7 @@ class TranslateGemmaTranslator:
             translated.append(" ".join(text.split()))
             indexes.append(unit.index)
             progress.report(
-                position / total,
+                0.9 + 0.1 * position / total,
                 f"Traduzindo com TranslateGemma · unidade {position}/{total}",
             )
 
