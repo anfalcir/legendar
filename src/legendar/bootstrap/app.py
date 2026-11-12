@@ -412,8 +412,8 @@ def build_ui_dependencies(
         ),
         runtime_shutdown=translategemma_runtime.shutdown,
         translation_authorization_required=lambda: (
-            (inspection := translategemma_runtime.inspect()).executable_available
-            and not inspection.model_available
+            translategemma_runtime.inspect().executable_available
+            and translategemma_runtime.needs_download_authorization
             and not translategemma_runtime.download_authorized
         ),
         translation_authorize=translategemma_runtime.authorize_model_download,
