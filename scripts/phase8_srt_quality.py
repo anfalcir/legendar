@@ -29,7 +29,7 @@ CONNECTORS = {
     "em", "na", "nas", "no", "nos", "ou", "para", "pela", "pelas", "pelo",
     "pelos", "por", "que", "se", "sem", "sob", "sobre", "the", "an", "and",
     "at", "by", "for", "from", "in", "into", "of", "on", "or", "to", "with",
-)
+}
 
 
 @dataclass(frozen=True, slots=True)
