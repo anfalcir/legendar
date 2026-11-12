@@ -226,6 +226,8 @@ def test_environment_configuration_is_read_without_logging_secret(
     monkeypatch.setenv("GEMINI_API_KEY", "private-key")
     monkeypatch.setenv("LEGENDAR_GEMINI_MODEL", "gemini-3.5-flash-lite")
     monkeypatch.setenv("LEGENDAR_GEMINI_BATCH_SIZE", "24")
+    monkeypatch.setenv("LEGENDAR_GEMINI_MAX_INPUT_TOKENS", "64000")
+    monkeypatch.setenv("LEGENDAR_GEMINI_MAX_OUTPUT_TOKENS", "4096")
     monkeypatch.setenv("LEGENDAR_GEMINI_GROUNDING", "true")
 
     translator = GeminiTranslator.from_environment(tmp_path)
@@ -233,6 +235,8 @@ def test_environment_configuration_is_read_without_logging_secret(
     snapshot = translator.performance_snapshot()
     assert translator.model == "gemini-3.5-flash-lite"
     assert translator.batch_size == 24
+    assert translator.max_input_tokens == 64000
+    assert translator.max_output_tokens == 4096
     assert translator.grounding
     assert snapshot["configuration"]["api_key_configured"]
     assert "private-key" not in repr(snapshot)
@@ -411,6 +415,187 @@ def test_server_errors_retry_up_to_configured_limit() -> None:
     assert len(attempts) == 3
 
 
+def _request_ids(payload: dict) -> list[int]:
+    prompt = payload["contents"][0]["parts"][0]["text"]
+    source = json.loads(prompt.split("\n", 3)[-1])
+    return [item["cue_id"] for item in source["cues_a_traduzir"]]
+
+
+def test_recovers_only_the_empty_cue_from_phase_8_1_fixture() -> None:
+    fixture_path = (
+        Path(__file__).resolve().parents[2]
+        / "fixtures"
+        / "phase_8_1"
+        / "gemini_responses.json"
+    )
+    fixtures = json.loads(fixture_path.read_text(encoding="utf-8"))
+    initial = next(
+        case["response"]
+        for case in fixtures["cases"]
+        if case["id"] == "gemini_one_empty_item"
+    )
+    attempts: list[list[int]] = []
+
+    def requester(_model, payload, _api_key, _timeout):
+        ids = _request_ids(payload)
+        attempts.append(ids)
+        if len(attempts) == 1:
+            return initial
+        assert ids == [71]
+        return _response([{"cue_id": 71, "text": "Muito obrigado."}])
+
+    units = (
+        TranslationUnit(index=70, text="Thank you."),
+        TranslationUnit(index=71, text="Thank you."),
+        TranslationUnit(index=72, text="We are safe."),
+    )
+    translator = GeminiTranslator(api_key="test", requester=requester)
+    result = translator.translate(
+        units,
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=ProgressRecorder(),
+    )
+
+    assert result.texts == ("Obrigado.", "Muito obrigado.", "Estamos seguros.")
+    assert attempts == [[70, 71, 72], [71]]
+    counters = translator.performance_snapshot()["counters"]
+    assert counters["item_retries"] == 1
+    assert counters["recovered_units"] == 1
+    assert counters["translated_units"] == 3
+
+
+def test_recovers_missing_cue_without_repeating_valid_cues() -> None:
+    attempts: list[list[int]] = []
+
+    def requester(_model, payload, _api_key, _timeout):
+        ids = _request_ids(payload)
+        attempts.append(ids)
+        if ids == [1, 2, 3]:
+            return _response(
+                [
+                    {"cue_id": 1, "text": "First."},
+                    {"cue_id": 3, "text": "Third."},
+                ]
+            )
+        assert ids == [2]
+        return _response([{"cue_id": 2, "text": "Second."}])
+
+    translator = GeminiTranslator(api_key="test", requester=requester)
+    result = translator.translate(
+        _units("um", "dois", "três"),
+        source_language=Language.PORTUGUESE,
+        target_language=Language.ENGLISH,
+        progress=ProgressRecorder(),
+    )
+
+    assert result.texts == ("First.", "Second.", "Third.")
+    assert attempts == [[1, 2, 3], [2]]
+
+
+def test_truncated_batch_is_split_and_reassembled_in_original_order() -> None:
+    attempts: list[list[int]] = []
+
+    def requester(_model, payload, _api_key, _timeout):
+        ids = _request_ids(payload)
+        attempts.append(ids)
+        if len(ids) > 1:
+            return _response(
+                [{"cue_id": ids[0], "text": "partial"}],
+                finish="MAX_TOKENS",
+            )
+        return _response([{"cue_id": ids[0], "text": f"translated-{ids[0]}"}])
+
+    translator = GeminiTranslator(
+        api_key="test",
+        requester=requester,
+        batch_size=3,
+    )
+    result = translator.translate(
+        _units("um", "dois", "três"),
+        source_language=Language.PORTUGUESE,
+        target_language=Language.ENGLISH,
+        progress=ProgressRecorder(),
+    )
+
+    assert result.texts == ("translated-1", "translated-2", "translated-3")
+    assert attempts == [[1, 2, 3], [1], [2, 3], [2], [3]]
+    assert translator.performance_snapshot()["counters"]["split_batches"] == 2
+
+
+def test_missing_candidate_is_retried_with_a_bounded_content_retry() -> None:
+    attempts = []
+
+    def requester(_model, _payload, _api_key, _timeout):
+        attempts.append(1)
+        if len(attempts) == 1:
+            return {"candidates": []}
+        return _response([{"cue_id": 1, "text": "Good morning."}])
+
+    translator = GeminiTranslator(api_key="test", requester=requester)
+    result = translator.translate(
+        _units("bom dia"),
+        source_language=Language.PORTUGUESE,
+        target_language=Language.ENGLISH,
+        progress=ProgressRecorder(),
+    )
+
+    assert result.texts == ("Good morning.",)
+    assert len(attempts) == 2
+    assert translator.performance_snapshot()["counters"]["content_retries"] == 1
+
+
+def test_safety_block_is_not_retried() -> None:
+    attempts = []
+
+    def requester(*_args):
+        attempts.append(1)
+        return _response([], finish="SAFETY")
+
+    translator = GeminiTranslator(
+        api_key="test",
+        requester=requester,
+        sleeper=lambda _seconds: pytest.fail("bloqueio de segurança não deve repetir"),
+    )
+    with pytest.raises(TranslationError, match="segurança"):
+        translator.translate(
+            _units("bom dia"),
+            source_language=Language.PORTUGUESE,
+            target_language=Language.ENGLISH,
+            progress=ProgressRecorder(),
+        )
+
+    assert len(attempts) == 1
+
+
+def test_cancellation_during_rate_limit_backoff_stops_retries() -> None:
+    token = CancellationTokenImpl()
+    attempts = []
+
+    def requester(*_args):
+        attempts.append(1)
+        raise GeminiApiError(429, retry_after=5)
+
+    def cancel_during_sleep(_seconds: float) -> None:
+        token.cancel("cancelado durante backoff")
+
+    translator = GeminiTranslator(
+        api_key="test",
+        requester=requester,
+        sleeper=cancel_during_sleep,
+    )
+    with pytest.raises(JobCancelledError, match="backoff"):
+        translator.translate(
+            _units("bom dia"),
+            source_language=Language.PORTUGUESE,
+            target_language=Language.ENGLISH,
+            progress=ProgressRecorder(),
+            token=token,
+        )
+
+    assert len(attempts) == 1
+
+
 def test_cancellation_between_batches_stops_requests() -> None:
     token = CancellationTokenImpl()
     calls: list = []
@@ -447,11 +632,123 @@ def test_metrics_are_sanitized_and_include_token_counts() -> None:
     assert "test-secret" not in repr(snapshot)
 
 
+@pytest.mark.parametrize(
+    ("batch_size", "expected_requests"),
+    [(32, 29), (64, 15), (96, 10), (100, 10)],
+)
+def test_larger_gemini_batches_reduce_requests_for_927_cues(
+    batch_size: int,
+    expected_requests: int,
+) -> None:
+    calls: list = []
+    translator = _translator(calls=calls, batch_size=batch_size)
+    units = tuple(
+        TranslationUnit(index=index, text="A short subtitle.")
+        for index in range(1, 928)
+    )
+
+    result = translator.translate(
+        units,
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=ProgressRecorder(),
+    )
+
+    assert len(result.texts) == 927
+    assert len(calls) == expected_requests
+    assert all(len(_request_ids(call[1])) <= batch_size for call in calls)
+    assert translator.performance_snapshot()["counters"]["estimated_input_tokens"] > 0
+
+
+def test_output_token_reserve_splits_batches_before_the_api_call() -> None:
+    calls: list = []
+
+    def requester(_model, payload, _api_key, _timeout):
+        calls.append(payload)
+        ids = _request_ids(payload)
+        return _response(
+            [{"cue_id": cue_id, "text": f"translated-{cue_id}"} for cue_id in ids]
+        )
+
+    translator = GeminiTranslator(
+        api_key="test",
+        batch_size=3,
+        max_output_tokens=512,
+        requester=requester,
+    )
+    result = translator.translate(
+        _units("a" * 200, "b" * 200, "c" * 200),
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=ProgressRecorder(),
+    )
+
+    assert result.texts == ("translated-1", "translated-2", "translated-3")
+    assert [_request_ids(payload) for payload in calls] == [[1], [2], [3]]
+    assert all(
+        payload["generationConfig"]["maxOutputTokens"] == 512 for payload in calls
+    )
+    assert translator.performance_snapshot()["counters"]["token_budget_splits"] == 2
+
+
+def test_input_byte_budget_limits_batch_size_conservatively() -> None:
+    units = _units("A" * 3000, "B" * 3000, "C" * 3000, "D" * 3000)
+    translator = GeminiTranslator(api_key="test", batch_size=4)
+    positions = {unit.index: index for index, unit in enumerate(units)}
+    single_payload = translator._prepare_payload(
+        units[:1],
+        all_units=units,
+        positions=positions,
+        translated_by_id={},
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+    )
+    single_input_estimate, _ = translator._estimate_payload_budget(
+        single_payload, units[:1]
+    )
+    translator.max_input_tokens = max(4096, single_input_estimate)
+
+    batch = translator._select_batch(
+        units,
+        start=0,
+        positions=positions,
+        translated_by_id={},
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+    )
+
+    assert batch == units[:1]
+    assert translator.performance_snapshot()["counters"]["token_budget_splits"] == 1
+
+
+def test_single_cue_over_input_budget_fails_before_network() -> None:
+    calls: list = []
+    translator = GeminiTranslator(
+        api_key="test",
+        max_input_tokens=4096,
+        requester=lambda *args: calls.append(args) or {},
+    )
+
+    with pytest.raises(TranslationError, match="excede o orçamento"):
+        translator.translate(
+            _units("x" * 10_000),
+            source_language=Language.ENGLISH,
+            target_language=Language.PORTUGUESE,
+            progress=ProgressRecorder(),
+        )
+
+    assert calls == []
+
+
 def test_invalid_configuration_is_rejected() -> None:
     with pytest.raises(ValueError, match="Modelo Gemini"):
         GeminiTranslator(model=" ")
     with pytest.raises(ValueError, match="entre 1 e 100"):
         GeminiTranslator(batch_size=0)
+    with pytest.raises(ValueError, match="entrada Gemini"):
+        GeminiTranslator(max_input_tokens=4095)
+    with pytest.raises(ValueError, match="saída Gemini"):
+        GeminiTranslator(max_output_tokens=511)
     with pytest.raises(ValueError, match="timeout"):
         GeminiTranslator(timeout_seconds=0)
     with pytest.raises(ValueError, match="retries"):

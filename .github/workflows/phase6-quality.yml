@@ -11,6 +11,7 @@ on:
       - "src/**"
       - "scripts/**"
       - "tests/**"
+      - "temporario/EN-baseline.srt"
       - "pyproject.toml"
       - "uv.lock"
       - "docs/FASE_6_PLANO.md"
@@ -70,7 +71,7 @@ jobs:
       - name: Validate the frozen English benchmark corpus
         run: |
           uv run --locked --no-sync python scripts/phase6_build_manifest.py \
-            --source "logs/EN-Watch The Wingfeather Saga S4E2 Home at Chimney Hill on Angel.srt" \
+            --source "temporario/EN-baseline.srt" \
             --output "$RUNNER_TEMP/phase6-corpus.tsv"
           python -c "import csv; p='$RUNNER_TEMP/phase6-corpus.tsv'; rows=list(csv.DictReader(open(p, encoding='utf-8'), delimiter='\\t')); assert len(rows) == 967, len(rows); assert all(not row['reference_text'] for row in rows); assert [int(row['cue_id']) for row in rows] == list(range(1, 968)); print('Corpus validado: 967 cues; sem referência humana.')"
 

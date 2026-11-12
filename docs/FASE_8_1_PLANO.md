@@ -3,7 +3,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
 - **Base auditada:** `main`, commit `92ac98dbef5748bf008f54fb2d4db3ad9a1d14d9`
-- **Status:** plano elaborado a partir dos testes reais; **execução das correções ainda não iniciada**
+- **Status:** execução em branch dedicada; congelamento técnico da 8.1.0 e implementação inicial da 8.1.1 estão versionados. CI da revisão atual em andamento. A referência humana PT-BR e o snapshot real de ASR/alinhamento seguem pendentes e bloqueiam aceite comparativo/semântico.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
 - **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
 
@@ -201,30 +201,45 @@ Arquivos principais:
 - [`serial_pipeline.py`](../src/legendar/application/pipeline/serial_pipeline.py)
 - [`test_gemini_translator.py`](../tests/unit/infrastructure/test_gemini_translator.py)
 
-Comportamento atual relevante:
+Estado observado na implementação da branch `phase-8-1-step-0-corpus-freeze` (ainda não integrada à `main`):
 
-1. Gemini processa lotes de 32 cues.
-2. A resposta HTTP é recebida em `_request_with_retry()`.
-3. A validação de candidato, JSON, IDs, quantidade, ordem e texto vazio ocorre depois, em `_parse_response()`.
-4. O retry existente cobre erros HTTP 429 e 5xx, mas não erros de conteúdo estruturado detectados pelo parser.
-5. Se uma cue vier vazia, o lote inteiro é rejeitado. A métrica de unidades traduzidas só é incrementada após o lote passar integralmente.
+1. O padrão continua sendo 32 cues; `LEGENDAR_GEMINI_BATCH_SIZE` aceita de 1 a 100.
+2. Há dois limites adicionais: `LEGENDAR_GEMINI_MAX_INPUT_TOKENS` (padrão 200.000; faixa 4.096–900.000) e `LEGENDAR_GEMINI_MAX_OUTPUT_TOKENS` (padrão 8.192; faixa 512–8.192).
+3. O lote real é escolhido dinamicamente pelo menor limite entre número de cues, orçamento estimado de entrada e reserva de saída.
+4. A estimativa de entrada serializa o payload integral (instruções, schema, contexto, cues atuais e vizinhas) e usa tamanho em bytes UTF-8 como aproximação conservadora. Não faz uma chamada remota extra de contagem de tokens por lote.
+5. A reserva de saída considera bytes de texto e quantidade de cues, com margem; `maxOutputTokens` enviado é explícito. A API continua fornecendo tokens reais em `usageMetadata`, registrados para calibração.
+6. Resultados são staged em memória por `cue_id`; itens válidos são preservados, IDs ausentes/vazios são recuperados individualmente, respostas truncadas/JSON inválido podem dividir-se em sublotes e o cancelamento é verificado durante backoff.
+7. Bloqueios de segurança e erros não recuperáveis não entram em repetição infinita. O adaptador só devolve `TranslationResult` depois de todas as unidades estarem presentes, não vazias e na ordem.
+8. Métricas sanitizadas incluem categoria de falha, retries por conteúdo/HTTP, subdivisões, itens recuperados, maior lote efetivo, estimativas e tokens reais; não registram texto nem prompt.
 
-A sequência 3 requests / 2 batches / 64 unidades aceitas / 0 retries é compatível com falha de validação na terceira resposta. O plano deve preservar os critérios rígidos de integridade e adicionar recuperação limitada, em vez de aceitar texto vazio.
+Para 927 unidades curtas e sem subdivisões, os números teóricos permanecem: lote 32 → 29 pedidos; 48 → 20; 64 → 15; 80 → 12; 96 → 10; 100 → 10. A suíte sintética comprova somente a contagem de pedidos com um fake local; não mede latência real nem qualidade tradutória.
 
-**Intervenção requerida:**
+#### Batching Gemini: implementação e estratégia de homologação
 
-- criar uma taxonomia de falhas: sem candidato, bloqueio de segurança, JSON inválido, lote truncado, quantidade errada, IDs duplicados/fora de ordem, item vazio, falha de rede, rate limit e erro do servidor;
-- validar e registrar quais IDs falharam sem gravar o conteúdo das cues;
-- manter traduções válidas em staging por `cue_id`, sem publicá-las enquanto houver IDs ausentes;
-- tentar novamente somente os itens vazios/inválidos quando a resposta e os IDs permitirem isolamento seguro;
-- para resposta inteira malformada ou sem candidato, repetir o lote dentro de limite configurado;
-- para `MAX_TOKENS`, dividir o lote em sublotes menores, sem alterar a ordem nem omitir IDs;
-- respeitar cancelamento durante backoff e novas tentativas;
-- não repetir indefinidamente falhas de autenticação, configuração ou bloqueio de segurança;
-- produzir um erro final seguro e acionável quando o orçamento de recuperação acabar;
-- somente devolver `TranslationResult` após todas as unidades estarem presentes, únicas, não vazias e na ordem esperada.
+O objetivo é reduzir chamadas sem transferir o risco de uma cue defeituosa para dezenas de unidades. A primeira implementação da Fase 8.1.1 está no branch atual e é submetida à CI. A validação de desempenho/qualidade com a API real e corpus humano continua pendente. Requisitos implementados ou ainda a homologar:
 
-**Observabilidade obrigatória:** requests, tentativas, lotes originais/subdivididos, IDs afetados, categoria da falha, finish reason, contagens de candidato/parte e total de unidades concluídas. Nenhum texto, prompt, credencial ou resposta integral deve aparecer no JSON de performance.
+- manter dois limites independentes: no máximo 100 unidades por requisição e orçamento configurável de entrada/saída; **implementado na branch**;
+- formar lotes dinamicamente usando o payload integral serializado em UTF-8 como estimador conservador de entrada e reservar saída com margem; **implementado, ainda sem calibração em uso prolongado real**;
+- dimensionar `maxOutputTokens` pelo volume esperado de saída e margem explícita, limitado pela configuração local (padrão 8192); resposta `MAX_TOKENS` é subdividida; **implementado, a margem precisa ser calibrada com `usageMetadata` real**;
+- registrar `usageMetadata` real para calibrar estimativas; não adicionar chamada remota de contagem antes de demonstrar benefício líquido; **registro implementado**;
+- testar lotes 32 (baseline), 64, 96 e 100; 48/80 podem localizar ponto intermediário. Fixtures locais validam apenas pedidos teóricos, não tempo de resposta;
+- preservar respostas válidas por `cue_id`; ao receber JSON íntegro com um item vazio ou ausente, recuperar somente os IDs afetados;
+- dividir recursivamente lotes com `MAX_TOKENS`, JSON truncado ou outra falha estrutural recuperável, respeitando tamanho mínimo, profundidade e orçamento de tentativas;
+- nunca publicar parcialmente e nunca transformar uma falha de segurança/autenticação em retry ilimitado.
+
+O tamanho padrão de produção permanece em 32 até que a matriz passe pelos gates de integridade, PT-BR, latência, tokens, memória e taxa de recuperação. A configuração maior será selecionada com base no resultado medido, não no menor número teórico de chamadas.
+
+A sequência original de 3 requests / 2 batches / 64 unidades aceitas / 0 retries segue compatível com falha de validação na terceira resposta; o corpo original não foi preservado, portanto a causa exata continua não comprovada. O código novo acrescenta recuperação limitada sem aceitar texto vazio.
+
+**Implementação já versionada nesta branch (pendente da CI verde):**
+
+- taxonomia de falhas por resposta/cue, incluindo candidato ausente, bloqueio de segurança, JSON inválido, truncamento, IDs inválidos/fora de ordem e item vazio;
+- staging de itens aceitos por `cue_id` e recuperação individual de IDs ausentes/vazios;
+- retries de conteúdo limitados, subdivisão recursiva até profundidade 8 e cancelamento durante backoff;
+- erro final seguro e sem publicação parcial quando uma cue continua inválida;
+- orçamento de entrada/saída configurável e métricas sanitizadas.
+
+**Observabilidade obrigatória:** requests, tentativas, lotes originais/subdivididos, IDs afetados, categoria de falha, finish reason, contagens de candidato/parte, estimativa de tokens, tokens reais, maior lote e total de unidades concluídas. Nenhum texto, prompt, credencial ou resposta integral deve aparecer no JSON de performance.
 
 ### 4.2. Segmentação — corrigir composição, não duplicar a regra de pontuação
 
@@ -326,27 +341,22 @@ A sequência abaixo é deliberada. Não avançar para otimização de modelo ant
 
 **Objetivo:** impedir que mudanças posteriores apaguem a causa original ou tornem comparações inválidas.
 
+**Estado em 12/11/2026:** congelamento técnico dos artefatos e fixtures sintéticas concluído nesta branch. A referência humana do áudio real e o snapshot reprodutível dos intermediários ASR/alinhamento ainda estão pendentes; portanto, o gate de experimentos comparativos permanece **BLOCKED**.
+
 Tarefas:
 
-1. preservar os três SRTs e os sete JSON atuais em `temporario/` como evidência histórica;
-2. registrar checksum SHA-256 de cada fixture no relatório de experimento;
-3. criar trechos de teste pequenos e sanitizados que reproduzam:
-   - resposta Gemini com uma cue vazia;
-   - resposta Gemini sem candidato;
-   - resposta truncada;
-   - sequência de fragmentos de legenda;
-   - sentença curta seguida de outra sentença;
-   - interjeição isolada legítima;
-   - frase longa que ultrapassa duas linhas;
-   - nome próprio/termo recorrente;
-   - mudança de sentido em negação/agradecimento;
-4. criar referência PT-BR revisada por humano para uma amostra do áudio, armazenada localmente fora do Git quando houver mídia/texto protegido;
-5. separar explicitamente erros de ASR da origem e erros introduzidos pela tradução;
-6. usar a mesma transcrição/alinhamento congelados para testar isoladamente segmentação e tradução, evitando comparar duas execuções completas que produziram quantidades e limites de cues diferentes.
+1. preservar os três SRTs e os sete JSON atuais em `temporario/` como evidência histórica — **concluído e conferido**;
+2. registrar SHA-256, tamanho em bytes e Git blob SHA-1 dos dez artefatos no [manifesto imutável](../temporario/manifesto-fase-8.1.0.json) — **concluído**;
+3. criar trechos de teste pequenos e sanitizados que reproduzam os dez casos sintéticos — **criados; validação CI pendente** nas [fixtures sintéticas](../tests/fixtures/phase_8_1/README.md);
+4. criar referência PT-BR revisada por humano para uma amostra do áudio, armazenada localmente fora do Git quando houver mídia/texto protegido — **pendente**; existe somente o [template vazio](../tests/fixtures/phase_8_1/human_reference.template.json);
+5. separar explicitamente erros de ASR da origem e erros introduzidos pela tradução — **regra documentada** nas fixtures e no template; aplicação à amostra real depende da revisão humana;
+6. usar a mesma transcrição/alinhamento congelados para testar isoladamente segmentação e tradução — **pendente**; os relatórios sanitizados não contêm esses intermediários e os três SRTs não substituem o snapshot pré-tradução;
+7. registrar hash do áudio autorizado, versões/modelos, parâmetros, hardware e intermediários de entrada ao capturar a referência reprodutível — **pendente** até a amostra real;
+8. corrigir o caminho obsoleto do gate de corpus em `.github/workflows/phase6-quality.yml`, que ainda apontava para `logs/`, para consumir `temporario/EN-baseline.srt` e disparar quando essa fonte congelada mudar — **corrigido nesta branch; CI pendente**.
 
-**Saída obrigatória:** manifesto de corpus, hashes, amostras sintéticas versionáveis, referência humana local e relatório com a separação entre evidências e hipóteses.
+**Saída obrigatória:** manifesto de corpus, hashes, amostras sintéticas versionáveis, referência humana local e relatório com a separação entre evidências e hipóteses. O manifesto e as fixtures já estão versionados; os itens humanos/intermediários continuam explicitamente pendentes.
 
-**Gate:** nenhum experimento comparativo começa sem arquivo, modelo, parâmetros, hardware e referência identificados.
+**Gate:** testes determinísticos com fixtures sintéticas podem avançar. Nenhum benchmark comparativo de qualidade, comparação isolada de segmentação/tradução ou declaração de aceite PT-BR começa sem referência humana real e entradas congeladas identificáveis.
 
 ### Etapa 8.1.1 — Corrigir confiabilidade do Gemini
 
@@ -367,6 +377,8 @@ Tarefas:
 
 **Testes obrigatórios:**
 
+- matriz determinística sintética de lote 32, 64, 96 e 100, com 927 unidades; registrar requisições e provar a contagem teórica (29/15/10/10). O tempo real e a qualidade ainda exigem experimento controlado autorizado;
+- comprovar que lote maior reduz chamadas sem ultrapassar orçamento de entrada/saída e sem degradar completude/naturalidade;
 - item específico vazio dentro de resposta com outros itens corretos;
 - repetição do item vazio com sucesso;
 - item vazio persistente após o limite de tentativas;
@@ -382,7 +394,7 @@ Tarefas:
 - cancelamento durante backoff e entre sublotes;
 - garantia de que nenhuma unidade parcial chega ao publisher.
 
-**Gate:** tradução somente será considerada completa com todos os IDs esperados exatamente uma vez e nenhum texto vazio. O teste sintético equivalente ao problema da cue 71 deve passar.
+**Gate:** tradução somente será considerada completa com todos os IDs esperados exatamente uma vez e nenhum texto vazio. O teste sintético equivalente à cue 71, recuperação de IDs ausentes, subdivisão e cancelamento deve passar na CI. A promoção de lote acima de 32 permanece bloqueada até medição real de latência, tokens, qualidade PT-BR e taxa de recuperação. O candidato de batching deve ser selecionado por medição: para 927 unidades sem recuperação, lote 64 corresponde a 15 pedidos e lote 96/100 a 10 pedidos; qualquer subdivisão/retry deve aparecer separadamente nas métricas. Não promover lote acima de 32 ao padrão antes dos gates de qualidade e desempenho.
 
 ### Etapa 8.1.2 — Corrigir topologia de CPU e ciclo de vida de modelos
 
@@ -604,6 +616,9 @@ Os thresholds abaixo são gates de engenharia propostos para esta execução; de
 ### 6.4. Gemini
 
 - simulação da falha equivalente à cue 71 recuperada com sucesso ou falha final clara e não ambígua;
+- lotes 32/64/96/100 testados na mesma entrada congelada; registrar pedidos e lotes efetivos, tokens de entrada/saída, latência, subdivisões e retries;
+- dimensionamento de lote por teto de itens e orçamento de tokens, com margem para contexto e saída;
+- `maxOutputTokens` dimensionado sem exceder os limites efetivos do modelo/API nem permitir truncamento silencioso;
 - retries limitados, contabilizados e canceláveis;
 - todos os IDs recebidos e validados antes de conclusão;
 - nenhuma publicação parcial;
@@ -632,7 +647,10 @@ O limite de 26min30s é um teto de recuperação inicial, não promessa de veloc
 |---|---|---|
 | Segmentação | `src/legendar/application/pipeline/segmentation.py` | agrupamento por frase/oração, subdivisão temporal e exceções curtas |
 | Contrato de tradução | `src/legendar/application/pipeline/translation.py` | unidade contextual, IDs e aplicação rastreável |
-| Gemini | `src/legendar/infrastructure/translation/gemini.py` | parser, retries, recuperação por item/lote e métricas sanitizadas |
+| Gemini | `src/legendar/infrastructure/translation/gemini.py` | parser, retries, batching por itens/tokens, orçamento de saída, recuperação por item/lote e métricas sanitizadas |
+| Corpus congelado | `temporario/manifesto-fase-8.1.0.json` | SHA-256, tamanho e identidade dos dez artefatos históricos |
+| Fixtures | `tests/fixtures/phase_8_1/` | falhas Gemini, cenários de composição/layout, entidades e semântica; template de referência humana |
+| CI do corpus | `.github/workflows/phase6-quality.yml` | usar o SRT inglês congelado em `temporario/` para gerar e validar manifesto local sem conteúdo humano |
 | NLLB | `src/legendar/infrastructure/translation/nllb.py` | idioma, limite de tokens, geração e batching |
 | Política de recursos | `src/legendar/infrastructure/resources/profile.py` | topologia, afinidade e threads |
 | Pipeline | `src/legendar/application/pipeline/serial_pipeline.py` | liberação segura, erro, cancelamento e gate |
@@ -658,7 +676,7 @@ Não modificar todos esses arquivos em um único commit sem uma divisão clara p
 
 | Atalho | Por que é perigoso | Alternativa exigida |
 |---|---|---|
-| Somente aumentar o tamanho do lote Gemini | pode aumentar truncamento e não resolve item vazio | classificar falha, validar por ID e recuperar com limites |
+| Somente aumentar o tamanho do lote Gemini ou fixar 100 para todos os prompts | pode aumentar truncamento, latência por pedido e raio de impacto; não resolve item vazio nem orçamento de saída | batching com teto de itens e tokens, saída dimensionada, staging por ID, recuperação limitada e matriz 32/64/96/100 |
 | Aceitar resposta parcial | produz SRT incompleto com aparência de sucesso | staging e gate de 100% dos IDs |
 | Fazer fallback automático Gemini → NLLB | mistura estilos/qualidade, mascara falha e viola seleção explícita | erro claro; usuário escolhe outro backend |
 | Trocar `por_Latn` por substituições de palavras/pronomes | não corrige sintaxe, sentido nem contexto | avaliação PT-BR por blocos completos |
@@ -677,20 +695,21 @@ Não modificar todos esses arquivos em um único commit sem uma divisão clara p
 A IA que executar esta fase deverá seguir este roteiro e não pular gates:
 
 1. Ler este documento inteiro, [estado atual](ESTADO_ATUAL.md), [plano mestre](PLANO_CORRECAO_MELHORIA.md), [decisões](DECISOES.md) e [homologação](HOMOLOGACAO.md).
-2. Confirmar que os arquivos de evidência ainda correspondem aos artefatos listados e calcular seus hashes.
-3. Reproduzir métricas dos SRTs e logs antes de modificar código.
-4. Abrir uma etapa de implementação por vez, com escopo fechado.
-5. Antes de editar um módulo, ler sua implementação completa e todos os testes associados.
-6. Escrever testes de regressão para a evidência específica antes ou junto da correção.
-7. Executar a suíte relevante, Ruff, format check e validação documental após cada etapa.
-8. Fazer revisão de efeitos colaterais: timestamps, conteúdo, IDs, cancelamento, publicação, memória e concorrência.
-9. Atualizar este documento com resultado real, evidências e decisões; não marcar etapa como concluída sem teste.
-10. Repetir a mídia real no hardware de referência somente depois de os testes determinísticos passarem.
-11. Não executar benchmark amplo Gemini × NLLB nem trocar o backend padrão sem decisão explícita.
-12. Ao final, atualizar os documentos vivos e a matriz de dependências; arquivar qualquer plano substituído sem apagar evidência.
-13. Criar PR com commits por etapa, revisar diff integral, aguardar CI e só então fazer merge para `main`.
-14. Validar o estado pós-merge: commit, workflows, documentos, links, lockfile e testes.
-15. Entregar relatório de conclusão com cada gate como PASS/FAIL/BLOCKED, números medidos e limitações restantes.
+2. Conferir os dez artefatos contra o [manifesto SHA-256](../temporario/manifesto-fase-8.1.0.json); recalcular hashes antes de qualquer alteração e não modificar a evidência congelada.
+3. Completar a referência humana PT-BR e capturar a mesma transcrição/alinhamento de entrada antes de iniciar experimentos comparativos.
+4. Reproduzir métricas dos SRTs e logs antes de modificar código.
+5. Abrir uma etapa de implementação por vez, com escopo fechado.
+6. Antes de editar um módulo, ler sua implementação completa e todos os testes associados.
+7. Escrever testes de regressão para a evidência específica antes ou junto da correção.
+8. Executar a suíte relevante, Ruff, format check e validação documental após cada etapa.
+9. Fazer revisão de efeitos colaterais: timestamps, conteúdo, IDs, cancelamento, publicação, memória e concorrência.
+10. Atualizar este documento com resultado real, evidências e decisões; não marcar etapa como concluída sem teste.
+11. Repetir a mídia real no hardware de referência somente depois de os testes determinísticos passarem.
+12. Não executar benchmark amplo Gemini × NLLB nem trocar o backend padrão sem decisão explícita.
+13. Ao final, atualizar os documentos vivos e a matriz de dependências; arquivar qualquer plano substituído sem apagar evidência.
+14. Criar PR com commits por etapa, revisar diff integral, aguardar CI e só então fazer merge para `main`.
+15. Validar o estado pós-merge: commit, workflows, documentos, links, lockfile e testes.
+16. Entregar relatório de conclusão com cada gate como PASS/FAIL/BLOCKED, números medidos e limitações restantes.
 
 ### 9.1. Modelo de relatório por etapa
 
@@ -713,7 +732,7 @@ Para cada etapa, registrar:
 
 Interromper a progressão e documentar o bloqueio se:
 
-- o corpus de referência não puder ser reproduzido;
+- o corpus de referência não puder ser reproduzido ou a referência humana PT-BR não estiver validada;
 - houver perda de conteúdo ou deslocamento temporal;
 - não for possível distinguir erro de ASR de erro de tradução;
 - a melhoria de velocidade degradar semântica, PT-BR ou sincronização;
@@ -727,7 +746,7 @@ Interromper a progressão e documentar o bloqueio se:
 
 A Fase 8.1 só poderá ser marcada como concluída quando:
 
-- Gemini tratar respostas vazias/malformadas com recuperação limitada e sem saída parcial;
+- Gemini tratar respostas vazias/malformadas com recuperação limitada e sem saída parcial, e a configuração de lote escolhida reduzir chamadas sem violar orçamento de tokens, limite de saída ou qualidade;
 - o perfil de CPU usar topologia real e a política de retenção funcionar como documentado;
 - o agrupamento de cues reduzir fragmentação sem fundir sentenças legítimas;
 - o SRT final respeitar o limite de duas linhas e 42 caracteres por linha sem perda;
