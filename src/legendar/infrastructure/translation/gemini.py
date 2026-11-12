@@ -54,10 +54,12 @@ produzir uma frase artificial.
 
 Preserve nomes próprios e entidades nomeadas: pessoas, personagens, cidades,
 lugares, povos, raças, clãs, famílias, facções, organizações, títulos próprios,
-obras e universos ficcionais. Não traduza nem adapte esses nomes, salvo forma
-consagrada inequívoca ou glossário explícito. Preserve números, datas, siglas,
-referências, nomes de usuário e termos específicos do universo. Em caso de
-ambiguidade sem evidência suficiente, mantenha o termo original.
+obras e universos ficcionais. Não traduza, translitere nem adapte esses
+nomes; preserve sua grafia canônica original. Se houver provável erro de
+reconhecimento de um nome, use contexto e pesquisa para inferir a grafia
+original somente quando houver evidência forte; se houver dúvida, mantenha a
+forma da transcrição. Preserve números, datas, siglas, referências, nomes de
+usuário e termos específicos do universo.
 
 Use as cues anteriores traduzidas e as cues vizinhas como contexto para
 consistência terminológica e continuidade. Não acrescente explicações, notas,
