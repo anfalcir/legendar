@@ -58,6 +58,8 @@ As opções abaixo **não são dependências adotadas**. Só devem entrar no man
 
 O faster-whisper é uma implementação de Whisper baseada em CTranslate2. Sua documentação demonstra INT8 em CPU, FP16 em GPU, timestamps por palavra e VAD opcional.
 
+Estado da Fase 5: adaptador e benchmark pareado integrados; OpenAI Whisper continua padrão. A avaliação operacional do candidato ainda depende de corpus humano e hardware de referência.
+
 Avaliar:
 - compatibilidade de versão com Python, Torch/WhisperX e wheels disponíveis;
 - suporte INT8 no hardware AMD do perfil de referência;
@@ -65,7 +67,7 @@ Avaliar:
 - equivalência de parâmetros e comportamento de janelas;
 - uso de CPU/RAM, threads e tempo de inferência.
 
-Não adicionar pacote como dependência direta até a Fase 5 aprovar o candidato.
+O adaptador da Fase 5 está integrado. O perfil `runtime-cpu`/`runtime-cu128` já recebe faster-whisper/CTranslate2 transitivamente por `whisperx`; a implementação não adicionou dependência direta redundante. Antes de alterar essa relação, revisar o lock e a compatibilidade do stack completo.
 
 Referência: [SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper).
 
