@@ -206,8 +206,12 @@ def detect_resource_profile() -> ResourceProfile:
     if raw in explicit:
         return ResourceProfile(raw)
     memory = _total_memory_bytes()
-    if memory is not None and memory < 16 * 1024**3:
-        return ResourceProfile.LOW_MEMORY
+    if memory is not None:
+        if memory < 8 * 1024**3:
+            return ResourceProfile.LOW_MEMORY
+        if memory < 12 * 1024**3:
+            return ResourceProfile.BALANCED
+        return ResourceProfile.PERFORMANCE
     return ResourceProfile.BALANCED
 
 
@@ -218,15 +222,18 @@ def resolve_resource_policy() -> ResourcePolicy:
     physical = topology.physical_count
 
     if profile is ResourceProfile.LOW_MEMORY:
-        threads = min(physical, 4)
+        threads = max(1, min(physical, 4))
         interop = 1
         retain = False
     elif profile is ResourceProfile.PERFORMANCE:
-        threads = max(1, logical)
+        # Perfil agressivo para o hardware local: usa os núcleos físicos
+        # disponíveis e até quatro threads de interop. A referência histórica
+        # deste equipamento apresentou 4/4 como configuração quente mais rápida.
+        threads = max(1, min(physical, 4))
         interop = max(1, min(4, physical))
         retain = True
     else:
-        threads = max(1, min(physical, 6))
+        threads = max(1, min(physical, 4))
         interop = max(1, min(2, physical))
         retain = True
 
