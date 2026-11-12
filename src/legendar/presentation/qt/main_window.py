@@ -485,8 +485,11 @@ class MainWindow(QMainWindow):
                 "A tradução local NLLB não está pronta neste ambiente. " + details
             )
         else:
+            backend_label = (
+                "Gemini (API)" if self._deps.translation_backend == "gemini" else "NLLB-200 (local)"
+            )
             self.translate_check.setToolTip(
-                "Traduz PT-BR ↔ EN localmente com NLLB-200, preservando os tempos. "
+                f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
                 "Com a opção desmarcada, a legenda sai no idioma falado."
             )
         layout.addWidget(self.translate_check)
@@ -960,8 +963,11 @@ class MainWindow(QMainWindow):
                 "A legenda sai no idioma falado."
             )
         elif translating:
+            backend_label = (
+                "Gemini (API)" if self._deps.translation_backend == "gemini" else "NLLB-200"
+            )
             hint = (
-                f"Tradução {source.label_pt} → {target.label_pt} com NLLB-200, "
+                f"Tradução {source.label_pt} → {target.label_pt} com {backend_label}, "
                 "preservando os tempos originais."
             )
         elif source is None:
