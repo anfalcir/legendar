@@ -1,9 +1,9 @@
 # Estado atual do Legendar
 
 - **Última atualização:** 12/11/2026
-- **Última integração da Fase 8.1:** PR #33 (8.1.4 — contrato contextual e rastreabilidade) integrada por squash à `main`, commit `c30380adafb865eff7ae3d56e960d4f3f90350a4`; os sete workflows de CI passaram integralmente antes do merge.
+- **Última integração da Fase 8.1:** PR #34 (8.1.5 — ferramenta local de revisão do corpus-ouro) integrada por squash à `main`, commit `9350438674d3e83537392e73c7e95e4dd27dad36`; os sete workflows passaram (smoke jobs condicionais foram skipped).
 - **Última atualização da Fase 8:** os testes reais de 12/11/2026 foram analisados. O SRT NLLB concluiu em 45min49s, com 71,0% das cues contendo até três palavras e três linhas acima de 42 caracteres; a rota Gemini falhou no terceiro lote após 64/927 unidades. A auditoria identificou deriva PT-PT, erros semânticos, provável regressão de threads e falha confirmada no ciclo de vida de modelos. A homologação final permanece pendente.
-- **Fase 8.1:** etapas 8.1.0 a 8.1.4 integradas à `main`. A PR #33 (8.1.4) foi aprovada com CI completa — sete workflows verdes, incluindo matrizes Python 3.10–3.13, smoke Whisper/WhisperX, NLLB real, Gemini opcional e E2E Qt/FFmpeg — e integrada pelo commit `c30380adafb865eff7ae3d56e960d4f3f90350a4`. A primeira implementação da 8.1.3 também está integrada, mas seu gate quantitativo permanece aberto. A política CPU está consolidada: `performance=4/4`, `balanced=4/2` e `low-memory=4/1`; `auto` seleciona `performance` a partir de 12 GiB, `balanced` entre 8 e 12 GiB e `low-memory` abaixo de 8 GiB. Não será exigida a matriz redundante de 15 rodadas. Permanecem pendentes o corpus-ouro/revisão humana PT-BR, o snapshot real de ASR/alinhamento e os gates quantitativos/editoriais da 8.1.3 e seguintes.
+- **Fase 8.1:** etapas 8.1.0 a 8.1.5 integradas à `main`; a etapa 8.1.6 está em implementação para substituir NLLB por TranslateGemma 4B Q4_K_M, conforme decisão explícita do usuário. A PR #33 (8.1.4) foi aprovada com CI completa — sete workflows verdes, incluindo matrizes Python 3.10–3.13, smoke Whisper/WhisperX, NLLB real, Gemini opcional e E2E Qt/FFmpeg — e integrada pelo commit `c30380adafb865eff7ae3d56e960d4f3f90350a4`. A primeira implementação da 8.1.3 também está integrada, mas seu gate quantitativo permanece aberto. A política CPU está consolidada: `performance=4/4`, `balanced=4/2` e `low-memory=4/1`; `auto` seleciona `performance` a partir de 12 GiB, `balanced` entre 8 e 12 GiB e `low-memory` abaixo de 8 GiB. Não será exigida a matriz redundante de 15 rodadas. Permanecem pendentes o corpus-ouro/revisão humana PT-BR, o snapshot real de ASR/alinhamento e os gates quantitativos/editoriais da 8.1.3 e seguintes. A substituição NLLB → TranslateGemma ainda não foi implementada nem homologada.
 - **Commit da implementação Gemini:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19).
 - **Commit de registro da homologação inicial:** `80d7ef9ef37e68c587534194db93a34970389f3a` (PR #20).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
@@ -167,7 +167,7 @@ A implementação da Fase 5 está integrada; promover faster-whisper ao padrão 
 3. Fechar o gate quantitativo da 8.1.3 e construir a referência humana PT-BR/snapshot ASR-alinhamento; então executar a validação semântica/editorial da 8.1.5 e os gates subsequentes.
 4. Validar a tradução por corpus PT-BR revisado e inspeção humana; separar erros originados no ASR dos erros introduzidos pelo tradutor.
 5. Repetir a mídia de 37min10s em pelo menos três execuções quentes e uma fria após as correções, registrar métricas e inspecionar o SRT em player real.
-6. Manter NLLB e Gemini opcionais. Não executar benchmark comparativo amplo nem alterar backend padrão sem decisão explícita.
+6. Substituir NLLB por TranslateGemma 4B como motor local único, conforme decisão aprovada em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md); Gemini permanece como rota remota opcional. Não fazer matriz extensa de benchmarks.
 
 ## 10. Histórico documental
 
