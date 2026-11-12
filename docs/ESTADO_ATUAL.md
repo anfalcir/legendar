@@ -2,7 +2,7 @@
 
 - **Última atualização:** 12/11/2026
 - **Última atualização da Fase 8:** os testes reais de 12/11/2026 foram analisados. O SRT NLLB concluiu em 45min49s, com 71,0% das cues contendo até três palavras e três linhas acima de 42 caracteres; a rota Gemini falhou no terceiro lote após 64/927 unidades. A auditoria identificou deriva PT-PT, erros semânticos, provável regressão de threads e falha confirmada no ciclo de vida de modelos. A homologação final permanece pendente.
-- **Fase 8.1:** execução iniciada pela etapa 8.1.0 na branch `phase-8-1-step-0-corpus-freeze`. Os três SRTs e sete JSONs foram preservados e conferidos; manifesto SHA-256 e fixtures sintéticas foram criados. A referência humana PT-BR e o snapshot dos intermediários ASR/alinhamento ainda estão pendentes. Nenhuma correção do pipeline de produção foi implementada nesta etapa.
+- **Fase 8.1:** execução iniciada pela etapa 8.1.0 na branch `phase-8-1-step-0-corpus-freeze`. Os três SRTs e sete JSONs foram preservados e conferidos; manifesto SHA-256 e fixtures sintéticas foram criados. A workflow da Fase 6 também foi corrigida para consumir o SRT inglês em `temporario/`, em vez do caminho obsoleto em `logs/`. A referência humana PT-BR e o snapshot dos intermediários ASR/alinhamento ainda estão pendentes. Nenhuma correção do pipeline de produção foi implementada nesta etapa.
 - **Commit da implementação Gemini:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19).
 - **Commit de registro da homologação inicial:** `80d7ef9ef37e68c587534194db93a34970389f3a` (PR #20).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
