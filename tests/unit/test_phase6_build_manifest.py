@@ -31,9 +31,7 @@ def test_parse_srt_rejects_invalid_cues(source: str) -> None:
 def test_write_manifest_leaves_human_reference_empty(tmp_path) -> None:
     source = tmp_path / "source.srt"
     output = tmp_path / "corpus.tsv"
-    source.write_text(
-        "1\n00:00:01,000 --> 00:00:02,000\nHello\n", encoding="utf-8"
-    )
+    source.write_text("1\n00:00:01,000 --> 00:00:02,000\nHello\n", encoding="utf-8")
     count, digest = write_manifest(source, output)
     with output.open(encoding="utf-8", newline="") as stream:
         rows = list(csv.DictReader(stream, delimiter="\t"))
