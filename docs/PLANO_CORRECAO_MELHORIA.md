@@ -425,21 +425,28 @@ A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, t
 
 **Objetivo:** evitar que a aceleração de uma etapa seja anulada por pressão de RAM, swapping ou disputa de CPU.
 
-A aplicação mantém instâncias reutilizáveis de Whisper, WhisperX e NLLB. Isso economiza carregamentos entre jobs, mas pode manter múltiplos modelos residentes durante o mesmo processo. O efeito sobre RAM e swapping ainda precisa ser medido.
+**Status:** **implementação concluída e preparada para homologação pareada no hardware de referência**. A Fase 7 introduz política explícita de recursos, evicção segura de modelos entre etapas em perfil de pouca memória, configuração de threads CPU antes da primeira inferência e registro do perfil efetivo no relatório de desempenho.
 
-Entregas:
-- medir RSS e memória disponível antes/depois de cada carga;
-- medir se modelos simultaneamente residentes causam pressão de memória;
-- projetar política de retenção/evicção de modelos por perfil de hardware;
-- permitir descarregar modelo que não será reutilizado durante a fase seguinte quando isso reduzir pressão sem custo total maior;
-- equilibrar cache em memória para execuções repetidas versus perfil de baixo consumo;
-- controlar threads CPU e evitar sobreposição de inferências concorrentes;
-- detectar CUDA/MPS/backend suportado sem assumir disponibilidade;
-- registrar configuração efetiva no diagnóstico.
+Entregas implementadas:
+- perfil `auto`, `low-memory`, `balanced` e `performance`;
+- modo `auto` conservador para máquinas com menos de 16 GiB de RAM;
+- perfil `low-memory` libera Whisper após transcrição, WhisperX após alinhamento e NLLB após tradução;
+- pesos/checkpoints continuam no cache em disco; somente objetos residentes e caches de backend são liberados;
+- perfil `balanced` preserva modelos residentes para favorecer jobs repetidos;
+- perfil `performance` prioriza retenção e maior paralelismo CPU;
+- threads PyTorch intra-op/inter-op configuráveis por ambiente e definidas antes da primeira inferência;
+- política registrada nos metadados sanitizados do job;
+- falha de evicção é best-effort e não altera o resultado do job;
+- testes unitários cobrem perfis, evicção e overrides de threads.
 
-A política de memória deve ser orientada por medição. Descarregar e recarregar o mesmo modelo pode aumentar o tempo total; manter tudo residente pode provocar swapping. O melhor ponto dependerá da RAM disponível e do backend.
+Configuração:
+- `LEGENDAR_RESOURCE_PROFILE=auto|low-memory|balanced|performance`;
+- `LEGENDAR_CPU_THREADS=N`;
+- `LEGENDAR_CPU_INTEROP_THREADS=N`.
 
-**Critério de conclusão:** configuração por perfil de hardware com menor ou igual tempo total e sem pico de memória que provoque instabilidade ou swapping excessivo.
+**Decisão:** `auto` é o padrão. Em hardware com menos de 16 GiB, o produto prefere evitar manter simultaneamente os modelos pesados residentes. Em hardware maior, mantém os modelos para reduzir recargas. A escolha pode ser sobrescrita explicitamente sem alterar o cache em disco.
+
+**Critério de conclusão:** a implementação atende ao controle de recursos; o aceite de desempenho continua condicionado à medição pareada no hardware de referência, porque não é tecnicamente válido declarar ganho de tempo ou ausência de swapping sem executar o protocolo no equipamento real.
 
 ### Fase 8 — Regressão, homologação e liberação
 
