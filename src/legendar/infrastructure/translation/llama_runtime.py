@@ -133,6 +133,7 @@ class LlamaCppRuntimeManager:
         opener: Callable[..., Any] = urlopen,
         sleep: Callable[[float], None] = time.sleep,
         monotonic: Callable[[], float] = time.monotonic,
+        model_sha256: str = MODEL_SHA256,
     ) -> None:
         if host != "127.0.0.1":
             raise ValueError(
@@ -154,6 +155,7 @@ class LlamaCppRuntimeManager:
         self.context_size = context_size
         self.threads = threads
         self.startup_timeout = startup_timeout
+        self.model_sha256 = model_sha256
         self._configured_executable = (
             Path(executable).expanduser() if executable else None
         )
@@ -247,7 +249,7 @@ class LlamaCppRuntimeManager:
             if os.name != "nt":
                 os.chmod(self.model_path.parent, 0o700)
             if self.model_path.is_file():
-                if self._sha256_file(self.model_path, token) == MODEL_SHA256:
+                if self._sha256_file(self.model_path, token) == self.model_sha256:
                     if progress is not None:
                         progress.report(1.0, "Modelo TranslateGemma já está íntegro")
                     return self.model_path
@@ -338,7 +340,7 @@ class LlamaCppRuntimeManager:
                     "O download TranslateGemma terminou incompleto; "
                     "o arquivo parcial poderá ser retomado."
                 )
-            if digest.hexdigest() != MODEL_SHA256:
+            if digest.hexdigest() != self.model_sha256:
                 partial_path.unlink(missing_ok=True)
                 raise ModelError(
                     "O SHA-256 do TranslateGemma não corresponde ao artefato "
