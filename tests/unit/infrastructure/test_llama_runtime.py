@@ -9,8 +9,8 @@ from urllib.error import URLError
 
 import pytest
 
-from legendar.domain.errors.catalog import JobCancelledError, ModelError
 import legendar.infrastructure.translation.llama_runtime as llama_runtime
+from legendar.domain.errors.catalog import JobCancelledError, ModelError
 from legendar.infrastructure.translation.llama_runtime import (
     DEFAULT_MODEL_ALIAS,
     LlamaCppRuntimeManager,
