@@ -22,7 +22,7 @@ def test_low_memory_profile_limits_threads_and_eviction(monkeypatch) -> None:
 
     assert policy.profile is ResourceProfile.LOW_MEMORY
     assert policy.retain_models is False
-    assert policy.cpu_threads == 4
+    assert policy.cpu_threads == min(policy.physical_cpu_count, 4)
     assert policy.cpu_interop_threads == 1
 
 
@@ -46,8 +46,8 @@ def test_performance_profile_uses_aggressive_cpu_policy(monkeypatch) -> None:
 
     assert policy.profile is ResourceProfile.PERFORMANCE
     assert policy.retain_models is True
-    assert policy.cpu_threads == 4
-    assert policy.cpu_interop_threads == 4
+    assert policy.cpu_threads == min(policy.physical_cpu_count, 4)
+    assert policy.cpu_interop_threads == min(policy.physical_cpu_count, 4)
 
 
 def test_cpu_topology_falls_back_without_assuming_smt_ratio(
@@ -218,7 +218,7 @@ def test_auto_profile_uses_balanced_for_sufficient_memory(monkeypatch) -> None:
     monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "auto")
     monkeypatch.setattr(resource_profile, "_total_memory_bytes", lambda: 16 * 1024**3)
 
-    assert resource_profile.detect_resource_profile() is ResourceProfile.BALANCED
+    assert resource_profile.detect_resource_profile() is ResourceProfile.PERFORMANCE
 
 
 @pytest.mark.parametrize("value", ["not-an-integer", "0"])

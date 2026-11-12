@@ -188,13 +188,16 @@ def segment_alignment(
             )
 
     split_applied = False
+    recomposition_applied = False
     source_by_identity = {id(word): source for word, _, source in words}
 
     for run in word_runs:
         plain_words = [(word, time_range) for word, time_range, _ in run]
         groups = _split_words(plain_words, policy)
-        refined = _refine_for_reading_speed(groups, policy)
-        split_applied = split_applied or len(refined) > len(groups)
+        recomposed = _recompose_weak_fragments(groups, policy)
+        recomposition_applied = recomposition_applied or len(recomposed) < len(groups)
+        refined = _refine_for_reading_speed(recomposed, policy)
+        split_applied = split_applied or len(refined) > len(recomposed)
         for group in refined:
             window = TimeRange(start=group[0][1].start, end=group[-1][1].end)
             text = _text_of(group)
@@ -249,6 +252,8 @@ def segment_alignment(
         diagnostics.append("reading_speed_overflow")
     if split_applied:
         diagnostics.append("reading_speed_split")
+    if recomposition_applied:
+        diagnostics.append("weak_fragment_merge")
     if any(len(cue.source_segments) > 1 for cue in cues):
         diagnostics.append("cross_segment_merge")
 
@@ -347,6 +352,64 @@ def _prefers_break_after(
         policy.sentence_break_ratio * policy.max_chars_per_cue,
     )
     return meaningful_text or duration >= policy.min_cue_duration
+
+
+def _recompose_weak_fragments(
+    groups: list[list[tuple[TranscriptWord, TimeRange]]],
+    policy: SegmentationPolicy,
+) -> list[list[tuple[TranscriptWord, TimeRange]]]:
+    """Reagrupa fragmentos curtos sem destruir fronteiras de frases.
+
+    A segmentação inicial é deliberadamente conservadora: ela pode encerrar
+    uma cue em uma pausa, vírgula ou limite de segmento do ASR. Antes de aplicar
+    o corte por velocidade de leitura, esta etapa recompõe fragmentos que ainda
+    não formam uma unidade editorial útil.
+
+    Uma frase completa terminada em ponto, exclamação, interrogação ou reticências
+    é protegida. Fragmentos sem esse fechamento podem ser unidos à cue seguinte
+    quando o intervalo combinado continua dentro dos limites editoriais.
+    Os timestamps continuam sendo exclusivamente os das palavras originais.
+    """
+    if len(groups) < 2:
+        return groups
+
+    recomposed: list[list[tuple[TranscriptWord, TimeRange]]] = []
+    index = 0
+    while index < len(groups):
+        current = groups[index]
+        while index + 1 < len(groups) and _is_weak_fragment(current, policy):
+            candidate = [*current, *groups[index + 1]]
+            gap = candidate[len(current)][1].start - current[-1][1].end
+            duration = candidate[-1][1].end - candidate[0][1].start
+            text = _text_of(candidate)
+            if (
+                gap > policy.max_gap
+                or duration > policy.max_cue_duration
+                or len(text) > policy.max_chars_per_cue
+            ):
+                break
+            current = candidate
+            index += 1
+            if _ends_sentence(_text_of(current)):
+                break
+        recomposed.append(current)
+        index += 1
+    return recomposed
+
+
+def _is_weak_fragment(
+    group: list[tuple[TranscriptWord, TimeRange]],
+    policy: SegmentationPolicy,
+) -> bool:
+    """Identifica uma cue curta que ainda parece depender da próxima."""
+    text = _text_of(group)
+    if _ends_sentence(text):
+        return False
+    return len(group) <= 4 or len(text) <= 24
+
+
+def _ends_sentence(text: str) -> bool:
+    return text.rstrip().endswith(_SENTENCE_ENDINGS)
 
 
 def _refine_for_reading_speed(
