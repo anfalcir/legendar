@@ -499,6 +499,20 @@ Tarefas:
 
 **Objetivo:** tornar a saída brasileira natural e semanticamente fiel.
 
+**Ferramenta de apoio em implementação:** `scripts/phase8_1_translation_review.py` gera um CSV local, com amostra determinística de blocos, contexto anterior/posterior e pareamento temporal entre o SRT inglês automático e o SRT PT. A amostra prioriza candidatos de risco (agradecimentos, negações, perguntas, possíveis nomes próprios e cues curtas) e completa a cobertura ao longo da mídia. Os campos de referência humana, verificação do ASR, veredito, entidades protegidas e notas ficam vazios para preenchimento pelo revisor. O script não corrige traduções, não presume que o ASR está correto e não envia nem registra o texto dos arquivos.
+
+Uso no computador de homologação, a partir da raiz do repositório:
+
+```bash
+python scripts/phase8_1_translation_review.py \
+  temporario/EN-baseline.srt \
+  temporario/teste-2026.11.12.srt \
+  --output temporario/revisao-ptbr.csv \
+  --samples 30
+```
+
+A saída é uma planilha CSV UTF-8 com BOM e separador `;`, adequada ao LibreOffice Calc. Cada linha fonte precisa ser conferida com o áudio antes de julgar o tradutor; somente então preencher `source_asr_verified_by_audio`, `reviewed_ptbr`, `semantic_verdict`, `protected_entities` e `reviewer_notes`. O CSV resultante deve permanecer local e não ser commitado, pois contém transcrição e tradução do episódio.
+
 Tarefas:
 
 1. preparar um pequeno corpus-ouro com frases completas, contexto anterior/posterior e revisão humana PT-BR;
