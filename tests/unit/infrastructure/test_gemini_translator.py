@@ -201,7 +201,9 @@ def test_grounding_is_added_only_when_enabled_on_adapter() -> None:
 
     assert "tools" not in plain_calls[0][1]
     assert grounded_calls[0][1]["tools"] == [{"googleSearch": {}}]
-    assert grounded_calls[0][1]["generationConfig"]["thinkingConfig"] == {"thinkingLevel": "LOW"}
+    assert grounded_calls[0][1]["generationConfig"]["thinkingConfig"] == {
+        "thinkingLevel": "LOW"
+    }
     assert grounded.performance_snapshot()["configuration"]["grounding"]
 
 
