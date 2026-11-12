@@ -478,6 +478,8 @@ Tarefas:
 
 **Objetivo:** deixar de traduzir fragmentos isolados sem perder o vínculo temporal.
 
+**Primeira implementação em andamento:** a PR #33 formaliza contexto adjacente, IDs das unidades, intervalo temporal de origem, termos protegidos e validação por ID; também bloqueia truncamento silencioso da entrada NLLB acima de 256 tokens. A aprovação semântica permanece dependente da referência PT-BR humana da 8.1.5.
+
 Tarefas:
 
 1. avaliar o contrato atual de `TranslationUnit`, que hoje representa uma cue individual;
