@@ -22,6 +22,7 @@ from legendar.infrastructure.translation.nllb import (
     MODEL_NAME,
     NLLB_CODES,
     NllbTranslator,
+    _validate_input_length,
 )
 
 
@@ -92,6 +93,13 @@ def _make_translator(
     )
 
 
+def test_nllb_rejects_input_that_would_be_truncated() -> None:
+    with pytest.raises(TranslationError, match="nenhuma entrada foi truncada"):
+        _validate_input_length(257)
+
+    _validate_input_length(256)
+
+
 def test_satisfies_the_translator_port(tmp_path: Path) -> None:
     assert isinstance(_make_translator(tmp_path), Translator)
 
@@ -112,6 +120,7 @@ def test_translates_units_with_explicit_language_codes(tmp_path: Path) -> None:
 
     assert result.language is Language.ENGLISH
     assert result.texts == ("Good morning", "See you soon")
+    assert result.unit_indexes == (1, 2)
     assert calls == [
         (
             ("bom dia", "até logo"),

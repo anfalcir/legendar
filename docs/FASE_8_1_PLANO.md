@@ -3,7 +3,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
 - **Base auditada:** `main`, commit `bd2a917b8f75045545c97848b10252a8253aa1ed`
-- **Status:** 8.1.0 (congelamento técnico), 8.1.1 (confiabilidade/batching Gemini) e 8.1.2 (topologia CPU/lifecycle) estão integrados à `main`. A CI completa do commit de 8.1.2 passou; permanece pendente a matriz real de desempenho 2/1, 3/1, 4/1, 4/2 e 4/4, três execuções quentes por configuração. A referência humana PT-BR e o snapshot real de ASR/alinhamento seguem pendentes e bloqueiam aceite comparativo/semântico.
+- **Status:** 8.1.0, 8.1.1 e 8.1.2 estão integrados à `main`; a primeira implementação da 8.1.3 também está integrada e passou pela CI completa. A política de CPU foi consolidada com perfis adaptativos, sem exigir uma matriz redundante de dezenas de execuções. A 8.1.3 ainda precisa do gate quantitativo no corpus congelado; a referência humana PT-BR e o snapshot real de ASR/alinhamento continuam pendentes e bloqueiam o aceite semântico final.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
 - **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
 
@@ -477,6 +477,8 @@ Tarefas:
 ### Etapa 8.1.4 — Adequar o contrato de tradução a blocos contextualizados
 
 **Objetivo:** deixar de traduzir fragmentos isolados sem perder o vínculo temporal.
+
+**Primeira implementação em andamento:** a PR #33 formaliza contexto adjacente, IDs das unidades, intervalo temporal de origem, termos protegidos e validação por ID; também bloqueia truncamento silencioso da entrada NLLB acima de 256 tokens. A aprovação semântica permanece dependente da referência PT-BR humana da 8.1.5.
 
 Tarefas:
 

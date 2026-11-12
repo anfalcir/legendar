@@ -386,7 +386,11 @@ class GeminiTranslator:
         outputs = tuple(translated_by_id[unit.index] for unit in units)
         if any(not text for text in outputs):
             raise TranslationError("Gemini deixou texto vazio após a recuperação.")
-        return TranslationResult(language=target_language, texts=outputs)
+        return TranslationResult(
+            language=target_language,
+            texts=outputs,
+            unit_indexes=tuple(unit.index for unit in units),
+        )
 
     def _select_batch(
         self,
@@ -502,6 +506,16 @@ class GeminiTranslator:
             "contexto_anterior_traduzido": [
                 {"original": source, "traducao": translated}
                 for source, translated in translated_context
+            ],
+            "contexto_explicito_das_unidades": [
+                {
+                    "cue_id": unit.index,
+                    "source_cue_ids": list(unit.source_cue_ids or (unit.index,)),
+                    "contexto_anterior": list(unit.context.before),
+                    "contexto_posterior": list(unit.context.after),
+                    "termos_protegidos": list(unit.context.protected_terms),
+                }
+                for unit in batch
             ],
             "cues_anteriores": [
                 {"cue_id": unit.index, "text": unit.text} for unit in before

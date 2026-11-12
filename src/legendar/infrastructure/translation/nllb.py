@@ -124,6 +124,15 @@ def _model_device(model: Any) -> str:
     return str(device) if device is not None else "cpu"
 
 
+def _validate_input_length(input_length: int) -> None:
+    """Impede truncamento silencioso da unidade antes da geração."""
+    if input_length > MAX_INPUT_TOKENS:
+        raise TranslationError(
+            "Uma unidade de tradução excede o limite de "
+            f"{MAX_INPUT_TOKENS} tokens do NLLB; nenhuma entrada foi truncada."
+        )
+
+
 def _run_nllb_batch(
     texts: Sequence[str],
     tokenizer: Any,
@@ -141,9 +150,13 @@ def _run_nllb_batch(
         list(texts),
         return_tensors="pt",
         padding=True,
-        truncation=True,
-        max_length=MAX_INPUT_TOKENS,
+        truncation=False,
     )
+    input_ids = encoded.get("input_ids")
+    if input_ids is None:
+        raise TranslationError("NLLB não retornou IDs tokenizados para a entrada.")
+    input_length = int(input_ids.shape[1])
+    _validate_input_length(input_length)
     if metrics_callback is not None:
         metrics_callback("tokenization_seconds", time.perf_counter() - phase_started)
         attention_mask = encoded.get("attention_mask")
@@ -366,7 +379,11 @@ class NllbTranslator:
                 + ", ".join(str(index) for index in empty)
                 + "."
             )
-        return TranslationResult(language=target_language, texts=tuple(cleaned))
+        return TranslationResult(
+            language=target_language,
+            texts=tuple(cleaned),
+            unit_indexes=tuple(unit.index for unit in units),
+        )
 
     # -- internos ---------------------------------------------------------
 
