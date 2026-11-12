@@ -335,6 +335,10 @@ def test_translategemma_backend_is_composed_when_runtime_and_model_exist(
         def download_authorized(self) -> bool:
             return False
 
+        @property
+        def needs_download_authorization(self) -> bool:
+            return False
+
         def authorize_model_download(self) -> None:
             pass
 
