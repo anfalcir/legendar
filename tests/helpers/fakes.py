@@ -195,6 +195,7 @@ class FakeTranslator:
         result = TranslationResult(
             language=self.language or target_language,
             texts=texts,
+            unit_indexes=tuple(unit.index for unit in units),
         )
         if progress is not None:
             progress.report(1.0, "Tradução concluída")
