@@ -2,8 +2,8 @@
 
 O módulo não instala o binário llama.cpp. O download do GGUF é explícito,
 retomável e validado por SHA-256; a camada de aplicação/UI deve solicitar
-consentimento antes de chamá-lo. O servidor iniciado pelo Legendar é privado,
-reutilizável durante a sessão e encerrado sem tocar em processos externos.
+consentimento antes de chamá-lo. Locks de arquivo evitam downloads e servidores
+duplicados entre instâncias; o processo próprio é encerrado sem tocar em serviços externos.
 """
 
 from __future__ import annotations
@@ -518,9 +518,9 @@ class LlamaCppRuntimeManager:
             raise ValueError("O período de encerramento não pode ser negativo.")
         with self._lock:
             process = self._process
-            self._process = None
-            self._port = None
             if process is None or process.poll() is not None:
+                self._process = None
+                self._port = None
                 self._release_runtime_lock_locked()
                 return
             try:
@@ -530,8 +530,15 @@ class LlamaCppRuntimeManager:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
-            finally:
-                self._release_runtime_lock_locked()
+            except Exception:
+                if process.poll() is not None:
+                    self._process = None
+                    self._port = None
+                    self._release_runtime_lock_locked()
+                raise
+            self._process = None
+            self._port = None
+            self._release_runtime_lock_locked()
 
     def _wait_until_ready(
         self,
@@ -581,9 +588,9 @@ class LlamaCppRuntimeManager:
 
     def _stop_process_locked(self) -> None:
         process = self._process
-        self._process = None
-        self._port = None
         if process is None or process.poll() is not None:
+            self._process = None
+            self._port = None
             self._release_runtime_lock_locked()
             return
         try:
@@ -593,8 +600,15 @@ class LlamaCppRuntimeManager:
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
-        finally:
-            self._release_runtime_lock_locked()
+        except Exception:
+            if process.poll() is not None:
+                self._process = None
+                self._port = None
+                self._release_runtime_lock_locked()
+            raise
+        self._process = None
+        self._port = None
+        self._release_runtime_lock_locked()
 
     def _release_runtime_lock_locked(self) -> None:
         lock, self._runtime_lock = self._runtime_lock, None
