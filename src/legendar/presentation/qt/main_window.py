@@ -142,7 +142,9 @@ class UiDependencies:
     publishing_available: bool = True
     publishing_readiness_details: tuple[str, ...] = ()
     translation_backend: str = "nllb"
-    translation_reconfigure: Callable[[str, str | None], tuple[bool, tuple[str, ...]]] | None = None
+    translation_reconfigure: (
+        Callable[[str, str | None], tuple[bool, tuple[str, ...]]] | None
+    ) = None
 
 
 class MainWindow(QMainWindow):
@@ -489,7 +491,9 @@ class MainWindow(QMainWindow):
             )
         else:
             backend_label = (
-                "Gemini (API)" if self._deps.translation_backend == "gemini" else "NLLB-200 (local)"
+                "Gemini (API)"
+                if self._deps.translation_backend == "gemini"
+                else "NLLB-200 (local)"
             )
             self.translate_check.setToolTip(
                 f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
@@ -967,7 +971,9 @@ class MainWindow(QMainWindow):
             )
         elif translating:
             backend_label = (
-                "Gemini (API)" if self._deps.translation_backend == "gemini" else "NLLB-200"
+                "Gemini (API)"
+                if self._deps.translation_backend == "gemini"
+                else "NLLB-200"
             )
             hint = (
                 f"Tradução {source.label_pt} → {target.label_pt} com {backend_label}, "
