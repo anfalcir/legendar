@@ -247,7 +247,7 @@ def build_ui_dependencies(
 
     translategemma_runtime = LlamaCppRuntimeManager(settings.models_dir)
     # Diagnóstico leve e local em toda abertura; não faz hash, rede ou spawn.
-    translategemma_startup_inspection = translategemma_runtime.inspect()
+    translategemma_runtime.inspect()
 
     env_translation_backend = (
         os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "nllb").strip().casefold()
