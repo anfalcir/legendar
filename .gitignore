@@ -20,3 +20,7 @@ legendar-phase0-environment.json
 .coverage
 coverage.xml
 htmlcov/
+
+# Corpus privado e relatórios locais do benchmark da Fase 6
+/corpus/
+/phase6-translation-benchmark.json
