@@ -8,7 +8,10 @@ from pathlib import Path
 import pytest
 
 from legendar.application.job.context import CancellationTokenImpl
-from legendar.application.pipeline.translation import TranslationContext, TranslationUnit
+from legendar.application.pipeline.translation import (
+    TranslationContext,
+    TranslationUnit,
+)
 from legendar.application.ports.protocols import Translator
 from legendar.domain.errors.catalog import (
     JobCancelledError,
