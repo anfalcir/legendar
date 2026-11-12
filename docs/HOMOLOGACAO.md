@@ -129,7 +129,7 @@ Os resultados reais desta rodada foram preservados em `temporario/`:
 - O job novo usou PyTorch intra-op/inter-op 2/1; as três execuções quentes anteriores usaram 4/4.
 - Gemini encerrou após **32min29s**, com 3 requisições, 2 lotes completos, 64/927 unidades aceitas e 0 retries registrados.
 - O SRT PT novo tem 925 cues; 71,0% têm até três palavras; 444 cues excedem 17 CPS; há três linhas acima de 42 caracteres.
-- A tradução contém deriva para PT-PT e erros semânticos que exigem revisão humana. “Não, obrigado” aparece 15 vezes em contextos em que a origem automática contém “Thank you”.
+- A tradução contém deriva para PT-PT e erros semânticos que exigem revisão humana. “Não, obrigado” aparece 15 vezes no PT; a comparação temporal confirma que várias ocorrências coincidem com “Thank you” no inglês automático, mas os limites de cues diferem e cada ocorrência precisa de revisão individual.
 
 O relatório JSON não guarda o conteúdo das respostas Gemini, portanto a natureza exata da resposta rejeitada no terceiro lote permanece hipótese. A leitura técnica mais provável e a sequência de correção estão documentadas em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md).
 
