@@ -531,9 +531,9 @@ Tarefas:
 
 ### Etapa 8.1.6 — substituição do motor local por TranslateGemma
 
-**STATUS: PRIMEIRA FATIA INTEGRADA; IMPLEMENTAÇÃO E HOMOLOGAÇÃO DO MOTOR PENDENTES**
+**STATUS: DECISÃO/SMOKE DE PROTOCOLO INTEGRADOS; LIFECYCLE EM IMPLEMENTAÇÃO; HOMOLOGAÇÃO REAL PENDENTE**
 
-A PR #35 foi integrada à `main` por squash no commit `e0ba71080243972158272cf4792c1efdde0649df`, com sete workflows aprovados. Ela registra a decisão e adiciona o smoke determinístico do protocolo HTTP local; não inclui ainda o smoke com pesos reais nem o adaptador de produção. A decisão de produto foi aprovada pelo usuário em 12/11/2026: remover NLLB e adotar TranslateGemma 4B Q4_K_M como único motor local. Gemini permanece como opção remota independente. A decisão técnica, o runtime candidato, o contrato de idioma, os riscos de licença e os gates estão em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
+A PR #35 foi integrada à `main` por squash no commit `e0ba71080243972158272cf4792c1efdde0649df`, com sete workflows aprovados. A PR #36 está em desenvolvimento: adiciona a primeira fatia do gerenciador de processo local e testes simulados; ainda aguarda CI e revisão. Ela registra a decisão e adiciona o smoke determinístico do protocolo HTTP local; não inclui ainda o smoke com pesos reais nem o adaptador de produção. A decisão de produto foi aprovada pelo usuário em 12/11/2026: remover NLLB e adotar TranslateGemma 4B Q4_K_M como único motor local. Gemini permanece como opção remota independente. A decisão técnica, o runtime candidato, o contrato de idioma, os riscos de licença e os gates estão em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
 
 ### Escopo fechado
 
@@ -793,3 +793,6 @@ A Fase 8.1 só poderá ser marcada como concluída quando:
 ### Requisito adicional aprovado — autonomia operacional
 
 O runtime local não poderá depender de instalação/inicialização manual em cada máquina. O Legendar deverá verificar dependências na abertura sem bloquear a GUI, propor instalação quando necessário, baixar pesos somente após autorização informada, iniciar automaticamente o servidor antes da etapa de tradução, aguardar health check, reutilizar instâncias próprias saudáveis e encerrar apenas o processo filho que iniciou. Repetir o fluxo deve ser idempotente e concorrência não pode produzir instalações ou servidores duplicados. Ver critérios completos em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md), seção “Operação autônoma e idempotente do runtime”.
+
+
+**Fatia atual de lifecycle (PR #36):** diagnóstico local do executável/GGUF, inicialização do servidor em loopback com porta dinâmica, health check, cancelamento, reutilização do processo filho próprio e encerramento seguro. Ainda faltam instalação assistida do runtime, download verificável do modelo, lock entre processos, integração ao bootstrap/GUI, adaptador de tradução e smoke com os pesos reais. A implementação parcial não deve ser apresentada ao usuário como pronta para uso.
