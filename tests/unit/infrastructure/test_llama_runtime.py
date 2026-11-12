@@ -86,7 +86,11 @@ def _manager(tmp_path: Path, **overrides) -> tuple[LlamaCppRuntimeManager, list]
         "popen_factory": popen,
         "opener": lambda *_args, **_kwargs: FakeResponse(),
         "startup_timeout": 1.0,
-        "model_sha256": llama_runtime.MODEL_SHA256,
+        "model_sha256": (
+            hashlib.sha256(b"model").hexdigest()
+            if "model_path" not in overrides
+            else llama_runtime.MODEL_SHA256
+        ),
         "sleep": lambda _seconds: None,
     }
     options.update(overrides)
