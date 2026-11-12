@@ -1,6 +1,6 @@
 # Fase 6 — Benchmark e aceleração da tradução
 
-**Status:** implementação técnica em validação na PR [#14](https://github.com/anfalcir/legendar/pull/13); CI determinística aprovada no head anterior. Smoke real da API e benchmark com corpus humano permanecem pendentes.
+**Status:** implementação técnica em validação na PR [#14](https://github.com/anfalcir/legendar/pull/14); CI determinística aprovada no head anterior. Smoke real da API e benchmark com corpus humano permanecem pendentes.
 **Objetivo:** reduzir o tempo de tradução hoje dominado pelo NLLB (aproximadamente 14 minutos na mídia de referência de 37min10s), sem degradar sentido, terminologia, consistência ou integridade das cues.
 
 ## 1. Decisão arquitetural
