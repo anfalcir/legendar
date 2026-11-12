@@ -2,7 +2,7 @@
 
 - **Última atualização:** 12/11/2026
 - **Última atualização da Fase 8:** os testes reais de 12/11/2026 foram analisados. O SRT NLLB concluiu em 45min49s, com 71,0% das cues contendo até três palavras e três linhas acima de 42 caracteres; a rota Gemini falhou no terceiro lote após 64/927 unidades. A auditoria identificou deriva PT-PT, erros semânticos, provável regressão de threads e falha confirmada no ciclo de vida de modelos. A homologação final permanece pendente.
-- **Fase 8.1:** execução iniciada pela etapa 8.1.0 na branch `phase-8-1-step-0-corpus-freeze`. Os três SRTs e sete JSONs foram preservados e conferidos; manifesto SHA-256 e fixtures sintéticas foram criados. A workflow da Fase 6 também foi corrigida para consumir o SRT inglês em `temporario/`, em vez do caminho obsoleto em `logs/`. A referência humana PT-BR e o snapshot dos intermediários ASR/alinhamento ainda estão pendentes. Nenhuma correção do pipeline de produção foi implementada nesta etapa.
+- **Fase 8.1:** execução na branch `phase-8-1-step-0-corpus-freeze`. O congelamento técnico dos três SRTs e sete JSONs foi registrado com SHA-256 e testes automáticos; fixtures sintéticas e correção do caminho obsoleto da workflow Fase 6 foram adicionadas. A 8.1.1 já tem implementação inicial no branch: recuperação Gemini por `cue_id`, subdivisão, cancelamento durante backoff, limites de tokens e instrumentação sanitizada. Essa implementação ainda aguarda CI verde e merge; não está em `main`. Referência humana PT-BR e snapshot de ASR/alinhamento continuam pendentes.
 - **Commit da implementação Gemini:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19).
 - **Commit de registro da homologação inicial:** `80d7ef9ef37e68c587534194db93a34970389f3a` (PR #20).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
@@ -34,7 +34,7 @@ As Fases 1–7 estão implementadas e integradas à `main`; a Fase 8 está em ho
 
 A homologação de 12/11/2026 demonstrou regressão relevante: NLLB concluiu a mídia em 45min49s (mediana quente anterior: 23min21s); Whisper levou 19min15s, WhisperX 5min43s e geração NLLB 20min32s. O job foi executado com 2 threads intra-op/1 inter-op, enquanto as três execuções quentes de referência usavam 4/4. A hipótese de subutilização de CPU é prioritária, mas ainda requer experimento controlado. O perfil `low-memory` informou `retain_models=false`, porém os três adaptadores terminaram carregados; a liberação prevista na Fase 7 não está conectada ao fluxo real.
 
-O SRT novo contém 925 cues, média de 3,33 palavras e 657 cues com até três palavras (71,0%), praticamente igual ao PT anterior (71,4%). Há 40 cues de uma palavra, 444 acima de 17 CPS e três linhas acima de 42 caracteres. Foram observadas formas PT-PT e 15 ocorrências de “Não, obrigado”; a comparação temporal confirma que várias coincidem com “Thank you”, mas os limites de cues diferem e cada ocorrência precisa de revisão individual. O Gemini interrompeu após 64 das 927 unidades; os logs sugerem falha de validação de conteúdo no terceiro lote, mas não preservam o detalhe da resposta por segurança. A Fase 8.1 está em execução: o congelamento técnico dos artefatos e fixtures sintéticas foi feito; os gates humanos e os snapshots intermediários ainda estão pendentes. Nenhuma mudança de comportamento no pipeline de produção foi aplicada.
+O SRT novo contém 925 cues, média de 3,33 palavras e 657 cues com até três palavras (71,0%), praticamente igual ao PT anterior (71,4%). Há 40 cues de uma palavra, 444 acima de 17 CPS e três linhas acima de 42 caracteres. Foram observadas formas PT-PT e 15 ocorrências de “Não, obrigado”; a comparação temporal confirma que várias coincidem com “Thank you”, mas os limites de cues diferem e cada ocorrência precisa de revisão individual. O Gemini interrompeu após 64 das 927 unidades; os logs sugerem falha de validação de conteúdo no terceiro lote, mas não preservam o detalhe da resposta por segurança. A Fase 8.1 está em execução em branch dedicada. O congelamento e as fixtures estão feitos; a confiabilidade Gemini e o batching por orçamento estão implementados inicialmente no branch e aguardam CI/merge. Os gates humanos e snapshots intermediários continuam pendentes.
 
 ## 2. Estado da Fase 1 — concluída
 
@@ -146,7 +146,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 6 | Benchmark e aceleração da tradução | **Concluída: dois backends opcionais, Preferências locais e smoke Gemini aprovado** |
 | 7 | Gestão de memória, threads e perfis de execução | **Implementação concluída e integrada à `main` (PR #26)**; homologação de desempenho pendente |
 | 8 | Regressão, homologação real e liberação | **Em andamento**: gate estrutural integrado; mídia real de 12/11 analisada, correções e reinspeção pendentes |
-| 8.1 | Correções dirigidas pela auditoria real: Gemini, PT-BR, cues, gate, CPU e lifecycle | **Em execução — etapa 8.1.0 parcialmente concluída; gate humano/intermediários pendente** ([plano](FASE_8_1_PLANO.md)) |
+| 8.1 | Correções dirigidas pela auditoria real: Gemini, PT-BR, cues, gate, CPU e lifecycle | **Em execução — congelamento técnico 8.1.0 feito; implementação inicial 8.1.1 no branch em CI; gate humano/intermediários pendente** ([plano](FASE_8_1_PLANO.md)) |
 
 A implementação da Fase 5 está integrada; promover faster-whisper ao padrão depende de homologação local com corpus humano e hardware de referência. A Fase 6 está concluída conforme o escopo acordado: smoke real Gemini aprovado, ambos os backends opcionais e benchmark comparativo retirado do gate por decisão do usuário. A Fase 7 está integrada; seu aceite de desempenho depende da medição pareada. A Fase 8 concentra a homologação audiovisual completa.
 
@@ -161,7 +161,7 @@ A implementação da Fase 5 está integrada; promover faster-whisper ao padrão 
 
 ## 9. Próximas ações
 
-1. Concluir o gate 8.1.0 com referência PT-BR humana e snapshot congelado de ASR/alinhamento; depois executar a 8.1.1 (Gemini com lotes por itens/tokens e recuperação) e a 8.1.2 (threads/lifecycle).
+1. Fechar CI/revisão e integrar a implementação inicial 8.1.1 (recuperação Gemini e lotes por orçamento de tokens); o teste sintético de 32/64/96/100 não substitui latência/qualidade real. Completar a referência humana e o snapshot ASR/alinhamento quando disponíveis; depois seguir para 8.1.2 (threads/lifecycle).
 2. Corrigir a composição das cues, o limite físico de linhas e a divergência entre validador de produção e avaliador da Fase 8.
 3. Validar a tradução por corpus PT-BR revisado e inspeção humana; separar erros originados no ASR dos erros introduzidos pelo tradutor.
 4. Repetir a mídia de 37min10s em pelo menos três execuções quentes e uma fria, registrar métricas e inspecionar o SRT em player real.
