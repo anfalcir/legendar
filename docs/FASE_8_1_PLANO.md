@@ -3,7 +3,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
 - **Base auditada:** `main` após PR #34 (8.1.5), commit `9350438674d3e83537392e73c7e95e4dd27dad36`
-- **Status:** 8.1.0 a 8.1.5 estão integradas à `main`. A PR #34 (8.1.5) foi integrada por squash no commit `9350438674d3e83537392e73c7e95e4dd27dad36`, após os sete workflows passarem. A primeira implementação da 8.1.3 está integrada, mas seu gate quantitativo no corpus congelado permanece pendente. A referência humana PT-BR e o snapshot real de ASR/alinhamento também continuam pendentes; portanto, a aprovação semântica final ainda não foi concedida.
+- **Status:** etapas 8.1.0 a 8.1.5 integradas à `main`; a primeira fatia da 8.1.6 (decisão técnica, smoke de protocolo e testes determinísticos) foi integrada pela PR #35, squash `e0ba71080243972158272cf4792c1efdde0649df`, após os sete workflows passarem. O smoke com o modelo TranslateGemma real ainda não foi executado; portanto, o runtime e a tradução local ainda não estão homologados. A primeira implementação da 8.1.3 está integrada, mas seu gate quantitativo no corpus congelado permanece pendente. A referência humana PT-BR e o snapshot real de ASR/alinhamento também continuam pendentes; a aprovação semântica final não foi concedida.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
 - **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
 
@@ -48,7 +48,7 @@ A execução deve preservar a arquitetura e os contratos existentes sempre que p
 | A-02 | P1 — alta | A tradução NLLB apresenta PT-PT e erros semânticos/lexicais incompatíveis com o alvo PT-BR | formas como “teu”, “tu”, “protecção”; 15 ocorrências de “Não, obrigado”; a comparação temporal confirma correspondência com “Thank you” em várias cues PT (por exemplo, 99–104), mas a segmentação diferente exige revisão individual das demais | avaliação com corpus-ouro PT-BR, unidades com contexto frasal, glossário controlado e política explícita de revisão |
 | A-03 | P1 — alta | A segmentação ainda gera fragmentação excessiva | 657/925 cues (71,0%) têm até 3 palavras; 40 têm uma palavra; proporção praticamente igual ao SRT PT anterior (71,4%) | acrescentar composição/agrupamento de cues curtas por frase/oração, sem remover fronteiras temporais ou sintáticas legítimas |
 | A-04 | P1 — alta | O SRT final excede a largura editorial em algumas linhas, e a validação de produção não detecta todos esses casos | 3 linhas acima de 42 caracteres no SRT novo; maior linha com 59 caracteres | alinhar layout, validador de produção e script de qualidade; subdividir em novas cues usando âncoras reais |
-| A-05 | P1 — alta | A execução NLLB regrediu para 45min49s, quase o dobro da mediana quente anterior | 2 threads intra-op/1 inter-op no teste novo; baseline quente 4/4 | corrigir detecção de CPU e medir matriz de threads de forma controlada |
+| A-05 | P1 — alta | A execução NLLB regrediu para 45min49s, quase o dobro da mediana quente anterior | 2 threads intra-op/1 inter-op no teste novo; baseline quente 4/4 | corrigir detecção de CPU e consolidar perfis operacionais; validar o perfil escolhido em uma execução real, sem matriz extensa de configurações |
 | A-06 | P1 — alta | O perfil declara não reter modelos, mas os adaptadores permanecem carregados ao fim do job | `retain_models=false`, mas Whisper, WhisperX e NLLB registram `loaded_after_job=true`; o helper de liberação não é chamado | aplicar o ciclo de vida em pontos seguros, inclusive falha/cancelamento, e cobrir concorrência |
 | A-07 | P2 — média | WhisperX executa uma chamada de alinhamento por segmento do ASR | 487 chamadas para 487 segmentos na execução NLLB | avaliar agrupamento de chamadas em janelas limitadas, isoladamente e com validação temporal |
 | A-08 | P2 — média | Os gates não representam a qualidade tradutória semântica nem são equivalentes entre script e pipeline | status `REVIEW_REQUIRED` pode ser publicado; script da Fase 8 encontra largura que o validador de produção pode não sinalizar | separar aprovação estrutural, revisão editorial e revisão semântica da tradução |
@@ -531,9 +531,9 @@ Tarefas:
 
 ### Etapa 8.1.6 — substituição do motor local por TranslateGemma
 
-**STATUS: EM IMPLEMENTAÇÃO**
+**STATUS: PRIMEIRA FATIA INTEGRADA; IMPLEMENTAÇÃO E HOMOLOGAÇÃO DO MOTOR PENDENTES**
 
-A decisão de produto foi aprovada pelo usuário em 12/11/2026: remover NLLB e adotar TranslateGemma 4B Q4_K_M como único motor local. Gemini permanece como opção remota independente. A decisão técnica, o runtime candidato, o contrato de idioma, os riscos de licença e os gates estão em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
+A PR #35 foi integrada à `main` por squash no commit `e0ba71080243972158272cf4792c1efdde0649df`, com sete workflows aprovados. Ela registra a decisão e adiciona o smoke determinístico do protocolo HTTP local; não inclui ainda o smoke com pesos reais nem o adaptador de produção. A decisão de produto foi aprovada pelo usuário em 12/11/2026: remover NLLB e adotar TranslateGemma 4B Q4_K_M como único motor local. Gemini permanece como opção remota independente. A decisão técnica, o runtime candidato, o contrato de idioma, os riscos de licença e os gates estão em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
 
 ### Escopo fechado
 
