@@ -14,11 +14,11 @@
 A Fase 8.1 transforma os resultados reais de 12/11/2026 em um plano cirúrgico de correção. O trabalho deverá resolver, em ordem de dependência:
 
 1. falha de lote e recuperação segura da tradução Gemini;
-2. regressão de desempenho associada à política de threads, sem confundir esse problema com a política de retenção de modelos;
+2. topologia de CPU e ciclo de vida de recursos, sem confundir alocação de threads com retenção de modelos;
 3. fragmentação de cues e ausência de composição de frases curtas;
-4. vazamento de PT-PT, erros semânticos e falta de contexto suficiente na tradução;
-5. divergência entre formatação SRT, validador de produção e avaliador da Fase 8;
-6. oportunidades adicionais de desempenho, somente depois de estabilizar qualidade e recursos.
+4. contrato contextual e qualidade editorial PT-BR, sem perda de rastreabilidade temporal;
+5. substituição integral do motor local NLLB por TranslateGemma, mantendo Gemini como rota remota independente;
+6. unificação do gate estrutural, publicação segura e validação de desempenho no hardware de referência.
 
 **Esta fase é de correção dirigida por evidência. A substituição do motor local por TranslateGemma foi aprovada explicitamente e está isolada na etapa 8.1.6; não autoriza mudanças simultâneas não relacionadas nem substituição da rota remota Gemini.**
 
