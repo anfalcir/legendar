@@ -76,7 +76,9 @@ class LlamaCppRuntimeManager:
         monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         if host != "127.0.0.1":
-            raise ValueError("O servidor TranslateGemma deve escutar somente em 127.0.0.1.")
+            raise ValueError(
+                "O servidor TranslateGemma deve escutar somente em 127.0.0.1."
+            )
         if context_size < 512 or context_size > 2048:
             raise ValueError("O contexto TranslateGemma deve ficar entre 512 e 2048.")
         if threads < 1:
@@ -91,7 +93,9 @@ class LlamaCppRuntimeManager:
         self.context_size = context_size
         self.threads = threads
         self.startup_timeout = startup_timeout
-        self._configured_executable = Path(executable).expanduser() if executable else None
+        self._configured_executable = (
+            Path(executable).expanduser() if executable else None
+        )
         self._popen_factory = popen_factory
         self._opener = opener
         self._sleep = sleep
@@ -286,7 +290,9 @@ class LlamaCppRuntimeManager:
                 return
             if progress is not None:
                 remaining = max(0.0, deadline - self._monotonic())
-                fraction = min(0.95, 0.1 + 0.85 * (1 - remaining / self.startup_timeout))
+                fraction = min(
+                    0.95, 0.1 + 0.85 * (1 - remaining / self.startup_timeout)
+                )
                 progress.report(fraction, "Aguardando o servidor TranslateGemma")
             self._sleep(_POLL_INTERVAL)
         raise ModelError(
