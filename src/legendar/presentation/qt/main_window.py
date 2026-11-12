@@ -1009,7 +1009,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 self,
                 "Não foi possível salvar a chave Gemini",
-                f"A chave não foi alterada. Verifique as permissões do perfil do usuário.\\n\\n{exc}",
+                f"A chave não foi alterada. Verifique as permissões do perfil do usuário.\n\n{exc}",
             )
             return
 
