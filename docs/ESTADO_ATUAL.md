@@ -69,7 +69,7 @@ A Fase 2 foi integrada à `main` após CI verde em todas as matrizes relevantes.
 
 A Fase 3 foi integrada pela PR #10, squash commit `10f6d6d428a1fa5a45a7c7fd13870f48bdf67019`. A implementação usa fluxo global cronológico de palavras alinhadas, consolida segmentos contíguos do Whisper, preserva segmentos fallback como barreiras, mantém rastreabilidade `source_segments`, rejeita cronologia inválida, respeita fronteiras de frase significativas e estende cues curtas somente no silêncio seguro antes da próxima cue (margem de 80 ms). O corpus determinístico cobre continuidade, pausas, pontuação, CPS, extensão segura, fallback intercalado, rastreabilidade e layout final de duas linhas.
 
-**Validação:** CI específica verde em Python 3.10–3.13; 506 testes aprovados; cobertura global de 86%; Ruff lint/formatação e integração FFmpeg/Qt/E2E aprovados. Workflows das Fases 4, 5, 6 e 8 também passaram no mesmo head. A homologação audiovisual com a mídia real de 37min10s permanece no escopo da Fase 8.
+**Validação histórica:** CI específica verde em Python 3.10–3.13; 506 testes aprovados e cobertura global de 86% em execução anterior. Na primeira execução sobre a integração da PR #27, as quatro matrizes falharam por uma expectativa incorreta de CPS no teste novo e cobertura global de 84,75%; o job documental passou. A correção está sendo preparada em PR de manutenção, e a matriz só será declarada verde após nova execução completa.
 
 ## 4. Estado do repositório
 
@@ -84,7 +84,7 @@ A Fase 3 foi integrada pela PR #10, squash commit `10f6d6d428a1fa5a45a7c7fd13870
 | Publicação | SRT com round-trip e gravação atômica |
 | Gate editorial | Relatório estruturado com estados `APPROVED`, `REVIEW_REQUIRED` e `BLOCKED`, bloqueio de perda e avisos de revisão; integrado pela PR #11 |
 | Benchmark por etapa | Instrumentação integrada; baseline real consolidado em 11/11/2026 |
-| Otimização de motores | Fase 5 implementada e integrada; benchmark de hardware pendente para promover faster-whisper. Fase 6 em validação técnica; Fase 7 planejada |
+| Otimização de motores | Fases 5 e 6 implementadas e integradas; faster-whisper continua opt-in até homologação local. NLLB e Gemini são opções de tradução; comparação entre eles não é gate atual |
 | Homologação audiovisual final | Pendente |
 
 ## 5. Evidências de qualidade e lacunas conhecidas
@@ -139,10 +139,10 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 4 | Gate editorial e diagnóstico textual | **Concluída e integrada à `main` (PR #11)** |
 | 5 | Benchmark e aceleração da transcrição | **Implementação concluída e integrada à `main` (PR #12)**; benchmark local/homologação para promoção do candidato pendentes |
 | 6 | Benchmark e aceleração da tradução | **Concluída: dois backends opcionais, Preferências locais e smoke Gemini aprovado** |
-| 7 | Gestão de memória, threads e perfis de execução | Planejada |
-| 8 | Regressão, homologação real e comparação final | Planejada |
+| 7 | Gestão de memória, threads e perfis de execução | **Implementação concluída e integrada à `main` (PR #26)**; homologação de desempenho pendente |
+| 8 | Regressão, homologação real e liberação | **Em andamento**: gate estrutural integrado pela PR #27; mídia real, cold/warm e inspeção audiovisual pendentes |
 
-A Fase 5 tem implementação integrada; seu aceite operacional depende da homologação real na Fase 8. A implementação técnica da Fase 6 está integrada e sua CI passou; o aceite operacional do Gemini depende de smoke real da API, benchmark pareado na mídia de referência e revisão humana.
+A implementação da Fase 5 está integrada; promover faster-whisper ao padrão depende de homologação local com corpus humano e hardware de referência. A Fase 6 está concluída conforme o escopo acordado: smoke real Gemini aprovado, ambos os backends opcionais e benchmark comparativo retirado do gate por decisão do usuário. A Fase 7 está integrada; seu aceite de desempenho depende da medição pareada. A Fase 8 concentra a homologação audiovisual completa.
 
 ## 8. Critérios que não podem ser sacrificados
 
@@ -155,12 +155,11 @@ A Fase 5 tem implementação integrada; seu aceite operacional depende da homolo
 
 ## 9. Próximas ações
 
-1. Homologar o benchmark pareado da Fase 5 no computador de referência, com áudio de 37min10s e referências humanas, antes de alterar o backend padrão.
-2. Fase 6: implementação integrada pela PR #19 e smoke real aprovado após atualização da chave; executar benchmark pareado no hardware de referência, validar grounding separadamente e concluir revisão humana cega.
-3. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
-4. Executar a Fase 7 para gestão de memória, threads e perfis de execução, conforme os resultados dos benchmarks.
-5. Consolidar a Fase 8 com comparação do pipeline completo, homologação audiovisual com a mídia real, validação no hardware-alvo e evidências sanitizadas.
+1. Concluir a homologação da Fase 8 com a mídia real de 37min10s no hardware-alvo, incluindo cold/warm, tempo por etapa, memória e comparação com a baseline.
+2. Avaliar o SRT no gate estrutural e em player real: sincronização, PT-BR natural, nomes próprios/entidades, fragmentação, omissões, duplicações e legibilidade.
+3. Usar os resultados da homologação para corrigir regressões encontradas; não promover faster-whisper a padrão sem benchmark e referência humana.
+4. Manter NLLB e Gemini opcionais. Não executar benchmark comparativo Gemini × NLLB sem nova decisão explícita do usuário.
 
 ## 10. Histórico documental
 
-Os protocolos, planos, handoffs e relatórios concluídos da remodelação anterior estão preservados em [archive/README.md](archive/README.md). Eles servem como registro histórico; este arquivo e o plano vigente representam o estado atual.
+Os planos e relatórios encerrados das Fases 5 e 6 e os documentos da remodelação anterior estão preservados em [archive/README.md](archive/README.md). Eles servem como registro histórico; este arquivo e o plano vigente representam o estado atual.
