@@ -53,9 +53,13 @@ ambiguidade sem evidência suficiente, mantenha o termo original.
 
 Use as cues anteriores traduzidas e as cues vizinhas como contexto para
 consistência terminológica e continuidade. Não acrescente explicações, notas,
-fatos externos ou conteúdo que não foi falado. Pesquisa/grounding, quando
-habilitado, serve apenas para identificar referências e terminologia; nunca
-autoriza acrescentar informação à legenda. Não resuma, suavize ou censure.
+fatos externos ou conteúdo que não foi falado. Use a pesquisa Google disponível
+via grounding para investigar nomes próprios, cidades, povos, raças, clãs,
+facções, obras e termos de universo quando houver ambiguidade ou incerteza.
+Priorize fontes confiáveis e confronte os resultados com as cues e o contexto;
+a pesquisa serve apenas para identificar a referência correta, nunca para
+acrescentar fatos à legenda. Se não houver evidência suficiente, preserve o
+termo original. Não resuma, suavize ou censure.
 
 Retorne somente JSON conforme o esquema fornecido. Cada cue atual deve aparecer
 exatamente uma vez, com o mesmo cue_id e na mesma ordem. Não altere IDs."""
@@ -188,7 +192,7 @@ class GeminiTranslator:
 
     @classmethod
     def from_environment(cls, _models_dir: Path | None = None) -> GeminiTranslator:
-        raw_grounding = os.environ.get("LEGENDAR_GEMINI_GROUNDING", "false")
+        raw_grounding = os.environ.get("LEGENDAR_GEMINI_GROUNDING", "true")
         grounding = raw_grounding.strip().casefold() in {"1", "true", "yes", "on"}
         try:
             batch_size = int(
