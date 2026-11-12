@@ -58,6 +58,8 @@ As opções abaixo **não são dependências adotadas**. Só devem entrar no man
 
 O faster-whisper é uma implementação de Whisper baseada em CTranslate2. Sua documentação demonstra INT8 em CPU, FP16 em GPU, timestamps por palavra e VAD opcional.
 
+Estado da Fase 5: adaptador e benchmark pareado integrados; OpenAI Whisper continua padrão. A avaliação operacional do candidato ainda depende de corpus humano e hardware de referência.
+
 Avaliar:
 - compatibilidade de versão com Python, Torch/WhisperX e wheels disponíveis;
 - suporte INT8 no hardware AMD do perfil de referência;
@@ -65,7 +67,7 @@ Avaliar:
 - equivalência de parâmetros e comportamento de janelas;
 - uso de CPU/RAM, threads e tempo de inferência.
 
-Não adicionar pacote como dependência direta até a Fase 5 aprovar o candidato.
+O adaptador da Fase 5 está integrado. O perfil `runtime-cpu`/`runtime-cu128` já recebe faster-whisper/CTranslate2 transitivamente por `whisperx`; a implementação não adicionou dependência direta redundante. Antes de alterar essa relação, revisar o lock e a compatibilidade do stack completo.
 
 Referência: [SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper).
 
@@ -90,21 +92,17 @@ O model card do `facebook/nllb-200-distilled-600M` informa CC-BY-NC-4.0 e descre
 
 Referência: [NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-distilled-600M).
 
+
 ### 5.4. Gemini Developer API para tradução contextual
 
-O adaptador `GeminiTranslator` usa HTTPS via biblioteca padrão `urllib`; não adiciona SDK ou dependência Python ao runtime. A chamada exige `GEMINI_API_KEY` no ambiente e envia texto das cues à API externa. O backend continua opt-in e o NLLB local permanece padrão.
+O adaptador `GeminiTranslator` usa HTTPS via biblioteca padrão `urllib`; não adiciona SDK ou dependência Python ao runtime. A chamada exige `GEMINI_API_KEY` no ambiente e transmite o texto das cues à API externa. O backend é opt-in e o NLLB local permanece padrão.
 
-Avaliar:
-- disponibilidade e estabilidade do modelo configurado (padrão atual `gemini-3.8-flash`);
-- grounding Google Search não está disponível no `gemini-3.8-flash`; a opção é limitada no adaptador ao `gemini-3.5-flash-lite`;
-- latência, tokens, retries, throughput e limites de requisição;
-- qualidade PT-BR, nomes próprios, termos de universo e consistência entre cues;
-- privacidade e política de tratamento de conteúdo no provedor;
-- grounding Google Search opcional, com custo/latência medidos separadamente.
+- Modelo padrão `gemini-3.8-flash`, estável/GA segundo a documentação oficial consultada em 11/11/2026.
+- Gemini 3 usa `thinkingLevel=LOW` no payload para reduzir latência; `temperature` não é enviado.
+- Google Search grounding é suportado pelo `gemini-3.8-flash`, mas permanece desligado por padrão.
+- Chave nunca entra no repositório, URL, logs ou artefatos; não há fallback automático entre motores.
 
-A chave nunca entra no repositório, URL, logs ou artefatos. O uso da API não torna a tradução local: o texto-fonte é transmitido ao provedor. Só selecionar Gemini quando o usuário configurar explicitamente o backend e fornecer a chave. Não há fallback automático entre Gemini e NLLB.
-
-Referências: [Gemini Generate Content](https://ai.google.dev/gemini-api/docs/generate-content), [modelos](https://ai.google.dev/gemini-api/docs/models), [structured output](https://ai.google.dev/gemini-api/docs/structured-output).
+Referências: [Generate Content](https://ai.google.dev/api/generate-content), [modelos Gemini](https://ai.google.dev/gemini-api/docs/models), [Gemini 3 thinking](https://ai.google.dev/gemini-api/docs/generate-content/thinking).
 
 ## 6. Política de atualização
 
