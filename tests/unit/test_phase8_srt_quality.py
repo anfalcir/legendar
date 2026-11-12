@@ -97,9 +97,7 @@ def test_percentile_and_empty_analysis() -> None:
 
 def test_compare_handles_empty_baseline() -> None:
     empty = analyze([])
-    nonempty = analyze(
-        parse_srt_from_text("1\n00:00:00,000 --> 00:00:02,000\nTexto\n")
-    )
+    nonempty = analyze(parse_srt_from_text("1\n00:00:00,000 --> 00:00:02,000\nTexto\n"))
     result = compare(nonempty, empty)
     assert result["cue_count_delta"] == 1
     assert result["cue_count_ratio"] is None
