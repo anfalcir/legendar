@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 LANGUAGES = {
@@ -49,6 +50,16 @@ def translate(
     timeout: float = 600,
 ) -> str:
     """Envia uma única mensagem com metadados de idioma por requisição."""
+    parsed_url = urlsplit(base_url)
+    if (
+        parsed_url.scheme != "http"
+        or parsed_url.hostname not in {"127.0.0.1", "localhost", "::1"}
+        or parsed_url.username is not None
+        or parsed_url.password is not None
+    ):
+        raise ValueError("O servidor de tradução deve estar em loopback HTTP.")
+    if timeout <= 0:
+        raise ValueError("O timeout deve ser positivo.")
     prompt = build_prompt(text, source, target)
     payload = {
         "model": model,
