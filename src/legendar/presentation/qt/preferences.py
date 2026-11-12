@@ -9,7 +9,7 @@ from PySide6.QtCore import QByteArray, QSettings
 
 from legendar.domain.value_objects.language import Language
 
-_TRANSLATION_BACKENDS = {"nllb", "gemini"}
+_TRANSLATION_BACKENDS = {"nllb", "gemini", "translategemma"}
 
 _VALID_THEMES = {"system", "light", "dark"}
 
