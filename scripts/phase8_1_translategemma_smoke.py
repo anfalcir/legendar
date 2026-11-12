@@ -20,24 +20,13 @@ LANGUAGES = {
 }
 
 
-def build_prompt(text: str, source: str, target: str) -> str:
-    """Monta a instrução de tradução documentada para TranslateGemma."""
+def build_user_content(text: str, source: str, target: str) -> str:
+    """Valida o par e mantém o texto puro, como exige o chat template oficial."""
     if source not in LANGUAGES or target not in LANGUAGES:
         raise ValueError("Par de idiomas não suportado pelo smoke test.")
     if not text.strip():
         raise ValueError("O texto de entrada não pode ficar vazio.")
-    source_name, source_code = LANGUAGES[source]
-    target_name, target_code = LANGUAGES[target]
-    return (
-        f"You are a professional {source_name} ({source_code}) to "
-        f"{target_name} ({target_code}) translator. Your goal is to accurately "
-        f"convey the meaning and nuances of the original {source_name} text "
-        f"while adhering to {target_name} grammar, vocabulary, and cultural "
-        "sensitivities.\n"
-        f"Produce only the {target_name} translation, without any additional "
-        "explanations or commentary. Please translate the following "
-        f"{source_name} text into {target_name}:\n\n\n{text.strip()}"
-    )
+    return text.strip()
 
 
 def translate(
@@ -60,10 +49,10 @@ def translate(
         raise ValueError("O servidor de tradução deve estar em loopback HTTP.")
     if timeout <= 0:
         raise ValueError("O timeout deve ser positivo.")
-    prompt = build_prompt(text, source, target)
+    user_content = build_user_content(text, source, target)
     payload = {
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user", "content": user_content}],
         "chat_template_kwargs": {
             "source_lang_code": source,
             "target_lang_code": target,
