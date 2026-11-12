@@ -37,7 +37,7 @@ src/legendar/
     media/{probe,ffmpeg,ffprobe,tools,youtube}.py
     transcription/whisper.py
     alignment/whisperx.py
-    translation/{nllb,gemini,llama_runtime}.py
+    translation/{nllb,gemini,llama_runtime,translategemma}.py
     filesystem/{srt,publisher,atomic,workspace,paths}.py
     config/settings.py
     diagnostics/performance.py
@@ -127,7 +127,7 @@ Os testes E2E de mídia atuais usam adaptadores falsos para reconhecimento e ali
 
 ## 10. Evolução sob o plano atual
 
-A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. A Fase 7 adiciona uma política transversal de recursos: perfis controlam retenção de modelos e threads CPU sem acoplar a UI aos runtimes. A Fase 6 mantém `NllbTranslator` e `GeminiTranslator` atrás da mesma porta; a seleção persistida em Preferências altera o adaptador usado pelos próximos jobs sem reiniciar a GUI. As próximas mudanças devem preservar essas fronteiras.
+A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. A Fase 7 adiciona uma política transversal de recursos: perfis controlam retenção de modelos e threads CPU sem acoplar a UI aos runtimes. A Fase 6 mantém `NllbTranslator` e `GeminiTranslator` atrás da mesma porta; a migração da Fase 8.1.6 adiciona `TranslateGemmaTranslator` e o runtime gerenciado. A seleção persistida em Preferências altera o adaptador usado pelos próximos jobs sem reiniciar a GUI. As próximas mudanças devem preservar essas fronteiras.
 
 A evolução proposta é:
 - instrumentar tempo e memória por estágio;
@@ -153,4 +153,4 @@ O runtime TranslateGemma é uma dependência operacional sob responsabilidade do
 - Encerramento: parar somente o processo filho criado pelo Legendar; preservar pesos/cache e nunca matar processos externos.
 - Segurança: loopback exclusivo, versão fixada, integridade verificada, sem privilégios elevados silenciosos e sem credenciais em logs/configurações comuns.
 
-A máquina de estados operacional e seus eventos de progresso devem ser testáveis sem baixar o modelo real. A prova com pesos reais permanece um gate separado de homologação. A primeira fatia de infraestrutura está em desenvolvimento na PR #36: diagnóstico local, download retomável do GGUF após consentimento e SHA-256, inicialização em loopback, readiness, reutilização do processo próprio e encerramento seguro; ainda não está conectada ao bootstrap nem ao adaptador de tradução.
+A máquina de estados operacional e seus eventos de progresso devem ser testáveis sem baixar o modelo real. A prova com pesos reais permanece um gate separado de homologação. A PR #36 conecta o adaptador TranslateGemma e o diagnóstico do runtime ao bootstrap/Preferências; o adaptador inicializa/reutiliza o servidor em loopback e envia códigos de idioma por requisição. Download GGUF com consentimento e SHA-256, locks e shutdown seguro estão no gerenciador. Instalação assistida do binário, autorização/download integrado à UI e smoke com pesos reais continuam pendentes.
