@@ -384,6 +384,10 @@ def test_translategemma_backend_stays_disabled_until_runtime_and_model_exist(
         def download_authorized(self) -> bool:
             return False
 
+        @property
+        def needs_download_authorization(self) -> bool:
+            return True
+
         def authorize_model_download(self) -> None:
             pass
 
@@ -403,6 +407,7 @@ def test_translategemma_backend_stays_disabled_until_runtime_and_model_exist(
     assert not dependencies.translate_available
     assert "Instale o runtime llama.cpp" in dependencies.translate_readiness_details
     assert "GGUF ausente" in dependencies.translate_readiness_details
+
 
 def test_gemini_backend_is_selected_with_api_key(tmp_path, monkeypatch) -> None:
     _patch_modules(monkeypatch)
