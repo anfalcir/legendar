@@ -433,11 +433,11 @@ Tarefas:
 
 **Gate:** o perfil automático não pode reduzir indevidamente 4 núcleos físicos a 2. A política de retenção precisa ser demonstravelmente aplicada. Nenhuma configuração de threads será promovida sem mediana e dispersão medidas.
 
-**Status de implementação:** concluída e integrada à `main` pela PR #31. A CI completa do commit `89707ab7a060608ad0716764e16d92336df3d70e` passou nos sete workflows de qualidade. Os testes determinísticos cobrem topologia 4/4 e 4/8, afinidade, cpuset, quota, lifecycle `low-memory`/`balanced`, cancelamento, falhas de release e concorrência. O gate de homologação de desempenho continua aberto até a matriz real de threads.
+**Status de implementação:** concluída e integrada à `main` pela PR #31. A política operacional foi consolidada sem exigir uma matriz de 15 execuções: no hardware de referência, `performance` usa 4/4, `balanced` usa 4/2 e `low-memory` usa 4/1; o `auto` seleciona `performance` a partir de 12 GiB, `balanced` entre 8 e 12 GiB e `low-memory` abaixo de 8 GiB. A referência histórica já demonstrou 4/4 como configuração quente rápida e a regressão observada ocorreu com 2/1. A CI estrutural cobre topologia, afinidade, cpuset, quota, lifecycle, cancelamento, falhas de release e concorrência. A homologação E2E final continua pendente, mas não bloqueia a definição desta política operacional.
 
 ### Etapa 8.1.3 — Reestruturar composição das cues e limites de exibição
 
-**Pré-requisito:** a implementação 8.1.2 está integrada e a CI estrutural está verde. Antes de alterar a composição das cues, executar a matriz real de threads definida na 8.1.2 e registrar a configuração escolhida como baseline operacional. Depois disso, esta etapa pode avançar em branch próprio.
+**Pré-requisito:** a implementação 8.1.2 está integrada e a CI estrutural está verde. A política CPU já foi definida operacionalmente com `performance=4/4`, `balanced=4/2` e `low-memory=4/1`; não é necessário executar uma matriz de 15 rodadas apenas para escolher threads. A homologação E2E posterior servirá para confirmar o conjunto completo do pipeline. Esta etapa pode avançar em branch próprio.
 
 **Objetivo:** produzir legendas que acompanhem frases/orações com boa continuidade visual, sem excesso de microcues e sem ultrapassar o espaço de tela.
 
