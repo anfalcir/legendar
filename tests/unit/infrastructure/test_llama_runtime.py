@@ -387,3 +387,46 @@ def test_dead_owned_process_releases_lock_before_restart(tmp_path) -> None:
     assert len(processes) == 2
     assert manager.is_running
     manager.shutdown()
+
+
+def test_existing_valid_model_download_is_idempotent(tmp_path, monkeypatch) -> None:
+    payload = b"already-installed-model"
+    monkeypatch.setattr(
+        llama_runtime, "MODEL_SHA256", hashlib.sha256(payload).hexdigest()
+    )
+    model_path = tmp_path / "models" / "translategemma.gguf"
+    model_path.parent.mkdir()
+    model_path.write_bytes(payload)
+    manager, _ = _manager(
+        tmp_path,
+        model_path=model_path,
+        opener=lambda *_args, **_kwargs: pytest.fail("download must not run"),
+    )
+
+    assert manager.download_model(consent=True) == model_path
+    assert model_path.read_bytes() == payload
+
+
+def test_download_file_lock_prevents_parallel_model_downloads(
+    tmp_path, monkeypatch
+) -> None:
+    payload = b"single-download"
+    monkeypatch.setattr(
+        llama_runtime, "MODEL_SHA256", hashlib.sha256(payload).hexdigest()
+    )
+    second, _ = _manager(tmp_path)
+    response = DownloadResponse(
+        [payload],
+        headers={"Content-Length": str(len(payload))},
+    )
+
+    def opener(*_args, **_kwargs):
+        with pytest.raises(ModelError, match="Outra instância"):
+            second.download_model(consent=True)
+        return response
+
+    model_path = tmp_path / "models" / "translategemma.gguf"
+    first, _ = _manager(tmp_path, model_path=model_path, opener=opener)
+
+    assert first.download_model(consent=True) == model_path
+    assert model_path.read_bytes() == payload
