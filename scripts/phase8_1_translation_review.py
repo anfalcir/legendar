@@ -14,7 +14,11 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from scripts.phase8_srt_quality import Cue, parse_srt
+try:
+    from scripts.phase8_srt_quality import Cue, parse_srt
+except ModuleNotFoundError:
+    # Execução direta: o diretório scripts/ é sys.path[0].
+    from phase8_srt_quality import Cue, parse_srt
 
 _WORD_RE = re.compile(r"[\wÀ-ÿ'-]+", re.UNICODE)
 _NEGATION_RE = re.compile(
