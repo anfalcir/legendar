@@ -1,24 +1,25 @@
 # Documentação viva do Legendar
 
-Este diretório mantém na raiz somente documentos que orientam a operação atual, registram decisões vigentes ou conduzem a evolução em andamento.
+Este diretório mantém na raiz somente documentos que orientam a operação atual, registram decisões vigentes ou conduzem a evolução em andamento. Planos específicos de fases encerradas, handoffs e relatórios substituídos ficam em `archive/`.
 
 ## Estado e evolução
 
-- [Estado atual](ESTADO_ATUAL.md) — o que está implementado, validado, pendente e em risco.
-- [Plano de correção, qualidade e desempenho](PLANO_CORRECAO_MELHORIA.md) — plano mestre de trabalho para corrigir a qualidade do SRT e reduzir o tempo de execução sem perda de qualidade.
-- [Plano operacional da Fase 5](FASE_5_PLANO.md) — configuração do faster-whisper, benchmark pareado e critérios de aceite do ASR.
-- [Plano operacional da Fase 6](FASE_6_PLANO.md) — Gemini contextual, benchmark pareado com NLLB, segurança e critérios de homologação.
-- [Registro de homologação da Fase 6](FASE_6_HOMOLOGACAO.md) — evidências do smoke real, benchmark no hardware de referência e revisão humana.
+- [Estado atual](ESTADO_ATUAL.md) — fonte de verdade sobre o que está implementado, integrado, validado, pendente e em risco.
+- [Plano de correção, qualidade e desempenho](PLANO_CORRECAO_MELHORIA.md) — plano mestre vigente, incluindo a Fase 8 de regressão e homologação real.
 
 ## Referência técnica e operacional
 
-- [Arquitetura](ARQUITETURA.md) — camadas, pipeline, portas, estados e publicação.
+- [Arquitetura](ARQUITETURA.md) — camadas, pipeline, portas, estados, recursos e publicação.
 - [Operação](OPERACAO.md) — jornada de uso, estados, cancelamento, arquivos e diagnóstico.
 - [Instalação](INSTALACAO.md) — requisitos, perfis, instalação, execução e verificação.
-- [Homologação](HOMOLOGACAO.md) — roteiro prático com mídia real, hardware e revisão do SRT.
+- [Homologação](HOMOLOGACAO.md) — roteiro prático com mídia real, hardware, avaliação estrutural e revisão do SRT.
 - [Decisões](DECISOES.md) — escolhas consolidadas e pontos ainda em avaliação.
 - [Matriz de dependências](MATRIZ_DEPENDENCIAS.md) — manifesto, lock, compatibilidade e candidatos em avaliação.
 
 ## Histórico
 
-Planos por fase, handoffs, relatório da Fase 8, plano mestre anterior e baseline legada foram preservados em [archive/README.md](archive/README.md). O histórico não é a fonte de verdade do estado operacional atual; para isso, consulte [ESTADO_ATUAL.md](ESTADO_ATUAL.md).
+- [Fases 5 e 6 — planos e registro de homologação](archive/completed-phases/): planos e evidências preservados após encerramento das fases.
+- [Remodelação anterior — Fases 0–10](archive/previous-remodeling/): protocolos, planos, handoffs, relatório e baseline da implementação anterior.
+- [Índice do arquivo histórico](archive/README.md).
+
+Os documentos arquivados são evidência histórica, não instruções operacionais atuais. Em caso de divergência, prevalecem os documentos vivos e o comportamento integrado à `main`.
