@@ -495,6 +495,7 @@ def test_pipeline_blocks_publication_when_segmentation_drops_source_content(
 
     assert publisher.calls == []
 
+
 class ReleasableAdapter:
     """Decorador de porta que simula modelo residente e lifecycle observável."""
 
@@ -591,7 +592,9 @@ def test_low_memory_releases_each_model_after_its_stage_and_reports_state(
         1,
         1,
     ]
-    assert all(item.is_loaded is False for item in (transcriber, aligner, translator))
+    assert all(
+        item.is_loaded is False for item in (transcriber, aligner, translator)
+    )
     report = reporter.reports[0]
     assert report["metadata"]["transcription_loaded_after_stage"] is False
     assert report["metadata"]["alignment_loaded_after_stage"] is False
