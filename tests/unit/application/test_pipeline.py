@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+
 import pytest
 from tests.helpers.fakes import (
     FakeAligner,
@@ -492,3 +494,339 @@ def test_pipeline_blocks_publication_when_segmentation_drops_source_content(
         pipeline.execute(_request(), job_context)
 
     assert publisher.calls == []
+
+
+class ReleasableAdapter:
+    """Decorador de porta que simula modelo residente e lifecycle observável."""
+
+    def __init__(
+        self,
+        delegate,
+        *,
+        loaded: bool = False,
+        fail_release: bool = False,
+    ) -> None:
+        self.delegate = delegate
+        self.loaded = loaded
+        self.fail_release = fail_release
+        self.release_calls = 0
+
+    @property
+    def is_loaded(self) -> bool:
+        return self.loaded
+
+    def transcribe(self, *args, **kwargs):
+        self.loaded = True
+        return self.delegate.transcribe(*args, **kwargs)
+
+    def align(self, *args, **kwargs):
+        self.loaded = True
+        return self.delegate.align(*args, **kwargs)
+
+    def translate(self, *args, **kwargs):
+        self.loaded = True
+        return self.delegate.translate(*args, **kwargs)
+
+    def release_resources(self) -> None:
+        self.release_calls += 1
+        if self.fail_release:
+            raise RuntimeError("falha sintética ao liberar modelo")
+        self.loaded = False
+
+    def performance_snapshot(self) -> dict:
+        return {"loaded": self.loaded, "configuration": {}, "counters": {}}
+
+
+def _releasable_pipeline(
+    *,
+    reporter=None,
+    transcriber=None,
+    aligner=None,
+    translator=None,
+) -> tuple[SerialPipeline, dict]:
+    ports = {
+        "inspector": FakeInspector(),
+        "audio_preparer": FakeAudioPreparer(),
+        "transcriber": transcriber or ReleasableAdapter(FakeTranscriber()),
+        "aligner": aligner or ReleasableAdapter(FakeAligner()),
+        "publisher": FakePublisher(),
+        "translator": translator,
+    }
+    return (
+        SerialPipeline(
+            PipelinePorts(**ports),
+            performance_reporter=reporter,
+        ),
+        ports,
+    )
+
+
+def test_low_memory_releases_each_model_after_its_stage_and_reports_state(
+    job_context, monkeypatch
+) -> None:
+    monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "low-memory")
+    monkeypatch.delenv("LEGENDAR_CPU_THREADS", raising=False)
+    monkeypatch.delenv("LEGENDAR_CPU_INTEROP_THREADS", raising=False)
+    transcriber = ReleasableAdapter(FakeTranscriber())
+    aligner = ReleasableAdapter(FakeAligner())
+    translator = ReleasableAdapter(FakeTranslator())
+    reporter = PerformanceReporterFake()
+    pipeline, _ = _releasable_pipeline(
+        reporter=reporter,
+        transcriber=transcriber,
+        aligner=aligner,
+        translator=translator,
+    )
+
+    pipeline.execute(
+        _request(
+            source_language=Language.PORTUGUESE,
+            output_language=Language.ENGLISH,
+            translate=True,
+        ),
+        job_context,
+    )
+
+    assert [item.release_calls for item in (transcriber, aligner, translator)] == [
+        1,
+        1,
+        1,
+    ]
+    assert all(item.is_loaded is False for item in (transcriber, aligner, translator))
+    report = reporter.reports[0]
+    assert report["metadata"]["transcription_loaded_after_stage"] is False
+    assert report["metadata"]["alignment_loaded_after_stage"] is False
+    assert report["metadata"]["translation_loaded_after_stage"] is False
+    assert report["counts"]["transcription_resource_release_attempted"] == 1
+    assert report["counts"]["alignment_resource_release_attempted"] == 1
+    assert report["counts"]["translation_resource_release_attempted"] == 1
+    assert all(
+        report["adapters"][name]["loaded_after_job"] is False
+        for name in ("transcription", "alignment", "translation")
+    )
+
+
+def test_low_memory_releases_transcriber_after_cancellation(
+    job_context, monkeypatch
+) -> None:
+    monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "low-memory")
+
+    class CancellingTranscriber(FakeTranscriber):
+        def transcribe(self, audio, *, language=None, progress=None, token=None):
+            token.cancel("cancelamento no estágio de transcrição")
+            token.raise_if_cancelled()
+
+    transcriber = ReleasableAdapter(CancellingTranscriber())
+    reporter = PerformanceReporterFake()
+    pipeline, _ = _releasable_pipeline(
+        reporter=reporter,
+        transcriber=transcriber,
+    )
+
+    with pytest.raises(JobCancelledError, match="cancelamento no estágio"):
+        pipeline.execute(_request(), job_context)
+
+    assert transcriber.release_calls == 1
+    assert transcriber.is_loaded is False
+    assert reporter.reports[0]["status"] == "cancelled"
+    assert reporter.reports[0]["metadata"]["transcription_loaded_after_stage"] is False
+
+
+def test_balanced_profile_retains_models_after_job(job_context, monkeypatch) -> None:
+    monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "balanced")
+    transcriber = ReleasableAdapter(FakeTranscriber())
+    aligner = ReleasableAdapter(FakeAligner())
+    translator = ReleasableAdapter(FakeTranslator())
+    reporter = PerformanceReporterFake()
+    pipeline, _ = _releasable_pipeline(
+        reporter=reporter,
+        transcriber=transcriber,
+        aligner=aligner,
+        translator=translator,
+    )
+
+    pipeline.execute(
+        _request(
+            source_language=Language.PORTUGUESE,
+            output_language=Language.ENGLISH,
+            translate=True,
+        ),
+        job_context,
+    )
+
+    assert [item.release_calls for item in (transcriber, aligner, translator)] == [
+        0,
+        0,
+        0,
+    ]
+    report = reporter.reports[0]
+    assert all(
+        report["adapters"][name]["loaded_after_job"] is True
+        for name in ("transcription", "alignment", "translation")
+    )
+
+
+def test_low_memory_cleanup_runs_on_failure_even_before_model_stages(
+    job_context, monkeypatch
+) -> None:
+    monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "low-memory")
+    transcriber = ReleasableAdapter(FakeTranscriber(), loaded=True)
+    aligner = ReleasableAdapter(FakeAligner(), loaded=True)
+    translator = ReleasableAdapter(FakeTranslator(), loaded=True)
+    reporter = PerformanceReporterFake()
+    pipeline = SerialPipeline(
+        PipelinePorts(
+            inspector=FakeInspector(info=make_media_info(audio=False)),
+            audio_preparer=FakeAudioPreparer(),
+            transcriber=transcriber,
+            aligner=aligner,
+            publisher=FakePublisher(),
+            translator=translator,
+        ),
+        performance_reporter=reporter,
+    )
+
+    with pytest.raises(InvalidInputError):
+        pipeline.execute(_request(), job_context)
+
+    assert [item.release_calls for item in (transcriber, aligner, translator)] == [
+        1,
+        1,
+        1,
+    ]
+    assert all(item.is_loaded is False for item in (transcriber, aligner, translator))
+    assert reporter.reports[0]["status"] == "failed"
+
+
+def test_resource_release_failure_does_not_mask_success(
+    job_context, monkeypatch
+) -> None:
+    monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "low-memory")
+    transcriber = ReleasableAdapter(FakeTranscriber(), fail_release=True)
+    reporter = PerformanceReporterFake()
+    pipeline, _ = _releasable_pipeline(
+        reporter=reporter,
+        transcriber=transcriber,
+    )
+
+    result = pipeline.execute(_request(), job_context)
+
+    assert result.output_path == str(job_context.output_path)
+    assert reporter.reports[0]["status"] == "completed"
+    assert reporter.reports[0]["counts"]["transcription_resource_release_failures"] == 1
+    assert reporter.reports[0]["adapters"]["transcription"]["loaded_after_job"] is True
+
+
+def test_resource_release_failure_does_not_mask_original_error(
+    job_context, monkeypatch
+) -> None:
+    from legendar.domain.errors.catalog import ModelError
+
+    monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "low-memory")
+
+    class FailingTranscriber:
+        is_loaded = True
+
+        def transcribe(self, *_args, **_kwargs):
+            raise ModelError("erro original da transcrição")
+
+        def release_resources(self):
+            raise RuntimeError("erro secundário de liberação")
+
+        def performance_snapshot(self):
+            return {"loaded": self.is_loaded, "configuration": {}, "counters": {}}
+
+    reporter = PerformanceReporterFake()
+    pipeline, _ = _releasable_pipeline(
+        reporter=reporter,
+        transcriber=FailingTranscriber(),
+    )
+
+    with pytest.raises(ModelError, match="erro original"):
+        pipeline.execute(_request(), job_context)
+
+    assert reporter.reports[0]["error_type"] == "ModelError"
+    assert reporter.reports[0]["counts"]["transcription_resource_release_failures"] == 1
+
+
+def test_separate_pipeline_instances_do_not_release_a_shared_active_model(
+    job_context, monkeypatch
+) -> None:
+    monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "low-memory")
+    entered_first = threading.Event()
+    allow_first_to_finish = threading.Event()
+    second_started = threading.Event()
+    entered_second = threading.Event()
+
+    class BlockingTranscriber(ReleasableAdapter):
+        def __init__(self):
+            super().__init__(FakeTranscriber())
+            self._lock = threading.Lock()
+            self._active = 0
+            self.max_active = 0
+            self.calls = 0
+
+        def transcribe(self, *args, **kwargs):
+            with self._lock:
+                self._active += 1
+                self.max_active = max(self.max_active, self._active)
+                self.calls += 1
+                current_call = self.calls
+            if current_call == 1:
+                entered_first.set()
+                assert allow_first_to_finish.wait(timeout=5)
+            else:
+                entered_second.set()
+            try:
+                return super().transcribe(*args, **kwargs)
+            finally:
+                with self._lock:
+                    self._active -= 1
+
+        def release_resources(self):
+            with self._lock:
+                assert self._active == 0
+            super().release_resources()
+
+    transcriber = BlockingTranscriber()
+    shared_ports = {
+        "inspector": FakeInspector(),
+        "audio_preparer": FakeAudioPreparer(),
+        "transcriber": transcriber,
+        "aligner": ReleasableAdapter(FakeAligner()),
+        "publisher": FakePublisher(),
+    }
+    first_pipeline = SerialPipeline(PipelinePorts(**shared_ports))
+    second_pipeline = SerialPipeline(PipelinePorts(**shared_ports))
+    errors: list[BaseException] = []
+
+    def run_first() -> None:
+        try:
+            first_pipeline.execute(_request(), job_context)
+        except BaseException as exc:  # noqa: BLE001 - capturar falha da thread do teste
+            errors.append(exc)
+
+    def run_second() -> None:
+        second_started.set()
+        try:
+            second_pipeline.execute(_request(), job_context)
+        except BaseException as exc:  # noqa: BLE001 - capturar falha da thread do teste
+            errors.append(exc)
+
+    first = threading.Thread(target=run_first)
+    second = threading.Thread(target=run_second)
+    first.start()
+    assert entered_first.wait(timeout=5)
+    second.start()
+    assert second_started.wait(timeout=5)
+    assert not entered_second.wait(timeout=0.1)
+    allow_first_to_finish.set()
+    first.join(timeout=5)
+    second.join(timeout=5)
+
+    assert not first.is_alive()
+    assert not second.is_alive()
+    assert errors == []
+    assert entered_second.is_set()
+    assert transcriber.max_active == 1
+    assert transcriber.release_calls == 2
