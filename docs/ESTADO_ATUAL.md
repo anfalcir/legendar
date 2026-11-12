@@ -1,7 +1,9 @@
 # Estado atual do Legendar
 
 - **Última atualização:** 12/11/2026
-- **Commit de integração da Fase 6:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19; a `main` também contém os commits posteriores de sincronização documental).
+- **Última atualização da homologação da Fase 6:** smoke real Gemini aprovado após atualização da chave; ver [registro](FASE_6_HOMOLOGACAO.md).
+- **Commit da implementação Gemini:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19).
+- **Commit de registro da homologação inicial:** `80d7ef9ef37e68c587534194db93a34970389f3a` (PR #20).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
 - **Branch de integração:** `main`
 - **Base de início da Fase 1:** `d3530490df466aa6eeff4728b63d7e8dc22f056e`
@@ -14,7 +16,7 @@
 - **Fase 3:** concluída e integrada à `main` pela PR #10, squash `10f6d6d428a1fa5a45a7c7fd13870f48bdf67019`.
 - **Fase 4:** concluída e integrada à `main` pela PR [#11](https://github.com/anfalcir/legendar/pull/11), squash `32f20c3a5455dcc16f48e78a742ba4c7018339b5`. CI: 506 testes aprovados, cobertura de 86%, Python 3.10–3.13, Ruff e smoke Whisper/WhisperX CPU PT-BR/EN.
 - **Fase 5:** implementação concluída e integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`; backend faster-whisper/CTranslate2 opt-in, benchmark pareado e smoke de alinhamento para ambos os motores. A homologação no hardware de referência permanece pendente; Whisper continua padrão.
-- **Fase 6:** implementação técnica integrada à `main` pela PR [#19](https://github.com/anfalcir/legendar/pull/19), squash `7f337bc10cf210336fbf2367b56aea7e767bce32`. CI específica aprovada no run [43134372712](https://github.com/anfalcir/legendar/actions/runs/43134372712): runtime real NLLB/CPU e suíte determinística em Python 3.10–3.13, lint e formatação. Smoke real Gemini foi skipped porque `GEMINI_API_KEY` não estava disponível. Benchmark pareado real na mídia de 37min10s e revisão humana cega permanecem pendentes. Gemini é opt-in; NLLB continua padrão.
+- **Fase 6:** implementação técnica integrada à `main` pela PR [#19](https://github.com/anfalcir/legendar/pull/19). Registro operacional da PR [#20](https://github.com/anfalcir/legendar/pull/20), squash `80d7ef9ef37e68c587534194db93a34970389f3a`. Smoke real aprovado em 12/11/2026 após atualização da chave: 2 cues traduzidas por `gemini-3.8-flash`, sem grounding, 1 requisição, 0 retries e 1,5656 s. Suítes determinísticas Python 3.10–3.13 e NLLB/CPU aprovadas. Benchmark pareado real na mídia de 37min10s, validação do grounding e revisão humana cega permanecem pendentes. Gemini é opt-in; NLLB continua padrão.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 
@@ -135,7 +137,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 3 | Segmentação global e legibilidade | **Concluída e integrada à `main` (PR #10)** |
 | 4 | Gate editorial e diagnóstico textual | **Concluída e integrada à `main` (PR #11)** |
 | 5 | Benchmark e aceleração da transcrição | **Implementação concluída e integrada à `main` (PR #12)**; benchmark local/homologação para promoção do candidato pendentes |
-| 6 | Benchmark e aceleração da tradução | **Implementação integrada pela PR #19; smoke real da API, benchmark pareado e revisão humana pendentes** |
+| 6 | Benchmark e aceleração da tradução | **Implementação e CI integradas; smoke real aprovado; benchmark, grounding e revisão humana pendentes** |
 | 7 | Gestão de memória, threads e perfis de execução | Planejada |
 | 8 | Regressão, homologação real e comparação final | Planejada |
 
@@ -153,7 +155,7 @@ A Fase 5 tem implementação integrada; seu aceite operacional depende da homolo
 ## 9. Próximas ações
 
 1. Homologar o benchmark pareado da Fase 5 no computador de referência, com áudio de 37min10s e referências humanas, antes de alterar o backend padrão.
-2. Fase 6: implementação e CI integradas pela PR #19; cadastrar `GEMINI_API_KEY` como secret no GitHub Actions e no ambiente local antes das chamadas reais; executar smoke da API, benchmark pareado e revisão humana.
+2. Fase 6: implementação integrada pela PR #19 e smoke real aprovado após atualização da chave; executar benchmark pareado no hardware de referência, validar grounding separadamente e concluir revisão humana cega.
 3. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
 4. Executar a Fase 7 para gestão de memória, threads e perfis de execução, conforme os resultados dos benchmarks.
 5. Consolidar a Fase 8 com comparação do pipeline completo, homologação audiovisual com a mídia real, validação no hardware-alvo e evidências sanitizadas.
