@@ -140,3 +140,17 @@ A evolução proposta é:
 - gerenciar a residência dos modelos e threads por perfil de hardware.
 
 As próximas mudanças devem ser guiadas pelas evidências de homologação real da Fase 8. Escopo, critérios e pendências estão em [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
+
+
+## 11. Runtime local gerenciado e idempotente
+
+O runtime TranslateGemma é uma dependência operacional sob responsabilidade do bootstrap/infraestrutura, não uma tarefa manual do usuário. A camada de infraestrutura deve expor um gerenciador com operações idempotentes de diagnóstico, preparação, inicialização, health check e encerramento. A apresentação consome estados/progresso por worker e nunca executa instalação, rede, I/O pesado ou espera de processo na thread Qt.
+
+- Na abertura: diagnóstico leve, sem download nem bloqueio da janela.
+- Na seleção/execução da tradução local: preflight atualizado; propor instalação do runtime/modelo ausente e solicitar consentimentos necessários.
+- Antes de TRANSLATING: garantir modelo válido, iniciar/reutilizar apenas processo gerenciado e aguardar readiness.
+- Concorrência: locks para impedir instalações, downloads ou servidores duplicados; arquivos temporários e publicação atômica do modelo.
+- Encerramento: parar somente o processo filho criado pelo Legendar; preservar pesos/cache e nunca matar processos externos.
+- Segurança: loopback exclusivo, versão fixada, integridade verificada, sem privilégios elevados silenciosos e sem credenciais em logs/configurações comuns.
+
+A máquina de estados operacional e seus eventos de progresso devem ser testáveis sem baixar o modelo real. A prova com pesos reais permanece um gate separado de homologação.
