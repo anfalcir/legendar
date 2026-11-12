@@ -331,6 +331,13 @@ def test_translategemma_backend_is_composed_when_runtime_and_model_exist(
                 details=("Runtime e pesos disponíveis.",),
             )
 
+        @property
+        def download_authorized(self) -> bool:
+            return False
+
+        def authorize_model_download(self) -> None:
+            pass
+
         def shutdown(self) -> None:
             self.shutdown_called = True
 
@@ -368,6 +375,13 @@ def test_translategemma_backend_stays_disabled_until_runtime_and_model_exist(
                 ready_to_start=False,
                 details=("llama.cpp ausente.", "GGUF ausente."),
             )
+
+        @property
+        def download_authorized(self) -> bool:
+            return False
+
+        def authorize_model_download(self) -> None:
+            pass
 
         def shutdown(self) -> None:
             pass
