@@ -180,6 +180,20 @@ class WhisperTranscriber:
     def is_loaded(self) -> bool:
         return self._model is not None
 
+    def release_resources(self) -> None:
+        """Descarta o modelo residente; o download em disco permanece no cache."""
+        with self._load_lock:
+            model = self._model
+            self._model = None
+            self._device = None
+            self._revision = None
+        if model is not None:
+            from legendar.infrastructure.resources.lifecycle import (
+                release_model_resources,
+            )
+
+            release_model_resources(model)
+
     @property
     def loaded_device(self) -> str | None:
         return self._device
