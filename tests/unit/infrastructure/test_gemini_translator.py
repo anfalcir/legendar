@@ -400,9 +400,7 @@ def test_cancellation_between_batches_stops_requests() -> None:
     def cancel_after_request():
         token.cancel("cancelado")
 
-    translator = _translator(
-        calls=calls, batch_size=1, on_request=cancel_after_request
-    )
+    translator = _translator(calls=calls, batch_size=1, on_request=cancel_after_request)
     with pytest.raises(JobCancelledError):
         translator.translate(
             _units("um", "dois", "três"),
