@@ -37,8 +37,8 @@ from legendar.infrastructure.transcription.faster_whisper import (
 )
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.gemini import GeminiTranslator
-from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.infrastructure.translation.llama_runtime import LlamaCppRuntimeManager
+from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.infrastructure.translation.translategemma import TranslateGemmaTranslator
 from legendar.presentation.qt.branding import app_icon
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
