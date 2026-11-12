@@ -82,7 +82,7 @@
       "path": "temporario/logs/job-d796d6a8218f.json",
       "kind": "sanitized-job-report",
       "bytes": 11425,
-      "sha256": "594ac33a18451356b0f739e8e3e84d842ae764484af34bc28dcd852bb96dcaa0",
+      "sha256": "594ac33a18451356b0f739e8f3e84d842ae764484af34bc28dcd852bb96dcaa0",
       "git_blob_sha1": "8a2f91769f07efee61e9bd8518d1dcf78e27d4c9",
       "role": "Uma das três execuções quentes anteriores."
     }
