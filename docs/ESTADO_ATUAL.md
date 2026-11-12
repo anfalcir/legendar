@@ -2,7 +2,7 @@
 
 - **Última atualização:** 12/11/2026
 - **Última atualização da Fase 8:** os testes reais de 12/11/2026 foram analisados. O SRT NLLB concluiu em 45min49s, com 71,0% das cues contendo até três palavras e três linhas acima de 42 caracteres; a rota Gemini falhou no terceiro lote após 64/927 unidades. A auditoria identificou deriva PT-PT, erros semânticos, provável regressão de threads e falha confirmada no ciclo de vida de modelos. A homologação final permanece pendente.
-- **Fase 8.1:** 8.1.0 (congelamento técnico), 8.1.1 (confiabilidade/batching Gemini) e 8.1.2 (topologia CPU/lifecycle) estão concluídas em implementação e integradas à `main`. A PR #31 foi integrada após CI completa verde no commit `bd2a917b8f75045545c97848b10252a8253aa1ed`; o commit de trabalho da 8.1.2 (`89707ab7a060608ad0716764e16d92336df3d70e`) passou os sete workflows de qualidade. A matriz real de desempenho 2/1, 3/1, 4/1, 4/2 e 4/4, com três execuções quentes por configuração, continua pendente. Referência humana PT-BR e snapshot de ASR/alinhamento continuam pendentes.
+- **Fase 8.1:** 8.1.0 (congelamento técnico), 8.1.1 (confiabilidade/batching Gemini) e 8.1.2 (topologia CPU/lifecycle) estão concluídas em implementação e integradas à `main`. A PR #31 foi integrada após CI completa verde no commit `bd2a917b8f75045545c97848b10252a8253aa1ed`; o commit de trabalho da 8.1.2 (`89707ab7a060608ad0716764e16d92336df3d70e`) passou os sete workflows de qualidade. A política CPU foi consolidada: `performance=4/4`, `balanced=4/2` e `low-memory=4/1`; o modo `auto` seleciona `performance` a partir de 12 GiB, `balanced` entre 8 e 12 GiB e `low-memory` abaixo de 8 GiB. Não será executada uma matriz redundante de 15 rodadas apenas para selecionar threads. Referência humana PT-BR e snapshot de ASR/alinhamento continuam pendentes.
 - **Commit da implementação Gemini:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19).
 - **Commit de registro da homologação inicial:** `80d7ef9ef37e68c587534194db93a34970389f3a` (PR #20).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
@@ -146,7 +146,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 6 | Benchmark e aceleração da tradução | **Concluída: dois backends opcionais, Preferências locais e smoke Gemini aprovado** |
 | 7 | Gestão de memória, threads e perfis de execução | **Implementação concluída e integrada à `main` (PR #26)**; homologação de desempenho pendente |
 | 8 | Regressão, homologação real e liberação | **Em andamento**: gate estrutural integrado; mídia real de 12/11 analisada, correções e reinspeção pendentes |
-| 8.1 | Correções dirigidas pela auditoria real: Gemini, PT-BR, cues, gate, CPU e lifecycle | **Em execução — 8.1.0, 8.1.1 e 8.1.2 integradas à `main`; matriz real de threads, gate humano/intermediários e correções 8.1.3+ pendentes** ([plano](FASE_8_1_PLANO.md)) |
+| 8.1 | Correções dirigidas pela auditoria real: Gemini, PT-BR, cues, gate, CPU e lifecycle | **Em execução — 8.1.0, 8.1.1 e 8.1.2 integradas à `main`; política CPU definida, gate humano/intermediários e correções 8.1.3+ pendentes** ([plano](FASE_8_1_PLANO.md)) |
 
 A implementação da Fase 5 está integrada; promover faster-whisper ao padrão depende de homologação local com corpus humano e hardware de referência. A Fase 6 está concluída conforme o escopo acordado: smoke real Gemini aprovado, ambos os backends opcionais e benchmark comparativo retirado do gate por decisão do usuário. A Fase 7 está integrada; seu aceite de desempenho depende da medição pareada. A Fase 8 concentra a homologação audiovisual completa.
 
@@ -161,8 +161,8 @@ A implementação da Fase 5 está integrada; promover faster-whisper ao padrão 
 
 ## 9. Próximas ações
 
-1. Executar e registrar a matriz real de threads 2/1, 3/1, 4/1, 4/2 e 4/4, com três execuções quentes por configuração e condições térmicas/carga externa controladas.
-2. Após o gate da 8.1.2, executar a 8.1.3 para recomposição de cues, limites físicos e alinhamento entre validador e avaliador.
+1. Usar a política CPU consolidada (`performance=4/4`, `balanced=4/2`, `low-memory=4/1`) e validar o conjunto completo em uma homologação E2E posterior.
+2. Executar a 8.1.3 para recomposição de cues, limites físicos e alinhamento entre validador e avaliador.
 3. Completar a referência humana PT-BR e o snapshot ASR/alinhamento quando disponíveis; depois avançar para 8.1.4–8.1.6.
 4. Validar a tradução por corpus PT-BR revisado e inspeção humana; separar erros originados no ASR dos erros introduzidos pelo tradutor.
 5. Repetir a mídia de 37min10s em pelo menos três execuções quentes e uma fria após as correções, registrar métricas e inspecionar o SRT em player real.
