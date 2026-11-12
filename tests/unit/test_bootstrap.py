@@ -313,6 +313,7 @@ def test_gemini_backend_is_selected_with_api_key(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("LEGENDAR_TRANSLATION_BACKEND", "gemini")
     monkeypatch.setenv("GEMINI_API_KEY", "test-secret")
     monkeypatch.setenv("LEGENDAR_GEMINI_MODEL", "gemini-test")
+    monkeypatch.setenv("LEGENDAR_GEMINI_GROUNDING", "false")
     monkeypatch.setenv("LEGENDAR_GEMINI_BATCH_SIZE", "24")
 
     dependencies = build_ui_dependencies(
