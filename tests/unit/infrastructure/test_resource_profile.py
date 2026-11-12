@@ -68,16 +68,12 @@ def test_cpu_topology_falls_back_without_assuming_smt_ratio(
     assert "logical-count-fallback" in topology.source
 
 
-def _write_fake_cpu_topology(
-    root: Path, *, logical: int, physical: int
-) -> None:
+def _write_fake_cpu_topology(root: Path, *, logical: int, physical: int) -> None:
     for cpu in range(logical):
         topology = root / f"cpu{cpu}" / "topology"
         topology.mkdir(parents=True)
         (topology / "physical_package_id").write_text("0", encoding="ascii")
-        (topology / "core_id").write_text(
-            str(cpu % physical), encoding="ascii"
-        )
+        (topology / "core_id").write_text(str(cpu % physical), encoding="ascii")
 
 
 def test_detects_four_physical_and_four_logical_cpus(tmp_path: Path) -> None:
