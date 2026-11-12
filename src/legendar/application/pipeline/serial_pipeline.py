@@ -30,6 +30,10 @@ from legendar.application.pipeline.validation import (
     TrackValidationReport,
     validate_track,
 )
+from legendar.infrastructure.resources.profile import (
+    ResourcePolicy,
+    resolve_resource_policy,
+)
 from legendar.application.ports.protocols import (
     Aligner,
     AudioPreparer,
@@ -140,6 +144,7 @@ class SerialPipeline:
     ) -> None:
         self._ports = ports
         self._performance_reporter = performance_reporter
+        self._resource_policy: ResourcePolicy = resolve_resource_policy()
 
     def execute(
         self,
@@ -203,6 +208,10 @@ class SerialPipeline:
         progress = MonotonicProgress(on_progress)
         warnings: list[str] = []
         performance.set_metadata(
+            resource_profile=self._resource_policy.profile.value,
+            retain_models=self._resource_policy.retain_models,
+            cpu_threads=self._resource_policy.cpu_threads,
+            cpu_interop_threads=self._resource_policy.cpu_interop_threads,
             media_kind=request.source.kind.value,
             requested_source_language=(
                 request.source_language.value if request.source_language else None
@@ -357,6 +366,20 @@ class SerialPipeline:
             )
 
     # -- etapas auxiliares -------------------------------------------------
+
+    @staticmethod
+    def _release_resources(adapter: object | None) -> None:
+        release = getattr(adapter, "release_resources", None)
+        if not callable(release):
+            return
+        try:
+            release()
+        except Exception:
+            LOGGER.warning(
+                "Não foi possível liberar recursos do adaptador %s.",
+                type(adapter).__name__,
+                exc_info=True,
+            )
 
     def _acquire(
         self,

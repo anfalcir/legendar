@@ -21,6 +21,10 @@ from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.credentials import load_gemini_api_key
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
 from legendar.infrastructure.diagnostics.performance import JsonPerformanceReporter
+from legendar.infrastructure.resources.profile import (
+    configure_torch_threads,
+    resolve_resource_policy,
+)
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
 from legendar.infrastructure.logging.setup import configure_logging
@@ -386,6 +390,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     settings = AppSettings.load()
     settings.ensure_directories()
     configure_logging(settings.logs_dir)
+    resource_policy = resolve_resource_policy()
+    configure_torch_threads(resource_policy)
 
     qt_settings = QSettings("Legendar", "Legendar")
     preferences = load_preferences(qt_settings, settings.output_dir)

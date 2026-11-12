@@ -1,7 +1,7 @@
 # Estado atual do Legendar
 
 - **Última atualização:** 12/11/2026
-- **Última atualização da Fase 6:** backend Gemini homologado e configuração local em Preferências concluída; ver [registro](FASE_6_HOMOLOGACAO.md).
+- **Última atualização da Fase 7:** política de memória/threads implementada, com perfis de recursos e evicção segura de modelos; aceite de desempenho ainda depende do benchmark pareado no hardware de referência.
 - **Commit da implementação Gemini:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19).
 - **Commit de registro da homologação inicial:** `80d7ef9ef37e68c587534194db93a34970389f3a` (PR #20).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
@@ -17,6 +17,7 @@
 - **Fase 4:** concluída e integrada à `main` pela PR [#11](https://github.com/anfalcir/legendar/pull/11), squash `32f20c3a5455dcc16f48e78a742ba4c7018339b5`. CI: 506 testes aprovados, cobertura de 86%, Python 3.10–3.13, Ruff e smoke Whisper/WhisperX CPU PT-BR/EN.
 - **Fase 5:** implementação concluída e integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`; backend faster-whisper/CTranslate2 opt-in, benchmark pareado e smoke de alinhamento para ambos os motores. A homologação no hardware de referência permanece pendente; Whisper continua padrão.
 - **Fase 6:** **concluída e integrada**. O Gemini foi homologado operacionalmente em smoke real (2 cues, `gemini-3.8-flash`, sem grounding, 1 requisição, 0 retries e 1,5656 s). NLLB permanece como padrão e Gemini como opção explícita. O usuário pode selecionar o motor em Preferências e configurar/remover a chave Gemini localmente; a troca é aplicada aos próximos jobs sem reinício. A chave não é armazenada em QSettings, logs ou relatórios. O benchmark comparativo e a revisão humana foram deliberadamente retirados do gate desta fase e permanecem disponíveis para avaliação futura.
+- **Fase 7:** implementação concluída na branch de trabalho, com perfis `auto`, `low-memory`, `balanced` e `performance`, configuração de threads CPU e liberação de modelos entre etapas no perfil conservador. A integração final depende da validação CI e merge desta etapa.
 - **CI de referência:** [run 43031178212](https://github.com/anfalcir/legendar/actions/runs/43031178212), 5/5 jobs aprovados no commit auditado.
 - **Documentação:** raiz de `docs/` reservada a documentos vivos; histórico anterior preservado em `docs/archive/`.
 

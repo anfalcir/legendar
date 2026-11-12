@@ -264,6 +264,23 @@ class NllbTranslator:
     def is_loaded(self) -> bool:
         return self._model is not None and self._tokenizer is not None
 
+    def release_resources(self) -> None:
+        """Descarta pesos/tokenizador residentes; o checkpoint em disco permanece."""
+        with self._lock:
+            model = self._model
+            tokenizer = self._tokenizer
+            self._model = None
+            self._tokenizer = None
+            self._device = None
+            self._revision = None
+        if model is not None:
+            from legendar.infrastructure.resources.lifecycle import (
+                release_model_resources,
+            )
+
+            release_model_resources(model)
+        del tokenizer
+
     @property
     def revision(self) -> str | None:
         """Versão do ``transformers`` usada no último carregamento."""

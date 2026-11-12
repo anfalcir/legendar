@@ -127,7 +127,7 @@ Os testes E2E de mídia atuais usam adaptadores falsos para reconhecimento e ali
 
 ## 10. Evolução sob o plano atual
 
-A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. A Fase 6 mantém `NllbTranslator` e `GeminiTranslator` atrás da mesma porta; a seleção persistida em Preferências altera o adaptador usado pelos próximos jobs sem reiniciar a GUI. As próximas mudanças devem preservar essas fronteiras.
+A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. A Fase 7 adiciona uma política transversal de recursos: perfis controlam retenção de modelos e threads CPU sem acoplar a UI aos runtimes. A Fase 6 mantém `NllbTranslator` e `GeminiTranslator` atrás da mesma porta; a seleção persistida em Preferências altera o adaptador usado pelos próximos jobs sem reiniciar a GUI. As próximas mudanças devem preservar essas fronteiras.
 
 A evolução proposta é:
 - instrumentar tempo e memória por estágio;
