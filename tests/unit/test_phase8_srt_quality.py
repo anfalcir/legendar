@@ -69,7 +69,9 @@ def test_analysis_detects_overlap_and_syntactic_fragment(tmp_path: Path) -> None
 
 def test_analysis_detects_long_wide_and_duplicate_cues(tmp_path: Path) -> None:
     path = tmp_path / "layout.srt"
-    long_line = "Esta legenda contém uma linha propositalmente muito extensa para o teste."
+    long_line = (
+        "Esta legenda contém uma linha propositalmente muito extensa para o teste."
+    )
     _write(
         path,
         "1\n00:00:00,000 --> 00:00:08,000\n" + long_line + "\n\n"
@@ -132,7 +134,9 @@ def test_parse_srt_rejects_malformed_blocks(
         parse_srt(path)
 
 
-def test_cli_text_and_comparison_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_text_and_comparison_output(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     candidate = tmp_path / "candidate.srt"
     baseline = tmp_path / "baseline.srt"
     valid = "1\n00:00:00,000 --> 00:00:02,000\nTexto curto\n"
@@ -145,12 +149,15 @@ def test_cli_text_and_comparison_output(tmp_path: Path, capsys: pytest.CaptureFi
     assert "Comparação:" in output
 
 
-def test_cli_json_and_gate_failure(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_json_and_gate_failure(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     candidate = tmp_path / "candidate.srt"
     _write(
         candidate,
         "1\n00:00:00,000 --> 00:00:08,000\n"
-        "Esta linha é excessivamente longa e também ficará acima do limite de leitura.\n",
+        "Esta linha é excessivamente longa e também ficará acima do limite "
+        "de leitura.\n",
     )
 
     assert main([str(candidate), "--json"]) == 1
