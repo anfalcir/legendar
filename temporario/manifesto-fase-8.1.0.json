@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "purpose": "Congelamento imutável das evidências recebidas para a auditoria da Fase 8.1.",
+  "captured_at": "2026-11-12",
+  "source_commit": "d81c97fc113e4bfccea71c8e4b9d2f3d1cbaf653",
+  "checksum_algorithm": "SHA-256",
+  "note": "Checksums calculados sobre os bytes originais obtidos em Base64 do conteúdo do repositório; tamanho e Git blob SHA-1 conferidos contra a API de conteúdo do GitHub. Não alterar os dez arquivos referenciados.",
+  "artifacts": [
+    {
+      "path": "temporario/EN-baseline.srt",
+      "kind": "srt",
+      "bytes": 48985,
+      "sha256": "f5ec41e944a9d6ae308a981f309e3c8284a3fcf23466576c286973abcdb2552d",
+      "git_blob_sha1": "1672b0d526936a5a99f610e76d42bb4c08fe2d36",
+      "role": "SRT automático em inglês; referência de comparação, não transcrição humana."
+    },
+    {
+      "path": "temporario/baseline.srt",
+      "kind": "srt",
+      "bytes": 50940,
+      "sha256": "6ab3037a7f39abc22d68e6753554cd3f0280bdf9e48d3847fd39ad8ffb421a9b",
+      "git_blob_sha1": "5f3f90382a764eb4862db4a05965e27f053e39b3",
+      "role": "SRT PT anterior."
+    },
+    {
+      "path": "temporario/teste-2026.11.12.srt",
+      "kind": "srt",
+      "bytes": 49737,
+      "sha256": "696202bc29824c63c7a3faf4e768b66a56d694b097c9777dc18f1ff8c0ccaf2f",
+      "git_blob_sha1": "f178d27c4997fca5e05c6baa8f614df3545ec390",
+      "role": "SRT PT da execução nova."
+    },
+    {
+      "path": "temporario/logs/job-2b922358055c.json",
+      "kind": "sanitized-job-report",
+      "bytes": 10964,
+      "sha256": "41c06f93b1cd292bdc2cd82b5c42a152f9057f774b6cd6e97e286613c187d8ad",
+      "git_blob_sha1": "50a6bb5d5dede9077aa2a6c410c0ebb7a1402ee0",
+      "role": "Execução de referência sem tradução; não comparar como job completo."
+    },
+    {
+      "path": "temporario/logs/job-2e5e93e3369c.json",
+      "kind": "sanitized-job-report",
+      "bytes": 11916,
+      "sha256": "fe72d5b1c4084921de1c00ac929a69aa26c4f1c79777cf15850eb91110f2c9ad",
+      "git_blob_sha1": "62073238a108cadcdbcfd91f2b38c26030bfbade",
+      "role": "NLLB completo da rodada nova."
+    },
+    {
+      "path": "temporario/logs/job-2f6d8c3e5dad.json",
+      "kind": "sanitized-job-report",
+      "bytes": 11413,
+      "sha256": "c904c5e56387f7b15d054e20ade665f70fe83b3df3eab748c100a9dc7df11e68",
+      "git_blob_sha1": "26c3ae8f36cd6d2b04e43c8d022228631589065e",
+      "role": "Uma das três execuções quentes anteriores."
+    },
+    {
+      "path": "temporario/logs/job-501f9e6ce91c.json",
+      "kind": "sanitized-job-report",
+      "bytes": 11419,
+      "sha256": "2fb9b30cc76338913f818b1b9a109946f69e344a335891723843132c804f3a87",
+      "git_blob_sha1": "33b214deb8020b421519bfabd353321a6ee6573f",
+      "role": "Uma das três execuções quentes anteriores."
+    },
+    {
+      "path": "temporario/logs/job-b845be3d8e7f.json",
+      "kind": "sanitized-job-report",
+      "bytes": 9837,
+      "sha256": "9c53a42ffc9c4a3f12317d0bec19583d5221ef324dc72df2c386ba84a821f4b9",
+      "git_blob_sha1": "4a93774876c2e5857d620eb8729eefc99e159a6d",
+      "role": "Execução Gemini que falhou no terceiro lote."
+    },
+    {
+      "path": "temporario/logs/job-c8e8b3d46d76.json",
+      "kind": "sanitized-job-report",
+      "bytes": 11465,
+      "sha256": "de4b24e8b455615a058ec5ef3408792b032642ff2e353d395953d710764f8597",
+      "git_blob_sha1": "ed03e4f3f9528a64e8bef6a167b344e75a5b1ef6",
+      "role": "Execução concluída com carregamento inicial de modelos."
+    },
+    {
+      "path": "temporario/logs/job-d796d6a8218f.json",
+      "kind": "sanitized-job-report",
+      "bytes": 11425,
+      "sha256": "594ac33a18451356b0f739e8e3e84d842ae764484af34bc28dcd852bb96dcaa0",
+      "git_blob_sha1": "8a2f91769f07efee61e9bd8518d1dcf78e27d4c9",
+      "role": "Uma das três execuções quentes anteriores."
+    }
+  ]
+}
