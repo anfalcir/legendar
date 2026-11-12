@@ -493,6 +493,8 @@ class MainWindow(QMainWindow):
             backend_label = (
                 "Gemini (API)"
                 if self._deps.translation_backend == "gemini"
+                else "TranslateGemma 4B (local)"
+                if self._deps.translation_backend == "translategemma"
                 else "NLLB-200 (local)"
             )
             self.translate_check.setToolTip(
@@ -973,6 +975,8 @@ class MainWindow(QMainWindow):
             backend_label = (
                 "Gemini (API)"
                 if self._deps.translation_backend == "gemini"
+                else "TranslateGemma 4B"
+                if self._deps.translation_backend == "translategemma"
                 else "NLLB-200"
             )
             hint = (
