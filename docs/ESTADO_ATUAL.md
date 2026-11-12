@@ -1,6 +1,7 @@
 # Estado atual do Legendar
 
 - **Última atualização:** 11/11/2026
+- **HEAD auditado da `main`:** `57f68985f1156b1d0c693f4b7d80e6aea145a8d0` (Fase 5 integrada).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
 - **Branch de integração:** `main`
 - **Base de início da Fase 1:** `d3530490df466aa6eeff4728b63d7e8dc22f056e`
@@ -23,7 +24,7 @@ O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliz
 
 A arquitetura e a base de engenharia das Fases 0–10 estão integradas. As Fases 2 e 3 corrigiram a integridade textual e a consolidação cronológica da segmentação. A Fase 4 agora adiciona gate editorial estruturado, diagnósticos de leitura/texto, bloqueio de perda de conteúdo e aviso de revisão na interface; tudo integrado à `main` pela PR #11.
 
-As Fases 1, 2, 3 e 4 estão concluídas e integradas à `main`. A Fase 3 consolidou globalmente as palavras alinhadas, preservou segmentos fallback, reforçou fronteiras editoriais e adicionou extensão segura de exibição. A Fase 4 estruturou o gate editorial e tornou explícitos os estados de aprovação, revisão necessária e bloqueio. A próxima etapa é a Fase 5. O baseline real de 37min10s é ~23min21s; NLLB consome ~14min e será o foco da Fase 6, quando será avaliado Gemini com credencial fornecida pelo usuário via secret do GitHub.
+As Fases 1–5 estão implementadas e integradas à `main`. A Fase 3 consolidou globalmente as palavras alinhadas; a Fase 4 integrou o gate editorial; e a Fase 5 adicionou o adaptador faster-whisper/CTranslate2, benchmark pareado e smokes de alinhamento. A PR [#12](https://github.com/anfalcir/legendar/pull/12) foi integrada no commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. O OpenAI Whisper permanece padrão até que o benchmark local no hardware de referência demonstre qualidade equivalente e ganho real. O baseline da mídia de 37min10s é ~23min21s; NLLB consome ~14min e segue como gargalo prioritário da Fase 6, que avalia tradução contextual com Gemini.
 
 ## 2. Estado da Fase 1 — concluída
 
@@ -71,14 +72,14 @@ A Fase 3 foi integrada pela PR #10, squash commit `10f6d6d428a1fa5a45a7c7fd13870
 |---|---|
 | Arquitetura das Fases 0–10 | Integrada à `main` |
 | UI, worker e pipeline real | Implementados |
-| Reconhecimento | OpenAI Whisper local; padrão declarado `base` |
+| Reconhecimento | OpenAI Whisper local (`base`) como padrão; `FasterWhisperTranscriber` via CTranslate2 disponível por seleção explícita, ainda não promovido |
 | Alinhamento | WhisperX 3.8.6; forced alignment por segmento |
 | Segmentação | Fluxo global cronológico integrado; consolida limites do Whisper, preserva fallback e rastreabilidade de origem |
 | Tradução | NLLB-200 distilled 600M via Transformers/PyTorch |
 | Publicação | SRT com round-trip e gravação atômica |
-| Gate editorial | Em implementação: relatório estruturado e bloqueio de perda de conteúdo na branch da Fase 4 |
+| Gate editorial | Relatório estruturado com estados `APPROVED`, `REVIEW_REQUIRED` e `BLOCKED`, bloqueio de perda e avisos de revisão; integrado pela PR #11 |
 | Benchmark por etapa | Instrumentação integrada; baseline real consolidado em 11/11/2026 |
-| Otimização de motores | Fases 5–7 planejadas; Gemini é candidato para a Fase 6, sem adoção ainda |
+| Otimização de motores | Fase 5 implementada e integrada; benchmark de hardware pendente para promover faster-whisper. Fase 6 em andamento na PR #13; Fase 7 planejada |
 | Homologação audiovisual final | Pendente |
 
 ## 5. Evidências de qualidade e lacunas conhecidas
@@ -95,11 +96,11 @@ Os módulos auditados incluem:
 
 Achados da auditoria original e tratamento atual:
 
-1. A segmentação isolada por segmento foi substituída na branch da Fase 3 pelo fluxo global de palavras alinhadas; aguarda CI e homologação.
+1. A segmentação isolada foi substituída pelo fluxo global cronológico de palavras alinhadas na Fase 3, integrada pela PR #10; a homologação audiovisual completa permanece na Fase 8.
 2. A subdivisão por velocidade de leitura continua limitada a timestamps reais. A Fase 3 adiciona extensão apenas em silêncio seguro antes da próxima cue.
 3. Cues curtas sem silêncio posterior seguro continuam explícitas para avaliação; não recebem duração inventada.
 4. A Fase 2 bloqueia a publicação quando há palavras reconhecidas sem âncora temporal confiável, impedindo a perda silenciosa observada na auditoria original.
-5. A validação estrutural ainda não é um gate editorial completo; a Fase 4 tratará CPS, duração, fragmentação e exceções.
+5. A Fase 4 integrou o gate editorial estruturado; os diagnósticos heurísticos exigem revisão humana e não alteram automaticamente o texto.
 6. Os testes E2E determinísticos continuam usando dublês; a homologação com áudio real permanece necessária para avaliar modelos e qualidade audiovisual.
 7. O alinhador real ainda chama WhisperX por segmento. O baseline instrumentado está disponível; otimizações de alinhamento não fazem parte do escopo atual.
 
@@ -111,7 +112,7 @@ Esses achados descrevem o código e os testes; não identificam, por si sós, a 
 
 Configuração atual relevante:
 
-- Transcrição: OpenAI Whisper, padrão `base`, execução PyTorch.
+- Transcrição: OpenAI Whisper, padrão `base`, execução PyTorch; faster-whisper/CTranslate2 está disponível por seleção explícita, com INT8 CPU/FP16 CUDA conforme configuração, mas ainda sem promoção operacional.
 - Alinhamento: WhisperX 3.8.6, chamadas por segmento.
 - Tradução: NLLB-200 distilled 600M via Transformers/PyTorch, `num_beams=4`, lote padrão de 16 unidades e tokenização com padding.
 - O adaptador de tradução já implementa batching; o próximo trabalho deve investigar custo por token, padding, beam search, tempo de geração e backend, não apenas aumentar o tamanho do lote.
@@ -131,7 +132,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 2 | Integridade textual e alinhamento recuperável | **Concluída e integrada à `main`** |
 | 3 | Segmentação global e legibilidade | **Concluída e integrada à `main` (PR #10)** |
 | 4 | Gate editorial e diagnóstico textual | **Concluída e integrada à `main` (PR #11)** |
-| 5 | Benchmark e aceleração da transcrição | Planejada |
+| 5 | Benchmark e aceleração da transcrição | **Implementação concluída e integrada à `main` (PR #12)**; benchmark local/homologação para promoção do candidato pendentes |
 | 6 | Benchmark e aceleração da tradução | Planejada |
 | 7 | Gestão de memória, threads e perfis de execução | Planejada |
 | 8 | Regressão, homologação real e comparação final | Planejada |
@@ -149,7 +150,7 @@ Nenhuma dessas fases de código é declarada concluída por existir apenas no pl
 
 ## 9. Próximas ações
 
-1. Executar a Fase 5 isoladamente, validar oportunidades de aceleração de ASR e manter as métricas de qualidade como critério de aceite.
+1. Homologar o benchmark pareado da Fase 5 no computador de referência, com áudio de 37min10s e referências humanas, antes de alterar o backend padrão.
 2. Na Fase 6, comparar Gemini API com NLLB usando o mesmo corpus e revisão humana. Antes das chamadas reais, solicitar o cadastro de `GEMINI_API_KEY` como secret no GitHub.
 3. Exigir do Gemini PT-BR idiomático, interpretação contextual, preservação de entidades/nomenclaturas próprias e consistência terminológica; grounding/pesquisa só poderá apoiar interpretação sem acrescentar conteúdo não falado.
 4. Executar a Fase 7 para gestão de memória, threads e perfis de execução, conforme os resultados dos benchmarks.
