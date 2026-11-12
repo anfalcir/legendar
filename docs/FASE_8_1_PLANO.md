@@ -553,7 +553,7 @@ Somente começar depois das Etapas 8.1.1–8.1.6 estarem estáveis.
 
 Experimentos separados:
 
-1. **CPU/threads:** comparar 2/1, 3/1, 4/1 e 4/2; controlar afinidade e condição térmica.
+1. **CPU/threads:** validar no hardware de referência o perfil operacional consolidado e a adaptação à topologia/afinidade; não repetir a matriz exploratória de threads já descartada.
 2. **NLLB beam:** comparar 4, 2 e 1 sem alterar simultaneamente batch ou modelo.
 3. **NLLB batching:** testar tamanhos de lote e limite de tokens isoladamente.
 4. **Length bucketing:** agrupar textos de tamanho semelhante para reduzir padding. O job novo teve 6.018 tokens de entrada e 13.527 posições padded, cerca de 2,25 vezes o volume útil; medir se isso reduz tempo real.
