@@ -287,7 +287,8 @@ class FasterWhisperTranscriber:
                 raise
             except Exception as exc:
                 raise ModelError(
-                    f"Não foi possível carregar faster-whisper {self.model_name!r}: {exc}"
+                    f"Não foi possível carregar faster-whisper "
+                    f"{self.model_name!r}: {exc}"
                 ) from exc
             finally:
                 self._record_metric("model_load_seconds", time.perf_counter() - started)
@@ -369,7 +370,8 @@ class FasterWhisperTranscriber:
             if token is not None:
                 token.raise_if_cancelled()
             raise ModelError(
-                f"Falha durante o reconhecimento com faster-whisper {self.model_name}: {exc}"
+                "Falha durante o reconhecimento com faster-whisper "
+                f"{self.model_name}: {exc}"
             ) from exc
         finally:
             self._record_metric(
