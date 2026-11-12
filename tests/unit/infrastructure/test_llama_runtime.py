@@ -414,7 +414,8 @@ def test_download_file_lock_prevents_parallel_model_downloads(
     monkeypatch.setattr(
         llama_runtime, "MODEL_SHA256", hashlib.sha256(payload).hexdigest()
     )
-    second, _ = _manager(tmp_path)
+    model_path = tmp_path / "models" / "translategemma.gguf"
+    second, _ = _manager(tmp_path, model_path=model_path)
     response = DownloadResponse(
         [payload],
         headers={"Content-Length": str(len(payload))},
@@ -425,7 +426,6 @@ def test_download_file_lock_prevents_parallel_model_downloads(
             second.download_model(consent=True)
         return response
 
-    model_path = tmp_path / "models" / "translategemma.gguf"
     first, _ = _manager(tmp_path, model_path=model_path, opener=opener)
 
     assert first.download_model(consent=True) == model_path
