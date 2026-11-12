@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import subprocess
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 import pytest
 
@@ -317,6 +317,53 @@ def test_model_download_requires_explicit_consent(tmp_path) -> None:
         manager.download_model(consent=False)
 
     assert called == []
+
+
+
+def test_model_download_reuses_existing_huggingface_token(tmp_path, monkeypatch) -> None:
+    payload = b"authenticated-model"
+    monkeypatch.setattr(
+        llama_runtime, "MODEL_SHA256", hashlib.sha256(payload).hexdigest()
+    )
+    requests = []
+    response = DownloadResponse(
+        [payload],
+        headers={"Content-Length": str(len(payload))},
+    )
+
+    def opener(request, **_kwargs):
+        requests.append(request)
+        return response
+
+    manager, _ = _manager(
+        tmp_path,
+        opener=opener,
+        token_provider=lambda: "local-test-token",
+    )
+
+    manager.download_model(consent=True)
+
+    assert requests[0].get_header("Authorization") == "Bearer local-test-token"
+
+
+def test_model_download_explains_huggingface_access_denial(tmp_path) -> None:
+    def opener(*_args, **_kwargs):
+        raise HTTPError(
+            MODEL_DOWNLOAD_URL,
+            403,
+            "Forbidden",
+            hdrs=None,
+            fp=None,
+        )
+
+    manager, _ = _manager(
+        tmp_path,
+        opener=opener,
+        token_provider=lambda: None,
+    )
+
+    with pytest.raises(ModelError, match="Aceite os termos/licença Gemma"):
+        manager.download_model(consent=True)
 
 
 def test_model_download_is_atomic_and_validates_sha256(tmp_path, monkeypatch) -> None:
