@@ -1,6 +1,6 @@
 # Fase 6 — Benchmark e aceleração da tradução
 
-**Status:** implementação técnica integrada pela PR [#19](https://github.com/anfalcir/legendar/pull/19), squash `7f337bc10cf210336fbf2367b56aea7e767bce32`. CI determinística, runtime NLLB/CPU e smoke real Gemini (2 cues, `gemini-3.8-flash`, sem grounding) aprovados. O registro está em [FASE_6_HOMOLOGACAO.md](FASE_6_HOMOLOGACAO.md). Benchmark pareado real, validação do grounding e revisão humana cega permanecem pendentes; Gemini continua opt-in e NLLB permanece padrão.
+**Status:** **concluída e integrada à `main`**. Além da implementação dos dois adaptadores, a Fase 6 agora oferece seleção explícita do motor nas Preferências, configuração local da chave Gemini e reconfiguração sem reiniciar a aplicação. O smoke real Gemini (2 cues, `gemini-3.8-flash`, sem grounding) e a CI determinística foram aprovados. O benchmark comparativo NLLB × Gemini não será executado nesta fase por decisão de produto; ambos os motores permanecem disponíveis e opcionais, com NLLB como padrão.
 
 **Objetivo:** reduzir o tempo de tradução hoje dominado pelo NLLB (aproximadamente 14 minutos na mídia de referência de 37min10s), sem degradar sentido, terminologia, consistência ou integridade das cues.
 
@@ -11,12 +11,19 @@ A porta `Translator` continua sendo a única interface do pipeline. Dois adaptad
 - `NllbTranslator`: baseline local, Transformers/PyTorch.
 - `GeminiTranslator`: candidato via Gemini Developer API, com lotes contextuais.
 
-O padrão permanece **NLLB** até que o benchmark pareado e a revisão humana aprovem o candidato. A seleção é explícita:
+O padrão permanece **NLLB** até que o benchmark pareado e a revisão humana aprovem o candidato. A seleção do motor é feita pelo usuário em **Preferências → Motor de tradução**:
+
+| Opção | Comportamento |
+|---|---|
+| **NLLB-200 (local)** | Tradução local, sem envio do texto para serviço externo; é o padrão. |
+| **Gemini (API)** | Tradução contextual via Gemini Developer API; exige chave configurada localmente. |
+
+As variáveis de ambiente continuam aceitas para automação/CI e compatibilidade:
 
 | Variável | Padrão | Função |
 |---|---|---|
-| `LEGENDAR_TRANSLATION_BACKEND` | `nllb` | `nllb` ou `gemini` |
-| `GEMINI_API_KEY` | ausente | Credencial do Gemini Developer API |
+| `LEGENDAR_TRANSLATION_BACKEND` | `nllb` | Backend inicial quando não há preferência salva |
+| `GEMINI_API_KEY` | ausente | Fallback de credencial para CI/ambientes automatizados |
 | `LEGENDAR_GEMINI_MODEL` | `gemini-3.8-flash` | Modelo configurável |
 | `LEGENDAR_GEMINI_BATCH_SIZE` | `32` | Cues atuais por requisição (1–100) |
 | `LEGENDAR_GEMINI_TIMEOUT` | `120` | Timeout por requisição, em segundos |
@@ -63,18 +70,18 @@ O adaptador usa HTTPS e envia a chave no header `x-goog-api-key`, nunca na URL. 
 
 Grounding com Google Search é **habilitado por padrão** no fluxo Gemini para atender ao requisito de investigar entidades e terminologia contextual. A documentação oficial atual lista suporte nos modelos Gemini 3 Flash estáveis; o adaptador permite explicitamente `gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash` e `gemini-3.5-flash-lite`, rejeitando combinações não habilitadas. Configure `LEGENDAR_GEMINI_GROUNDING=false` para desativar. O modelo deve pesquisar apenas quando houver nomes, termos ou referências ambíguas, confrontar fontes com as cues e jamais acrescentar fatos à fala. O benchmark registra consultas e latência para quantificar o impacto. Use apenas quando uma referência cultural, nome ou termo do universo exigir pesquisa. Grounding ajuda a identificar referências, mas não autoriza acrescentar fatos à fala. Ele pode aumentar latência e consumo; compare separadamente a configuração ligada/desligada.
 
-## 5. Instalação e configuração
+## 5. Configuração local
 
-Não foi adicionada dependência Python para o Gemini: o adaptador usa a biblioteca padrão `urllib`. Isso mantém o lockfile reproduzível e evita uma nova dependência no runtime desktop.
+A configuração normal é feita dentro do aplicativo:
 
-Exemplo para execução local (não salve a chave em arquivo versionado):
+1. Abra **Preferências**.
+2. Em **Motor de tradução**, escolha **NLLB-200 (local)** ou **Gemini (API)**.
+3. Se escolher Gemini, informe a chave no campo **Chave Gemini**.
+4. A chave é armazenada localmente no perfil do usuário, fora do QSettings, com arquivo privado `0600` quando suportado pelo sistema.
+5. A aplicação nunca registra a chave em logs, relatórios de desempenho, prompts persistidos ou commits.
+6. A troca de motor é aplicada imediatamente aos próximos jobs; não é necessário reiniciar o aplicativo.
 
-```bash
-export GEMINI_API_KEY="..."
-export LEGENDAR_TRANSLATION_BACKEND=gemini
-export LEGENDAR_GEMINI_MODEL=gemini-3.8-flash
-export LEGENDAR_GEMINI_BATCH_SIZE=32
-```
+As variáveis de ambiente continuam disponíveis para CI e automação. O campo de Preferências é a configuração recomendada para uso normal do desktop.
 
 Para voltar ao NLLB:
 
@@ -84,7 +91,7 @@ export LEGENDAR_TRANSLATION_BACKEND=nllb
 
 A chave para o workflow GitHub Actions deve ser cadastrada em **Settings → Secrets and variables → Actions → New repository secret**, com o nome exato `GEMINI_API_KEY`. Nunca a coloque no código, em commit, artefato ou log.
 
-## 6. Benchmark pareado
+## 6. Benchmark pareado (mantido como ferramenta, não como gate da Fase 6)
 
 O script `scripts/phase6_translation_benchmark.py` compara NLLB e Gemini sobre as mesmas cues, na mesma ordem. O manifesto TSV usa:
 
@@ -114,7 +121,7 @@ PYTHONPATH=src uv run --locked --group dev --group phase0 \\
 
 A execução deve usar a mesma mídia/cues, hardware, idioma, referências e versão do corpus. Registrar separadamente primeira execução (carga/cache) e execuções quentes. Não comparar runners GitHub com o computador de referência.
 
-## 7. Protocolo de qualidade e aceite
+## 7. Critérios de conclusão da Fase 6
 
 O relatório numérico é necessário, mas não substitui revisão humana bilíngue cega. Congelar antes da comparação um conjunto que inclua:
 
@@ -123,6 +130,16 @@ O relatório numérico é necessário, mas não substitui revisão humana bilín
 - negações, sujeitos, tempos verbais e relações entre cues;
 - números, datas, siglas e referências;
 - fala informal, frases interrompidas e cues curtas.
+
+Para a conclusão desta Fase 6, os gates de implementação são:
+- ambos os adaptadores implementados atrás da mesma porta `Translator`;
+- seleção explícita e persistente do backend em Preferências;
+- chave Gemini configurável localmente sem exposição em QSettings/logs;
+- troca de backend aplicada sem reinício;
+- validação estrutural 1:1, cancelamento, retries e métricas sanitizadas preservados;
+- CI determinística e smoke real Gemini aprovados.
+
+O benchmark comparativo e a revisão humana continuam disponíveis como evidência futura de qualidade/performance, mas não bloqueiam a conclusão desta fase por decisão do usuário.
 
 A decisão deve registrar:
 
