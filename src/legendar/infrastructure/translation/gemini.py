@@ -477,7 +477,7 @@ class GeminiTranslator:
             + 32 * len(batch)
             + 256
         )
-        reserve = max(512, min(self.max_output_tokens, estimated))
+        reserve = max(512, estimated)
         return estimated, reserve
 
     def _payload(
@@ -551,14 +551,11 @@ class GeminiTranslator:
     ) -> dict[int, str]:
         """Traduz um lote com staging por ID e recuperação limitada."""
         self._check_cancelled(token)
-        before, after, translated_context = self._context_for_batch(
-            batch, all_units, positions, translated_by_id
-        )
-        payload = self._payload(
+        payload = self._prepare_payload(
             batch,
-            before=before,
-            after=after,
-            translated_context=translated_context,
+            all_units=all_units,
+            positions=positions,
+            translated_by_id=translated_by_id,
             source_language=source_language,
             target_language=target_language,
         )
