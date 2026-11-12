@@ -14,9 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-TIMESTAMP = re.compile(
-    r"^(?P<h>\d{2,}):(?P<m>[0-5]\d):(?P<s>[0-5]\d),(?P<ms>\d{3})$"
-)
+TIMESTAMP = re.compile(r"^(?P<h>\d{2,}):(?P<m>[0-5]\d):(?P<s>[0-5]\d),(?P<ms>\d{3})$")
 TIME_LINE = re.compile(
     r"^(\d{2,}:[0-5]\d:[0-5]\d,\d{3})\s+-->\s+"
     r"(\d{2,}:[0-5]\d:[0-5]\d,\d{3})(?:\s+.*)?$"
@@ -33,11 +31,7 @@ def _milliseconds(value: str) -> int:
 
 def parse_srt(content: str) -> list[tuple[int, str]]:
     """Lê cues SRT sem alterar o texto nem descartar cues multilinha."""
-    normalized = (
-        content.lstrip("\ufeff")
-        .replace("\r\n", "\n")
-        .replace("\r", "\n")
-    )
+    normalized = content.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
     blocks = re.split(r"\n[ \t]*\n", normalized.strip())
     cues: list[tuple[int, str]] = []
     seen: set[int] = set()
