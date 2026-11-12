@@ -725,7 +725,7 @@ A IA que executar esta fase deverá seguir este roteiro e não pular gates:
 9. Fazer revisão de efeitos colaterais: timestamps, conteúdo, IDs, cancelamento, publicação, memória e concorrência.
 10. Atualizar este documento com resultado real, evidências e decisões; não marcar etapa como concluída sem teste.
 11. Repetir a mídia real no hardware de referência somente depois de os testes determinísticos passarem.
-12. Não executar benchmark amplo Gemini × NLLB nem trocar o backend padrão sem decisão explícita.
+12. A decisão aprovada de substituir NLLB por TranslateGemma está registrada em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md); validar o novo motor contra o corpus-ouro e a evidência histórica sem criar matriz extensa de hardware.
 13. Ao final, atualizar os documentos vivos e a matriz de dependências; arquivar qualquer plano substituído sem apagar evidência.
 14. Criar PR com commits por etapa, revisar diff integral, aguardar CI e só então fazer merge para `main`.
 15. Validar o estado pós-merge: commit, workflows, documentos, links, lockfile e testes.
@@ -777,3 +777,32 @@ A Fase 8.1 só poderá ser marcada como concluída quando:
 - a PR estiver mergeada na `main` e o estado pós-merge validado.
 
 **Resultado esperado:** uma homologação repetível, com falhas recuperáveis, tradução em PT-BR natural, cues construídas por unidades de sentido, layout consistente e desempenho novamente próximo da baseline histórica — sem sacrificar rastreabilidade textual ou temporal.
+
+
+---
+
+## 11. Etapa 8.1.6 — substituição do motor local por TranslateGemma
+
+**STATUS: EM IMPLEMENTAÇÃO**
+
+A decisão de produto foi aprovada pelo usuário em 12/11/2026: remover NLLB e adotar TranslateGemma 4B Q4_K_M como único motor local. Gemini permanece como opção remota independente. A decisão técnica, o runtime candidato, o contrato de idioma, os riscos de licença e os gates estão em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
+
+### Escopo fechado
+
+1. Provar o template TranslateGemma no runtime llama.cpp, com source_lang_code e target_lang_code enviados por requisição.
+2. Implementar adaptador local com o contrato existente, processamento contextual limitado pelo contexto oficial de 2K tokens, validação de cardinalidade/IDs e recuperação segura.
+3. Gerenciar servidor e modelo localmente, com loopback, cache, download verificável, cancelamento e encerramento confiável.
+4. Migrar bootstrap, Preferências, dependências e documentação para TranslateGemma como única rota local.
+5. Remover NLLB integralmente após os testes substitutos passarem.
+6. Validar no hardware de referência e no corpus-ouro; não aprovar qualidade apenas por CI.
+
+### Critérios de saída
+
+- Template e códigos de idioma comprovados em smoke real.
+- Nenhuma chamada externa com texto de legenda na rota local.
+- Sem publicação parcial; IDs, ordem e cardinalidade 1:1 preservados.
+- Testes de falha/cancelamento/processo/porta/download e CI completa aprovados.
+- NLLB ausente do runtime, código, testes ativos e documentação operacional.
+- Uma homologação E2E real e avaliação do corpus-ouro registradas, com tempo/RAM e limitações explícitas.
+
+A etapa não autoriza remover a referência histórica dos resultados NLLB nem os artefatos congelados da auditoria.
