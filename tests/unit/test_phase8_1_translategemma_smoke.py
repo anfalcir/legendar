@@ -41,13 +41,9 @@ def test_translate_sends_language_codes_per_request(monkeypatch) -> None:
         assert [message["role"] for message in payload["messages"]] == ["user"]
         assert payload["messages"][0]["content"] == "I will be back."
         assert payload["stream"] is False
-        return _Response(
-            {"choices": [{"message": {"content": "Eu vou voltar."}}]}
-        )
+        return _Response({"choices": [{"message": {"content": "Eu vou voltar."}}]})
 
-    monkeypatch.setattr(
-        "scripts.phase8_1_translategemma_smoke.urlopen", fake_urlopen
-    )
+    monkeypatch.setattr("scripts.phase8_1_translategemma_smoke.urlopen", fake_urlopen)
 
     result = translate("I will be back.", timeout=42)
 
