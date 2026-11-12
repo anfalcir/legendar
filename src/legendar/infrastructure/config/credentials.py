@@ -7,6 +7,7 @@ do usuário, com permissão 0600 quando o sistema operacional suporta esse modo.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import tempfile
 from pathlib import Path
@@ -26,10 +27,8 @@ def _credentials_dir() -> Path:
         location = str(Path.home() / ".config" / "Legendar")
     path = Path(location) / "credentials"
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
-    try:
+    with contextlib.suppress(OSError):
         path.chmod(0o700)
-    except OSError:
-        pass
     return path
 
 
@@ -57,10 +56,8 @@ def save_gemini_api_key(api_key: str) -> None:
 
     destination = _key_path()
     destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    try:
+    with contextlib.suppress(OSError):
         destination.parent.chmod(0o700)
-    except OSError:
-        pass
     fd, temporary = tempfile.mkstemp(
         prefix=".gemini_api_key.",
         dir=destination.parent,
@@ -74,15 +71,11 @@ def save_gemini_api_key(api_key: str) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         temporary_path.replace(destination)
-        try:
+        with contextlib.suppress(OSError):
             destination.chmod(0o600)
-        except OSError:
-            pass
     except Exception:
-        try:
+        with contextlib.suppress(OSError):
             temporary_path.unlink(missing_ok=True)
-        except OSError:
-            pass
         raise
 
 
