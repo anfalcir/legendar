@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1–5 com implementação concluída e integrada à `main`. Fase 5 integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. Fase 6 em validação na PR [#14](https://github.com/anfalcir/legendar/pull/14); a promoção operacional de faster-whisper a padrão permanece condicionada ao benchmark local pareado e à revisão humana.
+- **Status:** Fases 1–5 com implementação concluída e integrada à `main`. Fase 5 integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. Fase 6 em validação técnica; a promoção operacional de faster-whisper a padrão permanece condicionada ao benchmark local pareado e à revisão humana.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -690,7 +690,7 @@ Fase 7 — memória, threads e perfis
 Fase 8 — regressão e homologação final
 ```
 
-**Execução vigente:** Fase 5 implementada e integrada; Fase 6 em validação na PR [#14](https://github.com/anfalcir/legendar/pull/14). NLLB continua padrão e Gemini é opt-in até benchmark pareado e revisão humana. Antes das chamadas reais, cadastrar `GEMINI_API_KEY` como secret no GitHub Actions e no ambiente local de homologação. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos versionados.
+**Execução vigente:** Fase 5 implementada e integrada; Fase 6 em validação técnica. NLLB continua padrão e Gemini é opt-in até benchmark pareado e revisão humana. Antes das chamadas reais, cadastrar `GEMINI_API_KEY` como secret no GitHub Actions e no ambiente local de homologação. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos versionados.
 
 ### Definition of Done de cada fase
 
