@@ -86,6 +86,7 @@ def _manager(tmp_path: Path, **overrides) -> tuple[LlamaCppRuntimeManager, list]
         "popen_factory": popen,
         "opener": lambda *_args, **_kwargs: FakeResponse(),
         "startup_timeout": 1.0,
+        "model_sha256": llama_runtime.MODEL_SHA256,
         "sleep": lambda _seconds: None,
     }
     options.update(overrides)
@@ -157,6 +158,44 @@ def test_cancelled_start_does_not_leave_server_running(tmp_path) -> None:
     assert processes == []
     assert manager.base_url is None
 
+
+
+def test_invalid_existing_model_is_quarantined_and_redownloaded(
+    tmp_path, monkeypatch
+) -> None:
+    payload = b"approved-model"
+    monkeypatch.setattr(
+        llama_runtime, "MODEL_SHA256", hashlib.sha256(payload).hexdigest()
+    )
+    model_path = tmp_path / "models" / "translategemma.gguf"
+    model_path.parent.mkdir()
+    model_path.write_bytes(b"corrupted-model")
+    response = DownloadResponse(
+        [payload],
+        headers={"Content-Length": str(len(payload))},
+    )
+    manager, _ = _manager(
+        tmp_path,
+        model_path=model_path,
+        opener=lambda *_args, **_kwargs: response,
+    )
+
+    assert manager.download_model(consent=True) == model_path
+
+    assert model_path.read_bytes() == payload
+    quarantined = list(model_path.parent.glob("translategemma.gguf.invalid.*"))
+    assert len(quarantined) == 1
+    assert quarantined[0].read_bytes() == b"corrupted-model"
+
+
+def test_invalid_model_hash_prevents_server_start(tmp_path) -> None:
+    manager, processes = _manager(tmp_path, model_sha256="0" * 64)
+
+    with pytest.raises(ModelError, match="SHA-256"):
+        manager.ensure_running()
+
+    assert processes == []
+    assert manager.base_url is None
 
 def test_server_exit_before_readiness_is_reported(tmp_path) -> None:
     processes = []
