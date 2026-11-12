@@ -126,7 +126,11 @@ def _model_device(model: Any) -> str:
 
 def _validate_input_length(input_length: int) -> None:
     """Impede truncamento silencioso da unidade antes da geração."""
-    _validate_input_length(input_length)
+    if input_length > MAX_INPUT_TOKENS:
+        raise TranslationError(
+            "Uma unidade de tradução excede o limite de "
+            f"{MAX_INPUT_TOKENS} tokens do NLLB; nenhuma entrada foi truncada."
+        )
 
 
 def _run_nllb_batch(
@@ -152,11 +156,7 @@ def _run_nllb_batch(
     if input_ids is None:
         raise TranslationError("NLLB não retornou IDs tokenizados para a entrada.")
     input_length = int(input_ids.shape[1])
-    if input_length > MAX_INPUT_TOKENS:
-        raise TranslationError(
-            "Uma unidade de tradução excede o limite de "
-            f"{MAX_INPUT_TOKENS} tokens do NLLB; nenhuma entrada foi truncada."
-        )
+    _validate_input_length(input_length)
     if metrics_callback is not None:
         metrics_callback("tokenization_seconds", time.perf_counter() - phase_started)
         attention_mask = encoded.get("attention_mask")
