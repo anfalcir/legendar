@@ -507,7 +507,7 @@ class GeminiTranslator:
             if len(batch) == 1:
                 self._record("failed_units", len(invalid_ids))
                 raise TranslationError(
-                    "Gemini não recuperou texto não vazio para as cues: "
+                    "Gemini não recuperou texto vazio ou ausente para as cues: "
                     + ", ".join(map(str, invalid_ids))
                     + ". Nenhum resultado parcial será publicado."
                 )
