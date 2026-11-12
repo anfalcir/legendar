@@ -98,6 +98,24 @@ def _manager(tmp_path: Path, **overrides) -> tuple[LlamaCppRuntimeManager, list]
     return LlamaCppRuntimeManager(**options), processes
 
 
+def test_ensure_model_reuses_valid_cached_weights_without_consent(
+    tmp_path,
+) -> None:
+    manager, _ = _manager(tmp_path)
+
+    assert manager.ensure_model() == manager.model_path
+    assert not manager.download_authorized
+
+
+def test_ensure_model_requires_session_consent_when_weights_are_missing(
+    tmp_path,
+) -> None:
+    manager, _ = _manager(tmp_path, model_path=tmp_path / "missing.gguf")
+
+    with pytest.raises(ModelError, match="Autorize o download"):
+        manager.ensure_model()
+
+
 def test_inspection_is_lightweight_and_reports_missing_dependencies(tmp_path) -> None:
     manager = LlamaCppRuntimeManager(
         tmp_path / "models",
