@@ -504,6 +504,14 @@ class GeminiTranslator:
                     split_depth=split_depth,
                 )
 
+            if len(batch) == 1:
+                self._record("failed_units", len(invalid_ids))
+                raise TranslationError(
+                    "Gemini não recuperou texto não vazio para as cues: "
+                    + ", ".join(map(str, invalid_ids))
+                    + ". Nenhum resultado parcial será publicado."
+                )
+
             recovered: dict[int, str] = {}
             for cue_id in invalid_ids:
                 self._check_cancelled(token)
