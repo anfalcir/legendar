@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from legendar.application.pipeline.translation import TranslationUnit
 from legendar.domain.errors.catalog import TranslationError, UnsupportedLanguageError
 from legendar.domain.value_objects.language import Language
