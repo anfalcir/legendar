@@ -6,8 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from legendar.application.pipeline.serial_pipeline import SerialPipeline
-from legendar.bootstrap.app import build_ui_dependencies
 from legendar.bootstrap import app as bootstrap_app
+from legendar.bootstrap.app import build_ui_dependencies
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.settings import AppSettings
@@ -22,7 +22,9 @@ from legendar.infrastructure.transcription.faster_whisper import (
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.nllb import NllbTranslator
-from legendar.infrastructure.translation.translategemma import TranslateGemmaTranslator
+from legendar.infrastructure.translation.translategemma import (
+    TranslateGemmaTranslator,
+)
 
 
 def _settings(tmp_path: Path) -> AppSettings:
