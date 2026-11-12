@@ -458,6 +458,7 @@ def test_recovers_only_the_empty_cue_from_phase_8_1_fixture() -> None:
     )
 
     assert result.texts == ("Obrigado.", "Muito obrigado.", "Estamos seguros.")
+    assert result.unit_indexes == (70, 71, 72)
     assert attempts == [[70, 71, 72], [71]]
     counters = translator.performance_snapshot()["counters"]
     assert counters["item_retries"] == 1
