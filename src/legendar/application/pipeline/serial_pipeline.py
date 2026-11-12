@@ -391,7 +391,8 @@ class SerialPipeline:
         )
         if dropped_content_count:
             warnings.append(
-                f"{dropped_content_count} segmento(s) com conteúdo sem tempo foram descartados."
+                f"{dropped_content_count} segmento(s) com conteúdo sem tempo "
+                "foram descartados."
             )
 
         # 6. Tradução opcional (preserva tempos)
