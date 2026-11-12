@@ -18,6 +18,7 @@ from legendar.infrastructure.transcription.faster_whisper import (
     FasterWhisperTranscriber,
 )
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
+from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.nllb import NllbTranslator
 
 
@@ -304,4 +305,73 @@ def test_unknown_asr_backend_is_not_silently_accepted(tmp_path, monkeypatch) -> 
     assert (
         "LEGENDAR_ASR_BACKEND inválido"
         in dependencies.transcription_readiness_details[0]
+    )
+
+
+def test_gemini_backend_is_selected_with_api_key(tmp_path, monkeypatch) -> None:
+    _patch_modules(monkeypatch)
+    monkeypatch.setenv("LEGENDAR_TRANSLATION_BACKEND", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-secret")
+    monkeypatch.setenv("LEGENDAR_GEMINI_MODEL", "gemini-test")
+    monkeypatch.setenv("LEGENDAR_GEMINI_GROUNDING", "false")
+    monkeypatch.setenv("LEGENDAR_GEMINI_BATCH_SIZE", "24")
+
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+    translator = dependencies.pipeline_factory()._ports.translator
+
+    assert dependencies.translate_available
+    assert isinstance(translator, GeminiTranslator)
+    assert translator.model == "gemini-test"
+    assert translator.batch_size == 24
+    assert "Gemini API" in dependencies.translate_readiness_details[0]
+    assert "GEMINI_API_KEY configurada" in dependencies.translate_readiness_details[3]
+    assert "test-secret" not in repr(dependencies.translate_readiness_details)
+
+
+def test_gemini_backend_reports_missing_api_key_without_crashing(
+    tmp_path, monkeypatch
+) -> None:
+    _patch_modules(monkeypatch)
+    monkeypatch.setenv("LEGENDAR_TRANSLATION_BACKEND", "gemini")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert not dependencies.translate_available
+    assert isinstance(
+        dependencies.pipeline_factory()._ports.translator, GeminiTranslator
+    )
+    assert "GEMINI_API_KEY ausente" in dependencies.translate_readiness_details[3]
+
+
+def test_unknown_translation_backend_is_not_silently_accepted(
+    tmp_path, monkeypatch
+) -> None:
+    _patch_modules(monkeypatch, "transformers")
+    monkeypatch.setenv("LEGENDAR_TRANSLATION_BACKEND", "unknown")
+
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert not dependencies.translate_available
+    assert (
+        "LEGENDAR_TRANSLATION_BACKEND inválido"
+        in dependencies.translate_readiness_details[0]
     )
