@@ -163,7 +163,6 @@ def test_cancelled_start_does_not_leave_server_running(tmp_path) -> None:
     assert manager.base_url is None
 
 
-
 def test_invalid_existing_model_is_quarantined_and_redownloaded(
     tmp_path, monkeypatch
 ) -> None:
@@ -200,6 +199,7 @@ def test_invalid_model_hash_prevents_server_start(tmp_path) -> None:
 
     assert processes == []
     assert manager.base_url is None
+
 
 def test_server_exit_before_readiness_is_reported(tmp_path) -> None:
     processes = []
