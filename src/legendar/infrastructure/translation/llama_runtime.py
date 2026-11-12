@@ -21,7 +21,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from legendar.application.ports.protocols import CancellationToken, ProgressSink
-from legendar.domain.errors.catalog import JobCancelledError, ModelError
+from legendar.domain.errors.catalog import ModelError
 
 DEFAULT_MODEL_FILENAME = "translategemma-4b-it-Q4_K_M.gguf"
 DEFAULT_MODEL_ALIAS = "translategemma-4b"
@@ -125,7 +125,10 @@ class LlamaCppRuntimeManager:
             and executable.is_file()
             and (os.name == "nt" or os.access(executable, os.X_OK))
         )
-        model_ok = self.model_path.is_file() and self.model_path.stat().st_size > 0
+        try:
+            model_ok = self.model_path.is_file() and self.model_path.stat().st_size > 0
+        except OSError:
+            model_ok = False
         details: list[str] = []
         if not executable_ok:
             details.append("llama.cpp não encontrado ou não executável.")
@@ -264,7 +267,9 @@ class LlamaCppRuntimeManager:
         request = Request(f"http://{self.host}:{port}/health", method="GET")
         try:
             with self._opener(request, timeout=_HEALTH_TIMEOUT) as response:
-                status = getattr(response, "status", response.getcode())
+                status = getattr(response, "status", None)
+                if status is None:
+                    status = response.getcode()
                 return 200 <= int(status) < 300
         except (OSError, TimeoutError, URLError, ValueError):
             return False
