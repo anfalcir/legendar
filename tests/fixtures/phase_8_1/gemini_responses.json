@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "provenance": "synthetic-only",
+  "purpose": "Casos determinísticos sem áudio, transcrições ou conteúdo privado da homologação real.",
+  "cases": [
+    {
+      "id": "gemini_one_empty_item",
+      "category": "gemini-recovery",
+      "expected_classification": "item_text_empty",
+      "expected_ids": [
+        70,
+        71,
+        72
+      ],
+      "response": {
+        "candidates": [
+          {
+            "finishReason": "STOP",
+            "content": {
+              "parts": [
+                {
+                  "text": "{\"translations\":[{\"cue_id\":70,\"text\":\"Thank you.\"},{\"cue_id\":71,\"text\":\"  \"},{\"cue_id\":72,\"text\":\"We are safe.\"}]}"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "gemini_no_candidate",
+      "category": "gemini-recovery",
+      "expected_classification": "candidate_missing",
+      "expected_ids": [
+        1
+      ],
+      "response": {
+        "candidates": []
+      }
+    },
+    {
+      "id": "gemini_truncated_output",
+      "category": "gemini-recovery",
+      "expected_classification": "output_truncated",
+      "expected_ids": [
+        1,
+        2,
+        3
+      ],
+      "response": {
+        "candidates": [
+          {
+            "finishReason": "MAX_TOKENS",
+            "content": {
+              "parts": [
+                {
+                  "text": "{\"translations\":[{\"cue_id\":1,\"text\":\"A primeira\"}"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
