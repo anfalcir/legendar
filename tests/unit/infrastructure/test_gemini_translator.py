@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from legendar.application.job.context import CancellationTokenImpl
-from legendar.application.pipeline.translation import TranslationUnit
+from legendar.application.pipeline.translation import TranslationContext, TranslationUnit
 from legendar.application.ports.protocols import Translator
 from legendar.domain.errors.catalog import (
     JobCancelledError,
@@ -93,6 +93,42 @@ def _translator(
         sleeper=lambda _seconds: None,
         **kwargs,
     )
+
+
+def test_payload_transports_explicit_unit_context_and_protected_terms() -> None:
+    calls: list = []
+    translator = _translator(calls=calls)
+    units = (
+        TranslationUnit(
+            index=1,
+            text="The city is old.",
+            source_cue_ids=(1,),
+            context=TranslationContext(
+                before=("Welcome to Northreach.",),
+                after=("It was built long ago.",),
+                protected_terms=("Northreach",),
+            ),
+        ),
+    )
+
+    translator.translate(
+        units,
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=ProgressRecorder(),
+    )
+
+    payload = calls[0][1]
+    prompt = payload["contents"][0]["parts"][0]["text"]
+    source = json.loads(prompt.split("\n", 3)[-1])
+    context = source["contexto_explicito_das_unidades"][0]
+    assert context == {
+        "cue_id": 1,
+        "source_cue_ids": [1],
+        "contexto_anterior": ["Welcome to Northreach."],
+        "contexto_posterior": ["It was built long ago."],
+        "termos_protegidos": ["Northreach"],
+    }
 
 
 def test_satisfies_the_translator_port() -> None:
