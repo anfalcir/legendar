@@ -205,6 +205,17 @@ def test_grounding_is_opt_in() -> None:
     assert grounded.performance_snapshot()["configuration"]["grounding"]
 
 
+def test_environment_enables_grounding_by_default_and_allows_opt_out(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "test-secret")
+    monkeypatch.delenv("LEGENDAR_GEMINI_GROUNDING", raising=False)
+    assert GeminiTranslator.from_environment(tmp_path).grounding
+
+    monkeypatch.setenv("LEGENDAR_GEMINI_GROUNDING", "false")
+    assert not GeminiTranslator.from_environment(tmp_path).grounding
+
+
 def test_environment_configuration_is_read_without_logging_secret(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
