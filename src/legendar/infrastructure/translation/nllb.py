@@ -124,6 +124,11 @@ def _model_device(model: Any) -> str:
     return str(device) if device is not None else "cpu"
 
 
+def _validate_input_length(input_length: int) -> None:
+    """Impede truncamento silencioso da unidade antes da geração."""
+    _validate_input_length(input_length)
+
+
 def _run_nllb_batch(
     texts: Sequence[str],
     tokenizer: Any,
