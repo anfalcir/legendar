@@ -24,6 +24,15 @@ O comando abre a janela principal. Nada é processado sem confirmação explíci
 7. Acompanhe **Andamento do trabalho** e **Atividade**; o log pode ser recolhido.
 8. Ao final, abra a pasta de destino.
 
+### 2.1. Preferências de tradução
+
+- O backend padrão é NLLB-200 local; o Gemini Developer API é uma alternativa opcional.
+- Selecione o backend em **Preferências**. A escolha é persistida localmente e aplicada aos próximos trabalhos, sem reiniciar a aplicação.
+- Para usar Gemini, configure a chave API no próprio painel de Preferências. É possível substituir ou remover a chave por ali.
+- A chave é armazenada em arquivo local privado, fora do QSettings, logs e relatórios de desempenho. Não a compartilhe nem a coloque no repositório.
+- Ao selecionar Gemini, o texto das cues é enviado à API externa do Google para tradução. Use essa opção somente quando estiver de acordo com esse fluxo de dados e houver conectividade.
+- Não existe fallback silencioso entre Gemini e NLLB: escolha/configuração inválida deve ser corrigida explicitamente.
+
 ## 3. Estados exibidos
 
 | Estado | Significado | Controles |
