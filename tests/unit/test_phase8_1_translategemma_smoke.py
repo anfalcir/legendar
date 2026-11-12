@@ -4,7 +4,7 @@ import json
 from urllib.error import URLError
 
 import pytest
-from scripts.phase8_1_translategemma_smoke import build_prompt, main, translate
+from scripts.phase8_1_translategemma_smoke import build_user_content, main, translate
 
 
 class _Response:
@@ -21,11 +21,10 @@ class _Response:
         return self.payload
 
 
-def test_prompt_uses_explicit_brazilian_portuguese_pair() -> None:
-    prompt = build_prompt("I will be back.", "en", "pt-BR")
+def test_user_content_is_the_unmodified_text_to_translate() -> None:
+    content = build_user_content("  I will be back.  ", "en", "pt-BR")
 
-    assert "English (en) to Brazilian Portuguese (pt-BR)" in prompt
-    assert prompt.endswith("I will be back.")
+    assert content == "I will be back."
 
 
 def test_translate_sends_language_codes_per_request(monkeypatch) -> None:
@@ -40,6 +39,7 @@ def test_translate_sends_language_codes_per_request(monkeypatch) -> None:
             "target_lang_code": "pt-BR",
         }
         assert [message["role"] for message in payload["messages"]] == ["user"]
+        assert payload["messages"][0]["content"] == "I will be back."
         assert payload["stream"] is False
         return _Response(
             {"choices": [{"message": {"content": "Eu vou voltar."}}]}
@@ -85,7 +85,7 @@ def test_translate_rejects_non_loopback_server() -> None:
 
 def test_translate_rejects_unsupported_language_pair() -> None:
     with pytest.raises(ValueError, match="Par de idiomas"):
-        build_prompt("Hello.", "fr", "pt-BR")
+        build_user_content("Hello.", "fr", "pt-BR")
 
 
 def test_cli_smoke_uses_local_server(monkeypatch, capsys) -> None:
