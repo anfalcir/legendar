@@ -112,6 +112,7 @@ def test_ensure_model_requires_session_consent_when_weights_are_missing(
 ) -> None:
     manager, _ = _manager(tmp_path, model_path=tmp_path / "missing.gguf")
 
+    assert manager.needs_download_authorization
     with pytest.raises(ModelError, match="Autorize o download"):
         manager.ensure_model()
 
