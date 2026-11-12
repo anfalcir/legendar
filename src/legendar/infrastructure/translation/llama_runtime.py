@@ -187,6 +187,12 @@ class LlamaCppRuntimeManager:
         self._port: int | None = None
         self._validated_model_signature: tuple[int, int, int] | None = None
         self._download_authorized = False
+        self._download_required = False
+
+    @property
+    def needs_download_authorization(self) -> bool:
+        """Indica ausência ou corrupção detectada dos pesos locais."""
+        return self._download_required or not self.model_path.is_file()
 
     @property
     def download_authorized(self) -> bool:
@@ -414,6 +420,7 @@ class LlamaCppRuntimeManager:
             if os.name != "nt":
                 os.chmod(self.model_path, 0o600)
             self._remember_validated_model()
+            self._download_required = False
             if progress is not None:
                 progress.report(1.0, "Modelo TranslateGemma baixado e validado")
             return self.model_path
@@ -446,6 +453,7 @@ class LlamaCppRuntimeManager:
             or self._sha256_file(self.model_path, token) != self.model_sha256
         ):
             self._validated_model_signature = None
+            self._download_required = True
             raise ModelError(
                 "O arquivo local TranslateGemma não corresponde ao SHA-256 "
                 "do modelo aprovado. Faça novamente o download autorizado."
