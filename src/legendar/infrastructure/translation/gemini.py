@@ -242,6 +242,7 @@ class GeminiTranslator:
             "estimated_input_tokens": 0,
             "estimated_output_tokens": 0,
             "token_budget_splits": 0,
+            "largest_batch_units": 0,
         }
 
     @classmethod
@@ -308,6 +309,10 @@ class GeminiTranslator:
     def _record(self, name: str, value: int | float) -> None:
         with self._metrics_lock:
             self._metrics[name] = self._metrics.get(name, 0) + value
+
+    def _record_max(self, name: str, value: int) -> None:
+        with self._metrics_lock:
+            self._metrics[name] = max(int(self._metrics.get(name, 0)), value)
 
     def translate(
         self,
@@ -551,6 +556,7 @@ class GeminiTranslator:
     ) -> dict[int, str]:
         """Traduz um lote com staging por ID e recuperação limitada."""
         self._check_cancelled(token)
+        self._record_max("largest_batch_units", len(batch))
         payload = self._prepare_payload(
             batch,
             all_units=all_units,
@@ -570,6 +576,7 @@ class GeminiTranslator:
             valid, invalid_ids = self._parse_response(response, batch)
         except _GeminiResponseFailure as exc:
             self._record("response_failures", 1)
+            self._record(f"response_failure_{exc.category}", 1)
             if (
                 exc.split
                 and len(batch) > 1
@@ -626,6 +633,7 @@ class GeminiTranslator:
 
         translated_by_id.update(valid)
         if invalid_ids:
+            self._record("response_failure_item_empty_or_missing", len(invalid_ids))
             if not valid and content_attempt < MAX_CONTENT_RETRIES:
                 self._record("content_retries", 1)
                 self._record("retries", 1)
