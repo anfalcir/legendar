@@ -18,7 +18,6 @@ from legendar.application.pipeline.translation import (
 )
 from legendar.application.ports.protocols import CancellationToken, ProgressSink
 from legendar.domain.errors.catalog import (
-    ModelError,
     TranslationError,
     UnsupportedLanguageError,
 )
