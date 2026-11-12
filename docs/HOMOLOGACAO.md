@@ -81,7 +81,7 @@ Registre:
 - tempo frio e quente;
 - qualidade textual, alinhamento, CPS e legibilidade.
 
-O tempo global reportado inicialmente foi cerca de 60 minutos para 37 minutos de áudio (RTF ≈ 1,62). Esse é um relato inicial, não uma baseline de estágio nem uma medição reproduzida. A Fase 1 do [plano vigente](PLANO_CORRECAO_MELHORIA.md) criará o benchmark comparável.
+A baseline operacional consolidada em 11/11/2026 foi de aproximadamente **23min21s** para 37min10s de mídia nas execuções quentes (RTF ≈ 0,63), com NLLB consumindo cerca de 14 minutos. O relato inicial de aproximadamente uma hora foi substituído por essa medição reproduzida. A Fase 8 deve repetir o protocolo após as alterações de recursos, registrando cold/warm, memória e tempo por estágio.
 
 ## 9. Teste G — inspeção independente do SRT
 
