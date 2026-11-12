@@ -172,7 +172,12 @@ class LlamaCppRuntimeManager:
                 raise ModelError("TranslateGemma ainda não está instalado. " + " ".join(inspection.details))
 
             if self._process is not None and self._process.poll() is None:
-                if self._port is not None and self._is_healthy(self._port):
+                if (
+                    self._port is not None
+                    and self._is_healthy(self._port)
+                    and self._process is not None
+                    and self._process.poll() is None
+                ):
                     if progress is not None:
                         progress.report(1.0, "Servidor TranslateGemma já está pronto")
                     return f"http://{self.host}:{self._port}"
