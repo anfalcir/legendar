@@ -37,13 +37,14 @@ src/legendar/
     media/{probe,ffmpeg,ffprobe,tools,youtube}.py
     transcription/whisper.py
     alignment/whisperx.py
-    translation/nllb.py
+    translation/{nllb,gemini}.py
     filesystem/{srt,publisher,atomic,workspace,paths}.py
     config/settings.py
     diagnostics/performance.py
     logging/setup.py
   presentation/qt/
     main_window.py
+    dialogs.py, preferences.py
     view_model/job_view_model.py
     workers/{job_worker,media_inspection_worker}.py
     dialogs.py, preferences.py, theme.py
@@ -110,7 +111,7 @@ src/legendar/
 | Dispositivo da tradução | `auto` | `LEGENDAR_TRANSLATE_DEVICE` |
 | Checkpoint de tradução | `facebook/nllb-200-distilled-600M` | `LEGENDAR_TRANSLATE_MODEL` |
 
-Workspaces ficam em `<cache>/tmp` e são exclusivos por job; modelos ficam em `<cache>/models`.
+Workspaces ficam em `<cache>/tmp` e são exclusivos por job; modelos ficam em `<cache>/models`. A chave Gemini é armazenada separadamente no perfil local do usuário, com arquivo privado `0600` quando suportado, e não faz parte do QSettings.
 
 ## 9. Arquitetura de testes
 
@@ -126,7 +127,7 @@ Os testes E2E de mídia atuais usam adaptadores falsos para reconhecimento e ali
 
 ## 10. Evolução sob o plano atual
 
-A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. As próximas mudanças devem preservar essas fronteiras.
+A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. A Fase 6 mantém `NllbTranslator` e `GeminiTranslator` atrás da mesma porta; a seleção persistida em Preferências altera o adaptador usado pelos próximos jobs sem reiniciar a GUI. As próximas mudanças devem preservar essas fronteiras.
 
 A evolução proposta é:
 - instrumentar tempo e memória por estágio;
