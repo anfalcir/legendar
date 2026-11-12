@@ -5,7 +5,8 @@ Este diretório mantém na raiz somente documentos que orientam a operação atu
 ## Estado e evolução
 
 - [Estado atual](ESTADO_ATUAL.md) — fonte de verdade sobre o que está implementado, integrado, validado, pendente e em risco.
-- [Plano de correção, qualidade e desempenho](PLANO_CORRECAO_MELHORIA.md) — plano mestre vigente, incluindo a Fase 8 de regressão e homologação real.
+- [Plano de correção, qualidade e desempenho](PLANO_CORRECAO_MELHORIA.md) — plano mestre vigente e sequência global das fases.
+- [Fase 8.1 — auditoria e plano de execução](FASE_8_1_PLANO.md) — evidências reais de 12/11/2026, causas confirmadas/prováveis, prioridades, tarefas, testes e gates de aceite.
 
 ## Referência técnica e operacional
 
