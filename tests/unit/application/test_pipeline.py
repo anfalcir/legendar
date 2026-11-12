@@ -675,7 +675,9 @@ def test_low_memory_cleanup_runs_on_failure_even_before_model_stages(
     assert reporter.reports[0]["status"] == "failed"
 
 
-def test_resource_release_failure_does_not_mask_success(job_context, monkeypatch) -> None:
+def test_resource_release_failure_does_not_mask_success(
+    job_context, monkeypatch
+) -> None:
     monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "low-memory")
     transcriber = ReleasableAdapter(FakeTranscriber(), fail_release=True)
     reporter = PerformanceReporterFake()
