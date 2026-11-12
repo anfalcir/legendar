@@ -354,7 +354,6 @@ def _prefers_break_after(
     return meaningful_text or duration >= policy.min_cue_duration
 
 
-
 def _recompose_weak_fragments(
     groups: list[list[tuple[TranscriptWord, TimeRange]]],
     policy: SegmentationPolicy,
