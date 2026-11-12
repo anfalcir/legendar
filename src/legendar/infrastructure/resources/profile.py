@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 
 
-class ResourceProfile(StrEnum):
+class ResourceProfile(str, Enum):
     AUTO = "auto"
     LOW_MEMORY = "low-memory"
     BALANCED = "balanced"
