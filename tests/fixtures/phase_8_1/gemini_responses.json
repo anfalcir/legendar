@@ -19,7 +19,7 @@
             "content": {
               "parts": [
                 {
-                  "text": "{\"translations\":[{\"cue_id\":70,\"text\":\"Thank you.\"},{\"cue_id\":71,\"text\":\"  \"},{\"cue_id\":72,\"text\":\"We are safe.\"}]}"
+                  "text": "{\"translations\":[{\"cue_id\":70,\"text\":\"Obrigado.\"},{\"cue_id\":71,\"text\":\"  \"},{\"cue_id\":72,\"text\":\"Estamos seguros.\"}]}"
                 }
               ]
             }
