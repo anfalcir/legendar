@@ -31,7 +31,7 @@ O prompt do adaptador exige:
 1. Português brasileiro natural, contemporâneo e idiomático quando esse for o destino.
 2. Tradução de significado e intenção, não substituição literal palavra por palavra.
 3. Preservação de sujeito, negação, tempo verbal, tom, relações entre ideias e registro oral.
-4. Preservação de nomes próprios e entidades nomeadas: pessoas, personagens, cidades, lugares, povos, raças, clãs, famílias, facções, organizações, títulos, obras e universos ficcionais.
+4. Preservação estrita de nomes próprios e entidades nomeadas: pessoas, personagens, cidades, lugares, povos, raças, clãs, famílias, facções, organizações, títulos, obras e universos ficcionais. Nunca traduzir, transliterar ou adaptar esses nomes; preservar a grafia canônica original. Se houver provável erro de reconhecimento, usar contexto e pesquisa para inferir a grafia original somente com evidência forte; na dúvida, manter a forma da transcrição.
 5. Preservação de termos específicos, números, datas, siglas, referências e nomes de usuário.
 6. Não inventar traduções para nomes ambíguos; manter o original quando não houver evidência suficiente.
 7. Não acrescentar explicações, notas, fatos externos, resumo, censura ou suavização.
