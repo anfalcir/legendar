@@ -3,7 +3,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
 - **Base auditada:** `main`, commit `92ac98dbef5748bf008f54fb2d4db3ad9a1d14d9`
-- **Status:** execução iniciada na branch `phase-8-1-step-0-corpus-freeze`; etapa 8.1.0 com congelamento técnico e fixtures concluídos, mas gate humano ainda pendente
+- **Status:** execução iniciada na branch `phase-8-1-step-0-corpus-freeze`; etapa 8.1.0 com evidências preservadas, manifesto e fixtures versionados; validação CI e gate humano ainda pendentes
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
 - **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
 
@@ -350,7 +350,7 @@ Tarefas:
 
 1. preservar os três SRTs e os sete JSON atuais em `temporario/` como evidência histórica — **concluído e conferido**;
 2. registrar SHA-256, tamanho em bytes e Git blob SHA-1 dos dez artefatos no [manifesto imutável](../temporario/manifesto-fase-8.1.0.json) — **concluído**;
-3. criar trechos de teste pequenos e sanitizados que reproduzam os nove grupos de cenários — **concluído** nas [fixtures sintéticas](../tests/fixtures/phase_8_1/README.md);
+3. criar trechos de teste pequenos e sanitizados que reproduzam os dez casos sintéticos — **criados; validação CI pendente** nas [fixtures sintéticas](../tests/fixtures/phase_8_1/README.md);
 4. criar referência PT-BR revisada por humano para uma amostra do áudio, armazenada localmente fora do Git quando houver mídia/texto protegido — **pendente**; existe somente o [template vazio](../tests/fixtures/phase_8_1/human_reference.template.json);
 5. separar explicitamente erros de ASR da origem e erros introduzidos pela tradução — **regra documentada** nas fixtures e no template; aplicação à amostra real depende da revisão humana;
 6. usar a mesma transcrição/alinhamento congelados para testar isoladamente segmentação e tradução — **pendente**; os relatórios sanitizados não contêm esses intermediários e os três SRTs não substituem o snapshot pré-tradução;
