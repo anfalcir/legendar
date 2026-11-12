@@ -5,9 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-FIXTURE_DIR = (
-    Path(__file__).resolve().parents[2] / "fixtures" / "phase_8_1"
-)
+FIXTURE_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "phase_8_1"
 
 
 def _load(name: str) -> dict:
@@ -57,10 +55,7 @@ def test_subtitle_synthetic_fixtures_cover_phase_8_1_findings() -> None:
 
     fragmented = cases["continuous_fragmented_phrase"]
     assert len(fragmented["words"]) >= 6
-    assert all(
-        word["start"] < word["end"]
-        for word in fragmented["words"]
-    )
+    assert all(word["start"] < word["end"] for word in fragmented["words"])
     assert cases["two_short_sentences"]["words"][0]["text"].endswith(".")
     assert cases["legitimate_single_interjection"]["words"][0]["text"] == "Oh!"
     assert len(cases["long_display_text"]["text"]) > 84
