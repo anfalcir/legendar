@@ -140,7 +140,7 @@ A decisão deve registrar:
 
 - Testes determinísticos cobrem prompt, contexto, estrutura JSON, IDs, ordem, vazios, bloqueio/truncamento, retries, erros HTTP, cancelamento, métricas e seleção de backend.
 - O workflow `Phase 6 quality` executa a matriz Python 3.10–3.13, testes, cobertura, Ruff e validação de formatação.
-- O smoke real da API é opcional no CI e só executa quando o secret `GEMINI_API_KEY` estiver configurado.
+- O smoke real da API é opcional no CI e só executa quando o secret `GEMINI_API_KEY` estiver configurado. O smoke básico desativa Google Search grounding para isolar autenticação e geração do modelo; a validação de grounding/quota deve ser medida separadamente, pois o recurso tem limites próprios.
 - A CI sem chave não comprova acesso real, latência, quotas, grounding nem qualidade de tradução.
 - A integração técnica e a CI foram concluídas pela PR #19. A homologação final ainda exige secret `GEMINI_API_KEY`, smoke real da Developer API, benchmark pareado com NLLB no corpus/mídia de referência de 37min10s no hardware-alvo e revisão humana cega. Até a aprovação desses gates, Gemini não será promovido a padrão.
 
