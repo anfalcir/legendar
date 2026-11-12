@@ -13,6 +13,7 @@ import legendar.infrastructure.translation.llama_runtime as llama_runtime
 from legendar.domain.errors.catalog import JobCancelledError, ModelError
 from legendar.infrastructure.translation.llama_runtime import (
     DEFAULT_MODEL_ALIAS,
+    MODEL_DOWNLOAD_URL,
     LlamaCppRuntimeManager,
 )
 
