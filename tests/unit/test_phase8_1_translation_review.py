@@ -58,7 +58,9 @@ def test_review_sample_is_deterministic_and_covers_high_risk_categories() -> Non
     second = build_review_rows(source, translated, samples=5)
 
     assert first == second
-    categories = {category for row in first for category in row["risk_categories"].split(", ")}
+    categories = {
+        category for row in first for category in row["risk_categories"].split(", ")
+    }
     assert {"gratitude", "negation", "question", "possible_proper_name"} <= categories
 
 
@@ -106,9 +108,7 @@ def test_csv_is_excel_friendly_and_keeps_review_fields_empty(tmp_path: Path) -> 
     assert parsed[0]["semantic_verdict"] == ""
 
 
-def test_cli_creates_review_csv_from_srt_files(
-    tmp_path: Path, capsys
-) -> None:
+def test_cli_creates_review_csv_from_srt_files(tmp_path: Path, capsys) -> None:
     source = tmp_path / "source.srt"
     translated = tmp_path / "translated.srt"
     output = tmp_path / "review.csv"
@@ -122,15 +122,18 @@ def test_cli_creates_review_csv_from_srt_files(
         encoding="utf-8",
     )
 
-    assert main(
-        [
-            str(source),
-            str(translated),
-            "--output",
-            str(output),
-            "--samples",
-            "2",
-        ]
-    ) == 0
+    assert (
+        main(
+            [
+                str(source),
+                str(translated),
+                "--output",
+                str(output),
+                "--samples",
+                "2",
+            ]
+        )
+        == 0
+    )
     assert output.exists()
     assert "confira cada linha fonte com o áudio" in capsys.readouterr().out
