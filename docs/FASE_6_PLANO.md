@@ -1,6 +1,6 @@
 # Fase 6 — Benchmark e aceleração da tradução
 
-**Status:** implementação técnica integrada à `main` pela PR [#19](https://github.com/anfalcir/legendar/pull/19), squash `7f337bc10cf210336fbf2367b56aea7e767bce32`. CI específica aprovada no run [43134372712](https://github.com/anfalcir/legendar/actions/runs/43134372712), incluindo NLLB com runtime real em CPU e testes determinísticos em Python 3.10–3.13, lint e formatação. O smoke real da API foi skipped porque `GEMINI_API_KEY` não estava disponível na execução. Benchmark pareado real e revisão humana cega permanecem pendentes; Gemini continua opt-in e NLLB permanece padrão.
+**Status:** implementação técnica integrada pela PR [#19](https://github.com/anfalcir/legendar/pull/19), squash `7f337bc10cf210336fbf2367b56aea7e767bce32`. CI determinística, runtime NLLB/CPU e smoke real Gemini (2 cues, `gemini-3.8-flash`, sem grounding) aprovados. O registro está em [FASE_6_HOMOLOGACAO.md](FASE_6_HOMOLOGACAO.md). Benchmark pareado real, validação do grounding e revisão humana cega permanecem pendentes; Gemini continua opt-in e NLLB permanece padrão.
 
 **Objetivo:** reduzir o tempo de tradução hoje dominado pelo NLLB (aproximadamente 14 minutos na mídia de referência de 37min10s), sem degradar sentido, terminologia, consistência ou integridade das cues.
 
@@ -108,7 +108,7 @@ PYTHONPATH=src uv run --locked --group dev --group phase0 \\
   --source-language en \\
   --target-language pt \\
   --backends nllb,gemini \\
-  --repeats 3 \\
+  --repeats 4 \\
   --output ./phase6-translation-benchmark.json
 ```
 
@@ -140,9 +140,10 @@ A decisão deve registrar:
 
 - Testes determinísticos cobrem prompt, contexto, estrutura JSON, IDs, ordem, vazios, bloqueio/truncamento, retries, erros HTTP, cancelamento, métricas e seleção de backend.
 - O workflow `Phase 6 quality` executa a matriz Python 3.10–3.13, testes, cobertura, Ruff e validação de formatação.
-- O smoke real da API é opcional no CI e só executa quando o secret `GEMINI_API_KEY` estiver configurado. O smoke básico desativa Google Search grounding para isolar autenticação e geração do modelo; a validação de grounding/quota deve ser medida separadamente, pois o recurso tem limites próprios.
+- O smoke real da API é opcional no CI e só executa quando o secret `GEMINI_API_KEY` estiver configurado. O smoke básico desativa Google Search grounding para isolar autenticação e geração do modelo.
+- Em 12/11/2026, o smoke real foi aprovado após atualização da chave: 2 cues traduzidas, 1 requisição, 0 retries, 1,5656 s, 556 tokens de entrada e 36 de saída. Grounding estava desativado.
 - A CI sem chave não comprova acesso real, latência, quotas, grounding nem qualidade de tradução.
-- A integração técnica e a CI foram concluídas pela PR #19. A homologação final ainda exige secret `GEMINI_API_KEY`, smoke real da Developer API, benchmark pareado com NLLB no corpus/mídia de referência de 37min10s no hardware-alvo e revisão humana cega. Até a aprovação desses gates, Gemini não será promovido a padrão.
+- A homologação final ainda exige benchmark pareado com NLLB no corpus/mídia de referência de 37min10s no hardware-alvo, validação separada do grounding e revisão humana cega. Até a aprovação desses gates, Gemini não será promovido a padrão.
 
 O registro de execução e evidências da homologação real está em [FASE_6_HOMOLOGACAO.md](FASE_6_HOMOLOGACAO.md). Ele deve ser atualizado somente com resultados observados; a configuração do secret, isoladamente, não equivale a smoke aprovado.
 
