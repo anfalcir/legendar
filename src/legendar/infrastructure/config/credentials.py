@@ -56,6 +56,11 @@ def save_gemini_api_key(api_key: str) -> None:
         raise ValueError("A chave Gemini não pode ser vazia.")
 
     destination = _key_path()
+    destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        destination.parent.chmod(0o700)
+    except OSError:
+        pass
     fd, temporary = tempfile.mkstemp(
         prefix=".gemini_api_key.",
         dir=destination.parent,
