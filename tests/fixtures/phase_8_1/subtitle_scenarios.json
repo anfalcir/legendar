@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "provenance": "synthetic-only",
+  "purpose": "Casos artificiais para segmentação, layout e revisão contextual; não substituem referência humana de áudio real.",
+  "constraints": {
+    "max_lines": 2,
+    "max_characters_per_line": 42
+  },
+  "cases": [
+    {
+      "id": "continuous_fragmented_phrase",
+      "category": "segmentation",
+      "intent": "Recompor fragmentos contínuos em unidade de sentido sem deslocar âncoras.",
+      "words": [
+        {
+          "text": "The",
+          "start": 0.1,
+          "end": 0.24
+        },
+        {
+          "text": "old",
+          "start": 0.25,
+          "end": 0.42
+        },
+        {
+          "text": "keeper",
+          "start": 0.43,
+          "end": 0.78
+        },
+        {
+          "text": "opened",
+          "start": 0.8,
+          "end": 1.1
+        },
+        {
+          "text": "the",
+          "start": 1.11,
+          "end": 1.2
+        },
+        {
+          "text": "northern",
+          "start": 1.21,
+          "end": 1.58
+        },
+        {
+          "text": "gate.",
+          "start": 1.59,
+          "end": 1.95
+        }
+      ],
+      "invariants": [
+        "preserve_all_tokens",
+        "preserve_word_time_anchors",
+        "no_synthetic_timestamps"
+      ]
+    },
+    {
+      "id": "two_short_sentences",
+      "category": "segmentation",
+      "intent": "Não fundir sentenças curtas distintas só para aumentar palavras por cue.",
+      "words": [
+        {
+          "text": "Wait.",
+          "start": 0,
+          "end": 0.42
+        },
+        {
+          "text": "Run!",
+          "start": 0.68,
+          "end": 1.02
+        }
+      ],
+      "invariants": [
+        "respect_sentence_boundary",
+        "preserve_pause"
+      ]
+    },
+    {
+      "id": "legitimate_single_interjection",
+      "category": "segmentation",
+      "intent": "Preservar interjeição isolada e legítima.",
+      "words": [
+        {
+          "text": "Oh!",
+          "start": 2.1,
+          "end": 2.52
+        }
+      ],
+      "invariants": [
+        "do_not_force_merge",
+        "preserve_short_legitimate_cue"
+      ]
+    },
+    {
+      "id": "long_display_text",
+      "category": "layout",
+      "intent": "Exigir quebra física em no máximo duas linhas de até 42 caracteres, sem truncar.",
+      "text": "The ancient observatory remained beyond the river, behind the collapsed northern bridge.",
+      "invariants": [
+        "preserve_full_text",
+        "max_two_lines",
+        "max_42_characters_per_line",
+        "no_truncation"
+      ]
+    },
+    {
+      "id": "canonical_entities",
+      "category": "translation-context",
+      "source": "Mira crossed Northreach with the Silver Clans.",
+      "protected_entities": [
+        "Mira",
+        "Northreach",
+        "Silver Clans"
+      ],
+      "illustrative_pt_br": "Mira atravessou Northreach com os Silver Clans.",
+      "invariants": [
+        "preserve_exact_entity_spelling",
+        "do_not_translate_or_transliterate_protected_entities"
+      ]
+    },
+    {
+      "id": "acknowledgement_not_refusal",
+      "category": "translation-semantics",
+      "source": "Thank you.",
+      "illustrative_pt_br": "Obrigado.",
+      "prohibited_semantic_shift": "Não, obrigado.",
+      "invariants": [
+        "preserve_speech_act",
+        "do_not_turn_acknowledgement_into_refusal"
+      ]
+    },
+    {
+      "id": "explicit_negation",
+      "category": "translation-semantics",
+      "source": "I did not refuse.",
+      "illustrative_pt_br": "Eu não recusei.",
+      "invariants": [
+        "preserve_negation",
+        "preserve_subject_and_tense"
+      ]
+    }
+  ]
+}
