@@ -200,7 +200,7 @@ class LlamaCppRuntimeManager:
                 with self._opener(request, timeout=60.0) as response:
                     status = self._response_status(response)
                     if offset and status == 200:
-                        # O servidor ignorou Range: recomeçar, nunca anexar conteúdo duplicado.
+                        # Sem suporte a Range, reiniciar para não duplicar bytes.
                         offset = 0
                     elif offset and status != 206:
                         raise ModelError(
