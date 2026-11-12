@@ -9,6 +9,8 @@ controlador de job.
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -63,6 +65,10 @@ from legendar.infrastructure.resources.profile import (
 
 #: Faixas de progresso por etapa (somam 1.0 no caminho completo com tradução).
 LOGGER = logging.getLogger(__name__)
+
+# O bootstrap cria um SerialPipeline por job, mas reutiliza os mesmos
+# adaptadores. Este lock torna explícita a serialização exigida pelo lifecycle.
+_PIPELINE_EXECUTION_LOCK = threading.Lock()
 
 
 _STAGE_RANGES: dict[JobState, tuple[float, float]] = {
@@ -154,6 +160,22 @@ class SerialPipeline:
         on_state: Callable[[JobState], None] | None = None,
         on_progress: Callable[[float, str], None] | None = None,
     ) -> PipelineResult:
+        with _PIPELINE_EXECUTION_LOCK:
+            return self._execute_serialized(
+                request,
+                context,
+                on_state=on_state,
+                on_progress=on_progress,
+            )
+
+    def _execute_serialized(
+        self,
+        request: JobRequest,
+        context: JobContext,
+        *,
+        on_state: Callable[[JobState], None] | None = None,
+        on_progress: Callable[[float, str], None] | None = None,
+    ) -> PipelineResult:
         reporter = self._performance_reporter
         resource_provider = reporter.capture_resources if reporter is not None else None
         performance = PipelinePerformanceSession(
@@ -163,6 +185,7 @@ class SerialPipeline:
         )
         status = "failed"
         error_type: str | None = None
+        released_adapter_ids: set[int] = set()
         try:
             result = self._execute(
                 request,
@@ -170,6 +193,7 @@ class SerialPipeline:
                 on_state=on_state,
                 on_progress=on_progress,
                 performance=performance,
+                released_adapter_ids=released_adapter_ids,
             )
             status = "completed"
             return result
@@ -181,6 +205,16 @@ class SerialPipeline:
             error_type = type(exc).__name__
             raise
         finally:
+            if not self._resource_policy.retain_models:
+                for adapter_name, adapter in self._model_adapters():
+                    if id(adapter) not in released_adapter_ids:
+                        self._release_after_stage(
+                            "job_final_cleanup",
+                            adapter_name,
+                            adapter,
+                            performance,
+                            released_adapter_ids,
+                        )
             if reporter is not None:
                 report = performance.build_report(
                     status=status,
@@ -203,6 +237,7 @@ class SerialPipeline:
         on_state: Callable[[JobState], None] | None,
         on_progress: Callable[[float, str], None] | None,
         performance: PipelinePerformanceSession,
+        released_adapter_ids: set[int],
     ) -> PipelineResult:
         token = context.token
         progress = MonotonicProgress(on_progress)
@@ -212,6 +247,9 @@ class SerialPipeline:
             retain_models=self._resource_policy.retain_models,
             cpu_threads=self._resource_policy.cpu_threads,
             cpu_interop_threads=self._resource_policy.cpu_interop_threads,
+            logical_cpu_count=self._resource_policy.logical_cpu_count,
+            physical_cpu_count=self._resource_policy.physical_cpu_count,
+            cpu_topology_source=self._resource_policy.cpu_topology_source,
             media_kind=request.source.kind.value,
             requested_source_language=(
                 request.source_language.value if request.source_language else None
@@ -262,9 +300,21 @@ class SerialPipeline:
 
         # 3. Transcrição no idioma de origem
         stage = enter(JobState.TRANSCRIBING)
-        with performance.measure("transcription"):
-            transcript = self._ports.transcriber.transcribe(
-                audio, language=request.source_language, progress=stage, token=token
+        try:
+            with performance.measure("transcription"):
+                transcript = self._ports.transcriber.transcribe(
+                    audio,
+                    language=request.source_language,
+                    progress=stage,
+                    token=token,
+                )
+        finally:
+            self._release_after_stage(
+                "transcription",
+                "transcription",
+                self._ports.transcriber,
+                performance,
+                released_adapter_ids,
             )
         performance.set_count("transcript_segments", len(transcript.segments))
         performance.set_count(
@@ -287,9 +337,18 @@ class SerialPipeline:
 
         # 4. Alinhamento por palavra
         stage = enter(JobState.ALIGNING)
-        with performance.measure("alignment"):
-            alignment = self._ports.aligner.align(
-                audio, transcript, progress=stage, token=token
+        try:
+            with performance.measure("alignment"):
+                alignment = self._ports.aligner.align(
+                    audio, transcript, progress=stage, token=token
+                )
+        finally:
+            self._release_after_stage(
+                "alignment",
+                "alignment",
+                self._ports.aligner,
+                performance,
+                released_adapter_ids,
             )
         performance.set_count("aligned_words", alignment.diagnostics.aligned_words)
         performance.set_count(
@@ -332,7 +391,8 @@ class SerialPipeline:
         )
         if dropped_content_count:
             warnings.append(
-                f"{dropped_content_count} segmento(s) com conteúdo sem tempo foram descartados."
+                f"{dropped_content_count} segmento(s) com conteúdo sem tempo "
+                "foram descartados."
             )
 
         # 6. Tradução opcional (preserva tempos)
@@ -340,9 +400,18 @@ class SerialPipeline:
         track = source_track
         if request.translate:
             performance.set_count("translation_units", len(track.cues))
-            with performance.measure("translation"):
-                track = self._translate(
-                    request, alignment, track, enter, warnings, token
+            try:
+                with performance.measure("translation"):
+                    track = self._translate(
+                        request, alignment, track, enter, warnings, token
+                    )
+            finally:
+                self._release_after_stage(
+                    "translation",
+                    "translation",
+                    self._ports.translator,
+                    performance,
+                    released_adapter_ids,
                 )
 
         # 7. Validação estrutural do trilho final
@@ -367,19 +436,81 @@ class SerialPipeline:
 
     # -- etapas auxiliares -------------------------------------------------
 
+    def _model_adapters(self) -> tuple[tuple[str, object | None], ...]:
+        return (
+            ("transcription", self._ports.transcriber),
+            ("alignment", self._ports.aligner),
+            ("translation", self._ports.translator),
+        )
+
     @staticmethod
-    def _release_resources(adapter: object | None) -> None:
+    def _adapter_loaded(adapter: object | None) -> bool | None:
+        if adapter is None:
+            return False
+        try:
+            loaded = getattr(adapter, "is_loaded", None)
+            if callable(loaded):
+                return bool(loaded())
+            if loaded is not None:
+                return bool(loaded)
+            snapshot = getattr(adapter, "performance_snapshot", None)
+            if callable(snapshot):
+                value = snapshot()
+                if isinstance(value, dict) and "loaded" in value:
+                    return bool(value["loaded"])
+        except Exception:
+            return None
+        return None
+
+    @staticmethod
+    def _release_resources(adapter: object | None) -> tuple[bool, bool]:
         release = getattr(adapter, "release_resources", None)
         if not callable(release):
-            return
+            return False, True
         try:
             release()
+            return True, True
         except Exception:
             LOGGER.warning(
                 "Não foi possível liberar recursos do adaptador %s.",
                 type(adapter).__name__,
                 exc_info=True,
             )
+            return True, False
+
+    def _release_after_stage(
+        self,
+        stage: str,
+        adapter_name: str,
+        adapter: object | None,
+        performance: PipelinePerformanceSession,
+        released_adapter_ids: set[int],
+    ) -> None:
+        loaded_before = self._adapter_loaded(adapter)
+        if self._resource_policy.retain_models:
+            performance.set_metadata(**{f"{stage}_loaded_after_stage": loaded_before})
+            return
+
+        started = time.perf_counter()
+        attempted, succeeded = self._release_resources(adapter)
+        elapsed = max(0.0, time.perf_counter() - started)
+        if attempted and adapter is not None:
+            released_adapter_ids.add(id(adapter))
+        performance.set_count(f"{stage}_resource_release_seconds", elapsed)
+        performance.set_count(
+            f"{stage}_resource_release_attempted", 1 if attempted else 0
+        )
+        performance.set_count(
+            f"{stage}_resource_release_failures",
+            1 if attempted and not succeeded else 0,
+        )
+        performance.set_metadata(
+            **{
+                f"{stage}_loaded_before_release": loaded_before,
+                f"{stage}_loaded_after_stage": self._adapter_loaded(adapter),
+                f"{stage}_resource_release_adapter": adapter_name,
+            }
+        )
 
     def _acquire(
         self,
