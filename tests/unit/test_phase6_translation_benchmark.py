@@ -71,6 +71,7 @@ class FakeTranslator:
         return TranslationResult(
             language=kwargs["target_language"],
             texts=tuple(f"translated {unit.index}" for unit in units),
+            unit_indexes=tuple(unit.index for unit in units),
         )
 
     def performance_snapshot(self):
