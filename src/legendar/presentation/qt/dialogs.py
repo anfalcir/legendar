@@ -276,7 +276,18 @@ class PreferencesDialog(QDialog):
             output_dir=output_dir,
             target_language=Language(str(self.language_combo.currentData())),
             log_expanded=self.log_expanded_check.isChecked(),
+            translation_backend=str(self.translation_backend_combo.currentData()),
         )
+
+    @property
+    def gemini_api_key_input(self) -> str:
+        """Retorna somente a nova chave digitada; nunca a chave já salva."""
+        return self.gemini_api_key_edit.text().strip()
+
+    @property
+    def gemini_key_cleared(self) -> bool:
+        """Indica que o usuário solicitou a remoção da chave salva."""
+        return self._gemini_key_configured and not self.gemini_api_key_input
 
     def _choose_output_directory(self) -> None:
         selected = QFileDialog.getExistingDirectory(
