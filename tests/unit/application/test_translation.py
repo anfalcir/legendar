@@ -109,7 +109,7 @@ def test_apply_translation_rejects_divergent_count() -> None:
         language=Language.ENGLISH, texts=("one",), unit_indexes=(1,)
     )
 
-    with pytest.raises(TranslationError, match="1:1"):
+    with pytest.raises(TranslationError, match="cardinalidade|1:1"):
         apply_translation(track, result)
 
 
