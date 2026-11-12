@@ -148,7 +148,7 @@ A mídia tem aproximadamente 37min10s.
 | NLLB novo (`2e5e93e3369c`) | concluída | **45min49s** | 19min15s | 5min43s | 20min44s |
 | Gemini novo (`b845be3d8e7f`) | falhou no terceiro lote | **32min29s até a falha** | 24min30s | 6min02s | 1min48s antes da falha |
 
-O NLLB novo praticamente dobrou o tempo total em relação à mediana quente anterior (+97,7%). A execução Gemini não completou e, portanto, seus 32min29s não são uma medição comparável de job concluído.
+O NLLB novo praticamente dobrou o tempo total em relação à mediana quente anterior (aproximadamente +96,3%). A execução Gemini não completou e, portanto, seus 32min29s não são uma medição comparável de job concluído.
 
 Decomposição das causas prováveis:
 
