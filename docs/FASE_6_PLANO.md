@@ -1,6 +1,6 @@
 # Fase 6 — Benchmark e aceleração da tradução
 
-**Status:** implementação técnica em validação. Smoke real da API e benchmark com corpus humano permanecem pendentes.
+**Status:** implementação técnica integrada à `main` pela PR [#19](https://github.com/anfalcir/legendar/pull/19), squash `7f337bc10cf210336fbf2367b56aea7e767bce32`. CI específica aprovada no run [43134372712](https://github.com/anfalcir/legendar/actions/runs/43134372712), incluindo NLLB com runtime real em CPU e testes determinísticos em Python 3.10–3.13, lint e formatação. O smoke real da API foi skipped porque `GEMINI_API_KEY` não estava disponível na execução. Benchmark pareado real e revisão humana cega permanecem pendentes; Gemini continua opt-in e NLLB permanece padrão.
 **Objetivo:** reduzir o tempo de tradução hoje dominado pelo NLLB (aproximadamente 14 minutos na mídia de referência de 37min10s), sem degradar sentido, terminologia, consistência ou integridade das cues.
 
 ## 1. Decisão arquitetural
@@ -141,7 +141,7 @@ A decisão deve registrar:
 - O workflow `Phase 6 quality` executa a matriz Python 3.10–3.13, testes, cobertura, Ruff e validação de formatação.
 - O smoke real da API é opcional no CI e só executa quando o secret `GEMINI_API_KEY` estiver configurado.
 - A CI sem chave não comprova acesso real, latência, quotas, grounding nem qualidade de tradução.
-- A homologação final usa o corpus e a mídia de referência de 37min10s no hardware-alvo; a decisão de adoção permanece pendente até esses resultados.
+- A integração técnica e a CI foram concluídas pela PR #19. A homologação final ainda exige secret `GEMINI_API_KEY`, smoke real da Developer API, benchmark pareado com NLLB no corpus/mídia de referência de 37min10s no hardware-alvo e revisão humana cega. Até a aprovação desses gates, Gemini não será promovido a padrão.
 
 ## 9. Referências
 
@@ -156,5 +156,5 @@ A decisão deve registrar:
 
 - `gemini-3.8-flash` é um ID estável e GA segundo a documentação oficial consultada em 11/11/2026.
 - A geração usa `thinkingConfig.thinkingLevel=LOW` para reduzir latência; `temperature` foi removido do payload.
-- Grounding é permitido no `gemini-3.8-flash` e permanece desativado por padrão.
+- Grounding é permitido no `gemini-3.8-flash` e permanece habilitado por padrão no adaptador; `LEGENDAR_GEMINI_GROUNDING=false` permite desativá-lo.
 - O smoke de CI não substitui uma chamada real com a chave do usuário.
