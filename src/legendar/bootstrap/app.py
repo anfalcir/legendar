@@ -8,6 +8,7 @@ import re
 import sys
 from collections.abc import Callable, Mapping, Sequence
 
+from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
 from legendar import __version__
@@ -34,6 +35,7 @@ from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.infrastructure.config.credentials import load_gemini_api_key
 from legendar.presentation.qt.branding import app_icon
+from legendar.presentation.qt.preferences import load_preferences
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
 
 ToolLocator = Callable[[tuple[str, ...]], Mapping[str, ToolStatus]]
@@ -115,6 +117,8 @@ def build_ui_dependencies(
     settings: AppSettings,
     *,
     tool_locator: ToolLocator = locate_tools,
+    translation_backend: str | None = None,
+    gemini_api_key: str | None = None,
 ) -> UiDependencies:
     """Monta dependências da janela e executáveis observáveis pelo preflight."""
 
@@ -296,13 +300,16 @@ def build_ui_dependencies(
         )
 
     local_gemini_key = load_gemini_api_key()
-    configured_backend = os.environ.get(
-        "LEGENDAR_TRANSLATION_BACKEND",
-        translation_backend,
+    configured_backend = (
+        translation_backend
+        if translation_backend is not None
+        else os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "nllb")
     ).strip().casefold()
     translator, translation_available, translation_details = _configure_translation(
         configured_backend,
-        local_gemini_key or os.environ.get("GEMINI_API_KEY"),
+        gemini_api_key
+        or local_gemini_key
+        or os.environ.get("GEMINI_API_KEY"),
     )
     translator_holder: dict[str, Translator] = {"translator": translator}
 
@@ -362,10 +369,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     settings.ensure_directories()
     configure_logging(settings.logs_dir)
 
+    qt_settings = QSettings("Legendar", "Legendar")
+    preferences = load_preferences(qt_settings, settings.output_dir)
+    gemini_key = load_gemini_api_key()
+
     app = QApplication(list(argv) if argv is not None else sys.argv)
     app.setApplicationName("Legendar")
     app.setApplicationVersion(__version__)
     app.setWindowIcon(app_icon())
-    window = MainWindow(build_ui_dependencies(settings))
+    window = MainWindow(
+        build_ui_dependencies(
+            settings,
+            translation_backend=preferences.translation_backend,
+            gemini_api_key=gemini_key,
+        ),
+        settings=qt_settings,
+    )
     window.show()
     return int(app.exec())
