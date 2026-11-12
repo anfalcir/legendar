@@ -22,6 +22,7 @@ from legendar.infrastructure.translation.nllb import (
     MODEL_NAME,
     NLLB_CODES,
     NllbTranslator,
+    _validate_input_length,
 )
 
 
@@ -90,6 +91,13 @@ def _make_translator(
         version_provider=lambda: "4.57.1",
         **kwargs,
     )
+
+
+def test_nllb_rejects_input_that_would_be_truncated() -> None:
+    with pytest.raises(TranslationError, match="nenhuma entrada foi truncada"):
+        _validate_input_length(257)
+
+    _validate_input_length(256)
 
 
 def test_satisfies_the_translator_port(tmp_path: Path) -> None:
