@@ -18,7 +18,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from legendar.application.ports.protocols import CancellationToken, ProgressSink
@@ -38,6 +38,19 @@ DEFAULT_THREADS = 4
 DEFAULT_STARTUP_TIMEOUT = 90.0
 _HEALTH_TIMEOUT = 1.5
 _POLL_INTERVAL = 0.25
+
+
+def _huggingface_token() -> str | None:
+    """Lê token já configurado pelo usuário, sem persistir ou expor o segredo."""
+    try:
+        from huggingface_hub import get_token
+    except ImportError:
+        return (
+            os.environ.get("HF_TOKEN")
+            or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+            or None
+        )
+    return get_token()
 
 
 class _InterProcessLock:
@@ -134,6 +147,7 @@ class LlamaCppRuntimeManager:
         sleep: Callable[[float], None] = time.sleep,
         monotonic: Callable[[], float] = time.monotonic,
         model_sha256: str = MODEL_SHA256,
+        token_provider: Callable[[], str | None] = _huggingface_token,
     ) -> None:
         if host != "127.0.0.1":
             raise ValueError(
@@ -156,6 +170,7 @@ class LlamaCppRuntimeManager:
         self.threads = threads
         self.startup_timeout = startup_timeout
         self.model_sha256 = model_sha256
+        self._token_provider = token_provider
         self._configured_executable = (
             Path(executable).expanduser() if executable else None
         )
@@ -262,6 +277,9 @@ class LlamaCppRuntimeManager:
             partial_path = self.model_path.with_suffix(self.model_path.suffix + ".part")
             offset = partial_path.stat().st_size if partial_path.is_file() else 0
             headers = {"Range": f"bytes={offset}-"} if offset else {}
+            hf_token = self._token_provider()
+            if hf_token:
+                headers["Authorization"] = f"Bearer {hf_token}"
             request = Request(MODEL_DOWNLOAD_URL, headers=headers, method="GET")
             try:
                 with self._opener(request, timeout=60.0) as response:
@@ -329,6 +347,19 @@ class LlamaCppRuntimeManager:
                         os.fsync(output.fileno())
             except ModelError:
                 raise
+            except HTTPError as exc:
+                if exc.code in {401, 403}:
+                    raise ModelError(
+                        "O Hugging Face recusou o acesso ao TranslateGemma. "
+                        "Aceite os termos/licença Gemma na página do modelo e "
+                        "autentique-se localmente com o Hugging Face CLI ou HF_TOKEN. "
+                        "O Legendar reutiliza a credencial local existente, mas não "
+                        "armazena nem registra o token."
+                    ) from None
+                raise ModelError(
+                    "O Hugging Face respondeu com HTTP "
+                    f"{exc.code} durante o download do TranslateGemma."
+                ) from None
             except (OSError, TimeoutError, URLError) as exc:
                 raise ModelError(
                     "Falha de rede durante o download do TranslateGemma "
