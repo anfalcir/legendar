@@ -147,7 +147,9 @@ def run_benchmark(
         baseline = by_backend["nllb"]
         candidate = by_backend["gemini"]
         baseline_seconds = baseline["warm_median_seconds"] or baseline["median_seconds"]
-        candidate_seconds = candidate["warm_median_seconds"] or candidate["median_seconds"]
+        candidate_seconds = (
+            candidate["warm_median_seconds"] or candidate["median_seconds"]
+        )
         comparison = {
             "gemini_speedup_vs_nllb": (
                 baseline_seconds / candidate_seconds if candidate_seconds > 0 else None
