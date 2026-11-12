@@ -174,6 +174,7 @@ def test_pt_br_instruction_and_entity_preservation_are_sent() -> None:
     prompt = calls[0][1]["contents"][0]["parts"][0]["text"]
     assert "PT-BR" in system
     assert "Preserve nomes próprios" in system
+    assert "Não traduza, translitere nem adapte esses nomes" in system
     assert "português brasileiro (PT-BR)" in prompt
 
 
