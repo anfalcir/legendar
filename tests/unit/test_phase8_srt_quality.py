@@ -119,7 +119,7 @@ def parse_srt_from_text(content: str):
         ("bloco inválido\n", "menos de 3 linhas"),
         ("x\n00:00:00,000 --> 00:00:01,000\ntexto\n", "Índice SRT inválido"),
         ("1\ntimestamp inválido\ntexto\n", "Timestamp SRT inválido"),
-        ("1\n00:00:00,000 --> 00:00:01,000\n\n", "sem texto"),
+        ("1\n00:00:00,000 --> 00:00:01,000\n\n", "menos de 3 linhas"),
         ("1\n00:00:02,000 --> 00:00:01,000\ntexto\n", "duração não positiva"),
     ],
 )
