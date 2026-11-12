@@ -83,6 +83,7 @@ jobs:
           tests/conftest.py
           tests/__init__.py
           scripts/phase6_translation_benchmark.py
+          scripts/phase6_build_manifest.py
           scripts/phase6_gemini_api_smoke.py
 
       - name: Verify formatting
