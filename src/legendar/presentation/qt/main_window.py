@@ -55,15 +55,15 @@ from legendar.domain.errors.catalog import InvalidInputError, JobCancelledError
 from legendar.domain.events.job_events import JobCompleted, JobEvent, JobFailed
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
-from legendar.presentation.qt.branding import app_icon
-from legendar.presentation.qt.dialogs import (
-    JobConfirmationDialog,
-    PreferencesDialog,
-)
 from legendar.infrastructure.config.credentials import (
     delete_gemini_api_key,
     load_gemini_api_key,
     save_gemini_api_key,
+)
+from legendar.presentation.qt.branding import app_icon
+from legendar.presentation.qt.dialogs import (
+    JobConfirmationDialog,
+    PreferencesDialog,
 )
 from legendar.presentation.qt.preferences import (
     UiPreferences,
