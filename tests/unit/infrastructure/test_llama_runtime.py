@@ -320,7 +320,6 @@ def test_model_download_requires_explicit_consent(tmp_path) -> None:
     assert called == []
 
 
-
 def test_model_download_reuses_existing_huggingface_token(
     tmp_path, monkeypatch
 ) -> None:
