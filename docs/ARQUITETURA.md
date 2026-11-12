@@ -37,7 +37,7 @@ src/legendar/
     media/{probe,ffmpeg,ffprobe,tools,youtube}.py
     transcription/whisper.py
     alignment/whisperx.py
-    translation/{nllb,gemini}.py
+    translation/{nllb,gemini,llama_runtime}.py
     filesystem/{srt,publisher,atomic,workspace,paths}.py
     config/settings.py
     diagnostics/performance.py
@@ -153,4 +153,4 @@ O runtime TranslateGemma é uma dependência operacional sob responsabilidade do
 - Encerramento: parar somente o processo filho criado pelo Legendar; preservar pesos/cache e nunca matar processos externos.
 - Segurança: loopback exclusivo, versão fixada, integridade verificada, sem privilégios elevados silenciosos e sem credenciais em logs/configurações comuns.
 
-A máquina de estados operacional e seus eventos de progresso devem ser testáveis sem baixar o modelo real. A prova com pesos reais permanece um gate separado de homologação.
+A máquina de estados operacional e seus eventos de progresso devem ser testáveis sem baixar o modelo real. A prova com pesos reais permanece um gate separado de homologação. A primeira fatia de infraestrutura está em desenvolvimento na PR #36: diagnóstico local, inicialização em loopback, readiness, reutilização do processo próprio e encerramento seguro; ainda não está conectada ao bootstrap nem ao adaptador de tradução.
