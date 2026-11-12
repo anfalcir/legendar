@@ -173,7 +173,7 @@ O código de [`profile.py`](../src/legendar/infrastructure/resources/profile.py)
 
 A coincidência é forte: a geração NLLB atual levou aproximadamente 47% mais que a mediana das três execuções quentes anteriores, com volume de tokens semelhante e metade das threads intra-op. Whisper e WhisperX também ficaram significativamente mais lentos.
 
-**Não concluir causalidade ainda.** A implementação deverá medir 2, 3 e 4 threads intra-op, com inter-op controlado, mesmo hardware, mesmos arquivos, mesma configuração, sistema sem carga externa e três execuções quentes por configuração. O número de threads deve refletir topologia física e afinidade disponível, não uma divisão fixa por dois.
+**Decisão operacional consolidada:** não será exigida a matriz 2/1, 3/1, 4/1, 4/2 e 4/4 com três repetições por configuração. A política já foi definida a partir da topologia corrigida, do baseline histórico quente 4/4 e da regressão observada em 2/1: `performance=4/4`, `balanced=4/2` e `low-memory=4/1`, com limites efetivos adaptados à CPU física/afinidade detectada. A validação restante é a homologação E2E do perfil selecionado no equipamento de referência, não uma nova matriz exploratória.
 
 ### 3.6. Ciclo de vida dos modelos: defeito confirmado, causa de tempo não comprovada
 
@@ -429,9 +429,9 @@ Tarefas:
 - cache em disco permanece íntegro;
 - falha de liberação não mascara falha original nem derruba job concluído.
 
-**Protocolo de desempenho:** com o mesmo áudio, comparar pelo menos três execuções quentes por configuração; alternar configurações em condições térmicas similares; não rodar outras tarefas pesadas; guardar cold start separado. Registrar relógio de CPU, uso por núcleo, threads efetivas, RSS, memória disponível e tempo por estágio.
+**Protocolo de desempenho remanescente:** validar a configuração operacional escolhida no pipeline completo com a mídia de referência; separar cold start de execução quente e registrar tempos por estágio, threads efetivas, RSS, memória disponível e uso de CPU. Não repetir a matriz de seleção de threads já descartada. Repetições adicionais só serão exigidas se uma medição isolada for inconclusiva ou houver suspeita de carga externa.
 
-**Gate:** o perfil automático não pode reduzir indevidamente 4 núcleos físicos a 2. A política de retenção precisa ser demonstravelmente aplicada. Nenhuma configuração de threads será promovida sem mediana e dispersão medidas.
+**Gate:** o perfil automático não pode reduzir indevidamente 4 núcleos físicos a 2; a política de retenção precisa ser demonstravelmente aplicada; a configuração consolidada deve ser homologada no pipeline real sem regressão de qualidade. Não se exige nova matriz de comparação de threads para promover os perfis já definidos.
 
 **Status de implementação:** concluída e integrada à `main` pela PR #31. A política operacional foi consolidada sem exigir uma matriz de 15 execuções: no hardware de referência, `performance` usa 4/4, `balanced` usa 4/2 e `low-memory` usa 4/1; o `auto` seleciona `performance` a partir de 12 GiB, `balanced` entre 8 e 12 GiB e `low-memory` abaixo de 8 GiB. A referência histórica já demonstrou 4/4 como configuração quente rápida e a regressão observada ocorreu com 2/1. A CI estrutural cobre topologia, afinidade, cpuset, quota, lifecycle, cancelamento, falhas de release e concorrência. A homologação E2E final continua pendente, mas não bloqueia a definição desta política operacional.
 
