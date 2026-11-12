@@ -336,7 +336,11 @@ def build_ui_dependencies(
                 details += (
                     "Os pesos serão preparados sob autorização antes da primeira tradução.",
                 )
-            return translator, inspection.ready_to_start, details
+            available = inspection.executable_available and (
+                inspection.model_available
+                or translategemma_runtime.download_authorized
+            )
+            return translator, available, details
 
         return (
             NllbTranslator(settings.models_dir),
@@ -407,6 +411,12 @@ def build_ui_dependencies(
             "Validação round-trip concluída antes de escrever no destino.",
         ),
         runtime_shutdown=translategemma_runtime.shutdown,
+        translation_authorization_required=lambda: (
+            (inspection := translategemma_runtime.inspect()).executable_available
+            and not inspection.model_available
+            and not translategemma_runtime.download_authorized
+        ),
+        translation_authorize=translategemma_runtime.authorize_model_download,
     )
 
 
