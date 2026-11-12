@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 from urllib.error import URLError
 
-from scripts.phase8_1_translategemma_smoke import build_prompt, main, translate
-
 import pytest
+from scripts.phase8_1_translategemma_smoke import build_prompt, main, translate
 
 
 class _Response:
