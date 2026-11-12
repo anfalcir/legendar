@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "reference_status": "pending-human-review",
+  "language": "pt-BR",
+  "audio_sha256": "",
+  "reviewer": "",
+  "review_date": "",
+  "notes": "Preencher somente após ouvir o áudio autorizado. Separar erros já presentes no ASR de erros introduzidos pela tradução.",
+  "samples": [
+    {
+      "sample_id": "sample-001",
+      "start_ms": null,
+      "end_ms": null,
+      "audio_observation": "",
+      "asr_source_text": "",
+      "asr_error_notes": "",
+      "translation_candidate": "",
+      "human_reference_pt_br": "",
+      "translation_error_notes": "",
+      "protected_entities": []
+    }
+  ]
+}
