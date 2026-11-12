@@ -1,7 +1,7 @@
 # Estado atual do Legendar
 
 - **Última atualização:** 12/11/2026
-- **HEAD auditado da `main`:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (Fase 6 integrada pela PR #19).
+- **Commit de integração da Fase 6:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19; a `main` também contém os commits posteriores de sincronização documental).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
 - **Branch de integração:** `main`
 - **Base de início da Fase 1:** `d3530490df466aa6eeff4728b63d7e8dc22f056e`
