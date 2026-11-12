@@ -33,7 +33,11 @@ def _milliseconds(value: str) -> int:
 
 def parse_srt(content: str) -> list[tuple[int, str]]:
     """Lê cues SRT sem alterar o texto nem descartar cues multilinha."""
-    normalized = content.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
+    normalized = (
+        content.lstrip("\ufeff")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+    )
     blocks = re.split(r"\n[ \t]*\n", normalized.strip())
     cues: list[tuple[int, str]] = []
     seen: set[int] = set()
@@ -83,8 +87,12 @@ def write_manifest(source: Path, output: Path) -> tuple[int, str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, required=True, help="SRT original em inglês")
-    parser.add_argument("--output", type=Path, required=True, help="TSV local de benchmark")
+    parser.add_argument(
+        "--source", type=Path, required=True, help="SRT original em inglês"
+    )
+    parser.add_argument(
+        "--output", type=Path, required=True, help="TSV local de benchmark"
+    )
     args = parser.parse_args()
     try:
         count, digest = write_manifest(args.source, args.output)
