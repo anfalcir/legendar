@@ -104,15 +104,18 @@ class LlamaCppRuntimeManager:
         candidates.extend(
             (
                 Path(models_dir) / "runtime" / "bin" / f"llama{suffix}",
+                Path(models_dir) / "runtime" / "bin" / f"llama-server{suffix}",
                 Path(models_dir) / "runtime" / f"llama{suffix}",
+                Path(models_dir) / "runtime" / f"llama-server{suffix}",
             )
         )
         for candidate in candidates:
             if candidate.is_file():
                 return candidate
-        located = shutil.which("llama")
-        if located:
-            return Path(located)
+        for command in ("llama", "llama-server"):
+            located = shutil.which(command)
+            if located:
+                return Path(located)
         return None
 
     def inspect(self) -> RuntimeInspection:
@@ -184,9 +187,12 @@ class LlamaCppRuntimeManager:
                 self._stop_process_locked()
 
             port = self._available_port()
-            command = [
-                str(inspection.executable),
-                "serve",
+            executable_name = inspection.executable.name.casefold()
+            is_standalone_server = executable_name in {"llama-server", "llama-server.exe"}
+            command = [str(inspection.executable)]
+            if not is_standalone_server:
+                command.append("serve")
+            command.extend([
                 "-m",
                 str(inspection.model_path),
                 "--host",
@@ -202,7 +208,7 @@ class LlamaCppRuntimeManager:
                 "--no-webui",
                 "--alias",
                 DEFAULT_MODEL_ALIAS,
-            ]
+            ])
             if progress is not None:
                 progress.report(0.05, "Iniciando servidor local TranslateGemma")
             try:
