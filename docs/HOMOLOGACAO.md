@@ -4,6 +4,7 @@
 - **Para quê:** validar sincronização, qualidade textual, tradução, desempenho e interface com mídia real.
 - **Operação:** [OPERACAO.md](OPERACAO.md).
 - **Plano de correção e desempenho:** [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
+- **Plano corretivo após os testes reais de 12/11/2026:** [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md).
 - **Instalação:** [INSTALACAO.md](INSTALACAO.md).
 
 ## 1. Preparar ambiente
@@ -111,6 +112,28 @@ uv run --locked --no-sync python scripts/phase8_srt_quality.py   caminho/candida
 ```
 
 O gate verifica, entre outros pontos, sobreposição, duração excessiva, CPS acima de 17, largura física acima de 42 caracteres por linha e candidatos de fragmentação sintática. Ele **não** decide sozinho se a legenda está natural nem comprova sincronização com o áudio; esses pontos continuam exigindo inspeção audiovisual.
+
+## 9.2. Evidências da rodada de 12/11/2026
+
+Os resultados reais desta rodada foram preservados em `temporario/`:
+
+- `EN-baseline.srt`: SRT inglês automático de referência;
+- `baseline.srt`: SRT PT anterior;
+- `teste-2026.11.12.srt`: SRT PT da nova rota NLLB;
+- `temporario/logs/`: sete relatórios JSON sanitizados.
+
+**Resultados medidos:**
+
+- NLLB concluiu a mídia de 37min10s em **45min49s**; transcrição 19min15s, alinhamento 5min43s e tradução 20min44s (geração 20min32s).
+- As três execuções quentes anteriores têm mediana de **23min21s**.
+- O job novo usou PyTorch intra-op/inter-op 2/1; as três execuções quentes anteriores usaram 4/4.
+- Gemini encerrou após **32min29s**, com 3 requisições, 2 lotes completos, 64/927 unidades aceitas e 0 retries registrados.
+- O SRT PT novo tem 925 cues; 71,0% têm até três palavras; 444 cues excedem 17 CPS; há três linhas acima de 42 caracteres.
+- A tradução contém deriva para PT-PT e erros semânticos que exigem revisão humana. “Não, obrigado” aparece 15 vezes em contextos em que a origem automática contém “Thank you”.
+
+O relatório JSON não guarda o conteúdo das respostas Gemini, portanto a natureza exata da resposta rejeitada no terceiro lote permanece hipótese. A leitura técnica mais provável e a sequência de correção estão documentadas em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md).
+
+**Regra para as próximas rodadas:** separar benchmark de pipeline completo de experimento de componente. Para isolar segmentação ou tradução, congelar a mesma transcrição/alinhamento de origem e reutilizá-los; comparar execuções completas não isola essas variáveis, pois Whisper pode produzir diferentes quantidades de palavras, segmentos e timestamps. Para desempenho completo, manter a mídia, hardware, perfil, cache, versão e parâmetros constantes; separar cold start de warm run e executar pelo menos três rodadas quentes.
 
 ## 10. Registro de resultado
 
