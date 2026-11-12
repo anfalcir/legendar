@@ -18,6 +18,7 @@ from legendar.application.pipeline.serial_pipeline import (
 )
 from legendar.application.ports.protocols import Aligner, Transcriber, Translator
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
+from legendar.infrastructure.config.credentials import load_gemini_api_key
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
 from legendar.infrastructure.diagnostics.performance import JsonPerformanceReporter
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
@@ -33,10 +34,9 @@ from legendar.infrastructure.transcription.faster_whisper import (
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.nllb import NllbTranslator
-from legendar.infrastructure.config.credentials import load_gemini_api_key
 from legendar.presentation.qt.branding import app_icon
-from legendar.presentation.qt.preferences import load_preferences
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
+from legendar.presentation.qt.preferences import load_preferences
 
 ToolLocator = Callable[[tuple[str, ...]], Mapping[str, ToolStatus]]
 _JS_RUNTIME_MINIMUMS = {"deno": (2, 3, 0), "node": (22, 0, 0)}
