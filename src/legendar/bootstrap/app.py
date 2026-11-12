@@ -239,7 +239,7 @@ def build_ui_dependencies(
         )
     alignment_available = whisperx_installed and alignment_configuration_ok
 
-    translation_backend = (
+    env_translation_backend = (
         os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "nllb").strip().casefold()
     )
 
@@ -303,7 +303,7 @@ def build_ui_dependencies(
     configured_backend = (
         translation_backend
         if translation_backend is not None
-        else os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "nllb")
+        else env_translation_backend
     ).strip().casefold()
     translator, translation_available, translation_details = _configure_translation(
         configured_backend,
