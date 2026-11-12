@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from legendar.application.pipeline.translation import (
-    TranslationContext,
     TranslationResult,
     TranslationUnit,
     apply_translation,
