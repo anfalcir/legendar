@@ -24,6 +24,13 @@ from legendar.application.ports.protocols import CancellationToken, ProgressSink
 from legendar.domain.errors.catalog import ModelError
 
 DEFAULT_MODEL_FILENAME = "translategemma-4b-it-Q4_K_M.gguf"
+MODEL_REPOSITORY = "bullerwins/translategemma-4b-it-GGUF"
+MODEL_REVISION = "7c938465a870d8624bcfa98a8e4a3510053c19a8"
+MODEL_SHA256 = "7f7357c14abd9da4eb200b38b05da502cd6e10d7e1d403fbc9f78c19f3209b72"
+MODEL_DOWNLOAD_URL = (
+    "https://huggingface.co/"
+    f"{MODEL_REPOSITORY}/resolve/{MODEL_REVISION}/{DEFAULT_MODEL_FILENAME}"
+)
 DEFAULT_MODEL_ALIAS = "translategemma-4b"
 DEFAULT_CONTEXT_SIZE = 2048
 DEFAULT_THREADS = 4
