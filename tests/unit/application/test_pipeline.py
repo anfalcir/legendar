@@ -649,26 +649,16 @@ def test_low_memory_cleanup_runs_on_failure_even_before_model_stages(
     aligner = ReleasableAdapter(FakeAligner(), loaded=True)
     translator = ReleasableAdapter(FakeTranslator(), loaded=True)
     reporter = PerformanceReporterFake()
-    pipeline, ports = _releasable_pipeline(
-        reporter=reporter,
-        transcriber=transcriber,
-        aligner=aligner,
-        translator=translator,
-    )
-    ports["inspector"] = FakeInspector(info=make_media_info(audio=False))
-    pipeline, _ = _releasable_pipeline(
-        reporter=reporter,
-        transcriber=transcriber,
-        aligner=aligner,
-        translator=translator,
-    )
-    pipeline._ports = PipelinePorts(
-        inspector=FakeInspector(info=make_media_info(audio=False)),
-        audio_preparer=FakeAudioPreparer(),
-        transcriber=transcriber,
-        aligner=aligner,
-        publisher=FakePublisher(),
-        translator=translator,
+    pipeline = SerialPipeline(
+        PipelinePorts(
+            inspector=FakeInspector(info=make_media_info(audio=False)),
+            audio_preparer=FakeAudioPreparer(),
+            transcriber=transcriber,
+            aligner=aligner,
+            publisher=FakePublisher(),
+            translator=translator,
+        ),
+        performance_reporter=reporter,
     )
 
     with pytest.raises(InvalidInputError):
