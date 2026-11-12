@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -47,10 +48,141 @@ def test_performance_profile_retains_models(monkeypatch) -> None:
     assert policy.retain_models is True
 
 
-def test_physical_cpu_count_handles_unavailable_count(monkeypatch) -> None:
-    monkeypatch.setattr(resource_profile.os, "cpu_count", lambda: None)
+def test_cpu_topology_falls_back_without_assuming_smt_ratio(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(resource_profile.os, "cpu_count", lambda: 4)
+    monkeypatch.setattr(
+        resource_profile.os, "sched_getaffinity", lambda _pid: set(), raising=False
+    )
+    monkeypatch.setattr(resource_profile, "_cgroup_cpu_quota", lambda _root: None)
+    monkeypatch.setattr(resource_profile, "_read_text", lambda _path: None)
 
-    assert resource_profile._physical_cpu_count() is None
+    topology = resource_profile._cpu_topology(
+        sysfs_root=tmp_path / "missing-sysfs",
+        cgroup_root=tmp_path / "missing-cgroup",
+    )
+
+    assert topology.logical_count == 4
+    assert topology.physical_count == 4
+    assert "logical-count-fallback" in topology.source
+
+
+def _write_fake_cpu_topology(root: Path, *, logical: int, physical: int) -> None:
+    for cpu in range(logical):
+        topology = root / f"cpu{cpu}" / "topology"
+        topology.mkdir(parents=True)
+        (topology / "physical_package_id").write_text("0", encoding="ascii")
+        (topology / "core_id").write_text(str(cpu % physical), encoding="ascii")
+
+
+def test_detects_four_physical_and_four_logical_cpus(tmp_path: Path) -> None:
+    sysfs = tmp_path / "sys"
+    _write_fake_cpu_topology(sysfs, logical=4, physical=4)
+
+    topology = resource_profile._cpu_topology(
+        sysfs_root=sysfs,
+        cgroup_root=tmp_path / "missing-cgroup",
+        affinity={0, 1, 2, 3},
+        logical_count=4,
+    )
+
+    assert topology.logical_count == 4
+    assert topology.physical_count == 4
+    assert "linux-sysfs-package-core" in topology.source
+
+
+def test_detects_four_physical_and_eight_logical_cpus(tmp_path: Path) -> None:
+    sysfs = tmp_path / "sys"
+    _write_fake_cpu_topology(sysfs, logical=8, physical=4)
+
+    topology = resource_profile._cpu_topology(
+        sysfs_root=sysfs,
+        cgroup_root=tmp_path / "missing-cgroup",
+        affinity=set(range(8)),
+        logical_count=8,
+    )
+
+    assert topology.logical_count == 8
+    assert topology.physical_count == 4
+
+
+def test_cpu_topology_respects_process_affinity(tmp_path: Path) -> None:
+    sysfs = tmp_path / "sys"
+    _write_fake_cpu_topology(sysfs, logical=8, physical=4)
+
+    topology = resource_profile._cpu_topology(
+        sysfs_root=sysfs,
+        cgroup_root=tmp_path / "missing-cgroup",
+        affinity={0, 4},
+        logical_count=8,
+    )
+
+    assert topology.logical_count == 2
+    assert topology.physical_count == 1
+
+
+def test_cpu_topology_respects_cgroup_v2_cpu_quota(tmp_path: Path) -> None:
+    sysfs = tmp_path / "sys"
+    cgroup = tmp_path / "cgroup"
+    _write_fake_cpu_topology(sysfs, logical=8, physical=4)
+    cgroup.mkdir()
+    (cgroup / "cpu.max").write_text("200000 100000", encoding="ascii")
+
+    topology = resource_profile._cpu_topology(
+        sysfs_root=sysfs,
+        cgroup_root=cgroup,
+        affinity=set(range(8)),
+        logical_count=8,
+    )
+
+    assert topology.logical_count == 2
+    assert topology.physical_count == 2
+    assert "cgroup-quota" in topology.source
+
+
+def test_cpu_topology_respects_cgroup_cpuset(tmp_path: Path) -> None:
+    sysfs = tmp_path / "sys"
+    cgroup = tmp_path / "cgroup"
+    _write_fake_cpu_topology(sysfs, logical=8, physical=4)
+    cgroup.mkdir()
+    (cgroup / "cpuset.cpus.effective").write_text("0-3", encoding="ascii")
+
+    topology = resource_profile._cpu_topology(
+        sysfs_root=sysfs,
+        cgroup_root=cgroup,
+        affinity=set(range(8)),
+        logical_count=8,
+    )
+
+    assert topology.logical_count == 4
+    assert topology.physical_count == 4
+    assert "cgroup-cpuset" in topology.source
+
+
+def test_low_memory_policy_uses_four_physical_cores_on_four_logical_cpu_host(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("LEGENDAR_RESOURCE_PROFILE", "low-memory")
+    monkeypatch.delenv("LEGENDAR_CPU_THREADS", raising=False)
+    monkeypatch.delenv("LEGENDAR_CPU_INTEROP_THREADS", raising=False)
+    monkeypatch.setattr(
+        resource_profile,
+        "_cpu_topology",
+        lambda: resource_profile.CpuTopology(
+            logical_count=4,
+            physical_count=4,
+            source="linux-sysfs-package-core+process-affinity",
+        ),
+    )
+
+    policy = resolve_resource_policy()
+
+    assert policy.cpu_threads == 4
+    assert policy.cpu_interop_threads == 1
+    assert policy.logical_cpu_count == 4
+    assert policy.physical_cpu_count == 4
+    assert "linux-sysfs-package-core" in policy.cpu_topology_source
 
 
 def test_total_memory_uses_posix_sysconf(monkeypatch) -> None:
