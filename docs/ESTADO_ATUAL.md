@@ -1,7 +1,8 @@
 # Estado atual do Legendar
 
 - **Última atualização:** 12/11/2026
-- **Última atualização da Fase 8:** avaliador estrutural de SRT integrado pela PR #27; correções de CI e governança documental integradas pela PR #28 (`b2932190e01453b6c7beb617c3321f91d3c5fcd1`). A homologação real de mídia, cold/warm, player, PT-BR e fragmentação permanece pendente.
+- **Última atualização da Fase 8:** os testes reais de 12/11/2026 foram analisados. O SRT NLLB concluiu em 45min49s, com 71,0% das cues contendo até três palavras e três linhas acima de 42 caracteres; a rota Gemini falhou no terceiro lote após 64/927 unidades. A auditoria identificou deriva PT-PT, erros semânticos, provável regressão de threads e falha confirmada no ciclo de vida de modelos. A homologação final permanece pendente.
+- **Fase 8.1:** plano detalhado de auditoria e execução criado em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md), com base nos sete JSONs e três SRTs em `temporario/`. Nenhuma correção de produto foi implementada nesta entrega; a Fase 8.1 aguarda execução.
 - **Commit da implementação Gemini:** `7f337bc10cf210336fbf2367b56aea7e767bce32` (PR #19).
 - **Commit de registro da homologação inicial:** `80d7ef9ef37e68c587534194db93a34970389f3a` (PR #20).
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar)
@@ -30,6 +31,10 @@ O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliz
 A arquitetura e a base de engenharia das Fases 0–10 estão integradas. As Fases 2 e 3 corrigiram a integridade textual e a consolidação cronológica da segmentação. A Fase 4 integrou gate editorial estruturado, diagnósticos de leitura/texto, bloqueio de perda de conteúdo e aviso de revisão na interface; tudo integrado à `main` pela PR #11.
 
 As Fases 1–7 estão implementadas e integradas à `main`; a Fase 8 está em homologação. A Fase 3 consolidou globalmente as palavras alinhadas; a Fase 4 integrou o gate editorial; e a Fase 5 adicionou o adaptador faster-whisper/CTranslate2, benchmark pareado e smokes de alinhamento. A PR [#12](https://github.com/anfalcir/legendar/pull/12) foi integrada no commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. A Fase 6 consolidou NLLB local e Gemini API como backends opcionais selecionáveis em Preferências, com chave local e smoke real aprovado; o benchmark comparativo entre eles foi retirado do gate por decisão do usuário. OpenAI Whisper e NLLB permanecem os padrões atuais. O baseline da mídia de 37min10s é ~23min21s; NLLB consome ~14min e segue como gargalo a avaliar.
+
+A homologação de 12/11/2026 demonstrou regressão relevante: NLLB concluiu a mídia em 45min49s (mediana quente anterior: 23min21s); Whisper levou 19min15s, WhisperX 5min43s e geração NLLB 20min32s. O job foi executado com 2 threads intra-op/1 inter-op, enquanto as três execuções quentes de referência usavam 4/4. A hipótese de subutilização de CPU é prioritária, mas ainda requer experimento controlado. O perfil `low-memory` informou `retain_models=false`, porém os três adaptadores terminaram carregados; a liberação prevista na Fase 7 não está conectada ao fluxo real.
+
+O SRT novo contém 925 cues, média de 3,33 palavras e 657 cues com até três palavras (71,0%), praticamente igual ao PT anterior (71,4%). Há 40 cues de uma palavra, 444 acima de 17 CPS e três linhas acima de 42 caracteres. Foram observadas formas PT-PT e 15 ocorrências de “Não, obrigado” em contextos de “Thank you”. O Gemini interrompeu após 64 das 927 unidades; os logs sugerem falha de validação de conteúdo no terceiro lote, mas não preservam o detalhe da resposta por segurança. A Fase 8.1 documenta o plano de correção sem implementar mudanças ainda.
 
 ## 2. Estado da Fase 1 — concluída
 
@@ -85,7 +90,7 @@ A Fase 3 foi integrada pela PR #10, squash commit `10f6d6d428a1fa5a45a7c7fd13870
 | Gate editorial | Relatório estruturado com estados `APPROVED`, `REVIEW_REQUIRED` e `BLOCKED`, bloqueio de perda e avisos de revisão; integrado pela PR #11 |
 | Benchmark por etapa | Instrumentação integrada; baseline real consolidado em 11/11/2026 |
 | Otimização de motores | Fases 5 e 6 implementadas e integradas; faster-whisper continua opt-in até homologação local. NLLB e Gemini são opções de tradução; comparação entre eles não é gate atual |
-| Homologação audiovisual final | Pendente |
+| Homologação audiovisual final | Pendente; testes de 12/11 analisados, plano corretivo da Fase 8.1 aguardando execução |
 
 ## 5. Evidências de qualidade e lacunas conhecidas
 
@@ -140,7 +145,8 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 5 | Benchmark e aceleração da transcrição | **Implementação concluída e integrada à `main` (PR #12)**; benchmark local/homologação para promoção do candidato pendentes |
 | 6 | Benchmark e aceleração da tradução | **Concluída: dois backends opcionais, Preferências locais e smoke Gemini aprovado** |
 | 7 | Gestão de memória, threads e perfis de execução | **Implementação concluída e integrada à `main` (PR #26)**; homologação de desempenho pendente |
-| 8 | Regressão, homologação real e liberação | **Em andamento**: gate estrutural integrado pela PR #27; mídia real, cold/warm e inspeção audiovisual pendentes |
+| 8 | Regressão, homologação real e liberação | **Em andamento**: gate estrutural integrado; mídia real de 12/11 analisada, correções e reinspeção pendentes |
+| 8.1 | Correções dirigidas pela auditoria real: Gemini, PT-BR, cues, gate, CPU e lifecycle | **Plano documentado; execução pendente** ([plano](FASE_8_1_PLANO.md)) |
 
 A implementação da Fase 5 está integrada; promover faster-whisper ao padrão depende de homologação local com corpus humano e hardware de referência. A Fase 6 está concluída conforme o escopo acordado: smoke real Gemini aprovado, ambos os backends opcionais e benchmark comparativo retirado do gate por decisão do usuário. A Fase 7 está integrada; seu aceite de desempenho depende da medição pareada. A Fase 8 concentra a homologação audiovisual completa.
 
@@ -155,10 +161,11 @@ A implementação da Fase 5 está integrada; promover faster-whisper ao padrão 
 
 ## 9. Próximas ações
 
-1. Concluir a homologação da Fase 8 com a mídia real de 37min10s no hardware-alvo, incluindo cold/warm, tempo por etapa, memória e comparação com a baseline.
-2. Avaliar o SRT no gate estrutural e em player real: sincronização, PT-BR natural, nomes próprios/entidades, fragmentação, omissões, duplicações e legibilidade.
-3. Usar os resultados da homologação para corrigir regressões encontradas; não promover faster-whisper a padrão sem benchmark e referência humana.
-4. Manter NLLB e Gemini opcionais. Não executar benchmark comparativo Gemini × NLLB sem nova decisão explícita do usuário.
+1. Executar a Fase 8.1 na ordem e com os gates definidos em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md), começando pela confiabilidade Gemini e correção de threads/lifecycle.
+2. Corrigir a composição das cues, o limite físico de linhas e a divergência entre validador de produção e avaliador da Fase 8.
+3. Validar a tradução por corpus PT-BR revisado e inspeção humana; separar erros originados no ASR dos erros introduzidos pelo tradutor.
+4. Repetir a mídia de 37min10s em pelo menos três execuções quentes e uma fria, registrar métricas e inspecionar o SRT em player real.
+5. Manter NLLB e Gemini opcionais. Não executar benchmark comparativo amplo nem alterar backend padrão sem decisão explícita.
 
 ## 10. Histórico documental
 
