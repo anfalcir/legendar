@@ -3,7 +3,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
 - **Base auditada:** `main`, commit `92ac98dbef5748bf008f54fb2d4db3ad9a1d14d9`
-- **Status:** execução iniciada na branch `phase-8-1-step-0-corpus-freeze`; etapa 8.1.0 com evidências preservadas, manifesto e fixtures versionados; validação CI e gate humano ainda pendentes
+- **Status:** execução em branch dedicada; congelamento técnico da 8.1.0 e implementação inicial da 8.1.1 estão versionados. CI da revisão atual em andamento. A referência humana PT-BR e o snapshot real de ASR/alinhamento seguem pendentes e bloqueiam aceite comparativo/semântico.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
 - **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
 
@@ -201,48 +201,45 @@ Arquivos principais:
 - [`serial_pipeline.py`](../src/legendar/application/pipeline/serial_pipeline.py)
 - [`test_gemini_translator.py`](../tests/unit/infrastructure/test_gemini_translator.py)
 
-Comportamento atual relevante:
+Estado observado na implementação da branch `phase-8-1-step-0-corpus-freeze` (ainda não integrada à `main`):
 
-1. O tamanho padrão atual é 32 cues; `LEGENDAR_GEMINI_BATCH_SIZE` configura o lote e o construtor aceita valores de 1 a 100.
-2. A resposta HTTP é recebida em `_request_with_retry()`; a configuração atual limita `maxOutputTokens` a 8192.
-3. O prompt inclui contexto anterior/traduzido e cues vizinhas, portanto o custo do pedido não depende apenas da quantidade de cues do lote.
-4. A validação de candidato, JSON, IDs, quantidade, ordem e texto vazio ocorre depois, em `_parse_response()`.
-5. O retry existente cobre erros HTTP 429 e 5xx, mas não erros de conteúdo estruturado detectados pelo parser.
-6. Se uma cue vier vazia, o lote inteiro é rejeitado. A métrica de unidades traduzidas só é incrementada após o lote passar integralmente.
+1. O padrão continua sendo 32 cues; `LEGENDAR_GEMINI_BATCH_SIZE` aceita de 1 a 100.
+2. Há dois limites adicionais: `LEGENDAR_GEMINI_MAX_INPUT_TOKENS` (padrão 200.000; faixa 4.096–900.000) e `LEGENDAR_GEMINI_MAX_OUTPUT_TOKENS` (padrão 8.192; faixa 512–8.192).
+3. O lote real é escolhido dinamicamente pelo menor limite entre número de cues, orçamento estimado de entrada e reserva de saída.
+4. A estimativa de entrada serializa o payload integral (instruções, schema, contexto, cues atuais e vizinhas) e usa tamanho em bytes UTF-8 como aproximação conservadora. Não faz uma chamada remota extra de contagem de tokens por lote.
+5. A reserva de saída considera bytes de texto e quantidade de cues, com margem; `maxOutputTokens` enviado é explícito. A API continua fornecendo tokens reais em `usageMetadata`, registrados para calibração.
+6. Resultados são staged em memória por `cue_id`; itens válidos são preservados, IDs ausentes/vazios são recuperados individualmente, respostas truncadas/JSON inválido podem dividir-se em sublotes e o cancelamento é verificado durante backoff.
+7. Bloqueios de segurança e erros não recuperáveis não entram em repetição infinita. O adaptador só devolve `TranslationResult` depois de todas as unidades estarem presentes, não vazias e na ordem.
+8. Métricas sanitizadas incluem categoria de falha, retries por conteúdo/HTTP, subdivisões, itens recuperados, maior lote efetivo, estimativas e tokens reais; não registram texto nem prompt.
 
-Para as 927 unidades do teste, o número teórico de pedidos sem falha seria: lote 32 → 29 pedidos; 48 → 20; 64 → 15; 80 → 12; 96 → 10; 100 → 10. Esses números são apenas a divisão inteira arredondada para cima: não representam tempos medidos nem incluem subdivisões, retries ou limite de tokens.
+Para 927 unidades curtas e sem subdivisões, os números teóricos permanecem: lote 32 → 29 pedidos; 48 → 20; 64 → 15; 80 → 12; 96 → 10; 100 → 10. A suíte sintética comprova somente a contagem de pedidos com um fake local; não mede latência real nem qualidade tradutória.
 
-#### Batching Gemini: estratégia obrigatória
+#### Batching Gemini: implementação e estratégia de homologação
 
-O objetivo é reduzir chamadas sem transferir o risco de uma cue defeituosa para dezenas de unidades. A Fase 8.1.1 deverá:
+O objetivo é reduzir chamadas sem transferir o risco de uma cue defeituosa para dezenas de unidades. A primeira implementação da Fase 8.1.1 está no branch atual e é submetida à CI. A validação de desempenho/qualidade com a API real e corpus humano continua pendente. Requisitos implementados ou ainda a homologar:
 
-- manter dois limites independentes: no máximo 100 unidades por requisição (limite já aceito pelo adaptador) e um orçamento configurável/conservador de tokens do prompt;
-- formar lotes dinamicamente conforme o tamanho estimado em tokens, considerando instruções, histórico contextual, cues atuais e margem; não usar apenas contagem fixa de cues;
-- dimensionar `maxOutputTokens` pelo volume esperado de saída e uma margem explícita, respeitando o limite documentado do modelo/API; o teto local atual de 8192 não pode causar truncamento silencioso nem ser simplesmente aumentado sem cálculo;
-- aproveitar `usageMetadata` real para calibrar estimativas futuras. Uma chamada remota extra de contagem de tokens por lote só poderá ser adotada se o custo total demonstrar benefício, pois pode anular a redução de requisições;
-- começar a matriz com lotes de 32 (baseline), 64, 96 e 100 unidades; 48/80 podem ser incluídos para localizar um ponto intermediário;
+- manter dois limites independentes: no máximo 100 unidades por requisição e orçamento configurável de entrada/saída; **implementado na branch**;
+- formar lotes dinamicamente usando o payload integral serializado em UTF-8 como estimador conservador de entrada e reservar saída com margem; **implementado, ainda sem calibração em uso prolongado real**;
+- dimensionar `maxOutputTokens` pelo volume esperado de saída e margem explícita, limitado pela configuração local (padrão 8192); resposta `MAX_TOKENS` é subdividida; **implementado, a margem precisa ser calibrada com `usageMetadata` real**;
+- registrar `usageMetadata` real para calibrar estimativas; não adicionar chamada remota de contagem antes de demonstrar benefício líquido; **registro implementado**;
+- testar lotes 32 (baseline), 64, 96 e 100; 48/80 podem localizar ponto intermediário. Fixtures locais validam apenas pedidos teóricos, não tempo de resposta;
 - preservar respostas válidas por `cue_id`; ao receber JSON íntegro com um item vazio ou ausente, recuperar somente os IDs afetados;
 - dividir recursivamente lotes com `MAX_TOKENS`, JSON truncado ou outra falha estrutural recuperável, respeitando tamanho mínimo, profundidade e orçamento de tentativas;
 - nunca publicar parcialmente e nunca transformar uma falha de segurança/autenticação em retry ilimitado.
 
 O tamanho padrão de produção permanece em 32 até que a matriz passe pelos gates de integridade, PT-BR, latência, tokens, memória e taxa de recuperação. A configuração maior será selecionada com base no resultado medido, não no menor número teórico de chamadas.
 
-A sequência 3 requests / 2 batches / 64 unidades aceitas / 0 retries é compatível com falha de validação na terceira resposta. O plano deve preservar os critérios rígidos de integridade e adicionar recuperação limitada, em vez de aceitar texto vazio.
+A sequência original de 3 requests / 2 batches / 64 unidades aceitas / 0 retries segue compatível com falha de validação na terceira resposta; o corpo original não foi preservado, portanto a causa exata continua não comprovada. O código novo acrescenta recuperação limitada sem aceitar texto vazio.
 
-**Intervenção requerida:**
+**Implementação já versionada nesta branch (pendente da CI verde):**
 
-- criar uma taxonomia de falhas: sem candidato, bloqueio de segurança, JSON inválido, lote truncado, quantidade errada, IDs duplicados/fora de ordem, item vazio, falha de rede, rate limit e erro do servidor;
-- validar e registrar quais IDs falharam sem gravar o conteúdo das cues;
-- manter traduções válidas em staging por `cue_id`, sem publicá-las enquanto houver IDs ausentes;
-- tentar novamente somente os itens vazios/inválidos quando a resposta e os IDs permitirem isolamento seguro;
-- para resposta inteira malformada ou sem candidato, repetir o lote dentro de limite configurado;
-- para `MAX_TOKENS`, dividir o lote em sublotes menores, sem alterar a ordem nem omitir IDs;
-- respeitar cancelamento durante backoff e novas tentativas;
-- não repetir indefinidamente falhas de autenticação, configuração ou bloqueio de segurança;
-- produzir um erro final seguro e acionável quando o orçamento de recuperação acabar;
-- somente devolver `TranslationResult` após todas as unidades estarem presentes, únicas, não vazias e na ordem esperada.
+- taxonomia de falhas por resposta/cue, incluindo candidato ausente, bloqueio de segurança, JSON inválido, truncamento, IDs inválidos/fora de ordem e item vazio;
+- staging de itens aceitos por `cue_id` e recuperação individual de IDs ausentes/vazios;
+- retries de conteúdo limitados, subdivisão recursiva até profundidade 8 e cancelamento durante backoff;
+- erro final seguro e sem publicação parcial quando uma cue continua inválida;
+- orçamento de entrada/saída configurável e métricas sanitizadas.
 
-**Observabilidade obrigatória:** requests, tentativas, lotes originais/subdivididos, IDs afetados, categoria da falha, finish reason, contagens de candidato/parte e total de unidades concluídas. Nenhum texto, prompt, credencial ou resposta integral deve aparecer no JSON de performance.
+**Observabilidade obrigatória:** requests, tentativas, lotes originais/subdivididos, IDs afetados, categoria de falha, finish reason, contagens de candidato/parte, estimativa de tokens, tokens reais, maior lote e total de unidades concluídas. Nenhum texto, prompt, credencial ou resposta integral deve aparecer no JSON de performance.
 
 ### 4.2. Segmentação — corrigir composição, não duplicar a regra de pontuação
 
@@ -380,7 +377,7 @@ Tarefas:
 
 **Testes obrigatórios:**
 
-- matriz determinística de lote 32, 64, 96 e 100, com 927 unidades e contexto variável; registrar requisições primárias, subdivisões, retries, tokens e tempo total;
+- matriz determinística sintética de lote 32, 64, 96 e 100, com 927 unidades; registrar requisições e provar a contagem teórica (29/15/10/10). O tempo real e a qualidade ainda exigem experimento controlado autorizado;
 - comprovar que lote maior reduz chamadas sem ultrapassar orçamento de entrada/saída e sem degradar completude/naturalidade;
 - item específico vazio dentro de resposta com outros itens corretos;
 - repetição do item vazio com sucesso;
@@ -397,7 +394,7 @@ Tarefas:
 - cancelamento durante backoff e entre sublotes;
 - garantia de que nenhuma unidade parcial chega ao publisher.
 
-**Gate:** tradução somente será considerada completa com todos os IDs esperados exatamente uma vez e nenhum texto vazio. O teste sintético equivalente ao problema da cue 71 deve passar. O candidato de batching deve ser selecionado por medição: para 927 unidades sem recuperação, lote 64 corresponde a 15 pedidos e lote 96/100 a 10 pedidos; qualquer subdivisão/retry deve aparecer separadamente nas métricas. Não promover lote acima de 32 ao padrão antes dos gates de qualidade e desempenho.
+**Gate:** tradução somente será considerada completa com todos os IDs esperados exatamente uma vez e nenhum texto vazio. O teste sintético equivalente à cue 71, recuperação de IDs ausentes, subdivisão e cancelamento deve passar na CI. A promoção de lote acima de 32 permanece bloqueada até medição real de latência, tokens, qualidade PT-BR e taxa de recuperação. O candidato de batching deve ser selecionado por medição: para 927 unidades sem recuperação, lote 64 corresponde a 15 pedidos e lote 96/100 a 10 pedidos; qualquer subdivisão/retry deve aparecer separadamente nas métricas. Não promover lote acima de 32 ao padrão antes dos gates de qualidade e desempenho.
 
 ### Etapa 8.1.2 — Corrigir topologia de CPU e ciclo de vida de modelos
 
