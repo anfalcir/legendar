@@ -411,6 +411,187 @@ def test_server_errors_retry_up_to_configured_limit() -> None:
     assert len(attempts) == 3
 
 
+def _request_ids(payload: dict) -> list[int]:
+    prompt = payload["contents"][0]["parts"][0]["text"]
+    source = json.loads(prompt.split("\n", 3)[-1])
+    return [item["cue_id"] for item in source["cues_a_traduzir"]]
+
+
+def test_recovers_only_the_empty_cue_from_phase_8_1_fixture() -> None:
+    fixture_path = (
+        Path(__file__).resolve().parents[2]
+        / "fixtures"
+        / "phase_8_1"
+        / "gemini_responses.json"
+    )
+    fixtures = json.loads(fixture_path.read_text(encoding="utf-8"))
+    initial = next(
+        case["response"]
+        for case in fixtures["cases"]
+        if case["id"] == "gemini_one_empty_item"
+    )
+    attempts: list[list[int]] = []
+
+    def requester(_model, payload, _api_key, _timeout):
+        ids = _request_ids(payload)
+        attempts.append(ids)
+        if len(attempts) == 1:
+            return initial
+        assert ids == [71]
+        return _response([{"cue_id": 71, "text": "Muito obrigado."}])
+
+    units = (
+        TranslationUnit(index=70, text="Thank you."),
+        TranslationUnit(index=71, text="Thank you."),
+        TranslationUnit(index=72, text="We are safe."),
+    )
+    translator = GeminiTranslator(api_key="test", requester=requester)
+    result = translator.translate(
+        units,
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=ProgressRecorder(),
+    )
+
+    assert result.texts == ("Thank you.", "Muito obrigado.", "We are safe.")
+    assert attempts == [[70, 71, 72], [71]]
+    counters = translator.performance_snapshot()["counters"]
+    assert counters["item_retries"] == 1
+    assert counters["recovered_units"] == 1
+    assert counters["translated_units"] == 3
+
+
+def test_recovers_missing_cue_without_repeating_valid_cues() -> None:
+    attempts: list[list[int]] = []
+
+    def requester(_model, payload, _api_key, _timeout):
+        ids = _request_ids(payload)
+        attempts.append(ids)
+        if ids == [1, 2, 3]:
+            return _response(
+                [
+                    {"cue_id": 1, "text": "First."},
+                    {"cue_id": 3, "text": "Third."},
+                ]
+            )
+        assert ids == [2]
+        return _response([{"cue_id": 2, "text": "Second."}])
+
+    translator = GeminiTranslator(api_key="test", requester=requester)
+    result = translator.translate(
+        _units("um", "dois", "três"),
+        source_language=Language.PORTUGUESE,
+        target_language=Language.ENGLISH,
+        progress=ProgressRecorder(),
+    )
+
+    assert result.texts == ("First.", "Second.", "Third.")
+    assert attempts == [[1, 2, 3], [2]]
+
+
+def test_truncated_batch_is_split_and_reassembled_in_original_order() -> None:
+    attempts: list[list[int]] = []
+
+    def requester(_model, payload, _api_key, _timeout):
+        ids = _request_ids(payload)
+        attempts.append(ids)
+        if len(ids) > 1:
+            return _response(
+                [{"cue_id": ids[0], "text": "partial"}],
+                finish="MAX_TOKENS",
+            )
+        return _response([{"cue_id": ids[0], "text": f"translated-{ids[0]}"}])
+
+    translator = GeminiTranslator(
+        api_key="test",
+        requester=requester,
+        batch_size=3,
+    )
+    result = translator.translate(
+        _units("um", "dois", "três"),
+        source_language=Language.PORTUGUESE,
+        target_language=Language.ENGLISH,
+        progress=ProgressRecorder(),
+    )
+
+    assert result.texts == ("translated-1", "translated-2", "translated-3")
+    assert attempts == [[1, 2, 3], [1], [2, 3], [2], [3]]
+    assert translator.performance_snapshot()["counters"]["split_batches"] == 2
+
+
+def test_missing_candidate_is_retried_with_a_bounded_content_retry() -> None:
+    attempts = []
+
+    def requester(_model, _payload, _api_key, _timeout):
+        attempts.append(1)
+        if len(attempts) == 1:
+            return {"candidates": []}
+        return _response([{"cue_id": 1, "text": "Good morning."}])
+
+    translator = GeminiTranslator(api_key="test", requester=requester)
+    result = translator.translate(
+        _units("bom dia"),
+        source_language=Language.PORTUGUESE,
+        target_language=Language.ENGLISH,
+        progress=ProgressRecorder(),
+    )
+
+    assert result.texts == ("Good morning.",)
+    assert len(attempts) == 2
+    assert translator.performance_snapshot()["counters"]["content_retries"] == 1
+
+
+def test_safety_block_is_not_retried() -> None:
+    attempts = []
+
+    def requester(*_args):
+        attempts.append(1)
+        return _response([], finish="SAFETY")
+
+    translator = GeminiTranslator(
+        api_key="test",
+        requester=requester,
+        sleeper=lambda _seconds: pytest.fail("bloqueio de segurança não deve repetir"),
+    )
+    with pytest.raises(TranslationError, match="segurança"):
+        translator.translate(
+            _units("bom dia"),
+            source_language=Language.PORTUGUESE,
+            target_language=Language.ENGLISH,
+            progress=ProgressRecorder(),
+        )
+
+    assert len(attempts) == 1
+
+
+def test_cancellation_during_rate_limit_backoff_stops_retries() -> None:
+    token = CancellationTokenImpl()
+    attempts = []
+
+    def requester(*_args):
+        attempts.append(1)
+        raise GeminiApiError(429, retry_after=5)
+
+    def cancel_during_sleep(_seconds: float) -> None:
+        token.cancel("cancelado durante backoff")
+
+    translator = GeminiTranslator(
+        api_key="test",
+        requester=requester,
+        sleeper=cancel_during_sleep,
+    )
+    with pytest.raises(JobCancelledError, match="backoff"):
+        translator.translate(
+            _units("bom dia"),
+            source_language=Language.PORTUGUESE,
+            target_language=Language.ENGLISH,
+            progress=ProgressRecorder(),
+            token=token,
+        )
+
+    assert len(attempts) == 1
+
+
 def test_cancellation_between_batches_stops_requests() -> None:
     token = CancellationTokenImpl()
     calls: list = []
