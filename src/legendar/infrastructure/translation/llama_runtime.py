@@ -3,7 +3,7 @@
 O módulo não instala o binário llama.cpp. O download do GGUF é explícito,
 retomável e validado por SHA-256; a camada de aplicação/UI deve solicitar
 consentimento antes de chamá-lo. Locks de arquivo evitam downloads e servidores
-duplicados entre instâncias; o processo próprio é encerrado sem tocar em serviços externos.
+duplicados entre instâncias; somente o processo próprio é encerrado.
 """
 
 from __future__ import annotations
