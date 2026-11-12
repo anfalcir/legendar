@@ -201,3 +201,31 @@ def test_unhealthy_server_times_out_and_is_terminated(tmp_path) -> None:
     assert len(processes) == 1
     assert processes[0].terminated
     assert manager.base_url is None
+
+
+def test_standalone_llama_server_uses_server_cli_arguments(tmp_path) -> None:
+    executable = tmp_path / "llama-server"
+    executable.write_text("fake server", encoding="utf-8")
+    executable.chmod(0o755)
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"model")
+    commands = []
+
+    def popen(command, **_kwargs):
+        commands.append(command)
+        return FakeProcess(command)
+
+    manager = LlamaCppRuntimeManager(
+        tmp_path / "models",
+        executable=executable,
+        model_path=model,
+        popen_factory=popen,
+        opener=lambda *_args, **_kwargs: FakeResponse(),
+    )
+
+    manager.ensure_running()
+
+    assert commands[0][0] == str(executable)
+    assert commands[0][1] == "-m"
+    assert "serve" not in commands[0]
+    manager.shutdown()
