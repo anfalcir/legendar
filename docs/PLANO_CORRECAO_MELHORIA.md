@@ -452,6 +452,17 @@ Configuração:
 
 **Objetivo:** comprovar a melhoria no pipeline completo e congelar uma baseline nova.
 
+**Execução iniciada na branch `phase8-regression-homologation`:**
+
+- Criado `scripts/phase8_srt_quality.py`, avaliador determinístico de SRT para medir contagem de cues, duração, CPS, largura física das linhas, sobreposição, duplicação e fragmentação sintática.
+- O avaliador possui modo `--compare` para comparar dois SRTs do mesmo corpus e registrar deltas de fragmentação/legibilidade.
+- Criados testes unitários para parsing, riscos de leitura, sobreposição, fragmentação e timestamps inválidos.
+- O avaliador não altera o SRT e não substitui a inspeção audiovisual; seu gate é estrutural e reproduzível.
+
+**Importante:** esta etapa de código não declara a homologação real concluída. O aceite final continua dependendo de executar a mídia de 37min10s no hardware-alvo, registrar cold/warm runs e inspecionar o SRT em player real. A qualidade PT-BR e a fragmentação ficam, portanto, sujeitas a evidência ponta a ponta, não apenas aos testes sintéticos.
+
+
+
 Entregas:
 
 1. Testes unitários para integridade textual, alinhamento, segmentação, gate e tradução.

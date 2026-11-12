@@ -96,6 +96,22 @@ Abra o SRT no VLC ou em outro player de referência e observe:
 
 Para precisão temporal, marque fronteiras humanas em uma amostra de fala e compare com o SRT. Use o avaliador de alinhamento existente com manifesto local; áudio e texto privado não devem ser versionados.
 
+## 9.1. Gate automatizado do SRT
+
+Antes da inspeção no player, execute o avaliador estrutural sobre o SRT gerado:
+
+```bash
+uv run --locked --no-sync python scripts/phase8_srt_quality.py caminho/resultado.srt
+```
+
+Para comparar dois resultados do mesmo corpus:
+
+```bash
+uv run --locked --no-sync python scripts/phase8_srt_quality.py   caminho/candidato.srt --compare caminho/baseline.srt --json
+```
+
+O gate verifica, entre outros pontos, sobreposição, duração excessiva, CPS acima de 17, largura física acima de 42 caracteres por linha e candidatos de fragmentação sintática. Ele **não** decide sozinho se a legenda está natural nem comprova sincronização com o áudio; esses pontos continuam exigindo inspeção audiovisual.
+
 ## 10. Registro de resultado
 
 | Campo | Valor |

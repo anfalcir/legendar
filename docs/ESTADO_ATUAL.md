@@ -1,3 +1,9 @@
+## Fase 8 — regressão, homologação e liberação
+
+A implementação da Fase 8 está em andamento. O primeiro incremento adiciona um avaliador determinístico de SRT em `scripts/phase8_srt_quality.py` e testes unitários para parsing, CPS, duração, largura física das linhas, sobreposição e fragmentação sintática. Isso fecha a lacuna de medição estrutural reproduzível.
+
+**Não considerar a homologação audiovisual concluída ainda:** a aprovação final exige execução da mídia real de aproximadamente 37min10s no hardware-alvo, comparação cold/warm, inspeção em player e registro sanitizado das métricas. A questão PT-BR e a legibilidade/fragmentação só podem ser declaradas resolvidas após essa evidência ponta a ponta.
+
 # Estado atual do Legendar
 
 - **Última atualização:** 12/11/2026
