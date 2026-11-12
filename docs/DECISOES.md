@@ -41,7 +41,7 @@
 | 33 | Tradução Gemini | `GeminiTranslator` via REST/urllib, opt-in; NLLB permanece padrão e alternativa local; grounding contextual habilitado por padrão no Gemini | sem fallback silencioso; chave e texto externo exigem escolha/configuração explícitas |
 | 34 | Configuração Gemini no desktop | Motor e chave são configuráveis em Preferências; a chave fica fora do QSettings em armazenamento local privado | troca de backend aplicada aos próximos jobs sem reinício; chave não entra em logs/relatórios |
 | 35 | Aceite da Fase 6 | NLLB e Gemini permanecem implementados e opcionais; benchmark comparativo não é gate desta fase | ambos ficam disponíveis para homologação futura sem bloquear a Fase 7 |
-| 36 | Perfil de recursos da Fase 7 | \\`auto\\` é padrão; <16 GiB usa perfil conservador de memória; hardware maior mantém modelos para favorecer jobs repetidos | não declarar ganho de desempenho sem benchmark pareado; evicção altera apenas residência em memória, nunca o cache em disco |
+| 37 | Motor local de tradução | Substituir integralmente NLLB por TranslateGemma 4B Instruct Q4_K_M; runtime candidato llama.cpp com servidor loopback e códigos de idioma por requisição. Gemini permanece remoto e independente. | Remover NLLB apenas após smoke real, CI, corpus-ouro e homologação E2E; aplicar Gemma Terms aos pesos/derivados. Ver [decisão técnica](DECISAO_TRANSLATEGEMMA.md). |\n| 36 | Perfil de recursos da Fase 7 | \\`auto\\` é padrão; <16 GiB usa perfil conservador de memória; hardware maior mantém modelos para favorecer jobs repetidos | não declarar ganho de desempenho sem benchmark pareado; evicção altera apenas residência em memória, nunca o cache em disco |
 
 ## Decisões da Fase 10 (D1–D6)
 
@@ -64,7 +64,7 @@ As linhas abaixo são opções para benchmark, não novas dependências ou decis
 |---|---|---|
 | ASR | Otimizar faster-whisper/CTranslate2 e comparar configurações | Backend alternativo já implementado; promover a padrão somente após WER/CER, alinhamento e ganho medidos no hardware de referência |
 | ASR CPU | INT8 e ajuste de threads | suporte real no hardware e ausência de regressão |
-| Tradução | NLLB convertido para CTranslate2 | revisão humana equivalente, tokens/segundo maior e licença validada |
+| Tradução | TranslateGemma 4B Q4_K_M via llama.cpp | Decisão aprovada; implementação e homologação conforme [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md) |
 | Tradução | Gemini Developer API (`gemini-3.8-flash`) | backend opcional já implementado; manter opt-in e validar qualidade em uso real, sem benchmark comparativo Gemini × NLLB nesta etapa |
 | Tradução CPU | INT8, beam 2/1 e token-bucketing | comparação com beam 4 e NLLB Transformers, sem erro crítico |
 | Memória | Evicção de modelos entre estágios | redução de pressão de RAM sem aumentar tempo total |
@@ -82,4 +82,4 @@ As linhas abaixo são opções para benchmark, não novas dependências ou decis
 | Backends oficialmente suportados | CI cobre Ubuntu; homologação multiplataforma pendente | após benchmark/homologação |
 | Empacotamento distribuível | PyInstaller declarado, fluxo não homologado | frente futura |
 | Adoção operacional de ASR alternativo | Implementado e integrado; não é padrão | Benchmark local pareado, revisão humana e homologação da Fase 8 |
-| Backends de tradução | NLLB local permanece padrão e Gemini API permanece opção explícita | benchmark comparativo suspenso por decisão do usuário; não executar sem nova solicitação |
+| Backends de tradução | TranslateGemma 4B será o único motor local; Gemini API permanece opção remota explícita | substituição aprovada; implementação, corpus-ouro e homologação ainda pendentes |
