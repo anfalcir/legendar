@@ -393,14 +393,14 @@ class LlamaCppRuntimeManager:
             getattr(stat, "st_ino", 0),
         )
 
-    def _validate_model_integrity(
-        self, token: CancellationToken | None
-    ) -> None:
+    def _validate_model_integrity(self, token: CancellationToken | None) -> None:
         """Valida o GGUF antes do spawn e evita re-hash durante a mesma sessão."""
         try:
             stat = self.model_path.stat()
         except OSError as exc:
-            raise ModelError("Não foi possível acessar os pesos TranslateGemma.") from exc
+            raise ModelError(
+                "Não foi possível acessar os pesos TranslateGemma."
+            ) from exc
         signature = (
             stat.st_size,
             stat.st_mtime_ns,
@@ -408,7 +408,10 @@ class LlamaCppRuntimeManager:
         )
         if signature == self._validated_model_signature:
             return
-        if stat.st_size <= 0 or self._sha256_file(self.model_path, token) != self.model_sha256:
+        if (
+            stat.st_size <= 0
+            or self._sha256_file(self.model_path, token) != self.model_sha256
+        ):
             self._validated_model_signature = None
             raise ModelError(
                 "O arquivo local TranslateGemma não corresponde ao SHA-256 "
