@@ -250,8 +250,24 @@ def build_ui_dependencies(
         backend = backend.strip().casefold()
         if backend == "gemini":
             try:
-                translator = GeminiTranslator(api_key=api_key)
-            except ValueError as exc:
+                translator = GeminiTranslator(
+                    api_key=api_key,
+                    model=os.environ.get("LEGENDAR_GEMINI_MODEL", "gemini-3.8-flash"),
+                    batch_size=int(
+                        os.environ.get("LEGENDAR_GEMINI_BATCH_SIZE", "32")
+                    ),
+                    timeout_seconds=float(
+                        os.environ.get("LEGENDAR_GEMINI_TIMEOUT", "120")
+                    ),
+                    max_retries=int(
+                        os.environ.get("LEGENDAR_GEMINI_MAX_RETRIES", "3")
+                    ),
+                    grounding=os.environ.get(
+                        "LEGENDAR_GEMINI_GROUNDING", "true"
+                    ).strip().casefold()
+                    in {"1", "true", "yes", "on"},
+                )
+            except (ValueError, TypeError) as exc:
                 return GeminiTranslator(), False, (f"Configuração Gemini inválida: {exc}",)
             details = (
                 f"Gemini API · modelo {translator.model}",
@@ -263,9 +279,11 @@ def build_ui_dependencies(
                     else "Grounding Google Search desabilitado."
                 ),
                 (
-                    "Chave Gemini configurada localmente."
-                    if translator.is_configured
-                    else "Chave Gemini ausente; configure-a em Preferências."
+                    "GEMINI_API_KEY configurada localmente."
+                    if api_key and api_key == load_gemini_api_key()
+                    else "GEMINI_API_KEY configurada no ambiente."
+                    if api_key
+                    else "GEMINI_API_KEY ausente; configure-a em Preferências."
                 ),
             )
             return translator, translator.is_configured, details
@@ -296,7 +314,7 @@ def build_ui_dependencies(
         return (
             NllbTranslator(settings.models_dir),
             False,
-            ("Backend de tradução inválido; use NLLB-200 ou Gemini.",),
+            ("LEGENDAR_TRANSLATION_BACKEND inválido; use nllb ou gemini.",),
         )
 
     local_gemini_key = load_gemini_api_key()
