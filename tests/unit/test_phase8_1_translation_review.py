@@ -146,11 +146,11 @@ def test_direct_script_execution_resolves_local_quality_parser(tmp_path: Path) -
     translated = tmp_path / "translated.srt"
     output = tmp_path / "review.csv"
     source.write_text(
-        "1\\n00:00:00,000 --> 00:00:01,000\\nThank you.\\n",
+        "1\n00:00:00,000 --> 00:00:01,000\nThank you.\n",
         encoding="utf-8",
     )
     translated.write_text(
-        "1\\n00:00:00,000 --> 00:00:01,000\\nObrigado.\\n",
+        "1\n00:00:00,000 --> 00:00:01,000\nObrigado.\n",
         encoding="utf-8",
     )
     repository_root = Path(__file__).resolve().parents[2]
