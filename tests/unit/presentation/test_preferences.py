@@ -64,3 +64,15 @@ def test_invalid_persisted_values_fall_back_to_safe_defaults(
 def test_preferences_reject_unknown_theme(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Tema inválido"):
         UiPreferences(theme="neon", output_dir=tmp_path)
+
+
+def test_translation_backend_round_trip(qtbot, tmp_path) -> None:
+    from PySide6.QtCore import QSettings
+
+    settings = QSettings(
+        str(tmp_path / "preferences.ini"), QSettings.Format.IniFormat
+    )
+    preferences = UiPreferences(translation_backend="gemini")
+    save_preferences(settings, preferences)
+    loaded = load_preferences(settings, tmp_path)
+    assert loaded.translation_backend == "gemini"
