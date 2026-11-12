@@ -41,4 +41,9 @@ A execução mede apenas o estágio de tradução. Comparar a mediana das execu�
 
 ## Resultado do smoke real
 
-Será preenchido após a execução do workflow que utiliza o secret do repositório.
+- 12/11/2026 — secret reconhecido pelo GitHub Actions (`GEMINI_API_KEY` foi mascarado nos logs e a etapa condicional de ausência da chave foi ignorada).
+- A chamada real ao modelo `gemini-3.8-flash` retornou HTTP 429 após as tentativas configuradas. O smoke **falhou**; não há evidência de tradução aceita.
+- O log não expõe o corpo de erro do Google, portanto ainda não é possível distinguir limite RPM, TPM, RPD, quota de grounding ou limite baseado em gasto. Consultar o painel de limites/uso do AI Studio para o projeto e modelo escolhidos antes de repetir.
+- Workflow: [Phase 6 quality — run 43135567777](https://github.com/anfalcir/legendar/actions/runs/43135567777).
+
+O resultado acima comprova que o secret foi injetado no job, mas não comprova quota suficiente nem funcionamento bem-sucedido da API.
