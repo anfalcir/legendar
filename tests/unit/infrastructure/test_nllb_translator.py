@@ -112,6 +112,7 @@ def test_translates_units_with_explicit_language_codes(tmp_path: Path) -> None:
 
     assert result.language is Language.ENGLISH
     assert result.texts == ("Good morning", "See you soon")
+    assert result.unit_indexes == (1, 2)
     assert calls == [
         (
             ("bom dia", "até logo"),
