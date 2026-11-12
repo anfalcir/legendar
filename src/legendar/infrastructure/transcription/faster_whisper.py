@@ -211,6 +211,22 @@ class FasterWhisperTranscriber:
     def is_loaded(self) -> bool:
         return self._model is not None
 
+    def release_resources(self) -> None:
+        """Descarta o modelo residente sem apagar os pesos em disco."""
+        with self._inference_lock:
+            with self._load_lock:
+                model = self._model
+                self._model = None
+                self._device = None
+                self._compute_type = None
+                self._revision = None
+            if model is not None:
+                from legendar.infrastructure.resources.lifecycle import (
+                    release_model_resources,
+                )
+
+                release_model_resources(model)
+
     @property
     def loaded_device(self) -> str | None:
         return self._device
@@ -271,7 +287,8 @@ class FasterWhisperTranscriber:
                 raise
             except Exception as exc:
                 raise ModelError(
-                    f"Não foi possível carregar faster-whisper {self.model_name!r}: {exc}"
+                    f"Não foi possível carregar faster-whisper "
+                    f"{self.model_name!r}: {exc}"
                 ) from exc
             finally:
                 self._record_metric("model_load_seconds", time.perf_counter() - started)
@@ -353,7 +370,8 @@ class FasterWhisperTranscriber:
             if token is not None:
                 token.raise_if_cancelled()
             raise ModelError(
-                f"Falha durante o reconhecimento com faster-whisper {self.model_name}: {exc}"
+                "Falha durante o reconhecimento com faster-whisper "
+                f"{self.model_name}: {exc}"
             ) from exc
         finally:
             self._record_metric(
