@@ -152,7 +152,11 @@ class LlamaCppRuntimeManager:
     def base_url(self) -> str | None:
         """URL privada da instância pertencente a este gerenciador."""
         with self._lock:
-            if self._port is None or self._process is None:
+            if (
+                self._port is None
+                or self._process is None
+                or self._process.poll() is not None
+            ):
                 return None
             return f"http://{self.host}:{self._port}"
 
@@ -172,7 +176,10 @@ class LlamaCppRuntimeManager:
             self._raise_if_cancelled(token)
             inspection = self.inspect()
             if not inspection.ready_to_start or inspection.executable is None:
-                raise ModelError("TranslateGemma ainda não está instalado. " + " ".join(inspection.details))
+                raise ModelError(
+                    "TranslateGemma ainda não está instalado. "
+                    + " ".join(inspection.details)
+                )
 
             if self._process is not None and self._process.poll() is None:
                 if (
@@ -188,27 +195,32 @@ class LlamaCppRuntimeManager:
 
             port = self._available_port()
             executable_name = inspection.executable.name.casefold()
-            is_standalone_server = executable_name in {"llama-server", "llama-server.exe"}
+            is_standalone_server = executable_name in {
+                "llama-server",
+                "llama-server.exe",
+            }
             command = [str(inspection.executable)]
             if not is_standalone_server:
                 command.append("serve")
-            command.extend([
-                "-m",
-                str(inspection.model_path),
-                "--host",
-                self.host,
-                "--port",
-                str(port),
-                "-c",
-                str(self.context_size),
-                "-np",
-                "1",
-                "-t",
-                str(self.threads),
-                "--no-webui",
-                "--alias",
-                DEFAULT_MODEL_ALIAS,
-            ])
+            command.extend(
+                [
+                    "-m",
+                    str(inspection.model_path),
+                    "--host",
+                    self.host,
+                    "--port",
+                    str(port),
+                    "-c",
+                    str(self.context_size),
+                    "-np",
+                    "1",
+                    "-t",
+                    str(self.threads),
+                    "--no-webui",
+                    "--alias",
+                    DEFAULT_MODEL_ALIAS,
+                ]
+            )
             if progress is not None:
                 progress.report(0.05, "Iniciando servidor local TranslateGemma")
             try:
