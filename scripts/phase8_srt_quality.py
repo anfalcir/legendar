@@ -24,7 +24,6 @@ TIMESTAMP_RE = re.compile(
     r"^(?P<start>\d{2}:\d{2}:\d{2},\d{3})\s+-->\s+"
     r"(?P<end>\d{2}:\d{2}:\d{2},\d{3})"
 )
-WORD_RE = re.compile(r"\S+")
 CONNECTORS = {
     "a", "ao", "aos", "as", "com", "da", "das", "de", "do", "dos", "e",
     "em", "na", "nas", "no", "nos", "ou", "para", "pela", "pelas", "pelo",
@@ -39,6 +38,7 @@ class Cue:
     start: float
     end: float
     text: str
+    lines: tuple[str, ...]
 
     @property
     def duration(self) -> float:
@@ -74,10 +74,11 @@ def parse_srt(path: Path) -> list[Cue]:
         end = _timestamp(match.group("end"))
         if end <= start:
             raise ValueError(f"Cue {index} tem duração não positiva.")
-        text = " ".join(line.strip() for line in lines[2:] if line.strip())
+        cue_lines = tuple(line.strip() for line in lines[2:] if line.strip())
+        text = " ".join(cue_lines)
         if not text:
             raise ValueError(f"Cue {index} sem texto.")
-        cues.append(Cue(index=index, start=start, end=end, text=text))
+        cues.append(Cue(index=index, start=start, end=end, text=text, lines=cue_lines))
     return cues
 
 
@@ -94,7 +95,7 @@ def analyze(cues: list[Cue]) -> dict[str, object]:
     cps = [cue.chars_per_second for cue in cues]
     short = [cue.index for cue in cues if cue.duration < 1.0]
     long = [cue.index for cue in cues if cue.duration > 7.0]
-    wide = [cue.index for cue in cues if max(map(len, cue.text.split("\n"))) > 42]
+    wide = [cue.index for cue in cues if any(len(line) > 42 for line in cue.lines)]
     overflow = [cue.index for cue in cues if cue.chars_per_second > 17.0]
     overlaps: list[int] = []
     fragments: list[int] = []
