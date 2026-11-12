@@ -45,7 +45,7 @@ A execução deve preservar a arquitetura e os contratos existentes sempre que p
 | ID | Prioridade | Achado | Evidência | Direção da correção |
 |---|---|---|---|---|
 | A-01 | P1 — alta | Gemini interrompeu a tradução no terceiro lote, após 64 unidades aceitas de 927 | 3 requisições, 2 lotes concluídos, 64 unidades, 0 retries; erro reportado pelo usuário na região da cue 71 | classificar respostas inválidas, recuperar somente itens/lotes afetados com limite de tentativas e manter resultados em staging até completar 100% |
-| A-02 | P1 — alta | A tradução NLLB apresenta PT-PT e erros semânticos/lexicais incompatíveis com o alvo PT-BR | formas como “teu”, “tu”, “protecção”; 15 ocorrências de “Não, obrigado” em contextos de “Thank you” | avaliação com corpus-ouro PT-BR, unidades com contexto frasal, glossário controlado e política explícita de revisão |
+| A-02 | P1 — alta | A tradução NLLB apresenta PT-PT e erros semânticos/lexicais incompatíveis com o alvo PT-BR | formas como “teu”, “tu”, “protecção”; 15 ocorrências de “Não, obrigado”; a comparação temporal confirma correspondência com “Thank you” em várias cues PT (por exemplo, 99–104), mas a segmentação diferente exige revisão individual das demais | avaliação com corpus-ouro PT-BR, unidades com contexto frasal, glossário controlado e política explícita de revisão |
 | A-03 | P1 — alta | A segmentação ainda gera fragmentação excessiva | 657/925 cues (71,0%) têm até 3 palavras; 40 têm uma palavra; proporção praticamente igual ao SRT PT anterior (71,4%) | acrescentar composição/agrupamento de cues curtas por frase/oração, sem remover fronteiras temporais ou sintáticas legítimas |
 | A-04 | P1 — alta | O SRT final excede a largura editorial em algumas linhas, e a validação de produção não detecta todos esses casos | 3 linhas acima de 42 caracteres no SRT novo; maior linha com 59 caracteres | alinhar layout, validador de produção e script de qualidade; subdividir em novas cues usando âncoras reais |
 | A-05 | P1 — alta | A execução NLLB regrediu para 45min49s, quase o dobro da mediana quente anterior | 2 threads intra-op/1 inter-op no teste novo; baseline quente 4/4 | corrigir detecção de CPU e medir matriz de threads de forma controlada |
@@ -122,7 +122,7 @@ O SRT PT novo contém formas associadas ao português europeu, entre elas:
 - “protecção” e “até ao”, que reforçam a deriva de variante;
 - somente três ocorrências de “você” no conjunto analisado.
 
-O indício mais objetivo de erro semântico são 15 ocorrências de “Não, obrigado” em contextos cujo original automático traz “Thank you.” Isso não é preferência estilística: é mudança de sentido/polaridade.
+O indício mais objetivo de erro semântico são 15 ocorrências de “Não, obrigado” no PT. A comparação temporal confirma correspondência com “Thank you” em várias cues (PT 99–104, por exemplo), embora as segmentações diferentes impeçam atribuir automaticamente todas as 15 ao mesmo original. Nos casos confirmados, não é preferência estilística: é mudança de sentido/polaridade.
 
 Outros exemplos de frases que precisam de revisão contextual:
 
@@ -394,7 +394,7 @@ Tarefas:
 2. no Linux, preferir informações de `physical id`/`core id` ou sysfs já disponíveis; tratar afinidade/cgroups quando aplicável;
 3. quando a topologia não puder ser determinada, registrar a incerteza e usar fallback conservador explícito, sem presumir sempre SMT 2:1;
 4. separar a decisão de threads da decisão de reter modelos: pouca RAM não significa necessariamente metade dos núcleos disponíveis;
-5. testar 2/1, 3/1, 4/1 e 4/2 (intra-op/inter-op) no hardware de referência;
+5. testar 2/1, 3/1, 4/1, 4/2 e 4/4 (intra-op/inter-op) no hardware de referência, incluindo 4/4 como referência histórica;
 6. verificar a ordem de configuração do PyTorch antes da primeira inferência e registrar threads efetivas;
 7. localizar todos os adaptadores com `release_resources()`;
 8. conectar `_release_resources()` ao pipeline em `finally` seguro, de acordo com a política de retenção;
