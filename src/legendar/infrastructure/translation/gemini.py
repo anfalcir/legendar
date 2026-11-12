@@ -330,7 +330,9 @@ class GeminiTranslator:
 
         self._check_cancelled(token)
         if len(translated_by_id) != total:
-            missing = [unit.index for unit in units if unit.index not in translated_by_id]
+            missing = [
+                unit.index for unit in units if unit.index not in translated_by_id
+            ]
             raise TranslationError(
                 "Gemini não concluiu todas as unidades; IDs pendentes: "
                 + ", ".join(map(str, missing))
@@ -665,7 +667,11 @@ class GeminiTranslator:
             )
             raise _GeminiResponseFailure(
                 message,
-                "output_truncated" if finish_reason == "MAX_TOKENS" else "finish_reason",
+                (
+                    "output_truncated"
+                    if finish_reason == "MAX_TOKENS"
+                    else "finish_reason"
+                ),
                 split=len(batch) > 1,
                 retry_same=len(batch) == 1,
             )
@@ -755,7 +761,9 @@ class GeminiTranslator:
                 split=len(batch) > 1,
             )
         missing = [cue_id for cue_id in expected if cue_id not in seen]
-        invalid_ids = [cue_id for cue_id in expected if cue_id in invalid or cue_id in missing]
+        invalid_ids = [
+            cue_id for cue_id in expected if cue_id in invalid or cue_id in missing
+        ]
         return valid, invalid_ids
 
     @staticmethod
