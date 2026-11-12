@@ -830,5 +830,3 @@ def test_separate_pipeline_instances_do_not_release_a_shared_active_model(
     assert entered_second.is_set()
     assert transcriber.max_active == 1
     assert transcriber.release_calls == 2
-
-
