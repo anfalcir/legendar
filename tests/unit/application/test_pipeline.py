@@ -694,9 +694,7 @@ def test_low_memory_cleanup_runs_on_failure_even_before_model_stages(
         1,
         1,
     ]
-    assert all(
-        item.is_loaded is False for item in (transcriber, aligner, translator)
-    )
+    assert all(item.is_loaded is False for item in (transcriber, aligner, translator))
     assert reporter.reports[0]["status"] == "failed"
 
 
