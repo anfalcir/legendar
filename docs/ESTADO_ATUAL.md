@@ -146,7 +146,7 @@ A fonte de verdade para a próxima frente é [PLANO_CORRECAO_MELHORIA.md](PLANO_
 | 6 | Benchmark e aceleração da tradução | **Concluída: dois backends opcionais, Preferências locais e smoke Gemini aprovado** |
 | 7 | Gestão de memória, threads e perfis de execução | **Implementação concluída e integrada à `main` (PR #26)**; homologação de desempenho pendente |
 | 8 | Regressão, homologação real e liberação | **Em andamento**: gate estrutural integrado; mídia real de 12/11 analisada, correções e reinspeção pendentes |
-| 8.1 | Correções dirigidas pela auditoria real: Gemini, PT-BR, cues, gate, CPU e lifecycle | **Em execução — 8.1.0, 8.1.1 e 8.1.2 integradas à `main`; política CPU definida, gate humano/intermediários e correções 8.1.3+ pendentes** ([plano](FASE_8_1_PLANO.md)) |
+| 8.1 | Correções dirigidas pela auditoria real: Gemini, PT-BR, cues, gate, CPU e lifecycle | **Em execução — 8.1.0–8.1.2 e primeira implementação 8.1.3 integradas à `main`; gate humano/intermediários e 8.1.3 complementar/8.1.4+ pendentes** ([plano](FASE_8_1_PLANO.md)) |
 
 A implementação da Fase 5 está integrada; promover faster-whisper ao padrão depende de homologação local com corpus humano e hardware de referência. A Fase 6 está concluída conforme o escopo acordado: smoke real Gemini aprovado, ambos os backends opcionais e benchmark comparativo retirado do gate por decisão do usuário. A Fase 7 está integrada; seu aceite de desempenho depende da medição pareada. A Fase 8 concentra a homologação audiovisual completa.
 
