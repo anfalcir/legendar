@@ -21,10 +21,6 @@ from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.credentials import load_gemini_api_key
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
 from legendar.infrastructure.diagnostics.performance import JsonPerformanceReporter
-from legendar.infrastructure.resources.profile import (
-    configure_torch_threads,
-    resolve_resource_policy,
-)
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
 from legendar.infrastructure.logging.setup import configure_logging
@@ -32,6 +28,10 @@ from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus, locate_tools
 from legendar.infrastructure.media.youtube import YtDlpDownloader
+from legendar.infrastructure.resources.profile import (
+    configure_torch_threads,
+    resolve_resource_policy,
+)
 from legendar.infrastructure.transcription.faster_whisper import (
     FasterWhisperTranscriber,
 )
@@ -257,22 +257,22 @@ def build_ui_dependencies(
                 translator = GeminiTranslator(
                     api_key=api_key,
                     model=os.environ.get("LEGENDAR_GEMINI_MODEL", "gemini-3.8-flash"),
-                    batch_size=int(
-                        os.environ.get("LEGENDAR_GEMINI_BATCH_SIZE", "32")
-                    ),
+                    batch_size=int(os.environ.get("LEGENDAR_GEMINI_BATCH_SIZE", "32")),
                     timeout_seconds=float(
                         os.environ.get("LEGENDAR_GEMINI_TIMEOUT", "120")
                     ),
-                    max_retries=int(
-                        os.environ.get("LEGENDAR_GEMINI_MAX_RETRIES", "3")
-                    ),
-                    grounding=os.environ.get(
-                        "LEGENDAR_GEMINI_GROUNDING", "true"
-                    ).strip().casefold()
+                    max_retries=int(os.environ.get("LEGENDAR_GEMINI_MAX_RETRIES", "3")),
+                    grounding=os.environ.get("LEGENDAR_GEMINI_GROUNDING", "true")
+                    .strip()
+                    .casefold()
                     in {"1", "true", "yes", "on"},
                 )
             except (ValueError, TypeError) as exc:
-                return GeminiTranslator(), False, (f"Configuração Gemini inválida: {exc}",)
+                return (
+                    GeminiTranslator(),
+                    False,
+                    (f"Configuração Gemini inválida: {exc}",),
+                )
             details = (
                 f"Gemini API · modelo {translator.model}",
                 f"Lote: {translator.batch_size} cues · timeout: "
@@ -323,15 +323,17 @@ def build_ui_dependencies(
 
     local_gemini_key = load_gemini_api_key()
     configured_backend = (
-        translation_backend
-        if translation_backend is not None
-        else env_translation_backend
-    ).strip().casefold()
+        (
+            translation_backend
+            if translation_backend is not None
+            else env_translation_backend
+        )
+        .strip()
+        .casefold()
+    )
     translator, translation_available, translation_details = _configure_translation(
         configured_backend,
-        gemini_api_key
-        or local_gemini_key
-        or os.environ.get("GEMINI_API_KEY"),
+        gemini_api_key or local_gemini_key or os.environ.get("GEMINI_API_KEY"),
     )
     translator_holder: dict[str, Translator] = {"translator": translator}
 
@@ -397,9 +399,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     preferences = load_preferences(qt_settings, settings.output_dir)
     selected_backend = preferences.translation_backend
     if not qt_settings.contains("translation/backend"):
-        selected_backend = os.environ.get(
-            "LEGENDAR_TRANSLATION_BACKEND", selected_backend
-        ).strip().casefold()
+        selected_backend = (
+            os.environ.get("LEGENDAR_TRANSLATION_BACKEND", selected_backend)
+            .strip()
+            .casefold()
+        )
     gemini_key = load_gemini_api_key()
 
     app = QApplication(list(argv) if argv is not None else sys.argv)

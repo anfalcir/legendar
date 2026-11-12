@@ -30,10 +30,6 @@ from legendar.application.pipeline.validation import (
     TrackValidationReport,
     validate_track,
 )
-from legendar.infrastructure.resources.profile import (
-    ResourcePolicy,
-    resolve_resource_policy,
-)
 from legendar.application.ports.protocols import (
     Aligner,
     AudioPreparer,
@@ -60,6 +56,10 @@ from legendar.domain.errors.catalog import (
 )
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
+from legendar.infrastructure.resources.profile import (
+    ResourcePolicy,
+    resolve_resource_policy,
+)
 
 #: Faixas de progresso por etapa (somam 1.0 no caminho completo com tradução).
 LOGGER = logging.getLogger(__name__)

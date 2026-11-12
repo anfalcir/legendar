@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1–6 concluídas na implementação e integradas à `main`. A Fase 6 mantém NLLB e Gemini como backends opcionais, seleção persistente em Preferências e chave Gemini configurável localmente. O smoke real Gemini foi aprovado. O benchmark comparativo NLLB × Gemini permanece como ferramenta futura e não é gate desta fase por decisão de produto.
+- **Status:** Fases 1–7 concluídas na implementação e integradas à `main`; Fase 8 em homologação real. A Fase 6 mantém NLLB e Gemini como backends opcionais, seleção persistente em Preferências e chave Gemini configurável localmente. O smoke real Gemini foi aprovado. O benchmark comparativo NLLB × Gemini permanece como ferramenta futura e não é gate desta fase por decisão de produto.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -419,13 +419,13 @@ A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, t
 - testes unitários da credencial local e persistência da preferência;
 - documentação e critérios de aceite atualizados.
 
-**Ferramenta preservada para avaliação futura:** `scripts/phase6_translation_benchmark.py` continua disponível para comparar tempo, throughput, tokens e qualidade quando houver decisão de executar esse experimento. Nenhuma execução comparativa é exigida para iniciar a Fase 7.
+**Ferramenta preservada para avaliação futura:** `scripts/phase6_translation_benchmark.py` continua disponível para comparar tempo, throughput, tokens e qualidade quando houver decisão de executar esse experimento. Nenhuma execução comparativa é exigida para concluir a Fase 6 ou avançar a Fase 7.
 
 ### Fase 7 — Gestão de memória, threads e perfis
 
 **Objetivo:** evitar que a aceleração de uma etapa seja anulada por pressão de RAM, swapping ou disputa de CPU.
 
-**Status:** **implementação concluída e preparada para homologação pareada no hardware de referência**. A Fase 7 introduz política explícita de recursos, evicção segura de modelos entre etapas em perfil de pouca memória, configuração de threads CPU antes da primeira inferência e registro do perfil efetivo no relatório de desempenho.
+**Status:** implementação concluída e integrada à `main` pela PR #26, squash `05db38d43ee70ef8f5ef331bd5d221c47bf05b44`; homologação pareada no hardware de referência pendente. A Fase 7 introduz política explícita de recursos, evicção segura de modelos entre etapas em perfil de pouca memória, configuração de threads CPU antes da primeira inferência e registro do perfil efetivo no relatório de desempenho.
 
 Entregas implementadas:
 - perfil `auto`, `low-memory`, `balanced` e `performance`;
@@ -452,14 +452,14 @@ Configuração:
 
 **Objetivo:** comprovar a melhoria no pipeline completo e congelar uma baseline nova.
 
-**Execução iniciada na branch `phase8-regression-homologation`:**
+**Primeiro incremento integrado à `main` pela PR #27, squash `f101775d69561c1c8b368219106f1169db5a8f43`:**
 
 - Criado `scripts/phase8_srt_quality.py`, avaliador determinístico de SRT para medir contagem de cues, duração, CPS, largura física das linhas, sobreposição, duplicação e fragmentação sintática.
 - O avaliador possui modo `--compare` para comparar dois SRTs do mesmo corpus e registrar deltas de fragmentação/legibilidade.
 - Criados testes unitários para parsing, riscos de leitura, sobreposição, fragmentação e timestamps inválidos.
 - O avaliador não altera o SRT e não substitui a inspeção audiovisual; seu gate é estrutural e reproduzível.
 
-**Importante:** esta etapa de código não declara a homologação real concluída. O aceite final continua dependendo de executar a mídia de 37min10s no hardware-alvo, registrar cold/warm runs e inspecionar o SRT em player real. A qualidade PT-BR e a fragmentação ficam, portanto, sujeitas a evidência ponta a ponta, não apenas aos testes sintéticos.
+**Estado:** o avaliador estrutural está integrado, mas a homologação real não está concluída. O aceite final depende da mídia de aproximadamente 37min10s no hardware-alvo, registros cold/warm, inspeção em player real e revisão de sincronização, PT-BR e fragmentação. O benchmark comparativo Gemini × NLLB permanece fora do escopo por decisão do usuário.
 
 
 

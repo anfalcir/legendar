@@ -118,7 +118,7 @@ Smoke CI com poucas amostras comprova integração e não substitui o corpus hum
 
 - Benchmark pareado: `phase5-asr-benchmark.json` (artefato do workflow).
 - Integração da implementação: PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0` na `main`.
-- Workflow dedicado: [Phase 5 quality](../.github/workflows/phase5-quality.yml), com matriz determinística Python 3.10–3.13, smokes reais Whisper/WhisperX e faster-whisper/WhisperX, benchmark pareado e artefatos sanitizados.
+- Workflow dedicado: [Phase 5 quality](../../../.github/workflows/phase5-quality.yml), com matriz determinística Python 3.10–3.13, smokes reais Whisper/WhisperX e faster-whisper/WhisperX, benchmark pareado e artefatos sanitizados.
 - Smoke Whisper + WhisperX: `phase5-alignment-smoke.json`.
 - Smoke faster-whisper + WhisperX: `phase5-faster-whisper-alignment-smoke.json`.
 - Relatórios sanitizados não incluem áudio, texto reconhecido, referências, URLs ou caminhos de mídia.

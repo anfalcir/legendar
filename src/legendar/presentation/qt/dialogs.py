@@ -263,9 +263,7 @@ class PreferencesDialog(QDialog):
         self.output_browse_button.clicked.connect(self._choose_output_directory)
         self.gemini_show_key_check.toggled.connect(
             lambda visible: self.gemini_api_key_edit.setEchoMode(
-                QLineEdit.EchoMode.Normal
-                if visible
-                else QLineEdit.EchoMode.Password
+                QLineEdit.EchoMode.Normal if visible else QLineEdit.EchoMode.Password
             )
         )
         self.gemini_remove_key_button.clicked.connect(self._remove_gemini_key)
