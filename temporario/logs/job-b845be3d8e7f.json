@@ -1,0 +1,309 @@
+{
+  "adapters": {
+    "alignment": {
+      "configuration": {
+        "adapter": "whisperx",
+        "alignment_models": {
+          "en": "WAV2VEC2_ASR_BASE_960H",
+          "pt": "jonatasgrosman/wav2vec2-large-xlsr-53-portuguese"
+        },
+        "dtype": "backend_default",
+        "interpolate_method": "ignore",
+        "loaded_device": "cpu",
+        "loaded_languages": [
+          "en"
+        ],
+        "max_window_seconds": 90.0,
+        "package_version": "3.8.6",
+        "pytorch_num_interop_threads": 1,
+        "pytorch_num_threads": 2,
+        "recovery_padding_seconds": 0.75,
+        "requested_device": "auto"
+      },
+      "counter_delta": {
+        "aligned_words": 2820.0,
+        "alignment_calls": 489.0,
+        "alignment_seconds": 344.7335392420018,
+        "input_segments": 489.0,
+        "model_load_attempts": 1.0,
+        "model_load_seconds": 16.966330969999945,
+        "model_load_successes": 1.0,
+        "punkt_preparation_seconds": 0.046995939999760594,
+        "punkt_preparations": 1.0,
+        "recovered_words": 0.0,
+        "recovery_attempts": 0.0,
+        "recovery_seconds": 0.0,
+        "unmatched_words": 0.0,
+        "waveform_load_seconds": 0.10374773100011225
+      },
+      "counters_after": {
+        "aligned_words": 2820,
+        "alignment_calls": 489,
+        "alignment_seconds": 344.7335392420018,
+        "input_segments": 489,
+        "model_load_attempts": 1,
+        "model_load_seconds": 16.966330969999945,
+        "model_load_successes": 1,
+        "punkt_preparation_seconds": 0.046995939999760594,
+        "punkt_preparations": 1,
+        "recovered_words": 0,
+        "recovery_attempts": 0,
+        "recovery_seconds": 0.0,
+        "unmatched_words": 0,
+        "waveform_load_seconds": 0.10374773100011225
+      },
+      "loaded_after_job": true,
+      "loaded_before_job": false
+    },
+    "transcription": {
+      "configuration": {
+        "adapter": "openai-whisper",
+        "beam_size": 5,
+        "fp16": false,
+        "loaded_device": "cpu",
+        "model": "base",
+        "package_version": "20250625",
+        "pytorch_num_interop_threads": 1,
+        "pytorch_num_threads": 2,
+        "requested_device": "auto",
+        "word_timestamps": false
+      },
+      "counter_delta": {
+        "audio_load_seconds": 0.10300146899999163,
+        "inference_calls": 1.0,
+        "inference_seconds": 1468.9929472019999,
+        "model_load_attempts": 1.0,
+        "model_load_seconds": 1.2067760109998744,
+        "model_load_successes": 1.0,
+        "recognized_words": 2820.0,
+        "transcribed_segments": 489.0
+      },
+      "counters_after": {
+        "audio_load_seconds": 0.10300146899999163,
+        "inference_calls": 1,
+        "inference_seconds": 1468.9929472019999,
+        "model_load_attempts": 1,
+        "model_load_seconds": 1.2067760109998744,
+        "model_load_successes": 1,
+        "recognized_words": 2820,
+        "transcribed_segments": 489
+      },
+      "loaded_after_job": true,
+      "loaded_before_job": false
+    },
+    "translation": {
+      "configuration": {
+        "adapter": "gemini-developer-api",
+        "api_key_configured": true,
+        "batch_size": 32,
+        "grounding": true,
+        "max_retries": 3,
+        "model": "gemini-3.8-flash",
+        "thinking_level": "LOW",
+        "timeout_seconds": 120.0
+      },
+      "counter_delta": {
+        "batches": 2.0,
+        "grounding_queries": 0.0,
+        "input_tokens": 3413.0,
+        "output_tokens": 2203.0,
+        "request_seconds": 108.3283704659998,
+        "requests": 3.0,
+        "retries": 0.0,
+        "translated_units": 64.0
+      },
+      "counters_after": {
+        "batches": 2,
+        "grounding_queries": 0,
+        "input_tokens": 3413,
+        "output_tokens": 2203,
+        "request_seconds": 108.3283704659998,
+        "requests": 3,
+        "retries": 0,
+        "translated_units": 64
+      },
+      "loaded_after_job": false,
+      "loaded_before_job": false
+    }
+  },
+  "counts": {
+    "aligned_words": 2820,
+    "recognized_words": 2820,
+    "subtitle_cues": 927,
+    "transcript_segments": 489,
+    "translation_units": 927,
+    "unmatched_words": 0
+  },
+  "environment": {
+    "architecture": "x86_64",
+    "cpu_model": "AMD Ryzen 3 2200G with Radeon Vega Graphics",
+    "graphics_adapters": [
+      {
+        "device_id": "0x15dd",
+        "driver": "amdgpu",
+        "vendor": "AMD",
+        "vendor_id": "0x1002"
+      }
+    ],
+    "logical_cpu_count": 4,
+    "media_tools": {
+      "ffmpeg": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+      "ffprobe": "ffprobe version 6.1.1-3ubuntu5 Copyright (c) 2007-2023 the FFmpeg developers"
+    },
+    "memory_total_bytes": 13521129472,
+    "nvidia_devices": [],
+    "os": "Linux",
+    "os_release": "7.0.0-43-generic",
+    "packages": {
+      "ctranslate2": "4.8.5",
+      "numpy": "2.5.4",
+      "openai-whisper": "20250625",
+      "torch": "2.8.0+cu128",
+      "torchaudio": "2.8.0+cu128",
+      "transformers": "4.57.6",
+      "whisperx": "3.8.6"
+    },
+    "physical_cpu_count": 4,
+    "python_version": "3.12.3"
+  },
+  "error_type": "TranslationError",
+  "generated_at_utc": "2026-11-12T13:53:47.186151+00:00",
+  "job_id": "b845be3d8e7f",
+  "metadata": {
+    "audio_duration_seconds": 2230.421313,
+    "cpu_interop_threads": 1,
+    "cpu_threads": 2,
+    "final_language": "pt",
+    "media_duration_seconds": 2230.464,
+    "media_kind": "local_file",
+    "requested_source_language": "en",
+    "resource_profile": "low-memory",
+    "retain_models": false,
+    "translation_requested": true
+  },
+  "schema_version": 1,
+  "stages": [
+    {
+      "name": "media_acquisition",
+      "process_cpu_seconds": 8.405800000055308e-05,
+      "resources_after": {
+        "process_peak_rss_bytes": 657707008,
+        "process_rss_bytes": 654835712,
+        "system_memory_available_bytes": 7728009216,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 657707008,
+        "process_rss_bytes": 654807040,
+        "system_memory_available_bytes": 7728009216,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 8.499600016875775e-05
+    },
+    {
+      "name": "media_inspection",
+      "process_cpu_seconds": 0.00964715299999952,
+      "resources_after": {
+        "process_peak_rss_bytes": 657707008,
+        "process_rss_bytes": 654839808,
+        "system_memory_available_bytes": 7700733952,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 657707008,
+        "process_rss_bytes": 654835712,
+        "system_memory_available_bytes": 7728009216,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.0864707239998097
+    },
+    {
+      "name": "audio_preparation",
+      "process_cpu_seconds": 0.11182364899999975,
+      "resources_after": {
+        "process_peak_rss_bytes": 657707008,
+        "process_rss_bytes": 654852096,
+        "system_memory_available_bytes": 7755382784,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 657707008,
+        "process_rss_bytes": 654839808,
+        "system_memory_available_bytes": 7700733952,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 8.084749550999732
+    },
+    {
+      "name": "transcription",
+      "process_cpu_seconds": 2347.493521001,
+      "resources_after": {
+        "process_peak_rss_bytes": 2264899584,
+        "process_rss_bytes": 1293496320,
+        "system_memory_available_bytes": 7545507840,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 657707008,
+        "process_rss_bytes": 654852096,
+        "system_memory_available_bytes": 7755382784,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 1470.3062916600002
+    },
+    {
+      "name": "alignment",
+      "process_cpu_seconds": 649.655835344,
+      "resources_after": {
+        "process_peak_rss_bytes": 2565353472,
+        "process_rss_bytes": 2047643648,
+        "system_memory_available_bytes": 7028424704,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 2264899584,
+        "process_rss_bytes": 1293496320,
+        "system_memory_available_bytes": 7545507840,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 361.96424242299963
+    },
+    {
+      "name": "segmentation",
+      "process_cpu_seconds": 0.0432202279998819,
+      "resources_after": {
+        "process_peak_rss_bytes": 2565353472,
+        "process_rss_bytes": 2047651840,
+        "system_memory_available_bytes": 7028682752,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 2565353472,
+        "process_rss_bytes": 2047643648,
+        "system_memory_available_bytes": 7028682752,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.0369519969999601
+    },
+    {
+      "name": "translation",
+      "process_cpu_seconds": 0.27755873500018424,
+      "resources_after": {
+        "process_peak_rss_bytes": 2565353472,
+        "process_rss_bytes": 2049126400,
+        "system_memory_available_bytes": 7076515840,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 2565353472,
+        "process_rss_bytes": 2047651840,
+        "system_memory_available_bytes": 7028682752,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 108.33098774999962
+    }
+  ],
+  "status": "failed",
+  "total_process_cpu_seconds": 2997.622881682,
+  "total_wall_seconds": 1948.8371601020003
+}

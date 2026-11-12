@@ -1,0 +1,361 @@
+{
+  "adapters": {
+    "alignment": {
+      "configuration": {
+        "adapter": "whisperx",
+        "alignment_models": {
+          "en": "WAV2VEC2_ASR_BASE_960H",
+          "pt": "jonatasgrosman/wav2vec2-large-xlsr-53-portuguese"
+        },
+        "dtype": "backend_default",
+        "interpolate_method": "ignore",
+        "loaded_device": "cpu",
+        "loaded_languages": [
+          "en"
+        ],
+        "max_window_seconds": 90.0,
+        "package_version": "3.8.6",
+        "pytorch_num_interop_threads": 1,
+        "pytorch_num_threads": 2,
+        "recovery_padding_seconds": 0.75,
+        "requested_device": "auto"
+      },
+      "counter_delta": {
+        "aligned_words": 2788.0,
+        "alignment_calls": 487.0,
+        "alignment_seconds": 337.27367026900356,
+        "input_segments": 487.0,
+        "model_load_attempts": 1.0,
+        "model_load_seconds": 5.460774184999536,
+        "model_load_successes": 1.0,
+        "punkt_preparation_seconds": 0.03982559299947752,
+        "punkt_preparations": 1.0,
+        "recovered_words": 0.0,
+        "recovery_attempts": 0.0,
+        "recovery_seconds": 0.0,
+        "unmatched_words": 0.0,
+        "waveform_load_seconds": 0.1032927540009041
+      },
+      "counters_after": {
+        "aligned_words": 2788,
+        "alignment_calls": 487,
+        "alignment_seconds": 337.27367026900356,
+        "input_segments": 487,
+        "model_load_attempts": 1,
+        "model_load_seconds": 5.460774184999536,
+        "model_load_successes": 1,
+        "punkt_preparation_seconds": 0.03982559299947752,
+        "punkt_preparations": 1,
+        "recovered_words": 0,
+        "recovery_attempts": 0,
+        "recovery_seconds": 0.0,
+        "unmatched_words": 0,
+        "waveform_load_seconds": 0.1032927540009041
+      },
+      "loaded_after_job": true,
+      "loaded_before_job": false
+    },
+    "transcription": {
+      "configuration": {
+        "adapter": "openai-whisper",
+        "beam_size": 5,
+        "fp16": false,
+        "loaded_device": "cpu",
+        "model": "base",
+        "package_version": "20250625",
+        "pytorch_num_interop_threads": 1,
+        "pytorch_num_threads": 2,
+        "requested_device": "auto",
+        "word_timestamps": false
+      },
+      "counter_delta": {
+        "audio_load_seconds": 0.10250086799987912,
+        "inference_calls": 1.0,
+        "inference_seconds": 1153.4710981440003,
+        "model_load_attempts": 1.0,
+        "model_load_seconds": 1.1743616900002962,
+        "model_load_successes": 1.0,
+        "recognized_words": 2788.0,
+        "transcribed_segments": 487.0
+      },
+      "counters_after": {
+        "audio_load_seconds": 0.10250086799987912,
+        "inference_calls": 1,
+        "inference_seconds": 1153.4710981440003,
+        "model_load_attempts": 1,
+        "model_load_seconds": 1.1743616900002962,
+        "model_load_successes": 1,
+        "recognized_words": 2788,
+        "transcribed_segments": 487
+      },
+      "loaded_after_job": true,
+      "loaded_before_job": false
+    },
+    "translation": {
+      "configuration": {
+        "adapter": "nllb-transformers",
+        "batch_size": 16,
+        "dtype": "torch.float32",
+        "loaded_device": "cpu",
+        "max_input_tokens": 256,
+        "max_new_tokens": 256,
+        "model": "facebook/nllb-200-distilled-600M",
+        "num_beams": 4,
+        "package_version": "4.57.6",
+        "pytorch_num_interop_threads": 1,
+        "pytorch_num_threads": 2,
+        "requested_device": "auto"
+      },
+      "counter_delta": {
+        "batch_calls": 58.0,
+        "batch_decode_seconds": 1.6610589410029206,
+        "batch_inference_seconds": 1233.9533187500056,
+        "batch_units": 925.0,
+        "device_transfer_seconds": 0.000973016994066711,
+        "generated_tokens": 15025.0,
+        "generation_seconds": 1232.0933717820053,
+        "input_tokens": 6018.0,
+        "max_batch_units": 16.0,
+        "model_load_attempts": 1.0,
+        "model_load_seconds": 9.86318554799982,
+        "model_load_successes": 1.0,
+        "padded_input_tokens": 13527.0,
+        "tokenization_seconds": 0.17577447099301935
+      },
+      "counters_after": {
+        "batch_calls": 58,
+        "batch_decode_seconds": 1.6610589410029206,
+        "batch_inference_seconds": 1233.9533187500056,
+        "batch_units": 925,
+        "device_transfer_seconds": 0.000973016994066711,
+        "generated_tokens": 15025,
+        "generation_seconds": 1232.0933717820053,
+        "input_tokens": 6018,
+        "max_batch_units": 16,
+        "model_load_attempts": 1,
+        "model_load_seconds": 9.86318554799982,
+        "model_load_successes": 1,
+        "padded_input_tokens": 13527,
+        "tokenization_seconds": 0.17577447099301935
+      },
+      "loaded_after_job": true,
+      "loaded_before_job": false
+    }
+  },
+  "counts": {
+    "aligned_words": 2788,
+    "editorial_issue_count": 7,
+    "recognized_words": 2788,
+    "subtitle_cues": 925,
+    "transcript_segments": 487,
+    "translation_units": 925,
+    "unmatched_words": 0,
+    "warning_count": 8
+  },
+  "environment": {
+    "architecture": "x86_64",
+    "cpu_model": "AMD Ryzen 3 2200G with Radeon Vega Graphics",
+    "graphics_adapters": [
+      {
+        "device_id": "0x15dd",
+        "driver": "amdgpu",
+        "vendor": "AMD",
+        "vendor_id": "0x1002"
+      }
+    ],
+    "logical_cpu_count": 4,
+    "media_tools": {
+      "ffmpeg": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+      "ffprobe": "ffprobe version 6.1.1-3ubuntu5 Copyright (c) 2007-2023 the FFmpeg developers"
+    },
+    "memory_total_bytes": 13521129472,
+    "nvidia_devices": [],
+    "os": "Linux",
+    "os_release": "7.0.0-43-generic",
+    "packages": {
+      "ctranslate2": "4.8.5",
+      "numpy": "2.5.4",
+      "openai-whisper": "20250625",
+      "torch": "2.8.0+cu128",
+      "torchaudio": "2.8.0+cu128",
+      "transformers": "4.57.6",
+      "whisperx": "3.8.6"
+    },
+    "physical_cpu_count": 4,
+    "python_version": "3.12.3"
+  },
+  "generated_at_utc": "2026-11-12T14:50:47.928625+00:00",
+  "job_id": "2e5e93e3369c",
+  "metadata": {
+    "audio_duration_seconds": 2230.421313,
+    "cpu_interop_threads": 1,
+    "cpu_threads": 2,
+    "editorial_quality_status": "REVIEW_REQUIRED",
+    "final_language": "pt",
+    "media_duration_seconds": 2230.464,
+    "media_kind": "local_file",
+    "requested_source_language": "en",
+    "resource_profile": "low-memory",
+    "retain_models": false,
+    "translation_requested": true
+  },
+  "schema_version": 1,
+  "stages": [
+    {
+      "name": "media_acquisition",
+      "process_cpu_seconds": 8.102500000006785e-05,
+      "resources_after": {
+        "process_peak_rss_bytes": 651608064,
+        "process_rss_bytes": 649162752,
+        "system_memory_available_bytes": 7894753280,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 651608064,
+        "process_rss_bytes": 649138176,
+        "system_memory_available_bytes": 7894753280,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 8.206300026358804e-05
+    },
+    {
+      "name": "media_inspection",
+      "process_cpu_seconds": 0.015981153999999442,
+      "resources_after": {
+        "process_peak_rss_bytes": 651608064,
+        "process_rss_bytes": 649162752,
+        "system_memory_available_bytes": 7887171584,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 651608064,
+        "process_rss_bytes": 649162752,
+        "system_memory_available_bytes": 7894753280,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.08068595599979744
+    },
+    {
+      "name": "audio_preparation",
+      "process_cpu_seconds": 0.06688698800000026,
+      "resources_after": {
+        "process_peak_rss_bytes": 651608064,
+        "process_rss_bytes": 649117696,
+        "system_memory_available_bytes": 7861972992,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 651608064,
+        "process_rss_bytes": 649162752,
+        "system_memory_available_bytes": 7887171584,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 7.441098059000069
+    },
+    {
+      "name": "transcription",
+      "process_cpu_seconds": 2060.305858573,
+      "resources_after": {
+        "process_peak_rss_bytes": 2258841600,
+        "process_rss_bytes": 1274298368,
+        "system_memory_available_bytes": 9469243392,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 651608064,
+        "process_rss_bytes": 649117696,
+        "system_memory_available_bytes": 7860969472,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 1154.751541865
+    },
+    {
+      "name": "alignment",
+      "process_cpu_seconds": 631.7295748410002,
+      "resources_after": {
+        "process_peak_rss_bytes": 2732539904,
+        "process_rss_bytes": 2231324672,
+        "system_memory_available_bytes": 8729178112,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 2258841600,
+        "process_rss_bytes": 1274298368,
+        "system_memory_available_bytes": 9464913920,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 342.97574144200007
+    },
+    {
+      "name": "segmentation",
+      "process_cpu_seconds": 0.0466386190000776,
+      "resources_after": {
+        "process_peak_rss_bytes": 2732539904,
+        "process_rss_bytes": 2231336960,
+        "system_memory_available_bytes": 8729325568,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 2732539904,
+        "process_rss_bytes": 2231324672,
+        "system_memory_available_bytes": 8729325568,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.03810155399969517
+    },
+    {
+      "name": "translation",
+      "process_cpu_seconds": 2426.154855019,
+      "resources_after": {
+        "process_peak_rss_bytes": 5332451328,
+        "process_rss_bytes": 4749455360,
+        "system_memory_available_bytes": 8631537664,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 2732539904,
+        "process_rss_bytes": 2231336960,
+        "system_memory_available_bytes": 8729325568,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 1243.8268114189996
+    },
+    {
+      "name": "srt_validation",
+      "process_cpu_seconds": 0.018265022999912617,
+      "resources_after": {
+        "process_peak_rss_bytes": 5332451328,
+        "process_rss_bytes": 4749455360,
+        "system_memory_available_bytes": 8626888704,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5332451328,
+        "process_rss_bytes": 4749455360,
+        "system_memory_available_bytes": 8631672832,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.012810844000341604
+    },
+    {
+      "name": "srt_publication",
+      "process_cpu_seconds": 0.038376350000362436,
+      "resources_after": {
+        "process_peak_rss_bytes": 5332451328,
+        "process_rss_bytes": 4749455360,
+        "system_memory_available_bytes": 8622272512,
+        "system_memory_total_bytes": 13521129472
+      },
+      "resources_before": {
+        "process_peak_rss_bytes": 5332451328,
+        "process_rss_bytes": 4749455360,
+        "system_memory_available_bytes": 8626888704,
+        "system_memory_total_bytes": 13521129472
+      },
+      "wall_seconds": 0.035921335000239196
+    }
+  ],
+  "status": "completed",
+  "total_process_cpu_seconds": 5118.412925885,
+  "total_wall_seconds": 2749.194590285001
+}
