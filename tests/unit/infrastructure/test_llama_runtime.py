@@ -320,7 +320,9 @@ def test_model_download_requires_explicit_consent(tmp_path) -> None:
 
 
 
-def test_model_download_reuses_existing_huggingface_token(tmp_path, monkeypatch) -> None:
+def test_model_download_reuses_existing_huggingface_token(
+    tmp_path, monkeypatch
+) -> None:
     payload = b"authenticated-model"
     monkeypatch.setattr(
         llama_runtime, "MODEL_SHA256", hashlib.sha256(payload).hexdigest()
