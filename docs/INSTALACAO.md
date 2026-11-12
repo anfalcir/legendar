@@ -136,9 +136,17 @@ demais continuam válidos.
 | `LEGENDAR_ALIGN_DEVICE` | `auto` | dispositivo do WhisperX |
 | `LEGENDAR_TRANSLATE_DEVICE` | `auto` | dispositivo do NLLB |
 | `LEGENDAR_TRANSLATE_MODEL` | `facebook/nllb-200-distilled-600M` | checkpoint compatível |
+| `LEGENDAR_RESOURCE_PROFILE` | `auto` | `auto`, `low-memory`, `balanced` ou `performance`; `auto` é conservador abaixo de 16 GiB de RAM |
+| `LEGENDAR_CPU_THREADS` | definido pelo perfil | sobrescreve o número de threads CPU |
+| `LEGENDAR_CPU_INTEROP_THREADS` | definido pelo perfil | sobrescreve threads inter-op do PyTorch |
 
 Configuração inválida não impede a janela de abrir: o recurso afetado fica
-desabilitado com o motivo no painel de prontidão.
+desabilitado com o motivo no painel de prontidão. O perfil de recursos e os overrides
+de threads também podem ser definidos no ambiente antes de iniciar a aplicação.
+
+A chave Gemini não é uma variável obrigatória de instalação: configure-a localmente
+em **Preferências**. O backend Gemini é opcional e transmite o texto das cues à API
+externa quando selecionado; NLLB permanece o caminho local padrão.
 
 ## 8. Instalação por pip (sem uv)
 
