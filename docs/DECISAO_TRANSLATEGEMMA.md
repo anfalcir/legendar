@@ -99,3 +99,15 @@ O smoke usa apenas a API local, envia os códigos de idioma por requisição em 
 - A GUI permanece responsiva durante verificação, instalação, download e inicialização.
 - A tradução só começa após readiness confirmada; nenhum SRT parcial é publicado em falha.
 - Nenhum fallback silencioso para Gemini ou NLLB. Gemini continua sendo uma escolha explícita independente.
+
+
+## Implementação incremental — primeira fatia do lifecycle
+
+A PR #36 adiciona `infrastructure/translation/llama_runtime.py` com:
+- inspeção local rápida de executável e arquivo GGUF, sem rede/download;
+- início do subcomando `llama serve` com loopback exclusivo, porta dinâmica, contexto de 2K e um slot;
+- health check `/health` com timeout, cancelamento e detecção de saída prematura;
+- serialização concorrente dentro da instância do aplicativo, reutilização apenas do processo filho próprio e encerramento gracioso/forçado desse filho;
+- preservação do modelo/cache e testes unitários determinísticos com processo/HTTP simulados.
+
+**Limites desta fatia:** não instala llama.cpp, não baixa pesos, não faz lock entre processos, não integra ainda o bootstrap/GUI nem implementa o adaptador Translator. A disponibilidade real do modelo, o nome exato do artefato GGUF, o protocolo com pesos reais e a compatibilidade do executável continuam gates obrigatórios. Portanto, não declarar autonomia operacional completa nem remover NLLB com base nesta entrega isolada.
