@@ -481,8 +481,11 @@ class MainWindow(QMainWindow):
         self.translate_check.setEnabled(self._deps.translate_available)
         if not self._deps.translate_available:
             details = " ".join(self._deps.translate_readiness_details)
+            backend_label = (
+                "Gemini" if self._deps.translation_backend == "gemini" else "NLLB-200"
+            )
             self.translate_check.setToolTip(
-                "A tradução local NLLB não está pronta neste ambiente. " + details
+                f"A tradução {backend_label} não está pronta neste ambiente. " + details
             )
         else:
             backend_label = (
