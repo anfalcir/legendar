@@ -134,6 +134,7 @@ class PreferencesDialog(QDialog):
         from legendar.infrastructure.config.credentials import gemini_api_key_configured
 
         self._gemini_key_configured = gemini_api_key_configured()
+        self._gemini_key_remove_requested = False
 
         root = QVBoxLayout(self)
         root.setContentsMargins(24, 22, 24, 20)
@@ -292,10 +293,11 @@ class PreferencesDialog(QDialog):
     @property
     def gemini_key_cleared(self) -> bool:
         """Indica que o usuário solicitou a remoção da chave salva."""
-        return self._gemini_key_configured and self.gemini_remove_key_button.isVisible()
+        return self._gemini_key_remove_requested
 
     def _remove_gemini_key(self) -> None:
         self.gemini_api_key_edit.clear()
+        self._gemini_key_remove_requested = True
         self.gemini_remove_key_button.setVisible(False)
 
     def _choose_output_directory(self) -> None:
