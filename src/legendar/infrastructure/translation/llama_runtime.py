@@ -239,7 +239,7 @@ class LlamaCppRuntimeManager:
             raise ModelError(
                 "O download do TranslateGemma exige autorização explícita."
             )
-        with self._lock:
+        with self._lock, self._download_lock:
             self._raise_if_cancelled(token)
             self.model_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             if os.name != "nt":
@@ -437,11 +437,11 @@ class LlamaCppRuntimeManager:
                     + " ".join(inspection.details)
                 )
 
-            if self._process is not None and self._process.poll() is None:
+            if self._process is not None:
                 if (
-                    self._port is not None
+                    self._process.poll() is None
+                    and self._port is not None
                     and self._is_healthy(self._port)
-                    and self._process is not None
                     and self._process.poll() is None
                 ):
                     if progress is not None:
@@ -449,15 +449,6 @@ class LlamaCppRuntimeManager:
                     return f"http://{self.host}:{self._port}"
                 self._stop_process_locked()
 
-            runtime_lock = _InterProcessLock(
-                self.models_dir / ".translategemma-runtime.lock"
-            )
-            if not runtime_lock.acquire():
-                raise ModelError(
-                    "Outra instância do Legendar já gerencia o servidor "
-                    "TranslateGemma. Feche a outra instância ou aguarde."
-                )
-            self._runtime_lock = runtime_lock
             port = self._available_port()
             executable_name = inspection.executable.name.casefold()
             is_standalone_server = executable_name in {
@@ -488,6 +479,15 @@ class LlamaCppRuntimeManager:
             )
             if progress is not None:
                 progress.report(0.05, "Iniciando servidor local TranslateGemma")
+            runtime_lock = _InterProcessLock(
+                self.models_dir / ".translategemma-runtime.lock"
+            )
+            if not runtime_lock.acquire():
+                raise ModelError(
+                    "Outra instância do Legendar já gerencia o servidor "
+                    "TranslateGemma. Feche a outra instância ou aguarde."
+                )
+            self._runtime_lock = runtime_lock
             try:
                 process = self._popen_factory(
                     command,
@@ -496,7 +496,7 @@ class LlamaCppRuntimeManager:
                     stderr=subprocess.DEVNULL,
                     close_fds=True,
                 )
-            except OSError as exc:
+            except Exception as exc:
                 self._release_runtime_lock_locked()
                 raise ModelError(
                     f"Não foi possível iniciar llama.cpp ({type(exc).__name__})."
