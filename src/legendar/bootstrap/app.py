@@ -21,10 +21,6 @@ from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.credentials import load_gemini_api_key
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
 from legendar.infrastructure.diagnostics.performance import JsonPerformanceReporter
-from legendar.infrastructure.resources.profile import (
-    configure_torch_threads,
-    resolve_resource_policy,
-)
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
 from legendar.infrastructure.logging.setup import configure_logging
@@ -32,6 +28,10 @@ from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus, locate_tools
 from legendar.infrastructure.media.youtube import YtDlpDownloader
+from legendar.infrastructure.resources.profile import (
+    configure_torch_threads,
+    resolve_resource_policy,
+)
 from legendar.infrastructure.transcription.faster_whisper import (
     FasterWhisperTranscriber,
 )
