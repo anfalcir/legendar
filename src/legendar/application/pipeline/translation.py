@@ -114,15 +114,15 @@ def apply_translation(
     if track.is_empty:
         raise InvalidInputError("Nenhuma legenda segmentada para traduzir.")
     expected_indexes = tuple(cue.index for cue in track.cues)
-    if result.unit_indexes != expected_indexes:
-        raise TranslationError(
-            "A tradução não manteve a correspondência por ID com as legendas "
-            f"(esperado {expected_indexes}, recebido {result.unit_indexes})."
-        )
     if len(result.texts) != len(track.cues):
         raise TranslationError(
             "A tradução não manteve a cardinalidade das unidades "
             f"({len(result.texts)} textos para {len(track.cues)} cues)."
+        )
+    if result.unit_indexes != expected_indexes:
+        raise TranslationError(
+            "A tradução não manteve a correspondência por ID com as legendas "
+            f"(esperado {expected_indexes}, recebido {result.unit_indexes})."
         )
 
     cues: list[SubtitleCue] = []
