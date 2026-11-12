@@ -87,7 +87,7 @@ def test_frozen_evidence_manifest_matches_repository_bytes() -> None:
         source = REPOSITORY_ROOT / artifact["path"]
         raw = source.read_bytes()
         git_blob = hashlib.sha1(
-            b"blob " + str(len(raw)).encode("ascii") + b"\\0" + raw
+            b"blob " + str(len(raw)).encode("ascii") + bytes([0]) + raw
         ).hexdigest()
 
         assert len(raw) == artifact["bytes"], artifact["path"]
