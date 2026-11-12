@@ -43,6 +43,17 @@ PYTHONPATH=src uv run --locked --group dev --group phase0 \
 
 O gerador valida estrutura, timestamps, duração positiva, texto não vazio, IDs sequenciais e duplicidades. Escreve `reference_text` vazio em todas as linhas e imprime o SHA-256 do SRT de origem para rastreabilidade local. Não cria nem presume referência humana.
 
+### Validação automatizada do corpus
+
+- Workflow [Phase 6 quality #307](https://github.com/anfalcir/legendar/actions/runs/43144606532), executado sobre o commit da preparação do corpus.
+- A etapa de geração e validação processou o SRT inglês real e confirmou 967 linhas, IDs de 1 a 967 em ordem e `reference_text` vazio em todas.
+- Suítes determinísticas aprovadas em Python 3.10, 3.11, 3.12 e 3.13; lint e formatação aprovados.
+- Smoke real da Gemini Developer API aprovado; testes do adaptador NLLB com runtime Transformers CPU aprovados.
+- PR [#22](https://github.com/anfalcir/legendar/pull/22) integrada à `main` por squash em `ab343da21710301906cde987e052cdaa9d5aa0fd`.
+- PR [#23](https://github.com/anfalcir/legendar/pull/23) protegeu `/corpus/` e o relatório local no `.gitignore`; merge `185f0843b0954319f8fd32be99a50811c8f5e5d6`.
+
+**Limite da evidência:** a CI validou a geração do manifesto, mas não executou o benchmark pareado completo. O tempo comparável ainda precisa ser medido no hardware de referência do usuário.
+
 ## Protocolo do benchmark local
 
 O manifesto TSV deve conter `cue_id`, `source_text` e, quando disponíveis, `reference_text`. As referências humanas devem estar completas em todas as linhas ou ausentes em todas. Manter o corpus privado/local.
