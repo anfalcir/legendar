@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from legendar.application.pipeline.translation import (
+    TranslationContext,
     TranslationResult,
     TranslationUnit,
     apply_translation,
@@ -37,6 +38,20 @@ def test_build_units_preserves_index_order_and_normalized_text() -> None:
 
     assert [unit.index for unit in units] == [1, 2]
     assert [unit.text for unit in units] == ["bom dia", "tudo bem?"]
+
+
+def test_build_units_carries_context_and_temporal_source_mapping() -> None:
+    track = _track("primeira", "segunda", "terceira", "quarta")
+
+    units = build_translation_units(track)
+
+    assert units[0].source_cue_ids == (1,)
+    assert units[0].source_range == track.cues[0].range
+    assert units[0].context.before == ()
+    assert units[0].context.after == ("segunda", "terceira")
+    assert units[2].context.before == ("primeira", "segunda")
+    assert units[2].context.after == ("quarta",)
+    assert units[2].context.protected_terms == ()
 
 
 def test_build_units_rejects_empty_track() -> None:
@@ -87,6 +102,18 @@ def test_apply_translation_rejects_divergent_count() -> None:
     result = TranslationResult(language=Language.ENGLISH, texts=("one",))
 
     with pytest.raises(TranslationError, match="1:1"):
+        apply_translation(track, result)
+
+
+def test_apply_translation_rejects_mismatched_unit_ids() -> None:
+    track = _track("um", "dois")
+    result = TranslationResult(
+        language=Language.ENGLISH,
+        texts=("one", "two"),
+        unit_indexes=(2, 1),
+    )
+
+    with pytest.raises(TranslationError, match="correspondência por ID"):
         apply_translation(track, result)
 
 
