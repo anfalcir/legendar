@@ -96,7 +96,7 @@ src/legendar/
 3. `validate_track` bloqueia estrutura inválida e sinaliza riscos de legibilidade.
 4. `format_srt` serializa; `validate_roundtrip` reparseia e compara; `atomic_write_text` troca o arquivo por rename.
 
-**Limitações conhecidas:** a política editorial de cues ainda será tratada na Fase 3. A Fase 2 agora bloqueia a publicação quando o alinhamento deixa palavras reconhecidas sem âncora temporal confiável e tenta uma recuperação controlada com janela ampliada antes de aceitar a falha.
+**Limitações conhecidas:** a política editorial e a consolidação cronológica de cues foram implementadas nas Fases 3 e 4. O gate estrutural da Fase 8 mede limites e riscos do SRT, mas não substitui revisão audiovisual, avaliação de naturalidade PT-BR ou conferência de sincronização em player.
 
 ## 8. Configuração e caminhos
 
@@ -131,7 +131,7 @@ A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` per
 
 A evolução proposta é:
 - instrumentar tempo e memória por estágio;
-- **garantir conservação integral do conteúdo reconhecido (Fase 2 em implementação);**
+- preservar integralmente o conteúdo reconhecido e bloquear publicação quando houver palavras sem âncora temporal confiável (Fase 2);
 - **recuperar alinhamentos parciais com segunda tentativa controlada, sem fabricar timestamps (Fase 2);**
 - formar cues a partir de um fluxo contínuo de palavras alinhadas;
 - distinguir tempo de fala de tempo de exibição;
@@ -139,4 +139,4 @@ A evolução proposta é:
 - avaliar faster-whisper/CTranslate2 e NLLB via CTranslate2 por benchmark;
 - gerenciar a residência dos modelos e threads por perfil de hardware.
 
-Essas mudanças ainda não são comportamento implementado. Escopo, dependências, critérios e ordem estão em [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
+As próximas mudanças devem ser guiadas pelas evidências de homologação real da Fase 8. Escopo, critérios e pendências estão em [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
