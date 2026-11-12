@@ -448,7 +448,6 @@ def test_environment_numeric_configuration_is_validated(
         GeminiTranslator.from_environment(tmp_path)
 
 
-
 def test_grounding_rejects_models_without_search_support() -> None:
     with pytest.raises(ValueError, match="grounding não está disponível"):
         GeminiTranslator(api_key="test", grounding=True, model="gemini-3.8-flash")
