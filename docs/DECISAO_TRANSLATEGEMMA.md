@@ -42,3 +42,25 @@
 5. Migração do bootstrap, Preferências e runtime para TranslateGemma como única rota local.
 6. Remoção total de NLLB e limpeza de dependências/documentação.
 7. CI, smoke real, corpus-ouro e homologação E2E.
+
+
+## Prova de conceito manual do protocolo
+
+Instale o runtime llama.cpp conforme a [documentação do modelo GGUF](https://huggingface.co/bullerwins/translategemma-4b-it-GGUF). Em Linux/macOS, o repositório documenta o instalador do projeto; no Windows, documenta WinGet. O primeiro início baixa a quantização escolhida e pode exigir que o usuário aceite os termos Gemma no Hugging Face.
+
+Inicie o servidor **somente em loopback**, com um slot e contexto nativo:
+
+```bash
+llama serve -hf bullerwins/translategemma-4b-it-GGUF:Q4_K_M \
+  --host 127.0.0.1 --port 8080 -c 2048 -np 1 -t 4 --no-webui \
+  --alias translategemma-4b
+```
+
+Em outro terminal, na raiz do repositório:
+
+```bash
+uv run --locked --no-sync python scripts/phase8_1_translategemma_smoke.py \
+  "I will be back."
+```
+
+O smoke usa apenas a API local, envia os códigos de idioma por requisição em chat_template_kwargs e imprime somente o texto retornado. Ele não inicia o servidor nem baixa pesos. O adaptador de produção deverá gerenciar essas duas responsabilidades; este script é exclusivamente uma prova de protocolo. Ainda é necessário executar o smoke com o modelo real antes de declarar compatibilidade.
