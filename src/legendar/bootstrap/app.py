@@ -32,6 +32,7 @@ from legendar.infrastructure.transcription.faster_whisper import (
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.nllb import NllbTranslator
+from legendar.infrastructure.config.credentials import load_gemini_api_key
 from legendar.presentation.qt.branding import app_icon
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
 
@@ -237,17 +238,18 @@ def build_ui_dependencies(
     translation_backend = (
         os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "nllb").strip().casefold()
     )
-    translation_configuration_ok = True
 
-    if translation_backend == "gemini":
-        try:
-            translator = GeminiTranslator.from_environment(settings.models_dir)
-        except ValueError as exc:
-            translator = GeminiTranslator()
-            translation_configuration_ok = False
-            translation_details = (f"Configuração Gemini inválida: {exc}",)
-        else:
-            translation_details = (
+    def _configure_translation(
+        backend: str,
+        api_key: str | None,
+    ) -> tuple[Translator, bool, tuple[str, ...]]:
+        backend = backend.strip().casefold()
+        if backend == "gemini":
+            try:
+                translator = GeminiTranslator(api_key=api_key)
+            except ValueError as exc:
+                return GeminiTranslator(), False, (f"Configuração Gemini inválida: {exc}",)
+            details = (
                 f"Gemini API · modelo {translator.model}",
                 f"Lote: {translator.batch_size} cues · timeout: "
                 f"{translator.timeout_seconds:g}s · retries: {translator.max_retries}",
@@ -257,46 +259,60 @@ def build_ui_dependencies(
                     else "Grounding Google Search desabilitado."
                 ),
                 (
-                    "GEMINI_API_KEY configurada no ambiente."
+                    "Chave Gemini configurada localmente."
                     if translator.is_configured
-                    else "GEMINI_API_KEY ausente; configure a chave para traduzir."
+                    else "Chave Gemini ausente; configure-a em Preferências."
                 ),
             )
-        translation_available = (
-            translation_configuration_ok and translator.is_configured
-        )
-    elif translation_backend == "nllb":
-        try:
-            transformers_installed = (
-                importlib.util.find_spec("transformers") is not None
-            )
-        except (ImportError, ValueError):
-            transformers_installed = False
+            return translator, translator.is_configured, details
 
-        try:
-            translator = NllbTranslator.from_environment(settings.models_dir)
-        except ValueError as exc:
-            translator = NllbTranslator(settings.models_dir)
-            translation_configuration_ok = False
-            translation_details = (f"Configuração NLLB inválida: {exc}",)
-        else:
-            translation_details = (
+        if backend == "nllb":
+            try:
+                transformers_installed = (
+                    importlib.util.find_spec("transformers") is not None
+                )
+            except (ImportError, ValueError):
+                transformers_installed = False
+            try:
+                translator = NllbTranslator.from_environment(settings.models_dir)
+            except ValueError as exc:
+                translator = NllbTranslator(settings.models_dir)
+                return translator, False, (f"Configuração NLLB inválida: {exc}",)
+            details = (
                 f"NLLB-200 distilled · modelo {translator.model_name}",
                 f"Dispositivo de tradução: {translator.requested_device}",
                 f"Pesos no cache local: {translator.download_root}",
             )
+            if not transformers_installed:
+                details = (
+                    "transformers não instalado; sincronize runtime-cpu ou runtime-cu128.",
+                )
+            return translator, transformers_installed, details
 
-        if not transformers_installed:
-            translation_details = (
-                "transformers não instalado; sincronize runtime-cpu ou runtime-cu128.",
-            )
-        translation_available = transformers_installed and translation_configuration_ok
-    else:
-        translator = NllbTranslator(settings.models_dir)
-        translation_available = False
-        translation_details = (
-            "LEGENDAR_TRANSLATION_BACKEND inválido; use nllb ou gemini.",
+        return (
+            NllbTranslator(settings.models_dir),
+            False,
+            ("Backend de tradução inválido; use NLLB-200 ou Gemini.",),
         )
+
+    local_gemini_key = load_gemini_api_key()
+    configured_backend = os.environ.get(
+        "LEGENDAR_TRANSLATION_BACKEND",
+        translation_backend,
+    ).strip().casefold()
+    translator, translation_available, translation_details = _configure_translation(
+        configured_backend,
+        local_gemini_key or os.environ.get("GEMINI_API_KEY"),
+    )
+    translator_holder: dict[str, Translator] = {"translator": translator}
+
+    def reconfigure_translation(
+        backend: str,
+        api_key: str | None,
+    ) -> tuple[bool, tuple[str, ...]]:
+        selected, available, details = _configure_translation(backend, api_key)
+        translator_holder["translator"] = selected
+        return available, details
 
     inspector = FfprobeInspector()
     downloader = YtDlpDownloader(
@@ -313,12 +329,14 @@ def build_ui_dependencies(
             downloader,
             transcriber,
             aligner,
-            translator,
+            translator_holder["translator"],
             performance_reporter,
         ),
         output_path_factory=lambda stem, _language: suggest_output_path(settings, stem),
         translate_available=translation_available,
         translate_readiness_details=translation_details,
+        translation_backend=configured_backend,
+        translation_reconfigure=reconfigure_translation,
         readiness_ok=readiness_ok,
         readiness_details=readiness_details,
         app_version=__version__,
