@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from legendar.application.pipeline.serial_pipeline import SerialPipeline
 from legendar.bootstrap.app import build_ui_dependencies
+from legendar.bootstrap import app as bootstrap_app
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.settings import AppSettings
@@ -20,6 +22,7 @@ from legendar.infrastructure.transcription.faster_whisper import (
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.nllb import NllbTranslator
+from legendar.infrastructure.translation.translategemma import TranslateGemmaTranslator
 
 
 def _settings(tmp_path: Path) -> AppSettings:
@@ -307,6 +310,79 @@ def test_unknown_asr_backend_is_not_silently_accepted(tmp_path, monkeypatch) -> 
         in dependencies.transcription_readiness_details[0]
     )
 
+
+
+def test_translategemma_backend_is_composed_when_runtime_and_model_exist(
+    tmp_path, monkeypatch
+) -> None:
+    _patch_modules(monkeypatch)
+
+    class FakeRuntime:
+        def __init__(self, _models_dir) -> None:
+            self.shutdown_called = False
+
+        def inspect(self):
+            return SimpleNamespace(
+                executable_available=True,
+                model_available=True,
+                ready_to_start=True,
+                details=("Runtime e pesos disponíveis.",),
+            )
+
+        def shutdown(self) -> None:
+            self.shutdown_called = True
+
+    monkeypatch.setattr(bootstrap_app, "LlamaCppRuntimeManager", FakeRuntime)
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        translation_backend="translategemma",
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    translator = dependencies.pipeline_factory()._ports.translator
+
+    assert dependencies.translate_available
+    assert isinstance(translator, TranslateGemmaTranslator)
+    assert "TranslateGemma 4B IT" in dependencies.translate_readiness_details[0]
+    assert dependencies.runtime_shutdown is not None
+
+
+def test_translategemma_backend_stays_disabled_until_runtime_and_model_exist(
+    tmp_path, monkeypatch
+) -> None:
+    _patch_modules(monkeypatch)
+
+    class FakeRuntime:
+        def __init__(self, _models_dir) -> None:
+            pass
+
+        def inspect(self):
+            return SimpleNamespace(
+                executable_available=False,
+                model_available=False,
+                ready_to_start=False,
+                details=("llama.cpp ausente.", "GGUF ausente."),
+            )
+
+        def shutdown(self) -> None:
+            pass
+
+    monkeypatch.setattr(bootstrap_app, "LlamaCppRuntimeManager", FakeRuntime)
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        translation_backend="translategemma",
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert not dependencies.translate_available
+    assert "Instale o runtime llama.cpp" in dependencies.translate_readiness_details
+    assert "GGUF ausente" in dependencies.translate_readiness_details
 
 def test_gemini_backend_is_selected_with_api_key(tmp_path, monkeypatch) -> None:
     _patch_modules(monkeypatch)
