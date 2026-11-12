@@ -78,6 +78,11 @@ def test_translate_reports_server_unavailable(monkeypatch) -> None:
         translate("Hello.")
 
 
+def test_translate_rejects_non_loopback_server() -> None:
+    with pytest.raises(ValueError, match="loopback"):
+        translate("Hello.", base_url="https://example.com")
+
+
 def test_translate_rejects_unsupported_language_pair() -> None:
     with pytest.raises(ValueError, match="Par de idiomas"):
         build_prompt("Hello.", "fr", "pt-BR")
