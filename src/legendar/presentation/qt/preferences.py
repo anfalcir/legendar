@@ -11,6 +11,8 @@ from legendar.domain.value_objects.language import Language
 
 _TRANSLATION_BACKENDS = {"nllb", "gemini"}
 
+_TRANSLATION_BACKENDS = {"nllb", "gemini"}
+
 _VALID_THEMES = {"system", "light", "dark"}
 
 
@@ -23,10 +25,13 @@ class UiPreferences:
     target_language: Language = Language.PORTUGUESE
     log_expanded: bool = False
     translation_backend: str = "nllb"
+    translation_backend: str = "nllb"
 
     def __post_init__(self) -> None:
         if self.theme not in _VALID_THEMES:
             raise ValueError(f"Tema inválido: {self.theme!r}")
+        if self.translation_backend not in _TRANSLATION_BACKENDS:
+            raise ValueError(f"Backend de tradução inválido: {self.translation_backend!r}")
         if self.translation_backend not in _TRANSLATION_BACKENDS:
             raise ValueError(f"Backend de tradução inválido: {self.translation_backend!r}")
 
@@ -83,6 +88,7 @@ def save_preferences(
     settings.setValue("ui/target_language", preferences.target_language.value)
     settings.setValue("paths/output_dir", str(preferences.output_dir))
     settings.setValue("ui/log_expanded", preferences.log_expanded)
+    settings.setValue("translation/backend", preferences.translation_backend)
     settings.setValue("translation/backend", preferences.translation_backend)
     if geometry is not None:
         settings.setValue("window/geometry", geometry)
