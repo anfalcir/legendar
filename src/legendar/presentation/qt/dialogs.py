@@ -219,8 +219,12 @@ class PreferencesDialog(QDialog):
         self.gemini_api_key_edit.setAccessibleName("Chave da API Gemini")
         self.gemini_show_key_check = QCheckBox("Mostrar", self)
         self.gemini_show_key_check.setObjectName("showGeminiApiKey")
+        self.gemini_remove_key_button = QPushButton("Remover", self)
+        self.gemini_remove_key_button.setObjectName("removeGeminiApiKey")
+        self.gemini_remove_key_button.setVisible(self._gemini_key_configured)
         api_key_row.addWidget(self.gemini_api_key_edit, stretch=1)
         api_key_row.addWidget(self.gemini_show_key_check)
+        api_key_row.addWidget(self.gemini_remove_key_button)
 
         form.addRow("Aparência", self.theme_combo)
         form.addRow("Idioma final padrão", self.language_combo)
@@ -263,6 +267,7 @@ class PreferencesDialog(QDialog):
                 else QLineEdit.EchoMode.Password
             )
         )
+        self.gemini_remove_key_button.clicked.connect(self._remove_gemini_key)
 
     @property
     def preferences(self) -> UiPreferences:
@@ -287,7 +292,11 @@ class PreferencesDialog(QDialog):
     @property
     def gemini_key_cleared(self) -> bool:
         """Indica que o usuário solicitou a remoção da chave salva."""
-        return self._gemini_key_configured and not self.gemini_api_key_input
+        return self._gemini_key_configured and self.gemini_remove_key_button.isVisible()
+
+    def _remove_gemini_key(self) -> None:
+        self.gemini_api_key_edit.clear()
+        self.gemini_remove_key_button.setVisible(False)
 
     def _choose_output_directory(self) -> None:
         selected = QFileDialog.getExistingDirectory(
