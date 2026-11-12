@@ -499,7 +499,7 @@ Tarefas:
 
 **Objetivo:** tornar a saída brasileira natural e semanticamente fiel.
 
-**Ferramenta de apoio em implementação:** `scripts/phase8_1_translation_review.py` gera um CSV local, com amostra determinística de blocos, contexto anterior/posterior e pareamento temporal entre o SRT inglês automático e o SRT PT. A amostra prioriza candidatos de risco (agradecimentos, negações, perguntas, possíveis nomes próprios e cues curtas) e completa a cobertura ao longo da mídia. Os campos de referência humana, verificação do ASR, veredito, entidades protegidas e notas ficam vazios para preenchimento pelo revisor. O script não corrige traduções, não presume que o ASR está correto e não envia nem registra o texto dos arquivos.
+**Ferramenta de apoio integrada à `main` pela PR #34:** `scripts/phase8_1_translation_review.py` gera um CSV local, com amostra determinística de blocos, contexto anterior/posterior e pareamento temporal entre o SRT inglês automático e o SRT PT. A amostra prioriza candidatos de risco (agradecimentos, negações, perguntas, possíveis nomes próprios e cues curtas) e completa a cobertura ao longo da mídia. Os campos de referência humana, verificação do ASR, veredito, entidades protegidas e notas ficam vazios para preenchimento pelo revisor. O script não corrige traduções, não presume que o ASR está correto e não envia nem registra o texto dos arquivos.
 
 Uso no computador de homologação, a partir da raiz do repositório:
 
@@ -520,7 +520,7 @@ Tarefas:
 3. incluir explicitamente exemplos equivalentes aos erros observados em 12/11, incluindo “Thank you”;
 4. estabelecer glossário aprovado para nomes e entidades, sem corrigir transcrição quando o áudio não sustentar a correção;
 5. escrever/revisar instruções Gemini para português brasileiro natural, oral e idiomático;
-6. investigar opções técnicas para NLLB compatíveis com o escopo, mas não presumir que uma configuração genérica de português produza PT-BR;
+6. avaliar a qualidade do TranslateGemma contra a referência humana PT-BR, preservando NLLB apenas como baseline histórica até a substituição ser homologada;
 7. pontuar preservação de sentido, negação, sujeito, tempo verbal, registro, concordância, nomes/números e naturalidade;
 8. exigir revisão humana cega de exemplos representativos antes de declarar aprovação;
 9. registrar separadamente erros provenientes da transcrição original e erros introduzidos pela tradução.
@@ -529,7 +529,34 @@ Tarefas:
 
 **Gate:** nenhum erro crítico de sentido, negação, nome ou número na amostra de aceite; PT-BR aprovado por revisor humano; casos não resolvidos são marcados para revisão, não escondidos por heurística.
 
-### Etapa 8.1.6 — Unificar o gate de qualidade e a publicação
+### Etapa 8.1.6 — substituição do motor local por TranslateGemma
+
+**STATUS: EM IMPLEMENTAÇÃO**
+
+A decisão de produto foi aprovada pelo usuário em 12/11/2026: remover NLLB e adotar TranslateGemma 4B Q4_K_M como único motor local. Gemini permanece como opção remota independente. A decisão técnica, o runtime candidato, o contrato de idioma, os riscos de licença e os gates estão em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
+
+### Escopo fechado
+
+1. Provar o template TranslateGemma no runtime llama.cpp, com source_lang_code e target_lang_code enviados por requisição; usar scripts/phase8_1_translategemma_smoke.py contra um servidor local real.
+2. Implementar adaptador local com o contrato existente, processamento contextual limitado pelo contexto oficial de 2K tokens, validação de cardinalidade/IDs e recuperação segura.
+3. Gerenciar servidor e modelo localmente, com loopback, cache, download verificável, cancelamento e encerramento confiável.
+4. Migrar bootstrap, Preferências, dependências e documentação para TranslateGemma como única rota local.
+5. Remover NLLB integralmente após os testes substitutos passarem.
+6. Validar no hardware de referência e no corpus-ouro; não aprovar qualidade apenas por CI.
+
+### Critérios de saída
+
+- Template e códigos de idioma comprovados em smoke real.
+- Nenhuma chamada externa com texto de legenda na rota local.
+- Sem publicação parcial; IDs, ordem e cardinalidade 1:1 preservados.
+- Testes de falha/cancelamento/processo/porta/download e CI completa aprovados.
+- NLLB ausente do runtime, código, testes ativos e documentação operacional.
+- Uma homologação E2E real e avaliação do corpus-ouro registradas, com tempo/RAM e limitações explícitas.
+
+A etapa não autoriza remover a referência histórica dos resultados NLLB nem os artefatos congelados da auditoria.
+
+
+### Etapa 8.1.7 — Unificar o gate de qualidade, publicação e validação de desempenho
 
 **Objetivo:** fazer o runtime e a ferramenta da Fase 8 aplicarem os mesmos critérios estruturais.
 
@@ -559,26 +586,9 @@ Tarefas:
 
 **Gate:** zero violações estruturais na saída publicada e equivalência entre o gate do aplicativo e o avaliador da Fase 8.
 
-### Etapa 8.1.7 — Otimizar os gargalos remanescentes isoladamente
+**Validação de desempenho desta etapa:** após o adaptador TranslateGemma estar integrado, medir uma execução completa no hardware de referência, separando cold start/download de execução quente, tempo de ASR, alinhamento e tradução local. Registrar versão do runtime, quantização, threads efetivas, RSS/memória máxima, tokens/unidades por segundo e duração total. Comparar com a evidência histórica NLLB, sem exigir uma matriz exploratória de configurações. Se o usuário selecionar Gemini, registrar esse percurso separadamente. Nenhum ganho de velocidade compensa regressão semântica ou perda de integridade.
 
-**Objetivo:** recuperar e, se possível, melhorar o tempo total sem sacrificar qualidade.
-
-Somente começar depois das Etapas 8.1.1–8.1.6 estarem estáveis.
-
-Experimentos separados:
-
-1. **CPU/threads:** validar no hardware de referência o perfil operacional consolidado e a adaptação à topologia/afinidade; não repetir a matriz exploratória de threads já descartada.
-2. **NLLB beam:** comparar 4, 2 e 1 sem alterar simultaneamente batch ou modelo.
-3. **NLLB batching:** testar tamanhos de lote e limite de tokens isoladamente.
-4. **Length bucketing:** agrupar textos de tamanho semelhante para reduzir padding. O job novo teve 6.018 tokens de entrada e 13.527 posições padded, cerca de 2,25 vezes o volume útil; medir se isso reduz tempo real.
-5. **Alternativa CTranslate2 para NLLB:** medir tempo, memória, qualidade e compatibilidade de licença/modelo.
-6. **Faster-whisper/CTranslate2:** avaliar como candidato de ASR sem promovê-lo automaticamente; medir WER/CER e alinhamento no mesmo corpus.
-7. **WhisperX:** experimentar agrupamento de segmentos em janelas limitadas, reduzindo chamadas unitárias, sem perder a associação de cada palavra ao texto e ao tempo.
-8. **Outros parâmetros:** testar um por vez, com baseline congelada e reversão simples.
-
-Para cada experimento registrar: hipótese, única variável alterada, comando/configuração, versão, hardware, cold/warm, três execuções quentes quando viável, mediana, dispersão, RSS, CPU por núcleo, tempo por etapa, throughput, métricas de texto e decisão.
-
-**Gate:** um experimento só pode ser promovido se melhora materialmente o estágio-alvo e passa integralmente os gates de qualidade; ganho isolado de tokens/s não é suficiente.
+**Gate:** critérios estruturais equivalentes no runtime e no avaliador, zero violações na saída publicada e métricas reais de desempenho/recursos disponíveis para a configuração homologada. A qualidade semântica continua condicionada ao corpus-ouro e à revisão humana.
 
 ### Etapa 8.1.8 — Regressão final, documentação e encerramento
 
@@ -652,7 +662,7 @@ Meta desta correção: recuperar o patamar histórico, antes de buscar uma nova 
 
 - mediana de três execuções quentes **≤ 26min30s**;
 - nenhuma execução quente individual acima de 30 minutos sem causa externa identificada e registrada;
-- tempos de Whisper, WhisperX e NLLB apresentados separadamente;
+- tempos de ASR, alinhamento e motor de tradução local (TranslateGemma) apresentados separadamente; NLLB permanece apenas como baseline histórica;
 - carregamento de modelos separado de inferência;
 - RSS, memória disponível, threads efetivas e uso por núcleo registrados;
 - se a meta não for atingida, a fase não deve ser declarada aprovada por causa de um único teste rápido.
@@ -778,31 +788,3 @@ A Fase 8.1 só poderá ser marcada como concluída quando:
 
 **Resultado esperado:** uma homologação repetível, com falhas recuperáveis, tradução em PT-BR natural, cues construídas por unidades de sentido, layout consistente e desempenho novamente próximo da baseline histórica — sem sacrificar rastreabilidade textual ou temporal.
 
-
----
-
-## 11. Etapa 8.1.6 — substituição do motor local por TranslateGemma
-
-**STATUS: EM IMPLEMENTAÇÃO**
-
-A decisão de produto foi aprovada pelo usuário em 12/11/2026: remover NLLB e adotar TranslateGemma 4B Q4_K_M como único motor local. Gemini permanece como opção remota independente. A decisão técnica, o runtime candidato, o contrato de idioma, os riscos de licença e os gates estão em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
-
-### Escopo fechado
-
-1. Provar o template TranslateGemma no runtime llama.cpp, com source_lang_code e target_lang_code enviados por requisição; usar scripts/phase8_1_translategemma_smoke.py contra um servidor local real.
-2. Implementar adaptador local com o contrato existente, processamento contextual limitado pelo contexto oficial de 2K tokens, validação de cardinalidade/IDs e recuperação segura.
-3. Gerenciar servidor e modelo localmente, com loopback, cache, download verificável, cancelamento e encerramento confiável.
-4. Migrar bootstrap, Preferências, dependências e documentação para TranslateGemma como única rota local.
-5. Remover NLLB integralmente após os testes substitutos passarem.
-6. Validar no hardware de referência e no corpus-ouro; não aprovar qualidade apenas por CI.
-
-### Critérios de saída
-
-- Template e códigos de idioma comprovados em smoke real.
-- Nenhuma chamada externa com texto de legenda na rota local.
-- Sem publicação parcial; IDs, ordem e cardinalidade 1:1 preservados.
-- Testes de falha/cancelamento/processo/porta/download e CI completa aprovados.
-- NLLB ausente do runtime, código, testes ativos e documentação operacional.
-- Uma homologação E2E real e avaliação do corpus-ouro registradas, com tempo/RAM e limitações explícitas.
-
-A etapa não autoriza remover a referência histórica dos resultados NLLB nem os artefatos congelados da auditoria.
