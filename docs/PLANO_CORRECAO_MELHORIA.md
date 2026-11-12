@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1–7 integradas à `main`; Fase 8 em homologação real; auditoria dos testes de 12/11/2026 concluída. A Fase 8.1 está em execução corretiva: 8.1.0, 8.1.1 e 8.1.2 já foram implementadas, validadas pela CI completa e integradas à `main`. O próximo gate obrigatório é a matriz real de threads 2/1, 3/1, 4/1, 4/2 e 4/4 no hardware de referência. Permanecem pendentes os gates humanos/intermediários e as etapas 8.1.3+. O benchmark comparativo amplo NLLB × Gemini continua fora do escopo sem nova decisão de produto.
+- **Status:** Fases 1–7 integradas à `main`; Fase 8 em homologação real; auditoria dos testes de 12/11/2026 concluída. A Fase 8.1 está em execução corretiva: 8.1.0, 8.1.1, 8.1.2 e a primeira implementação da 8.1.3 já foram implementadas, validadas pela CI completa e integradas à `main`. O próximo gate obrigatório é a matriz real de threads 2/1, 3/1, 4/1, 4/2 e 4/4 no hardware de referência. Permanecem pendentes os gates humanos/intermediários e as etapas 8.1.3+. O benchmark comparativo amplo NLLB × Gemini continua fora do escopo sem nova decisão de produto.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
