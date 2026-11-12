@@ -24,6 +24,7 @@ LIVING_DOCUMENTS = (
     "docs/INSTALACAO.md",
     "docs/HOMOLOGACAO.md",
     "docs/DECISOES.md",
+    "docs/DECISAO_TRANSLATEGEMMA.md",
     "docs/MATRIZ_DEPENDENCIAS.md",
 )
 
@@ -70,6 +71,7 @@ DOCS_ROOT_LIVING_FILES = {
     "INSTALACAO.md",
     "HOMOLOGACAO.md",
     "DECISOES.md",
+    "DECISAO_TRANSLATEGEMMA.md",
     "MATRIZ_DEPENDENCIAS.md",
 }
 
