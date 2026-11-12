@@ -221,6 +221,31 @@ def test_backend_errors_are_wrapped_without_hiding_cancellation(tmp_path: Path) 
         )
 
 
+def test_release_resources_discards_resident_model_and_keeps_disk_cache(
+    tmp_path: Path,
+) -> None:
+    model = FakeModel()
+    transcriber = make_transcriber(tmp_path, model)
+    audio = make_audio(tmp_path)
+    transcriber.transcribe(
+        audio,
+        language=Language.PORTUGUESE,
+        progress=ProgressRecorder(),
+    )
+    cache_root = transcriber.download_root
+    cache_root.mkdir(parents=True, exist_ok=True)
+    marker = cache_root / "cache-marker.bin"
+    marker.write_bytes(b"weights remain on disk")
+
+    assert transcriber.is_loaded is True
+    transcriber.release_resources()
+
+    assert transcriber.is_loaded is False
+    assert transcriber.loaded_device is None
+    assert transcriber.revision is None
+    assert marker.read_bytes() == b"weights remain on disk"
+
+
 def test_environment_configuration_is_validated(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("LEGENDAR_FASTER_WHISPER_CPU_THREADS", "not-an-int")
     with pytest.raises(ValueError, match="devem ser inteiros"):
