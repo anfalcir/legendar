@@ -423,7 +423,7 @@ O prompt de sistema/instruções do tradutor Gemini deverá:
 
 A avaliação humana deverá incluir nomes próprios, cidades, raças/clãs/povos, termos ambíguos, expressões idiomáticas, referências culturais, negações, números e contexto entre cues. Uma tradução literal correta isoladamente, mas incoerente com o universo ou com o discurso, deverá ser considerada regressão.
 
-A capacidade de pesquisa do modelo deve ser verificada por modelo e configurada explicitamente. A documentação oficial consultada em 11/11/2026 confirma Search grounding no `gemini-3.8-flash`; o recurso permanece desligado por padrão. O experimento deve registrar ferramentas habilitadas, fontes consultadas e latência/custo adicional. Grounding apoia a identificação de referências, mas não autoriza acrescentar fatos à fala.
+A capacidade de pesquisa do modelo deve ser verificada por modelo e configurada explicitamente. A documentação oficial consultada em 11/11/2026 confirma Search grounding no `gemini-3.8-flash`; o recurso fica habilitado por padrão no fluxo Gemini e pode ser desativado explicitamente. O experimento deve registrar ferramentas habilitadas, fontes consultadas e latência/custo adicional. Grounding apoia a identificação de referências, mas não autoriza acrescentar fatos à fala.
 
 Baseline atual:
 - `facebook/nllb-200-distilled-600M`;
