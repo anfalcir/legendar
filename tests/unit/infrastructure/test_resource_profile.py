@@ -145,6 +145,25 @@ def test_cpu_topology_respects_cgroup_v2_cpu_quota(tmp_path: Path) -> None:
     assert "cgroup-quota" in topology.source
 
 
+def test_cpu_topology_respects_cgroup_cpuset(tmp_path: Path) -> None:
+    sysfs = tmp_path / "sys"
+    cgroup = tmp_path / "cgroup"
+    _write_fake_cpu_topology(sysfs, logical=8, physical=4)
+    cgroup.mkdir()
+    (cgroup / "cpuset.cpus.effective").write_text("0-3", encoding="ascii")
+
+    topology = resource_profile._cpu_topology(
+        sysfs_root=sysfs,
+        cgroup_root=cgroup,
+        affinity=set(range(8)),
+        logical_count=8,
+    )
+
+    assert topology.logical_count == 4
+    assert topology.physical_count == 4
+    assert "cgroup-cpuset" in topology.source
+
+
 def test_low_memory_policy_uses_four_physical_cores_on_four_logical_cpu_host(
     monkeypatch,
 ) -> None:
