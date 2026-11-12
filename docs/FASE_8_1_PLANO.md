@@ -354,7 +354,8 @@ Tarefas:
 4. criar referência PT-BR revisada por humano para uma amostra do áudio, armazenada localmente fora do Git quando houver mídia/texto protegido — **pendente**; existe somente o [template vazio](../tests/fixtures/phase_8_1/human_reference.template.json);
 5. separar explicitamente erros de ASR da origem e erros introduzidos pela tradução — **regra documentada** nas fixtures e no template; aplicação à amostra real depende da revisão humana;
 6. usar a mesma transcrição/alinhamento congelados para testar isoladamente segmentação e tradução — **pendente**; os relatórios sanitizados não contêm esses intermediários e os três SRTs não substituem o snapshot pré-tradução;
-7. registrar hash do áudio autorizado, versões/modelos, parâmetros, hardware e intermediários de entrada ao capturar a referência reprodutível — **pendente** até a amostra real.
+7. registrar hash do áudio autorizado, versões/modelos, parâmetros, hardware e intermediários de entrada ao capturar a referência reprodutível — **pendente** até a amostra real;
+8. corrigir o caminho obsoleto do gate de corpus em `.github/workflows/phase6-quality.yml`, que ainda apontava para `logs/`, para consumir `temporario/EN-baseline.srt` e disparar quando essa fonte congelada mudar — **corrigido nesta branch; CI pendente**.
 
 **Saída obrigatória:** manifesto de corpus, hashes, amostras sintéticas versionáveis, referência humana local e relatório com a separação entre evidências e hipóteses. O manifesto e as fixtures já estão versionados; os itens humanos/intermediários continuam explicitamente pendentes.
 
@@ -652,6 +653,7 @@ O limite de 26min30s é um teto de recuperação inicial, não promessa de veloc
 | Gemini | `src/legendar/infrastructure/translation/gemini.py` | parser, retries, batching por itens/tokens, orçamento de saída, recuperação por item/lote e métricas sanitizadas |
 | Corpus congelado | `temporario/manifesto-fase-8.1.0.json` | SHA-256, tamanho e identidade dos dez artefatos históricos |
 | Fixtures | `tests/fixtures/phase_8_1/` | falhas Gemini, cenários de composição/layout, entidades e semântica; template de referência humana |
+| CI do corpus | `.github/workflows/phase6-quality.yml` | usar o SRT inglês congelado em `temporario/` para gerar e validar manifesto local sem conteúdo humano |
 | NLLB | `src/legendar/infrastructure/translation/nllb.py` | idioma, limite de tokens, geração e batching |
 | Política de recursos | `src/legendar/infrastructure/resources/profile.py` | topologia, afinidade e threads |
 | Pipeline | `src/legendar/application/pipeline/serial_pipeline.py` | liberação segura, erro, cancelamento e gate |
