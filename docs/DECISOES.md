@@ -26,7 +26,7 @@
 | 18 | Snapshot legado | `requirements.txt` removido | exportação por `uv export` documentada em [INSTALACAO.md](INSTALACAO.md) |
 | 19 | Temporários | Workspace exclusivo por job; cache de modelos não é apagado para cancelar | limpeza segura em conclusão, falha e cancelamento |
 | 20 | Logs | Log rotativo com home redigido; UI recebe mensagens amigáveis | não registrar caminho pessoal ou segredo |
-| 21 | Privacidade | Sem telemetria ou envio de áudio/texto a serviço externo no fluxo atual | mídia e conteúdo permanecem locais |
+| 21 | Privacidade | Fluxo padrão NLLB permanece local; Gemini é integração externa opt-in e transmite o texto das cues à API | chave fora do repositório/logs; escolha explícita do backend |
 | 22 | Testes | Suíte determinística sem rede/modelos; integração/E2E real depende de ferramentas | CI instala FFmpeg |
 | 23 | Baseline legada | `main.py`, `core/` e `gui/` preservados e caracterizados | histórico em [baseline arquivada](archive/previous-remodeling/LEGACY_BASELINE.md) |
 | 24 | Integração anterior | Fases 6–9 foram integradas por squash local quando PR não estava disponível | histórico detalhado preservado no arquivo |
@@ -38,6 +38,7 @@
 | 30 | Cache privado | Diretórios privados `0o700` | NLTK pode preparar `punkt_tab` em cache privado |
 | 31 | Telemetria de desempenho | Instrumentação local via porta `PerformanceReporter`; relatório JSON privado, sem mídia ou texto e sem envio externo | Não afeta o resultado do job; métricas servem à baseline comparável da Fase 1 |
 | 32 | ASR alternativo | `FasterWhisperTranscriber` via faster-whisper/CTranslate2 disponível por seleção explícita; OpenAI Whisper permanece padrão | Sem fallback silencioso; promoção do candidato depende de benchmark no hardware/corpus de referência e gate lexical/temporal |
+| 33 | Tradução Gemini | `GeminiTranslator` via REST/urllib, opt-in; NLLB permanece padrão e alternativa local; grounding contextual habilitado por padrão no Gemini | sem fallback silencioso; chave e texto externo exigem escolha/configuração explícitas |
 
 ## Decisões da Fase 10 (D1–D6)
 
@@ -61,6 +62,7 @@ As linhas abaixo são opções para benchmark, não novas dependências ou decis
 | ASR | Otimizar faster-whisper/CTranslate2 e comparar configurações | Backend alternativo já implementado; promover a padrão somente após WER/CER, alinhamento e ganho medidos no hardware de referência |
 | ASR CPU | INT8 e ajuste de threads | suporte real no hardware e ausência de regressão |
 | Tradução | NLLB convertido para CTranslate2 | revisão humana equivalente, tokens/segundo maior e licença validada |
+| Tradução | Gemini Developer API (`gemini-3.8-flash`) | throughput maior e revisão humana não inferior, com integridade 1:1 e privacidade aprovada |
 | Tradução CPU | INT8, beam 2/1 e token-bucketing | comparação com beam 4 e NLLB Transformers, sem erro crítico |
 | Memória | Evicção de modelos entre estágios | redução de pressão de RAM sem aumentar tempo total |
 | Segmentação | Agrupamento global entre segmentos Whisper | melhora de leitura sem perda textual ou deslocamento temporal |
@@ -77,4 +79,4 @@ As linhas abaixo são opções para benchmark, não novas dependências ou decis
 | Backends oficialmente suportados | CI cobre Ubuntu; homologação multiplataforma pendente | após benchmark/homologação |
 | Empacotamento distribuível | PyInstaller declarado, fluxo não homologado | frente futura |
 | Adoção operacional de ASR alternativo | Implementado e integrado; não é padrão | Benchmark local pareado, revisão humana e homologação da Fase 8 |
-| Backend de tradução otimizado | NLLB Transformers segue baseline | Fase 6 |
+| Backend de tradução otimizado | NLLB Transformers segue padrão; Gemini em avaliação técnica | Fase 6 e benchmark/homologação real |
