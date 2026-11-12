@@ -99,7 +99,7 @@ O adaptador `GeminiTranslator` usa HTTPS via biblioteca padrão `urllib`; não a
 
 - Modelo padrão `gemini-3.8-flash`, estável/GA segundo a documentação oficial consultada em 11/11/2026.
 - Gemini 3 usa `thinkingLevel=LOW` no payload para reduzir latência; `temperature` não é enviado.
-- Google Search grounding é suportado e habilitado por padrão no `gemini-3.8-flash`; `LEGENDAR_GEMINI_GROUNDING=false` desativa a pesquisa.
+- Google Search grounding é habilitado por padrão nos modelos Gemini 3 Flash estáveis suportados (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`); `LEGENDAR_GEMINI_GROUNDING=false` desativa a pesquisa.
 - Chave nunca entra no repositório, URL, logs ou artefatos; não há fallback automático entre motores.
 
 Referências: [Generate Content](https://ai.google.dev/api/generate-content), [modelos Gemini](https://ai.google.dev/gemini-api/docs/models), [Gemini 3 thinking](https://ai.google.dev/gemini-api/docs/generate-content/thinking).
