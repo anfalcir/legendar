@@ -1,6 +1,7 @@
 # Fase 6 — Benchmark e aceleração da tradução
 
 **Status:** implementação técnica integrada à `main` pela PR [#19](https://github.com/anfalcir/legendar/pull/19), squash `7f337bc10cf210336fbf2367b56aea7e767bce32`. CI específica aprovada no run [43134372712](https://github.com/anfalcir/legendar/actions/runs/43134372712), incluindo NLLB com runtime real em CPU e testes determinísticos em Python 3.10–3.13, lint e formatação. O smoke real da API foi skipped porque `GEMINI_API_KEY` não estava disponível na execução. Benchmark pareado real e revisão humana cega permanecem pendentes; Gemini continua opt-in e NLLB permanece padrão.
+
 **Objetivo:** reduzir o tempo de tradução hoje dominado pelo NLLB (aproximadamente 14 minutos na mídia de referência de 37min10s), sem degradar sentido, terminologia, consistência ou integridade das cues.
 
 ## 1. Decisão arquitetural
