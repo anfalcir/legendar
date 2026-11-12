@@ -159,6 +159,187 @@ class LlamaCppRuntimeManager:
             details=tuple(details),
         )
 
+    def download_model(
+        self,
+        *,
+        consent: bool,
+        token: CancellationToken | None = None,
+        progress: ProgressSink | None = None,
+    ) -> Path:
+        """Baixa o GGUF fixado após consentimento, com retomada e validação SHA-256.
+
+        Um arquivo parcial nunca é considerado instalado. Interrupções preservam
+        o .part para retomada; somente o hash esperado permite publicação atômica.
+        """
+        if not consent:
+            raise ModelError(
+                "O download do TranslateGemma exige autorização explícita."
+            )
+        with self._lock:
+            self._raise_if_cancelled(token)
+            self.model_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if os.name != "nt":
+                os.chmod(self.model_path.parent, 0o700)
+            if self.model_path.is_file():
+                if self._sha256_file(self.model_path, token) == MODEL_SHA256:
+                    if progress is not None:
+                        progress.report(1.0, "Modelo TranslateGemma já está íntegro")
+                    return self.model_path
+                raise ModelError(
+                    "Já existe um arquivo TranslateGemma com hash inválido. "
+                    "Ele não será sobrescrito automaticamente."
+                )
+
+            partial_path = self.model_path.with_suffix(
+                self.model_path.suffix + ".part"
+            )
+            offset = partial_path.stat().st_size if partial_path.is_file() else 0
+            headers = {"Range": f"bytes={offset}-"} if offset else {}
+            request = Request(MODEL_DOWNLOAD_URL, headers=headers, method="GET")
+            try:
+                with self._opener(request, timeout=60.0) as response:
+                    status = self._response_status(response)
+                    if offset and status == 200:
+                        # O servidor ignorou Range: recomeçar, nunca anexar conteúdo duplicado.
+                        offset = 0
+                    elif offset and status != 206:
+                        raise ModelError(
+                            "O servidor não aceitou a retomada do download "
+                            "TranslateGemma (resposta HTTP inesperada)."
+                        )
+                    elif not offset and status != 200:
+                        raise ModelError(
+                            "O servidor respondeu de forma inesperada ao download "
+                            "TranslateGemma."
+                        )
+
+                    content_range = self._response_header(response, "Content-Range")
+                    if offset and (
+                        not content_range
+                        or not content_range.startswith(f"bytes {offset}-")
+                    ):
+                        raise ModelError(
+                            "A resposta de retomada não corresponde ao trecho "
+                            "solicitado; o arquivo parcial foi preservado."
+                        )
+                    content_length = self._response_header(
+                        response, "Content-Length"
+                    )
+                    try:
+                        remaining = int(content_length or "")
+                    except ValueError:
+                        raise ModelError(
+                            "O servidor não informou o tamanho do arquivo; "
+                            "o download foi interrompido por segurança."
+                        ) from None
+                    if remaining <= 0:
+                        raise ModelError("O servidor informou um tamanho inválido.")
+                    total = offset + remaining
+                    if shutil.disk_usage(self.model_path.parent).free < remaining:
+                        raise ModelError(
+                            "Espaço livre insuficiente para baixar o modelo "
+                            "TranslateGemma."
+                        )
+
+                    digest = self._sha256_prefix(partial_path, offset, token)
+                    mode = "ab" if offset else "wb"
+                    downloaded = offset
+                    if progress is not None:
+                        progress.report(0.0, "Baixando TranslateGemma (aprox. 2,49 GB)")
+                    with partial_path.open(mode) as output:
+                        while True:
+                            self._raise_if_cancelled(token)
+                            chunk = response.read(8 * 1024 * 1024)
+                            if not chunk:
+                                break
+                            output.write(chunk)
+                            digest.update(chunk)
+                            downloaded += len(chunk)
+                            if progress is not None:
+                                progress.report(
+                                    min(0.99, downloaded / total),
+                                    "Baixando TranslateGemma",
+                                )
+                        output.flush()
+                        os.fsync(output.fileno())
+            except ModelError:
+                raise
+            except (OSError, TimeoutError, URLError) as exc:
+                raise ModelError(
+                    "Falha de rede durante o download do TranslateGemma "
+                    f"({type(exc).__name__}); o arquivo parcial foi preservado."
+                ) from None
+
+            if downloaded != total:
+                raise ModelError(
+                    "O download TranslateGemma terminou incompleto; "
+                    "o arquivo parcial poderá ser retomado."
+                )
+            if digest.hexdigest() != MODEL_SHA256:
+                partial_path.unlink(missing_ok=True)
+                raise ModelError(
+                    "O SHA-256 do TranslateGemma não corresponde ao artefato "
+                    "fixado; o arquivo inválido foi descartado."
+                )
+            os.replace(partial_path, self.model_path)
+            if os.name != "nt":
+                os.chmod(self.model_path, 0o600)
+            if progress is not None:
+                progress.report(1.0, "Modelo TranslateGemma baixado e validado")
+            return self.model_path
+
+    @staticmethod
+    def _response_status(response: Any) -> int:
+        status = getattr(response, "status", None)
+        if status is None:
+            status = response.getcode()
+        return int(status)
+
+    @staticmethod
+    def _response_header(response: Any, name: str) -> str | None:
+        headers = getattr(response, "headers", None)
+        if headers is None:
+            return None
+        value = headers.get(name)
+        return str(value) if value is not None else None
+
+    @staticmethod
+    def _sha256_prefix(
+        path: Path, size: int, token: CancellationToken | None
+    ) -> Any:
+        import hashlib
+
+        digest = hashlib.sha256()
+        if size:
+            with path.open("rb") as source:
+                remaining = size
+                while remaining:
+                    LlamaCppRuntimeManager._raise_if_cancelled(token)
+                    chunk = source.read(min(8 * 1024 * 1024, remaining))
+                    if not chunk:
+                        raise ModelError(
+                            "O arquivo parcial do TranslateGemma está truncado."
+                        )
+                    digest.update(chunk)
+                    remaining -= len(chunk)
+        return digest
+
+    @staticmethod
+    def _sha256_file(
+        path: Path, token: CancellationToken | None
+    ) -> str:
+        import hashlib
+
+        digest = hashlib.sha256()
+        with path.open("rb") as source:
+            while True:
+                LlamaCppRuntimeManager._raise_if_cancelled(token)
+                chunk = source.read(8 * 1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+        return digest.hexdigest()
+
     @property
     def base_url(self) -> str | None:
         """URL privada da instância pertencente a este gerenciador."""
