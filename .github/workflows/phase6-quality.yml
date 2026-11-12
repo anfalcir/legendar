@@ -151,6 +151,8 @@ jobs:
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       PYTHONPATH: src
+      # Isola a autenticação/geração do modelo; grounding será homologado separadamente.
+      LEGENDAR_GEMINI_GROUNDING: "false"
     steps:
       - name: Skip when no API secret is configured
         if: ${{ env.GEMINI_API_KEY == '' }}
