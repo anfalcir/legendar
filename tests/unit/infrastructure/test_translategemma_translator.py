@@ -23,8 +23,11 @@ class FakeRuntime:
         self.url = url
         self.calls = []
 
+    def ensure_model(self, *, token=None, progress=None) -> None:
+        self.calls.append(("model", token, progress))
+
     def ensure_running(self, *, token=None, progress=None) -> str:
-        self.calls.append((token, progress))
+        self.calls.append(("server", token, progress))
         return self.url
 
 
@@ -60,7 +63,7 @@ def test_translate_uses_official_template_language_metadata_and_preserves_ids() 
     assert result.language is Language.PORTUGUESE
     assert result.unit_indexes == (4, 5)
     assert result.texts == ("Eu voltarei.", "Estamos seguros.")
-    assert runtime.calls == [(None, progress)]
+    assert runtime.calls == [("model", None, progress), ("server", None, progress)]
     assert len(requests) == 2
     assert requests[0][0] == runtime.url
     assert requests[0][1]["messages"] == [
