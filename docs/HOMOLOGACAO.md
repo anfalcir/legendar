@@ -135,6 +135,14 @@ O relatório JSON não guarda o conteúdo das respostas Gemini, portanto a natur
 
 **Regra para as próximas rodadas:** separar benchmark de pipeline completo de experimento de componente. Para isolar segmentação ou tradução, congelar a mesma transcrição/alinhamento de origem e reutilizá-los; comparar execuções completas não isola essas variáveis, pois Whisper pode produzir diferentes quantidades de palavras, segmentos e timestamps. Para desempenho completo, manter a mídia, hardware, perfil, cache, versão e parâmetros constantes; separar cold start de warm run e executar pelo menos três rodadas quentes.
 
+## 9.3. Congelamento do corpus da Fase 8.1
+
+O manifesto [temporario/manifesto-fase-8.1.0.json](../temporario/manifesto-fase-8.1.0.json) registra SHA-256, tamanho e Git blob SHA-1 dos três SRTs e sete relatórios JSON da rodada de 12/11/2026. Não altere esses arquivos; qualquer evidência nova deve receber novo nome e novo registro de hash.
+
+As fixtures sintéticas versionadas estão em [tests/fixtures/phase_8_1/README.md](../tests/fixtures/phase_8_1/README.md). Elas cobrem falha Gemini com item vazio, candidato ausente, truncamento, composição, fronteiras de sentença, interjeição, layout, entidades protegidas, agradecimento e negação. Não são corpus-ouro de áudio real.
+
+A amostra humana PT-BR deve ser revisada a partir do áudio autorizado e armazenada localmente em `corpus/phase_8_1/human_reference.json` (a pasta `corpus/` é ignorada pelo Git). O template vazio está em `tests/fixtures/phase_8_1/human_reference.template.json`. Também é necessário congelar/hash dos mesmos intermediários ASR/alinhamento a serem reutilizados nos testes isolados de segmentação e tradução. Enquanto isso não for feito, comparações de qualidade permanecem bloqueadas.
+
 ## 10. Registro de resultado
 
 | Campo | Valor |
