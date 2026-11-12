@@ -69,9 +69,7 @@ def test_preferences_reject_unknown_theme(tmp_path: Path) -> None:
 def test_translation_backend_round_trip(qtbot, tmp_path) -> None:
     from PySide6.QtCore import QSettings
 
-    settings = QSettings(
-        str(tmp_path / "preferences.ini"), QSettings.Format.IniFormat
-    )
+    settings = QSettings(str(tmp_path / "preferences.ini"), QSettings.Format.IniFormat)
     preferences = UiPreferences(translation_backend="gemini")
     save_preferences(settings, preferences)
     loaded = load_preferences(settings, tmp_path)
