@@ -20,7 +20,7 @@ O padrão permanece **NLLB** até que o benchmark pareado e a revisão humana ap
 | `LEGENDAR_GEMINI_BATCH_SIZE` | `32` | Cues atuais por requisição (1–100) |
 | `LEGENDAR_GEMINI_TIMEOUT` | `120` | Timeout por requisição, em segundos |
 | `LEGENDAR_GEMINI_MAX_RETRIES` | `3` | Tentativas adicionais para HTTP 429/5xx (0–8) |
-| `LEGENDAR_GEMINI_GROUNDING` | `false` | Habilita Google Search grounding opcional |
+| `LEGENDAR_GEMINI_GROUNDING` | `true` | Habilita pesquisa contextual; use `false` para desativar |
 
 Não há fallback silencioso. Se Gemini falhar, o job falha com diagnóstico sanitizado; selecione `nllb` explicitamente para voltar ao motor local. Isso impede que uma mesma homologação misture resultados de motores diferentes sem evidência.
 
@@ -60,7 +60,7 @@ O adaptador usa HTTPS e envia a chave no header `x-goog-api-key`, nunca na URL. 
 - Métricas sanitizadas: número de requisições, retries, lotes, cues, duração de chamadas, tokens de entrada/saída e consultas de grounding.
 - O snapshot de performance não contém texto ou segredo.
 
-Grounding com Google Search é **opt-in**. A documentação oficial atual lista suporte no `gemini-3.8-flash` e no `gemini-3.5-flash-lite`; o adaptador permite explicitamente esses modelos e rejeita combinações não suportadas. O padrão permanece desligado. O grounding só pode apoiar identificação de referências e terminologia, nunca acrescentar fatos à fala. Compare latência e custo separadamente antes de habilitá-lo. Use apenas quando uma referência cultural, nome ou termo do universo exigir pesquisa. Grounding ajuda a identificar referências, mas não autoriza acrescentar fatos à fala. Ele pode aumentar latência e consumo; compare separadamente a configuração ligada/desligada.
+Grounding com Google Search é **habilitado por padrão** no fluxo Gemini para atender ao requisito de investigar entidades e terminologia contextual. A documentação oficial atual lista suporte no `gemini-3.8-flash` e no `gemini-3.5-flash-lite`; o adaptador permite explicitamente esses modelos e rejeita combinações não suportadas. Configure `LEGENDAR_GEMINI_GROUNDING=false` para desativar. O modelo deve pesquisar apenas quando houver nomes, termos ou referências ambíguas, confrontar fontes com as cues e jamais acrescentar fatos à fala. O benchmark registra consultas e latência para quantificar o impacto. Use apenas quando uma referência cultural, nome ou termo do universo exigir pesquisa. Grounding ajuda a identificar referências, mas não autoriza acrescentar fatos à fala. Ele pode aumentar latência e consumo; compare separadamente a configuração ligada/desligada.
 
 ## 5. Instalação e configuração
 
