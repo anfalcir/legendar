@@ -333,9 +333,7 @@ def build_ui_dependencies(
     )
     translator, translation_available, translation_details = _configure_translation(
         configured_backend,
-        gemini_api_key
-        or local_gemini_key
-        or os.environ.get("GEMINI_API_KEY"),
+        gemini_api_key or local_gemini_key or os.environ.get("GEMINI_API_KEY"),
     )
     translator_holder: dict[str, Translator] = {"translator": translator}
 
