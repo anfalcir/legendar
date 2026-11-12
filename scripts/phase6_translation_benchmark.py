@@ -141,6 +141,33 @@ def run_benchmark(
                 "performance": snapshot,
             }
         )
+    by_backend = {item["backend"]: item for item in results}
+    comparison: dict[str, Any] = {}
+    if "nllb" in by_backend and "gemini" in by_backend:
+        baseline = by_backend["nllb"]
+        candidate = by_backend["gemini"]
+        baseline_seconds = baseline["warm_median_seconds"] or baseline["median_seconds"]
+        candidate_seconds = candidate["warm_median_seconds"] or candidate["median_seconds"]
+        comparison = {
+            "gemini_speedup_vs_nllb": (
+                baseline_seconds / candidate_seconds if candidate_seconds > 0 else None
+            ),
+            "gemini_time_reduction_percent": (
+                (1 - candidate_seconds / baseline_seconds) * 100
+                if baseline_seconds > 0
+                else None
+            ),
+            "wer_delta_vs_nllb": (
+                candidate["wer"] - baseline["wer"]
+                if candidate["wer"] is not None and baseline["wer"] is not None
+                else None
+            ),
+            "cer_delta_vs_nllb": (
+                candidate["cer"] - baseline["cer"]
+                if candidate["cer"] is not None and baseline["cer"] is not None
+                else None
+            ),
+        }
     return {
         "schema_version": 1,
         "source_language": source_language.value,
@@ -148,6 +175,7 @@ def run_benchmark(
         "units": len(units),
         "human_references_available": references is not None,
         "results": results,
+        "comparison": comparison,
         "privacy": {
             "contains_source_text": False,
             "contains_translations": False,
