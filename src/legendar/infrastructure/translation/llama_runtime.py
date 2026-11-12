@@ -39,6 +39,66 @@ _HEALTH_TIMEOUT = 1.5
 _POLL_INTERVAL = 0.25
 
 
+
+
+class _InterProcessLock:
+    """Lock de arquivo não bloqueante, liberado automaticamente se o processo cair."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self._file: Any | None = None
+
+    def acquire(self) -> bool:
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        handle = self.path.open("a+b")
+        if self.path.stat().st_size == 0:
+            handle.write(b"0")
+            handle.flush()
+        handle.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            handle.close()
+            return False
+        self._file = handle
+        return True
+
+    def release(self) -> None:
+        handle, self._file = self._file, None
+        if handle is None:
+            return
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            handle.close()
+
+    def __enter__(self) -> _InterProcessLock:
+        if not self.acquire():
+            raise ModelError(
+                "Outra instância do Legendar já está preparando o modelo "
+                "TranslateGemma."
+            )
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        self.release()
+
+
 @dataclass(frozen=True, slots=True)
 class RuntimeInspection:
     """Diagnóstico rápido sem iniciar processos ou acessar a rede."""
@@ -101,6 +161,10 @@ class LlamaCppRuntimeManager:
         self._sleep = sleep
         self._monotonic = monotonic
         self._lock = threading.RLock()
+        self._download_lock = _InterProcessLock(
+            self.model_path.parent / ".translategemma-download.lock"
+        )
+        self._runtime_lock: _InterProcessLock | None = None
         self._process: Any | None = None
         self._port: int | None = None
 
@@ -385,6 +449,15 @@ class LlamaCppRuntimeManager:
                     return f"http://{self.host}:{self._port}"
                 self._stop_process_locked()
 
+            runtime_lock = _InterProcessLock(
+                self.models_dir / ".translategemma-runtime.lock"
+            )
+            if not runtime_lock.acquire():
+                raise ModelError(
+                    "Outra instância do Legendar já gerencia o servidor "
+                    "TranslateGemma. Feche a outra instância ou aguarde."
+                )
+            self._runtime_lock = runtime_lock
             port = self._available_port()
             executable_name = inspection.executable.name.casefold()
             is_standalone_server = executable_name in {
@@ -424,6 +497,7 @@ class LlamaCppRuntimeManager:
                     close_fds=True,
                 )
             except OSError as exc:
+                self._release_runtime_lock_locked()
                 raise ModelError(
                     f"Não foi possível iniciar llama.cpp ({type(exc).__name__})."
                 ) from None
@@ -447,13 +521,17 @@ class LlamaCppRuntimeManager:
             self._process = None
             self._port = None
             if process is None or process.poll() is not None:
+                self._release_runtime_lock_locked()
                 return
-            process.terminate()
             try:
-                process.wait(timeout=grace_seconds)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
+                process.terminate()
+                try:
+                    process.wait(timeout=grace_seconds)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+            finally:
+                self._release_runtime_lock_locked()
 
     def _wait_until_ready(
         self,
@@ -506,10 +584,19 @@ class LlamaCppRuntimeManager:
         self._process = None
         self._port = None
         if process is None or process.poll() is not None:
+            self._release_runtime_lock_locked()
             return
-        process.terminate()
         try:
-            process.wait(timeout=2.0)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
+            process.terminate()
+            try:
+                process.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+        finally:
+            self._release_runtime_lock_locked()
+
+    def _release_runtime_lock_locked(self) -> None:
+        lock, self._runtime_lock = self._runtime_lock, None
+        if lock is not None:
+            lock.release()
