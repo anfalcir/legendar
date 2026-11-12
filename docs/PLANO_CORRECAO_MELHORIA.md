@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1–7 concluídas na implementação e integradas à `main`; Fase 8 em homologação real. A Fase 6 mantém NLLB e Gemini como backends opcionais, seleção persistente em Preferências e chave Gemini configurável localmente. O smoke real Gemini foi aprovado. O benchmark comparativo NLLB × Gemini permanece como ferramenta futura e não é gate desta fase por decisão de produto.
+- **Status:** Fases 1–7 integradas à `main`; Fase 8 em homologação real; auditoria dos testes de 12/11/2026 concluída e Fase 8.1 documentada em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md), ainda sem execução das correções. Os testes identificaram falha de lote Gemini, deriva PT-PT/erros semânticos, fragmentação persistente, overflow físico de linhas, regressão de desempenho e falha na aplicação da política de liberação de modelos. O benchmark comparativo amplo NLLB × Gemini continua fora do escopo sem nova decisão de produto.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -14,6 +14,10 @@ Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITET
 ## 1. Resumo executivo
 
 O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min21s para 37min10s de áudio** nas execuções quentes. A tradução NLLB responde por cerca de 14 minutos e foi o principal alvo da Fase 6. A Fase 6 foi encerrada com os dois backends disponíveis e selecionáveis; medições comparativas futuras não bloqueiam a sequência do plano. A auditoria estática do código, por sua vez, identificou problemas que podem produzir um SRT fragmentado, difícil de ler e com perda silenciosa de palavras não alinhadas.
+
+A homologação real de 12/11/2026 trouxe novos achados: a execução NLLB concluiu em 45min49s, contra a mediana quente anterior de 23min21s; o estágio de transcrição levou 19min15s, o alinhamento 5min43s e a geração NLLB 20min32s. A execução nova usou PyTorch 2/1 threads, enquanto as três execuções quentes anteriores usavam 4/4. A topologia observada era 4 núcleos físicos/4 lógicos, mas a estimativa atual divide CPUs lógicas por dois. A regressão de threads é a hipótese de desempenho prioritária, ainda pendente de experimento controlado.
+
+O perfil `low-memory` registrou `retain_models=false`, mas os adaptadores terminaram carregados: o helper de liberação existe no pipeline e não é invocado. O Gemini falhou no terceiro lote após 64/927 unidades aceitas. O SRT PT novo manteve 71,0% de cues com até três palavras, apresentou três linhas acima de 42 caracteres e evidências de variante PT-PT/erros semânticos. A análise completa, com distinção entre fatos e hipóteses e plano executável, está em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md).
 
 O trabalho será conduzido em duas frentes coordenadas:
 
@@ -459,7 +463,7 @@ Configuração:
 - Criados testes unitários para parsing, riscos de leitura, sobreposição, fragmentação e timestamps inválidos.
 - O avaliador não altera o SRT e não substitui a inspeção audiovisual; seu gate é estrutural e reproduzível.
 
-**Estado:** o avaliador estrutural está integrado, mas a homologação real não está concluída. O aceite final depende da mídia de aproximadamente 37min10s no hardware-alvo, registros cold/warm, inspeção em player real e revisão de sincronização, PT-BR e fragmentação. O benchmark comparativo Gemini × NLLB permanece fora do escopo por decisão do usuário.
+**Estado:** o avaliador estrutural está integrado, mas a homologação real não está concluída. A rodada de 12/11/2026 já foi analisada: o SRT NLLB concluiu, porém com problemas de fragmentação, PT-BR e largura de linhas; a rota Gemini falhou durante a tradução. O NLLB levou 45min49s, quase o dobro da mediana quente histórica. As evidências e hipóteses estão em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md). A execução corretiva e a reinspeção em player real ainda estão pendentes. O benchmark comparativo amplo Gemini × NLLB permanece fora do escopo por decisão do usuário.
 
 
 
@@ -547,3 +551,17 @@ Investigar primeiro:
 7. contexto e glossário sem perda de correspondência 1:1.
 
 O lote atual de 16 cues já é uma otimização existente. A hipótese de ganho está no backend, no decoding, na quantização e na formação de batches mais eficientes.
+
+---
+
+## 8. Fase 8.1 — auditoria real e plano corretivo
+
+**Status:** plano documentado em 12/11/2026; implementação pendente. A Fase 8.1 é um incremento corretivo da homologação da Fase 8, não uma nova remodelação arquitetural.
+
+**Evidências congeladas:** os SRTs em `temporario/` e os sete relatórios JSON em `temporario/logs/` foram analisados. A rodada mais recente de NLLB levou 45min49s para a mídia de 37min10s, com 2/1 threads; a mediana quente anterior foi 23min21s, com 4/4 threads. A rota Gemini aceitou 64 de 927 unidades e falhou no terceiro lote após 32min29s de execução total. O PT novo manteve 71,0% das cues com até três palavras, apresentou três linhas acima de 42 caracteres e erros claros de variante/semântica.
+
+**Achados de código:** a segmentação já possui regras para pontuação final, mas não recompõe microcues adjacentes; a formatação pode manter overflow na última linha para não perder conteúdo; o validador de produção não verifica necessariamente a largura física de cada linha; o parser Gemini não recupera falhas de conteúdo; o perfil de CPU subestima os quatro núcleos físicos do equipamento auditado; e a rotina de liberação de modelos está definida, mas não é chamada pelo pipeline.
+
+**Sequência obrigatória:** (1) congelar corpus e evidências; (2) corrigir robustez Gemini; (3) corrigir topologia de CPU e lifecycle; (4) corrigir composição e layout de cues; (5) estabelecer unidades de tradução contextualizadas; (6) validar PT-BR com corpus revisado; (7) unificar gates; (8) otimizar gargalos remanescentes um por vez; (9) repetir homologação e concluir CI/PR/merge.
+
+**Critério de encerramento:** todos os gates definidos no [plano detalhado da Fase 8.1](FASE_8_1_PLANO.md) devem passar. A mediana de três execuções quentes da mídia de referência deve ficar em até 26min30s, sem regressão textual, semântica ou temporal. O status atual continua pendente; nenhum dos itens acima deve ser considerado implementado apenas por estar documentado.
