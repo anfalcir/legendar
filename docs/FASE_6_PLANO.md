@@ -144,6 +144,8 @@ A decisão deve registrar:
 - A CI sem chave não comprova acesso real, latência, quotas, grounding nem qualidade de tradução.
 - A integração técnica e a CI foram concluídas pela PR #19. A homologação final ainda exige secret `GEMINI_API_KEY`, smoke real da Developer API, benchmark pareado com NLLB no corpus/mídia de referência de 37min10s no hardware-alvo e revisão humana cega. Até a aprovação desses gates, Gemini não será promovido a padrão.
 
+O registro de execução e evidências da homologação real está em [FASE_6_HOMOLOGACAO.md](FASE_6_HOMOLOGACAO.md). Ele deve ser atualizado somente com resultados observados; a configuração do secret, isoladamente, não equivale a smoke aprovado.
+
 ## 9. Referências
 
 - [Gemini Developer API — Generate content](https://ai.google.dev/gemini-api/docs/generate-content)
