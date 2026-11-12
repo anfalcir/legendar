@@ -437,7 +437,7 @@ Tarefas:
 
 ### Etapa 8.1.3 — Reestruturar composição das cues e limites de exibição
 
-**Pré-requisito:** a implementação 8.1.2 está integrada e a CI estrutural está verde. A política CPU já foi definida operacionalmente com `performance=4/4`, `balanced=4/2` e `low-memory=4/1`; não é necessário executar uma matriz de 15 rodadas apenas para escolher threads. A homologação E2E posterior servirá para confirmar o conjunto completo do pipeline. Esta etapa pode avançar em branch próprio.
+**Pré-requisito:** a implementação 8.1.2 está integrada e a CI estrutural está verde. A política CPU já foi definida operacionalmente com `performance=4/4`, `balanced=4/2` e `low-memory=4/1`. A 8.1.3 foi implementada e integrada pela PR #32 após CI completa verde.
 
 **Objetivo:** produzir legendas que acompanhem frases/orações com boa continuidade visual, sem excesso de microcues e sem ultrapassar o espaço de tela.
 
