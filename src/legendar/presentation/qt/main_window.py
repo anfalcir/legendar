@@ -1028,7 +1028,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
-            if answer is QMessageBox.StandardButton.Yes:
+            if answer == QMessageBox.StandardButton.Yes:
                 if self._deps.translation_authorize is not None:
                     self._deps.translation_authorize()
             else:
