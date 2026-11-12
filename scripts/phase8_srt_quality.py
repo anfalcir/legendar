@@ -118,7 +118,7 @@ def analyze(cues: list[Cue]) -> dict[str, object]:
     return {
         "cue_count": len(cues),
         "duration_seconds": round(sum(durations), 3),
-        "median_duration_seconds": round(statistics.median(durations), 3),
+        "median_duration_seconds": round(statistics.median(durations), 3) if durations else 0.0,
         "p95_cps": round(_percentile(cps, 95), 3),
         "max_cps": round(max(cps, default=0.0), 3),
         "short_cues": short,
