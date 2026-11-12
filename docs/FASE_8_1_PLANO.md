@@ -789,7 +789,7 @@ A decisão de produto foi aprovada pelo usuário em 12/11/2026: remover NLLB e a
 
 ### Escopo fechado
 
-1. Provar o template TranslateGemma no runtime llama.cpp, com source_lang_code e target_lang_code enviados por requisição.
+1. Provar o template TranslateGemma no runtime llama.cpp, com source_lang_code e target_lang_code enviados por requisição; usar scripts/phase8_1_translategemma_smoke.py contra um servidor local real.
 2. Implementar adaptador local com o contrato existente, processamento contextual limitado pelo contexto oficial de 2K tokens, validação de cardinalidade/IDs e recuperação segura.
 3. Gerenciar servidor e modelo localmente, com loopback, cache, download verificável, cancelamento e encerramento confiável.
 4. Migrar bootstrap, Preferências, dependências e documentação para TranslateGemma como única rota local.
