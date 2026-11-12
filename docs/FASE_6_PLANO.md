@@ -95,7 +95,7 @@ cue_id	source_text	reference_text
 
 - `reference_text` deve conter a tradução humana revisada para todas as linhas ou ficar vazio em todas.
 - Manifesto sem referências mede desempenho e integridade estrutural, mas não comprova qualidade lexical.
-- O relatório contém tempo, mediana, cues/s, WER/CER quando há referência, configuração e métricas sanitizadas. Não contém texto das cues, traduções, referências ou chave.
+- O relatório contém tempo, mediana, cues/s, WER/CER quando há referência, configuração e métricas sanitizadas. Quando ambos os backends são executados, calcula também speedup do Gemini sobre NLLB, redução percentual de tempo e deltas WER/CER. Não contém texto das cues, traduções, referências ou chave.
 - O corpus real e os manifestos devem permanecer locais; não fazer commit de conteúdo privado.
 
 Execução recomendada com três repetições no mesmo computador:
