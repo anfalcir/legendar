@@ -1,6 +1,8 @@
 # Fase 5 — Benchmark e aceleração da transcrição (ASR)
 
-**Status:** implementação técnica concluída e integrada à `main` pela PR #12 (`57f68985f1156b1d0c693f4b7d80e6aea145a8d0`). A homologação operacional no hardware-alvo permanece pendente da Fase 8.
+**Status:** implementação concluída e integrada à `main` pela PR [#12](https://github.com/anfalcir/legendar/pull/12), no commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`.
+
+**Limite de aceite operacional:** o backend OpenAI Whisper continua como padrão. A comparação automatizada e os smokes de integração estão implementados; a decisão de promover faster-whisper depende de benchmark pareado no computador de referência, com corpus representativo e revisão lexical humana. Essa homologação não é presumida por CI nem pelo merge.
 **Objetivo:** reduzir o tempo de reconhecimento sem perda lexical nem quebra do contrato temporal consumido pelo WhisperX.
 
 ## 1. Estratégia
@@ -8,7 +10,7 @@
 A porta `Transcriber` continua sendo a única interface conhecida pelo pipeline. Dois adaptadores ficam disponíveis:
 
 - `WhisperTranscriber`: OpenAI Whisper + PyTorch, baseline atual.
-- `FasterWhisperTranscriber`: faster-whisper + CTranslate2, candidato otimizado.
+- `FasterWhisperTranscriber`: faster-whisper + CTranslate2, adaptador alternativo implementado e selecionável explicitamente.
 
 O backend do produto permanece `whisper` por padrão. A adoção do candidato é explícita por configuração; não ocorre apenas porque o pacote está instalado.
 
@@ -101,7 +103,7 @@ Não paralelizar janelas de áudio sem overlap, contexto e reconciliação de fr
 
 ## 6. Critérios de aceite
 
-A adoção de faster-whisper como padrão exige, em conjunto:
+A promoção de faster-whisper a backend padrão (decisão operacional posterior) exige, em conjunto:
 
 1. WER/CER por idioma dentro do gate definido contra o baseline no mesmo corpus, com revisão humana de nomes próprios, números, negações e trechos difíceis.
 2. Ausência de perda ou duplicação de texto; consumo integral dos segmentos.
@@ -115,6 +117,8 @@ Smoke CI com poucas amostras comprova integração e não substitui o corpus hum
 ## 7. Evidências
 
 - Benchmark pareado: `phase5-asr-benchmark.json` (artefato do workflow).
+- Integração da implementação: PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0` na `main`.
+- Workflow dedicado: [Phase 5 quality](../.github/workflows/phase5-quality.yml), com matriz determinística Python 3.10–3.13, smokes reais Whisper/WhisperX e faster-whisper/WhisperX, benchmark pareado e artefatos sanitizados.
 - Smoke Whisper + WhisperX: `phase5-alignment-smoke.json`.
 - Smoke faster-whisper + WhisperX: `phase5-faster-whisper-alignment-smoke.json`.
 - Relatórios sanitizados não incluem áudio, texto reconhecido, referências, URLs ou caminhos de mídia.
