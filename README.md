@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio, alinhar a fala à linha do tempo da mídia e produzir legendas SRT, com tradução local opcional entre português brasileiro e inglês.
 
-- **Estado:** remodelação arquitetural das Fases 0–10 integrada à `main`; a qualidade editorial e o desempenho de ponta a ponta estão sob um novo plano de correção e melhoria.
+- **Estado:** Fases 1–5 da frente de qualidade/desempenho implementadas e integradas à `main`; benchmark operacional de faster-whisper no hardware de referência e homologação audiovisual completa permanecem pendentes.
 - **Base técnica:** Python 3.10–3.13, PySide6, FFmpeg, Whisper, WhisperX e NLLB-200.
 - **Qualidade:** o arquivo pode ser estruturalmente válido sem estar editorialmente aprovado. O plano atual trata essa lacuna explicitamente.
 - **Licença do código:** MIT. As licenças dos modelos e pesos são independentes e devem ser observadas.
@@ -11,7 +11,7 @@ Aplicação desktop para transcrever áudio, alinhar a fala à linha do tempo da
 
 1. Recebe mídia local ou URL do YouTube.
 2. Inspeciona streams e normaliza o áudio para WAV PCM mono 16 kHz, preservando o offset da mídia.
-3. Transcreve a fala no idioma de origem com Whisper.
+3. Transcreve a fala no idioma de origem com OpenAI Whisper (padrão) ou faster-whisper/CTranslate2 (seleção explícita, ainda em homologação operacional).
 4. Alinha palavras com WhisperX.
 5. Segmenta o texto em cues, valida e publica SRT por troca atômica.
 6. Opcionalmente traduz as cues localmente com NLLB-200.
@@ -75,6 +75,6 @@ Planos, handoffs e relatórios encerrados das Fases 0–10 foram preservados em 
 
 ## Plano atual
 
-A auditoria de código identificou lacunas na recomposição de segmentos, subdivisão por CPS, preservação de palavras não alinhadas e gate editorial. Também foi reportado processamento de aproximadamente 60 minutos para 37 minutos de mídia; a duração por etapa ainda precisa ser medida.
+A auditoria e as Fases 1–5 já instrumentaram o pipeline, corrigiram integridade/segmentação, integraram o gate editorial e disponibilizaram benchmark pareado de ASR. O baseline operacional da mídia de 37min10s é aproximadamente 23min21s nas execuções quentes, com NLLB consumindo cerca de 14 minutos. A Fase 6 concentra o próximo esforço na tradução contextual e redução desse gargalo.
 
 O plano completo, com critérios de aceite, fases, benchmarks e estratégia de aceleração de CPU/GPU, está em [PLANO_CORRECAO_MELHORIA.md](docs/PLANO_CORRECAO_MELHORIA.md).
