@@ -87,6 +87,7 @@ O smoke usa apenas a API local, envia os códigos de idioma por requisição em 
 - Preferir distribuição oficial e versão fixada do llama.cpp por plataforma, com metadados de versão e verificação de integridade. Não executar scripts remotos arbitrários com privilégios elevados.
 - Se a instalação exigir gerenciador do sistema, senha administrativa, termos de uso ou autenticação Hugging Face, parar e orientar/solicitar a ação do usuário; nunca elevar privilégios nem aceitar termos em seu nome.
 - Não persistir tokens Hugging Face em QSettings, logs ou relatórios. Usar autenticação local já configurada pelo usuário ou fluxo seguro documentado.
+- O downloader reutiliza, quando disponível, o token já mantido pelo `huggingface_hub`/ambiente (`HF_TOKEN`); não solicita nem persiste credenciais próprias. Respostas HTTP 401/403 orientam o usuário a aceitar os termos Gemma e autenticar-se localmente.
 - Não baixar pesos automaticamente na abertura. O download pesado só começa após a escolha de tradução local e autorização informada.
 - A instalação e o modelo ficam no diretório privado do Legendar, salvo quando uma instalação gerenciada pelo sistema for explicitamente escolhida pelo usuário.
 
