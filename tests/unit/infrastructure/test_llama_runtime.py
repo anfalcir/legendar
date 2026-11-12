@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import subprocess
 from pathlib import Path
 from urllib.error import URLError
@@ -9,6 +10,7 @@ from urllib.error import URLError
 import pytest
 
 from legendar.domain.errors.catalog import JobCancelledError, ModelError
+import legendar.infrastructure.translation.llama_runtime as llama_runtime
 from legendar.infrastructure.translation.llama_runtime import (
     DEFAULT_MODEL_ALIAS,
     LlamaCppRuntimeManager,
@@ -229,3 +231,130 @@ def test_standalone_llama_server_uses_server_cli_arguments(tmp_path) -> None:
     assert commands[0][1] == "-m"
     assert "serve" not in commands[0]
     manager.shutdown()
+
+
+class DownloadResponse:
+    def __init__(
+        self,
+        chunks,
+        *,
+        status=200,
+        headers=None,
+        fail_after_chunks=False,
+    ) -> None:
+        self.chunks = list(chunks)
+        self.status = status
+        self.headers = headers or {}
+        self.fail_after_chunks = fail_after_chunks
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self, _size):
+        if self.chunks:
+            return self.chunks.pop(0)
+        if self.fail_after_chunks:
+            self.fail_after_chunks = False
+            raise URLError("connection interrupted")
+        return b""
+
+
+def test_model_download_requires_explicit_consent(tmp_path) -> None:
+    called = []
+    manager, _ = _manager(
+        tmp_path,
+        opener=lambda *_args, **_kwargs: called.append(True),
+    )
+
+    with pytest.raises(ModelError, match="autorização explícita"):
+        manager.download_model(consent=False)
+
+    assert called == []
+
+
+def test_model_download_is_atomic_and_validates_sha256(tmp_path, monkeypatch) -> None:
+    payload = b"TranslateGemma test payload"
+    monkeypatch.setattr(
+        llama_runtime, "MODEL_SHA256", hashlib.sha256(payload).hexdigest()
+    )
+    model_path = tmp_path / "models" / "translategemma.gguf"
+    response = DownloadResponse(
+        [payload],
+        headers={"Content-Length": str(len(payload))},
+    )
+    manager, _ = _manager(
+        tmp_path,
+        model_path=model_path,
+        opener=lambda *_args, **_kwargs: response,
+    )
+
+    result = manager.download_model(consent=True)
+
+    assert result == model_path
+    assert result.read_bytes() == payload
+    assert not result.with_suffix(".gguf.part").exists()
+
+
+def test_model_download_resumes_partial_file_after_network_failure(
+    tmp_path, monkeypatch
+) -> None:
+    payload = b"abcdefghij"
+    monkeypatch.setattr(
+        llama_runtime, "MODEL_SHA256", hashlib.sha256(payload).hexdigest()
+    )
+    responses = [
+        DownloadResponse(
+            [payload[:5]],
+            headers={"Content-Length": str(len(payload))},
+            fail_after_chunks=True,
+        ),
+        DownloadResponse(
+            [payload[5:]],
+            status=206,
+            headers={
+                "Content-Length": str(len(payload[5:])),
+                "Content-Range": f"bytes 5-{len(payload) - 1}/{len(payload)}",
+            },
+        ),
+    ]
+    requests = []
+
+    def opener(request, **_kwargs):
+        requests.append(request)
+        return responses.pop(0)
+
+    model_path = tmp_path / "models" / "translategemma.gguf"
+    manager, _ = _manager(tmp_path, model_path=model_path, opener=opener)
+
+    with pytest.raises(ModelError, match="arquivo parcial foi preservado"):
+        manager.download_model(consent=True)
+
+    result = manager.download_model(consent=True)
+
+    assert result.read_bytes() == payload
+    assert requests[1].get_header("Range") == "bytes=5-"
+    assert not result.with_suffix(".gguf.part").exists()
+
+
+def test_invalid_model_hash_discards_partial_download(tmp_path, monkeypatch) -> None:
+    payload = b"not-the-pinned-model"
+    monkeypatch.setattr(llama_runtime, "MODEL_SHA256", "0" * 64)
+    response = DownloadResponse(
+        [payload],
+        headers={"Content-Length": str(len(payload))},
+    )
+    model_path = tmp_path / "models" / "translategemma.gguf"
+    manager, _ = _manager(
+        tmp_path,
+        model_path=model_path,
+        opener=lambda *_args, **_kwargs: response,
+    )
+
+    with pytest.raises(ModelError, match="SHA-256"):
+        manager.download_model(consent=True)
+
+    assert not model_path.exists()
+    assert not model_path.with_suffix(".gguf.part").exists()
