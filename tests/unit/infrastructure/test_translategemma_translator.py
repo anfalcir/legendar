@@ -63,7 +63,11 @@ def test_translate_uses_official_template_language_metadata_and_preserves_ids() 
     assert result.language is Language.PORTUGUESE
     assert result.unit_indexes == (4, 5)
     assert result.texts == ("Eu voltarei.", "Estamos seguros.")
-    assert runtime.calls == [("model", None, progress), ("server", None, progress)]
+    assert [call[0] for call in runtime.calls] == ["model", "server"]
+    assert runtime.calls[0][2]._start == 0.0
+    assert runtime.calls[0][2]._span == 0.75
+    assert runtime.calls[1][2]._start == 0.75
+    assert runtime.calls[1][2]._span == 0.15
     assert len(requests) == 2
     assert requests[0][0] == runtime.url
     assert requests[0][1]["messages"] == [
