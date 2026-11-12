@@ -186,6 +186,39 @@ class LlamaCppRuntimeManager:
         self._process: Any | None = None
         self._port: int | None = None
         self._validated_model_signature: tuple[int, int, int] | None = None
+        self._download_authorized = False
+
+    @property
+    def download_authorized(self) -> bool:
+        """Consentimento de download concedido nesta sessão do aplicativo."""
+        return self._download_authorized
+
+    def authorize_model_download(self) -> None:
+        """Registra consentimento explícito apenas em memória."""
+        self._download_authorized = True
+
+    def ensure_model(
+        self,
+        *,
+        token: CancellationToken | None = None,
+        progress: ProgressSink | None = None,
+    ) -> Path:
+        """Garante pesos íntegros; baixa somente após consentimento nesta sessão."""
+        if self.model_path.is_file():
+            try:
+                self._validate_model_integrity(token)
+            except ModelError:
+                if not self._download_authorized:
+                    raise
+            else:
+                return self.model_path
+        if not self._download_authorized:
+            raise ModelError(
+                "Os pesos TranslateGemma ainda não estão instalados. "
+                "Autorize o download nas Preferências para prepará-los "
+                "automaticamente na próxima tradução."
+            )
+        return self.download_model(consent=True, token=token, progress=progress)
 
     @staticmethod
     def discover_executable(models_dir: Path) -> Path | None:
