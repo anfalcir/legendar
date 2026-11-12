@@ -1012,6 +1012,30 @@ class MainWindow(QMainWindow):
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         new_preferences = dialog.preferences
+        if (
+            new_preferences.translation_backend == "translategemma"
+            and self._deps.translation_authorization_required is not None
+            and self._deps.translation_authorization_required()
+        ):
+            answer = QMessageBox.question(
+                self,
+                "Preparar TranslateGemma",
+                "O modelo TranslateGemma 4B Q4_K_M ocupa aproximadamente 2,49 GB. "
+                "Autoriza o Legendar a baixá-lo automaticamente na primeira tradução? "
+                "O download será retomável e validado por SHA-256. "
+                "É necessário aceitar previamente os termos Gemma no Hugging Face; "
+                "a autenticação local existente será reutilizada, sem copiar o token.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer is QMessageBox.StandardButton.Yes:
+                if self._deps.translation_authorize is not None:
+                    self._deps.translation_authorize()
+            else:
+                new_preferences = replace(
+                    new_preferences,
+                    translation_backend=self._preferences.translation_backend,
+                )
         api_key_input = dialog.gemini_api_key_input
         try:
             if api_key_input:
@@ -1050,6 +1074,18 @@ class MainWindow(QMainWindow):
                 translate_readiness_details=details,
                 translation_backend=self._preferences.translation_backend,
             )
+            if (
+                self._preferences.translation_backend == "translategemma"
+                and not available
+                and not any("Pesos serão preparados" in item for item in details)
+            ):
+                QMessageBox.information(
+                    self,
+                    "TranslateGemma ainda não está pronto",
+                    "O runtime llama.cpp não foi encontrado. A instalação assistida "
+                    "do executável ainda está em implementação. Consulte a decisão "
+                    "técnica em docs/DECISAO_TRANSLATEGEMMA.md.",
+                )
         self._apply_preferences()
         if not self._output_touched:
             self.output_edit.setText(str(self._default_output_path("legenda")))
