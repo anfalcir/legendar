@@ -607,9 +607,7 @@ class GeminiTranslator:
             ):
                 self._record("content_retries", 1)
                 self._record("retries", 1)
-                self._sleep_before_retry(
-                    min(2**content_attempt, 4), token=token
-                )
+                self._sleep_before_retry(min(2**content_attempt, 4), token=token)
                 return self._translate_batch(
                     batch,
                     all_units=all_units,
