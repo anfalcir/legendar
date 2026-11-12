@@ -145,6 +145,7 @@ class UiDependencies:
     translation_reconfigure: (
         Callable[[str, str | None], tuple[bool, tuple[str, ...]]] | None
     ) = None
+    runtime_shutdown: Callable[[], None] | None = None
 
 
 class MainWindow(QMainWindow):
@@ -1068,6 +1069,7 @@ class MainWindow(QMainWindow):
             output_dir=self._preferences.output_dir,
             target_language=self._preferences.target_language,
             log_expanded=expanded,
+            translation_backend=self._preferences.translation_backend,
         )
 
     def _set_log_expanded(self, expanded: bool) -> None:
