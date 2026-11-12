@@ -539,8 +539,8 @@ A PR #35 foi integrada à `main` por squash no commit `e0ba71080243972158272cf47
 
 1. Provar o template TranslateGemma no runtime llama.cpp, com source_lang_code e target_lang_code enviados por requisição; usar scripts/phase8_1_translategemma_smoke.py contra um servidor local real.
 2. Implementar adaptador local com o contrato existente, processamento contextual limitado pelo contexto oficial de 2K tokens, validação de cardinalidade/IDs e recuperação segura.
-3. Gerenciar servidor e modelo localmente, com loopback, cache, download verificável, cancelamento e encerramento confiável.
-4. Migrar bootstrap, Preferências, dependências e documentação para TranslateGemma como única rota local.
+3. Gerenciar servidor e modelo localmente de forma autônoma e idempotente: diagnóstico leve na abertura, instalação proposta sob demanda, download verificável após consentimento, inicialização automática antes da tradução, health check, reutilização sem duplicação, cancelamento e encerramento confiável.
+4. Migrar bootstrap, Preferências, dependências e documentação para TranslateGemma como única rota local, com o Legendar responsável por todo o ciclo de vida do runtime e sem exigir comandos manuais do usuário na operação normal.
 5. Remover NLLB integralmente após os testes substitutos passarem.
 6. Validar no hardware de referência e no corpus-ouro; não aprovar qualidade apenas por CI.
 
@@ -788,3 +788,8 @@ A Fase 8.1 só poderá ser marcada como concluída quando:
 
 **Resultado esperado:** uma homologação repetível, com falhas recuperáveis, tradução em PT-BR natural, cues construídas por unidades de sentido, layout consistente e desempenho novamente próximo da baseline histórica — sem sacrificar rastreabilidade textual ou temporal.
 
+
+
+### Requisito adicional aprovado — autonomia operacional
+
+O runtime local não poderá depender de instalação/inicialização manual em cada máquina. O Legendar deverá verificar dependências na abertura sem bloquear a GUI, propor instalação quando necessário, baixar pesos somente após autorização informada, iniciar automaticamente o servidor antes da etapa de tradução, aguardar health check, reutilizar instâncias próprias saudáveis e encerrar apenas o processo filho que iniciou. Repetir o fluxo deve ser idempotente e concorrência não pode produzir instalações ou servidores duplicados. Ver critérios completos em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md), seção “Operação autônoma e idempotente do runtime”.
