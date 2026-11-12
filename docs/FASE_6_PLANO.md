@@ -11,7 +11,7 @@ A porta `Translator` continua sendo a única interface do pipeline. Dois adaptad
 - `NllbTranslator`: baseline local, Transformers/PyTorch.
 - `GeminiTranslator`: candidato via Gemini Developer API, com lotes contextuais.
 
-O padrão permanece **NLLB** até que o benchmark pareado e a revisão humana aprovem o candidato. A seleção do motor é feita pelo usuário em **Preferências → Motor de tradução**:
+O padrão continua sendo **NLLB**, mas o usuário pode selecionar explicitamente qualquer um dos dois motores. A seleção do motor é feita pelo usuário em **Preferências → Motor de tradução**:
 
 | Opção | Comportamento |
 |---|---|
@@ -123,35 +123,18 @@ A execução deve usar a mesma mídia/cues, hardware, idioma, referências e ver
 
 ## 7. Critérios de conclusão da Fase 6
 
-O relatório numérico é necessário, mas não substitui revisão humana bilíngue cega. Congelar antes da comparação um conjunto que inclua:
+A Fase 6 é considerada concluída com base nos requisitos de implementação definidos para esta etapa:
 
-- nomes próprios, cidades, raças, clãs, povos, facções e termos recorrentes;
-- expressões idiomáticas, ambiguidades e referências culturais;
-- negações, sujeitos, tempos verbais e relações entre cues;
-- números, datas, siglas e referências;
-- fala informal, frases interrompidas e cues curtas.
-
-Para a conclusão desta Fase 6, os gates de implementação são:
 - ambos os adaptadores implementados atrás da mesma porta `Translator`;
-- seleção explícita e persistente do backend em Preferências;
-- chave Gemini configurável localmente sem exposição em QSettings/logs;
-- troca de backend aplicada sem reinício;
+- NLLB mantido como padrão e Gemini mantido como opção explícita;
+- seleção persistente do backend em **Preferências**;
+- chave Gemini configurável localmente pela própria aplicação;
+- chave fora do QSettings, logs, relatórios de desempenho e código versionado;
+- troca de backend aplicada aos próximos jobs sem reiniciar a aplicação;
 - validação estrutural 1:1, cancelamento, retries e métricas sanitizadas preservados;
 - CI determinística e smoke real Gemini aprovados.
 
-O benchmark comparativo e a revisão humana continuam disponíveis como evidência futura de qualidade/performance, mas não bloqueiam a conclusão desta fase por decisão do usuário.
-
-A decisão deve registrar:
-
-1. tempo total de tradução e tempo por lote;
-2. mediana e dispersão de três execuções quentes, quando viável;
-3. tokens de entrada/saída, retries e latência;
-4. WER/CER contra referências humanas quando disponíveis;
-5. revisão humana de sentido, naturalidade, terminologia e nomes;
-6. zero perda, duplicação, vazio, reordenação ou alteração de timestamps;
-7. comportamento de cancelamento, erro e retorno explícito ao NLLB.
-
-**Aceite:** Gemini deve demonstrar ganho material e tradução não inferior na revisão humana, sem qualquer quebra estrutural. Uma meta de throughput de pelo menos 1,5× é alvo de experimento, não garantia. Se não passar, não será adotado como padrão; os resultados orientarão otimizações do NLLB (CTranslate2, quantização, batch/length bucketing e beam search).
+O benchmark comparativo NLLB × Gemini e a revisão humana permanecem disponíveis como ferramentas de homologação futura, mas **não são mais gates de conclusão da Fase 6**, conforme decisão do usuário. A Fase 7 pode avançar sem retirar nenhum dos dois motores.
 
 ## 8. CI e homologação real
 
