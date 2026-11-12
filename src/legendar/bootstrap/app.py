@@ -257,22 +257,22 @@ def build_ui_dependencies(
                 translator = GeminiTranslator(
                     api_key=api_key,
                     model=os.environ.get("LEGENDAR_GEMINI_MODEL", "gemini-3.8-flash"),
-                    batch_size=int(
-                        os.environ.get("LEGENDAR_GEMINI_BATCH_SIZE", "32")
-                    ),
+                    batch_size=int(os.environ.get("LEGENDAR_GEMINI_BATCH_SIZE", "32")),
                     timeout_seconds=float(
                         os.environ.get("LEGENDAR_GEMINI_TIMEOUT", "120")
                     ),
-                    max_retries=int(
-                        os.environ.get("LEGENDAR_GEMINI_MAX_RETRIES", "3")
-                    ),
-                    grounding=os.environ.get(
-                        "LEGENDAR_GEMINI_GROUNDING", "true"
-                    ).strip().casefold()
+                    max_retries=int(os.environ.get("LEGENDAR_GEMINI_MAX_RETRIES", "3")),
+                    grounding=os.environ.get("LEGENDAR_GEMINI_GROUNDING", "true")
+                    .strip()
+                    .casefold()
                     in {"1", "true", "yes", "on"},
                 )
             except (ValueError, TypeError) as exc:
-                return GeminiTranslator(), False, (f"Configuração Gemini inválida: {exc}",)
+                return (
+                    GeminiTranslator(),
+                    False,
+                    (f"Configuração Gemini inválida: {exc}",),
+                )
             details = (
                 f"Gemini API · modelo {translator.model}",
                 f"Lote: {translator.batch_size} cues · timeout: "
@@ -323,10 +323,14 @@ def build_ui_dependencies(
 
     local_gemini_key = load_gemini_api_key()
     configured_backend = (
-        translation_backend
-        if translation_backend is not None
-        else env_translation_backend
-    ).strip().casefold()
+        (
+            translation_backend
+            if translation_backend is not None
+            else env_translation_backend
+        )
+        .strip()
+        .casefold()
+    )
     translator, translation_available, translation_details = _configure_translation(
         configured_backend,
         gemini_api_key
@@ -397,9 +401,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     preferences = load_preferences(qt_settings, settings.output_dir)
     selected_backend = preferences.translation_backend
     if not qt_settings.contains("translation/backend"):
-        selected_backend = os.environ.get(
-            "LEGENDAR_TRANSLATION_BACKEND", selected_backend
-        ).strip().casefold()
+        selected_backend = (
+            os.environ.get("LEGENDAR_TRANSLATION_BACKEND", selected_backend)
+            .strip()
+            .casefold()
+        )
     gemini_key = load_gemini_api_key()
 
     app = QApplication(list(argv) if argv is not None else sys.argv)
