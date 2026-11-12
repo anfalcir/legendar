@@ -2,8 +2,8 @@
 
 - **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
-- **Base auditada:** `main`, commit `92ac98dbef5748bf008f54fb2d4db3ad9a1d14d9`
-- **Status:** execução em branch dedicada; congelamento técnico da 8.1.0 e implementação inicial da 8.1.1 estão versionados. CI da revisão atual em andamento. A referência humana PT-BR e o snapshot real de ASR/alinhamento seguem pendentes e bloqueiam aceite comparativo/semântico.
+- **Base auditada:** `main`, commit `bd2a917b8f75045545c97848b10252a8253aa1ed`
+- **Status:** 8.1.0 (congelamento técnico), 8.1.1 (confiabilidade/batching Gemini) e 8.1.2 (topologia CPU/lifecycle) estão integrados à `main`. A CI completa do commit de 8.1.2 passou; permanece pendente a matriz real de desempenho 2/1, 3/1, 4/1, 4/2 e 4/4, três execuções quentes por configuração. A referência humana PT-BR e o snapshot real de ASR/alinhamento seguem pendentes e bloqueiam aceite comparativo/semântico.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
 - **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
 
@@ -216,7 +216,7 @@ Para 927 unidades curtas e sem subdivisões, os números teóricos permanecem: l
 
 #### Batching Gemini: implementação e estratégia de homologação
 
-O objetivo é reduzir chamadas sem transferir o risco de uma cue defeituosa para dezenas de unidades. A primeira implementação da Fase 8.1.1 está no branch atual e é submetida à CI. A validação de desempenho/qualidade com a API real e corpus humano continua pendente. Requisitos implementados ou ainda a homologar:
+O objetivo é reduzir chamadas sem transferir o risco de uma cue defeituosa para dezenas de unidades. A implementação da Fase 8.1.1 foi integrada à `main` pela PR #29. A validação de desempenho/qualidade com a API real e corpus humano continua pendente. Requisitos implementados ou ainda a homologar:
 
 - manter dois limites independentes: no máximo 100 unidades por requisição e orçamento configurável de entrada/saída; **implementado na branch**;
 - formar lotes dinamicamente usando o payload integral serializado em UTF-8 como estimador conservador de entrada e reservar saída com margem; **implementado, ainda sem calibração em uso prolongado real**;
@@ -352,7 +352,7 @@ Tarefas:
 5. separar explicitamente erros de ASR da origem e erros introduzidos pela tradução — **regra documentada** nas fixtures e no template; aplicação à amostra real depende da revisão humana;
 6. usar a mesma transcrição/alinhamento congelados para testar isoladamente segmentação e tradução — **pendente**; os relatórios sanitizados não contêm esses intermediários e os três SRTs não substituem o snapshot pré-tradução;
 7. registrar hash do áudio autorizado, versões/modelos, parâmetros, hardware e intermediários de entrada ao capturar a referência reprodutível — **pendente** até a amostra real;
-8. corrigir o caminho obsoleto do gate de corpus em `.github/workflows/phase6-quality.yml`, que ainda apontava para `logs/`, para consumir `temporario/EN-baseline.srt` e disparar quando essa fonte congelada mudar — **corrigido nesta branch; CI pendente**.
+8. corrigir o caminho obsoleto do gate de corpus em `.github/workflows/phase6-quality.yml`, que ainda apontava para `logs/`, para consumir `temporario/EN-baseline.srt` e disparar quando essa fonte congelada mudar — **corrigido e integrado à `main` pela PR #29**.
 
 **Saída obrigatória:** manifesto de corpus, hashes, amostras sintéticas versionáveis, referência humana local e relatório com a separação entre evidências e hipóteses. O manifesto e as fixtures já estão versionados; os itens humanos/intermediários continuam explicitamente pendentes.
 
@@ -433,7 +433,11 @@ Tarefas:
 
 **Gate:** o perfil automático não pode reduzir indevidamente 4 núcleos físicos a 2. A política de retenção precisa ser demonstravelmente aplicada. Nenhuma configuração de threads será promovida sem mediana e dispersão medidas.
 
+**Status de implementação:** concluída e integrada à `main` pela PR #31. A CI completa do commit `89707ab7a060608ad0716764e16d92336df3d70e` passou nos sete workflows de qualidade. Os testes determinísticos cobrem topologia 4/4 e 4/8, afinidade, cpuset, quota, lifecycle `low-memory`/`balanced`, cancelamento, falhas de release e concorrência. O gate de homologação de desempenho continua aberto até a matriz real de threads.
+
 ### Etapa 8.1.3 — Reestruturar composição das cues e limites de exibição
+
+**Pré-requisito:** a implementação 8.1.2 está integrada e a CI estrutural está verde. Antes de alterar a composição das cues, executar a matriz real de threads definida na 8.1.2 e registrar a configuração escolhida como baseline operacional. Depois disso, esta etapa pode avançar em branch próprio.
 
 **Objetivo:** produzir legendas que acompanhem frases/orações com boa continuidade visual, sem excesso de microcues e sem ultrapassar o espaço de tela.
 
