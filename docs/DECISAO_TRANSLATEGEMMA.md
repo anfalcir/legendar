@@ -2,7 +2,7 @@
 
 - **Data:** 12/11/2026
 - **Projeto:** Legendar
-- **Status:** decisão aprovada pelo usuário; implementação em andamento na Fase 8.1.
+- **Status:** decisão aprovada; adaptador e composição inicial no bootstrap/Preferências implementados na PR #36, ainda em validação CI e sem homologação com pesos reais.
 - **Decisão:** substituir integralmente NLLB-200 pelo Google TranslateGemma 4B como único motor de tradução local. Gemini Developer API continua como backend remoto independente e explicitamente selecionável.
 - **Modelo inicial:** TranslateGemma 4B Instruct, quantização GGUF Q4_K_M.
 - **Runtime candidato adotado para a integração:** servidor local do projeto llama.cpp, com API HTTP restrita a loopback e parâmetros de idioma por requisição (chat_template_kwargs). O runtime deverá ser iniciado e encerrado pelo adaptador do Legendar, sem exigir daemon externo persistente.
@@ -39,7 +39,7 @@
 2. Adaptador TranslateGemmaTranslator sob a porta existente.
 3. Gestão do processo local, download/cache e readiness.
 4. Testes de unidade, integração e falhas.
-5. Migração do bootstrap, Preferências e runtime para TranslateGemma como única rota local.
+5. Migração do bootstrap e Preferências para expor TranslateGemma como backend local selecionável; integração inicial implementada na PR #36.
 6. Remoção total de NLLB e limpeza de dependências/documentação.
 7. CI, smoke real, corpus-ouro e homologação E2E.
 
@@ -115,11 +115,11 @@ A referência do arquivo e seu checksum foram conferidos na página do artefato 
 
 ## Implementação incremental — primeira fatia do lifecycle
 
-A PR #36 adiciona `infrastructure/translation/llama_runtime.py` com:
+A PR #36 adiciona `infrastructure/translation/llama_runtime.py` e `infrastructure/translation/translategemma.py` com:
 - inspeção local rápida de executável e arquivo GGUF, sem rede; download do GGUF após consentimento explícito, com retomada HTTP Range, arquivo parcial separado, SHA-256 fixado e publicação atômica;
 - início do subcomando `llama serve` com loopback exclusivo, porta dinâmica, contexto de 2K e um slot;
 - health check `/health` com timeout, cancelamento e detecção de saída prematura;
 - locks de thread e de arquivo entre processos para downloads/servidores duplicados, reutilização apenas do processo filho próprio e encerramento gracioso/forçado desse filho;
 - preservação do modelo/cache e testes unitários determinísticos com processo/HTTP simulados.
 
-**Limites desta fatia:** não instala o binário llama.cpp, não integra ainda o bootstrap/GUI nem implementa o adaptador Translator. O artefato GGUF e seu SHA-256 estão fixados; o lock entre processos para download e servidor está implementado e coberto por testes determinísticos. Ainda faltam a integração desses recursos ao fluxo real do aplicativo, a validação da versão/compatibilidade do executável e o protocolo com pesos reais. Portanto, não declarar autonomia operacional completa nem remover NLLB com base nesta entrega isolada.
+**Limites desta fatia:** ainda não instala o binário llama.cpp nem baixa o GGUF automaticamente a partir da interface; o backend fica indisponível até que executável e pesos estejam presentes. O adaptador inicia/reutiliza o servidor automaticamente quando chamado pelo pipeline, envia `chat_template_kwargs` e valida texto não vazio/IDs. A composição no bootstrap e a seleção em Preferências estão conectadas, mas o fluxo de autorização/download e a UX de instalação ainda faltam. O código não está homologado com pesos reais; não remover NLLB nem declarar autonomia operacional completa.
