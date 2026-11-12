@@ -504,10 +504,10 @@ Tarefas:
 Uso no computador de homologação, a partir da raiz do repositório:
 
 ```bash
-python scripts/phase8_1_translation_review.py \\
-  temporario/EN-baseline.srt \\
-  temporario/teste-2026.11.12.srt \\
-  --output temporario/revisao-ptbr.csv \\
+python scripts/phase8_1_translation_review.py \
+  temporario/EN-baseline.srt \
+  temporario/teste-2026.11.12.srt \
+  --output temporario/revisao-ptbr.csv \
   --samples 30
 ```
 
