@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1, 2, 3 e 4 concluídas e integradas à `main`. Fase 4 integrada pela PR #11, squash `32f20c3a5455dcc16f48e78a742ba4c7018339b5`.
+- **Status:** Fases 1–5 com implementação concluída e integrada à `main`. Fase 5 integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. A promoção operacional de faster-whisper a padrão permanece condicionada ao benchmark local pareado e à revisão humana; o Whisper original continua padrão.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -345,6 +345,12 @@ A detecção de repetição não deve remover texto automaticamente: repetição
 
 ### Fase 5 — Benchmark e aceleração da transcrição (ASR)
 
+<escape>**Status da implementação: concluída e integrada à `main` pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`.**</escape>
+
+Foi implementado `FasterWhisperTranscriber` via CTranslate2 atrás da porta `Transcriber`, com seleção explícita por `LEGENDAR_ASR_BACKEND`; OpenAI Whisper permanece como padrão e fallback configurável. O pacote não é selecionado automaticamente por estar instalado. Foram adicionados controles de compute type, threads, beam e VAD (desligado por padrão), consumo integral do generator, cancelamento cooperativo, métricas e benchmark pareado WER/CER/RTF. O smoke de alinhamento envia ambos os backends ao mesmo WhisperX.
+
+**Pendente, sem bloquear a conclusão da implementação:** benchmark no computador de referência com o áudio de 37min10s e corpus representativo com referência humana, incluindo comparação fria/quente, WER/CER, revisão de nomes/números/negações, cobertura do WhisperX e memória. Até essa homologação, não promover faster-whisper a padrão nem declarar ganho real no hardware do usuário.
+
 **Objetivo:** reduzir o tempo de reconhecimento sem perda de fidelidade.
 
 Baseline:
@@ -387,7 +393,7 @@ A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, t
 - Ajustar lote e paralelismo por perfil de hardware.
 - Manter interface responsiva e progresso honesto.
 
-**Critério de conclusão:** alternativa escolhida com WER/CER dentro do gate, qualidade de nomes/números preservada, alinhamento posterior aprovado e ganho de tempo demonstrado no hardware de referência.
+**Critério de conclusão da implementação:** adaptador, seleção explícita, benchmark reproduzível, integração com WhisperX, testes e CI documentados e integrados à `main` — concluído pela PR #12. **Critério para promoção operacional do candidato:** WER/CER dentro do gate, qualidade de nomes/números preservada, alinhamento posterior aprovado e ganho de tempo demonstrado no hardware de referência — pendente de homologação local/Fase 8.
 
 ### Fase 6 — Benchmark e aceleração da tradução
 
@@ -676,7 +682,7 @@ Fase 7 — memória, threads e perfis
 Fase 8 — regressão e homologação final
 ```
 
-**Próxima execução:** concluir a Fase 3, depois implementar o gate editorial da Fase 4. O experimento Gemini pertence à Fase 6 (tradução): antes de executar chamadas reais, solicitar ao usuário que cadastre a chave como secret no GitHub Actions. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos de configuração versionados.
+**Próxima execução:** Fase 5 implementada e integrada; seguir com a Fase 6 (tradução contextual e desempenho), mantendo o Whisper como padrão até homologar o candidato faster-whisper no hardware de referência. Antes de executar chamadas reais ao Gemini, solicitar ao usuário que cadastre `GEMINI_API_KEY` como secret no GitHub Actions. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos de configuração versionados.
 
 ### Definition of Done de cada fase
 
