@@ -40,8 +40,6 @@ _HEALTH_TIMEOUT = 1.5
 _POLL_INTERVAL = 0.25
 
 
-
-
 class _InterProcessLock:
     """Lock de arquivo não bloqueante, liberado automaticamente se o processo cair."""
 
