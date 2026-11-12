@@ -4,7 +4,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`.
 - **Data de abertura:** 11/11/2026.
 - **Base da auditoria:** `main` em `d3530490df466aa6eeff4728b63d7e8dc22f056e` (início da Fase 1).
-- **Status:** Fases 1–5 com implementação integrada à `main`; Fase 5 integrada pela PR #12, squash `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. Fase 6 em implementação na branch `phase-6/gemini-translation`. A homologação operacional de ASR permanece na Fase 8.
+- **Status:** Fases 1–5 com implementação concluída e integrada à `main`. Fase 5 integrada pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. Fase 6 em validação na PR [#13](https://github.com/anfalcir/legendar/pull/13); a promoção operacional de faster-whisper a padrão permanece condicionada ao benchmark local pareado e à revisão humana.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
 Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
@@ -345,6 +345,12 @@ A detecção de repetição não deve remover texto automaticamente: repetição
 
 ### Fase 5 — Benchmark e aceleração da transcrição (ASR)
 
+<escape>**Status da implementação: concluída e integrada à `main` pela PR [#12](https://github.com/anfalcir/legendar/pull/12), commit `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`.**</escape>
+
+Foi implementado `FasterWhisperTranscriber` via CTranslate2 atrás da porta `Transcriber`, com seleção explícita por `LEGENDAR_ASR_BACKEND`; OpenAI Whisper permanece como padrão e fallback configurável. O pacote não é selecionado automaticamente por estar instalado. Foram adicionados controles de compute type, threads, beam e VAD (desligado por padrão), consumo integral do generator, cancelamento cooperativo, métricas e benchmark pareado WER/CER/RTF. O smoke de alinhamento envia ambos os backends ao mesmo WhisperX.
+
+**Pendente, sem bloquear a conclusão da implementação:** benchmark no computador de referência com o áudio de 37min10s e corpus representativo com referência humana, incluindo comparação fria/quente, WER/CER, revisão de nomes/números/negações, cobertura do WhisperX e memória. Até essa homologação, não promover faster-whisper a padrão nem declarar ganho real no hardware do usuário.
+
 **Objetivo:** reduzir o tempo de reconhecimento sem perda de fidelidade.
 
 Baseline:
@@ -353,16 +359,22 @@ Baseline:
 - PyTorch;
 - reconhecimento sem timestamps de palavra, pois o forced alignment é uma etapa posterior.
 
-Candidatos e experimentos:
+Implementação integrada pela Fase 5:
 
 **A. faster-whisper / CTranslate2**
 
-- Criar adaptador alternativo atrás da mesma porta `Transcriber`.
-- Comparar inicialmente o mesmo tamanho de modelo, idioma e estratégia de decodificação.
-- Medir CPU `int8`, GPU `float16` e, quando suportado, `int8_float16`.
-- Comparar beam search, fallback de temperatura, condicionamento de texto anterior e demais parâmetros equivalentes.
-- Confirmar consumo integral do generator de segmentos antes de finalizar a transcrição.
-- Validar que os intervalos de segmentos são locais ao WAV e compatíveis com o contrato de `alignment_window`.
+- `FasterWhisperTranscriber` implementado atrás da mesma porta `Transcriber`.
+- Seleção explícita por `LEGENDAR_ASR_BACKEND`; OpenAI Whisper permanece padrão.
+- CPU INT8 e CUDA FP16 como escolhas automáticas iniciais por dispositivo, com compute type configurável.
+- Threads limitadas/configuráveis e beam compartilhado entre os adaptadores para comparação justa.
+- Consumo integral do generator, cancelamento cooperativo e preservação de `alignment_window` local ao WAV.
+- Métricas separadas de carga, leitura de áudio e inferência.
+
+Benchmark/homologação ainda necessários para decisão operacional:
+- Comparar mesmo tamanho de modelo, idioma, corpus e estratégia de decodificação.
+- Medir CPU `int8`, GPU `float16` e, quando suportado, `int8_float16` no hardware real.
+- Revisar WER/CER, nomes, números, negações e trechos difíceis com referência humana.
+- Confirmar cobertura e qualidade do WhisperX após cada backend.
 
 A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, timestamps de palavra e VAD opcional. A adoção não é automática: os parâmetros de decoding e o comportamento do VAD precisam ser comparados com o Whisper atual.
 
@@ -387,13 +399,13 @@ A documentação do faster-whisper expõe execução INT8 em CPU, FP16 em GPU, t
 - Ajustar lote e paralelismo por perfil de hardware.
 - Manter interface responsiva e progresso honesto.
 
-**Implementação técnica concluída e integrada à `main` (11/11/2026):** PR [#12](https://github.com/anfalcir/legendar/pull/12), squash `57f68985f1156b1d0c693f4b7d80e6aea145a8d0`. O adaptador `FasterWhisperTranscriber` está atrás da porta `Transcriber`, com seleção explícita, configuração CPU INT8/CUDA FP16, cancelamento, métricas e smoke de alinhamento WhisperX. O benchmark pareado compara WER/CER, RTF, carga, inferência e memória no mesmo corpus. O workflow específico da Fase 5 passou. A matriz geral Phase 8 tinha Python 3.11–3.13 aprovados e Python 3.10 ainda em execução no momento do merge.
-
-**Limite de aceite operacional:** a homologação com a mídia real de 37min10s, corpus humano revisado e hardware-alvo não foi executada pelo CI. Portanto, o código da Fase 5 está integrado, mas a decisão de tornar faster-whisper o backend padrão permanece pendente da Fase 8. OpenAI Whisper continua como padrão e fallback seguro.
+**Critério de conclusão da implementação:** adaptador, seleção explícita, benchmark reproduzível, integração com WhisperX, testes e CI documentados e integrados à `main` — concluído pela PR #12. **Critério para promoção operacional do candidato:** WER/CER dentro do gate, qualidade de nomes/números preservada, alinhamento posterior aprovado e ganho de tempo demonstrado no hardware de referência — pendente de homologação local/Fase 8.
 
 ### Fase 6 — Benchmark e aceleração da tradução
 
 **Objetivo:** reduzir o custo do NLLB sem degradar o sentido, a terminologia ou a consistência. O Gemini será avaliado como candidato de tradução via API, sem pressupor que será automaticamente superior ao NLLB.
+
+**Implementação em validação na PR #13:** `GeminiTranslator` via Gemini Developer API, atrás da porta `Translator`, com lotes contextuais, cues vizinhas, histórico recente traduzido, saída JSON estruturada e validação 1:1 de IDs/ordem. NLLB permanece padrão; Gemini exige seleção explícita e `GEMINI_API_KEY`, sem fallback silencioso. Benchmark pareado e smoke real opt-in foram adicionados. CI determinística aprovada; chamada real e avaliação humana permanecem pendentes.
 
 **Diretriz obrigatória de tradução contextual (requisito do usuário, 11/11/2026):**
 
@@ -411,7 +423,7 @@ O prompt de sistema/instruções do tradutor Gemini deverá:
 
 A avaliação humana deverá incluir nomes próprios, cidades, raças/clãs/povos, termos ambíguos, expressões idiomáticas, referências culturais, negações, números e contexto entre cues. Uma tradução literal correta isoladamente, mas incoerente com o universo ou com o discurso, deverá ser considerada regressão.
 
-A capacidade de pesquisa do modelo não será presumida como disponível por padrão: o experimento deverá documentar o modelo Gemini, ferramentas de grounding habilitadas, fontes consultadas e latência/custo adicional. Se grounding não estiver disponível, o prompt deverá instruir o modelo a usar apenas o contexto recebido e a preservar termos incertos.
+A capacidade de pesquisa do modelo deve ser verificada por modelo e configurada explicitamente. A documentação oficial consultada em 11/11/2026 confirma Search grounding no `gemini-3.8-flash`; o recurso permanece desligado por padrão. O experimento deve registrar ferramentas habilitadas, fontes consultadas e latência/custo adicional. Grounding apoia a identificação de referências, mas não autoriza acrescentar fatos à fala.
 
 Baseline atual:
 - `facebook/nllb-200-distilled-600M`;
@@ -475,10 +487,6 @@ Não concatenar cues com delimitadores arbitrários e assumir que o modelo prese
 **F. Licença e governança**
 
 O model card do NLLB-200 distilled 600M declara licença CC-BY-NC-4.0 e limitações de uso, incluindo domínio específico e uso em produção. A licença do código Legendar (MIT) não substitui a licença do modelo. Antes de distribuir o aplicativo ou adotar outro checkpoint, revisar licença, finalidade e obrigações aplicáveis.
-
-**Implementação inicial em andamento (11/11/2026, branch `phase-6/gemini-translation`):** criado `GeminiTranslator` atrás da porta `Translator`, com lotes contextuais, histórico recente traduzido, JSON estruturado, validação 1:1 de IDs/ordem, retries 429/5xx, timeout, cancelamento e métricas sanitizadas. NLLB permanece selecionável e continua sendo o padrão. A seleção do backend é explícita; não existe fallback silencioso entre motores. O benchmark `scripts/phase6_translation_benchmark.py` compara os mesmos cues e referências humanas, e o smoke real da API é opt-in.
-
-**Validação pendente:** testes/CI da Fase 6, execução real com `GEMINI_API_KEY`, benchmark de três execuções na mídia de 37min10s e revisão humana cega PT-BR. A chave deve ser cadastrada como secret do GitHub Actions e no ambiente local antes da chamada real. Não versionar manifestos ou transcrições privadas.
 
 **Critério de conclusão:** o candidato tem throughput superior, tradução não inferior na revisão humana, preserva unidades/ordem e timestamps e possui licença/versão documentadas.
 
@@ -682,7 +690,7 @@ Fase 7 — memória, threads e perfis
 Fase 8 — regressão e homologação final
 ```
 
-**Execução vigente:** Fases 0–5 têm implementação integrada à `main`; a Fase 6 está em implementação na branch `phase-6/gemini-translation`. Antes de chamadas reais, o usuário deverá cadastrar `GEMINI_API_KEY` como secret no GitHub Actions e no ambiente local de homologação. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos de configuração versionados.
+**Execução vigente:** Fase 5 implementada e integrada; Fase 6 em validação na PR [#13](https://github.com/anfalcir/legendar/pull/13). NLLB continua padrão e Gemini é opt-in até benchmark pareado e revisão humana. Antes das chamadas reais, cadastrar `GEMINI_API_KEY` como secret no GitHub Actions e no ambiente local de homologação. Nenhuma chave deve ser commitada, registrada em logs ou incluída em arquivos versionados.
 
 ### Definition of Done de cada fase
 
