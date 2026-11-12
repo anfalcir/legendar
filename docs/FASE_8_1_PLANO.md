@@ -2,8 +2,8 @@
 
 - **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
-- **Base auditada:** `main`, commit `bd2a917b8f75045545c97848b10252a8253aa1ed`
-- **Status:** 8.1.0, 8.1.1 e 8.1.2 estão integrados à `main`; a primeira implementação da 8.1.3 também está integrada e passou pela CI completa. A política de CPU foi consolidada com perfis adaptativos, sem exigir uma matriz redundante de dezenas de execuções. A 8.1.3 ainda precisa do gate quantitativo no corpus congelado; a referência humana PT-BR e o snapshot real de ASR/alinhamento continuam pendentes e bloqueiam o aceite semântico final.
+- **Base auditada:** `main`, após integração da 8.1.4, commit `c30380adafb865eff7ae3d56e960d4f3f90350a4`
+- **Status:** 8.1.0 a 8.1.4 estão integradas à `main`. A PR #33 (8.1.4) foi integrada por squash no commit `c30380adafb865eff7ae3d56e960d4f3f90350a4`, após os sete workflows de CI passarem. A primeira implementação da 8.1.3 está integrada, mas seu gate quantitativo no corpus congelado permanece pendente. A referência humana PT-BR e o snapshot real de ASR/alinhamento também continuam pendentes; portanto, a aprovação semântica final ainda não foi concedida.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
 - **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
 
@@ -478,7 +478,7 @@ Tarefas:
 
 **Objetivo:** deixar de traduzir fragmentos isolados sem perder o vínculo temporal.
 
-**Primeira implementação em andamento:** a PR #33 formaliza contexto adjacente, IDs das unidades, intervalo temporal de origem, termos protegidos e validação por ID; também bloqueia truncamento silencioso da entrada NLLB acima de 256 tokens. A aprovação semântica permanece dependente da referência PT-BR humana da 8.1.5.
+**Implementação estrutural integrada à `main` pela PR #33:** contexto adjacente determinístico, IDs das unidades e cues de origem, intervalo temporal, campo para termos protegidos, validação estrita por ID e rejeição de entradas NLLB acima de 256 tokens para impedir truncamento silencioso. O contexto explícito é enviado ao Gemini. Isso não representa extração automática de nomes/termos protegidos nem contextualização semântica equivalente no NLLB. A aprovação semântica PT-BR permanece dependente da referência humana e do gate da 8.1.5.
 
 Tarefas:
 
