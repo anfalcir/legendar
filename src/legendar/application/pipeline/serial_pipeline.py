@@ -488,9 +488,7 @@ class SerialPipeline:
     ) -> None:
         loaded_before = self._adapter_loaded(adapter)
         if self._resource_policy.retain_models:
-            performance.set_metadata(
-                **{f"{stage}_loaded_after_stage": loaded_before}
-            )
+            performance.set_metadata(**{f"{stage}_loaded_after_stage": loaded_before})
             return
 
         started = time.perf_counter()
