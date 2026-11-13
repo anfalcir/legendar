@@ -779,6 +779,7 @@ class MainWindow(QMainWindow):
         elif source_kind in {MediaKind.LOCAL_FILE.value, _SRT_SOURCE_KIND} and self.file_edit.text().strip():
             self._suggest_output(Path(self.file_edit.text().strip()))
         self._sync_translation_controls()
+        self._render(self._view_model.snapshot)
 
     def _choose_file(self) -> None:
         srt_source = self._source_kind() == _SRT_SOURCE_KIND
@@ -978,9 +979,11 @@ class MainWindow(QMainWindow):
             target_language=self._target_language(),
             log_expanded=self._preferences.log_expanded,
         )
+        self._render(self._view_model.snapshot)
 
     def _on_translate_toggled(self, _checked: bool) -> None:
         self._sync_translation_controls()
+        self._render(self._view_model.snapshot)
 
     def _sync_translation_controls(self) -> None:
         """Mantém falado e final independentes e explica o efeito na legenda.
