@@ -10,7 +10,7 @@
 - **Status:** etapas 8.1.0–8.1.6 integradas à `main` pela PR #36 (squash `9b831806d914d8cf856b6501557b12516b7715ce`). A CI pós-merge da Fase 8 (run `43353241876`) concluiu com sucesso: cinco jobs aprovados, incluindo documentação e Python 3.10–3.13 com suíte completa, cobertura, E2E, Ruff e formatação. Runtime autônomo, instalador assistido e primeira integração TranslateGemma estão na `main`; a PR #41 (squash `fe615fe246f777ee17e19dff45c66986c8e348fd`) integrou a correção que substitui marcadores longos por JSON compacto com IDs numéricos e gramática GBNF direta, além de orçamento dinâmico de saída e recuperação estrutural limitada. A CI pré-merge passou em 27 verificações, com 3 opcionais puladas; a CI pós-merge da Fase 8 concluiu com cinco jobs aprovados (run `43381434883`). Smoke com pesos reais, homologação no Linux Mint/Ryzen de referência, gate quantitativo da 8.1.3, referência humana PT-BR e snapshot real de ASR/alinhamento permanecem pendentes; a aprovação semântica final não foi concedida.
 - **Correção da fonte SRT:** em implementação na branch `feat/srt-source-translation`; adiciona entrada de SRT existente e fluxo direto de tradução, sem FFmpeg/Whisper/WhisperX. A homologação de TranslateGemma poderá usar `temporario/EN-baseline.srt` na interface, sem reexecutar ASR/alinhamento. PR e CI ainda pendentes.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
-- **Documento de referência:** [plano mestre](../../PLANO_CORRECAO_MELHORIA.md) · [estado atual](../../ESTADO_ATUAL.md) · [roteiro de homologação](../../HOMOLOGACAO.md)
+- **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](../../ESTADO_ATUAL.md) · [roteiro de homologação](../../HOMOLOGACAO.md)
 
 ---
 
@@ -280,10 +280,10 @@ Não fixar um mínimo rígido de duas, três ou quatro palavras: isso penalizari
 Arquivos principais:
 
 - [`translation.py`](../../../src/legendar/application/pipeline/translation.py)
-- [`nllb.py`](../../../src/legendar/infrastructure/translation/nllb.py)
+- [`nllb.py`](https://github.com/anfalcir/legendar/blob/483ec3ff6c9ef544553ea994084493ebe25cef72/src/legendar/infrastructure/translation/nllb.py)
 - [`gemini.py`](../../../src/legendar/infrastructure/translation/gemini.py)
 - [`test_translation.py`](../../../tests/unit/application/test_translation.py)
-- [`test_nllb_translator.py`](../../../tests/unit/infrastructure/test_nllb_translator.py)
+- [`test_nllb_translator.py`](https://github.com/anfalcir/legendar/blob/483ec3ff6c9ef544553ea994084493ebe25cef72/tests/unit/infrastructure/test_nllb_translator.py)
 
 Hoje a aplicação cria uma unidade para cada cue e exige uma saída 1:1. A tradução ocorre por cue, mesmo quando a cue contém apenas um fragmento sintático. O batching do NLLB agrupa requisições para inferência, mas não transforma automaticamente os textos em frases completas. O código NLLB usa `por_Latn`, sem parâmetro regional PT-BR explícito; ao contrário do Gemini, não existe prompt com instruções editoriais.
 
@@ -729,7 +729,7 @@ Não modificar todos esses arquivos em um único commit sem uma divisão clara p
 
 A IA que executar esta fase deverá seguir este roteiro e não pular gates:
 
-1. Ler este documento inteiro, [estado atual](../../ESTADO_ATUAL.md), [plano mestre](../../PLANO_CORRECAO_MELHORIA.md), [decisões](../../DECISOES.md) e [homologação](../../HOMOLOGACAO.md).
+1. Ler este documento inteiro, [estado atual](../../ESTADO_ATUAL.md), [plano mestre](PLANO_CORRECAO_MELHORIA.md), [decisões](../../DECISOES.md) e [homologação](../../HOMOLOGACAO.md).
 2. Conferir os dez artefatos contra o [manifesto SHA-256](../../../temporario/manifesto-fase-8.1.0.json); recalcular hashes antes de qualquer alteração e não modificar a evidência congelada.
 3. Completar a referência humana PT-BR e capturar a mesma transcrição/alinhamento de entrada antes de iniciar experimentos comparativos.
 4. Reproduzir métricas dos SRTs e logs antes de modificar código.

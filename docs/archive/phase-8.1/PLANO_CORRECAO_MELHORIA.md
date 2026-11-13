@@ -21,7 +21,7 @@ O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min2
 
 A homologação real de 12/11/2026 trouxe novos achados: a execução NLLB concluiu em 45min49s, contra a mediana quente anterior de 23min21s; o estágio de transcrição levou 19min15s, o alinhamento 5min43s e a geração NLLB 20min32s. A execução nova usou PyTorch 2/1 threads, enquanto as três execuções quentes anteriores usavam 4/4. A topologia observada era 4 núcleos físicos/4 lógicos, mas a estimativa atual divide CPUs lógicas por dois. A regressão de threads é a hipótese de desempenho prioritária, ainda pendente de experimento controlado.
 
-O perfil `low-memory` registrou `retain_models=false`, mas os adaptadores terminaram carregados: o helper de liberação existe no pipeline e não é invocado. O Gemini falhou no terceiro lote após 64/927 unidades aceitas. O SRT PT novo manteve 71,0% de cues com até três palavras, apresentou três linhas acima de 42 caracteres e evidências de variante PT-PT/erros semânticos. A análise completa, com distinção entre fatos e hipóteses e plano executável, está em [FASE_8_1_PLANO.md](../../FASE_8_1_PLANO.md).
+O perfil `low-memory` registrou `retain_models=false`, mas os adaptadores terminaram carregados: o helper de liberação existe no pipeline e não é invocado. O Gemini falhou no terceiro lote após 64/927 unidades aceitas. O SRT PT novo manteve 71,0% de cues com até três palavras, apresentou três linhas acima de 42 caracteres e evidências de variante PT-PT/erros semânticos. A análise completa, com distinção entre fatos e hipóteses e plano executável, está em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md).
 
 O trabalho será conduzido em duas frentes coordenadas:
 
@@ -467,7 +467,7 @@ Configuração:
 - Criados testes unitários para parsing, riscos de leitura, sobreposição, fragmentação e timestamps inválidos.
 - O avaliador não altera o SRT e não substitui a inspeção audiovisual; seu gate é estrutural e reproduzível.
 
-**Estado:** o avaliador estrutural está integrado, mas a homologação real não está concluída. A rodada de 12/11/2026 já foi analisada: o SRT NLLB concluiu, porém com problemas de fragmentação, PT-BR e largura de linhas; a rota Gemini falhou durante a tradução. O NLLB levou 45min49s, quase o dobro da mediana quente histórica. As evidências e hipóteses estão em [FASE_8_1_PLANO.md](../../FASE_8_1_PLANO.md). A execução corretiva e a reinspeção em player real ainda estão pendentes. O benchmark comparativo amplo Gemini × NLLB permanece fora do escopo por decisão do usuário.
+**Estado:** o avaliador estrutural está integrado, mas a homologação real não está concluída. A rodada de 12/11/2026 já foi analisada: o SRT NLLB concluiu, porém com problemas de fragmentação, PT-BR e largura de linhas; a rota Gemini falhou durante a tradução. O NLLB levou 45min49s, quase o dobro da mediana quente histórica. As evidências e hipóteses estão em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md). A execução corretiva e a reinspeção em player real ainda estão pendentes. O benchmark comparativo amplo Gemini × NLLB permanece fora do escopo por decisão do usuário.
 
 
 
@@ -570,4 +570,4 @@ O lote atual de 16 cues já é uma otimização existente. A hipótese de ganho 
 
 **Estratégia Gemini:** 927 unidades gerariam teoricamente 29 pedidos com lote 32, 15 com 64 e 10 com 96/100, sem falhas. O branch implementa orçamento de entrada/saída, estimativa conservadora, recuperação por ID e subdivisão; os testes fakes verificam os pedidos teóricos. O padrão permanece em 32: redução sintética de chamadas não comprova latência, custo nem qualidade na API real. A promoção de lote maior exige experimento PT-BR controlado com `usageMetadata`, tempo por chamada, retries/subdivisões e revisão humana.
 
-**Critério de encerramento:** todos os gates definidos no [plano detalhado da Fase 8.1](../../FASE_8_1_PLANO.md) devem passar. A mediana de três execuções quentes da mídia de referência deve ficar em até 26min30s, sem regressão textual, semântica ou temporal. O status atual continua pendente; nenhum dos itens acima deve ser considerado implementado apenas por estar documentado.
+**Critério de encerramento:** todos os gates definidos no [plano detalhado da Fase 8.1](FASE_8_1_PLANO.md) devem passar. A mediana de três execuções quentes da mídia de referência deve ficar em até 26min30s, sem regressão textual, semântica ou temporal. O status atual continua pendente; nenhum dos itens acima deve ser considerado implementado apenas por estar documentado.
