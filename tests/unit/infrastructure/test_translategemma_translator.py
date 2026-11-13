@@ -15,9 +15,8 @@ from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.translation.translategemma import TranslateGemmaTranslator
 
 
-translategemma_module = importlib.import_module(
-    "legendar.infrastructure.translation.translategemma"
-)
+def _translategemma_module():
+    return importlib.import_module("legendar.infrastructure.translation.translategemma")
 
 _MARKER_PATTERN = re.compile(r"\[\[LG[0-9a-f]{10}_[A-Z0-9_]+\]\]")
 
@@ -458,7 +457,7 @@ class _FakeHttpResponse:
 
 def test_post_json_decodes_object_response(monkeypatch) -> None:
     monkeypatch.setattr(
-        translategemma_module,
+        _translategemma_module(),
         "urlopen",
         lambda *_args, **_kwargs: _FakeHttpResponse(b'{"ok": true}'),
     )
@@ -564,7 +563,7 @@ def test_chat_completion_uses_expected_endpoint(monkeypatch) -> None:
 
 def test_progress_slice_maps_and_clamps_fraction() -> None:
     sink = FakeProgress()
-    progress = translategemma_module._ProgressSlice(sink, 0.2, 0.6)
+    progress = _translategemma_module()._ProgressSlice(sink, 0.2, 0.6)
     progress.report(0.5, "meio")
     progress.report(2.0, "fim")
     assert sink.updates == [(0.4, "meio"), (0.6, "fim")]
