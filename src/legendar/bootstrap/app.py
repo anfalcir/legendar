@@ -329,9 +329,7 @@ def build_ui_dependencies(
                 *inspection.details,
             )
             if not inspection.executable_available:
-                details += (
-                    "Instale o runtime llama.cpp para habilitar este motor.",
-                )
+                details += ("Instale o runtime llama.cpp para habilitar este motor.",)
             elif not inspection.model_available:
                 if translategemma_runtime.download_authorized:
                     details += (
