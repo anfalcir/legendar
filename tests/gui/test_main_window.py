@@ -30,6 +30,7 @@ from tests.helpers.fakes import (
     FakeInspector,
     FakePublisher,
     FakeTranscriber,
+    FakeTranslator,
     make_media_info,
     make_transcript,
 )
@@ -299,7 +300,7 @@ def test_progress_is_indeterminate_until_pipeline_reports_a_measurement(
 def test_keyboard_tab_order_and_accessible_names_are_explicit(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
-    assert window.file_edit.accessibleName() == "Arquivo ou URL da mídia"
+    assert window.file_edit.accessibleName() == "Arquivo SRT, arquivo de mídia ou URL"
     assert window.generate_button.accessibleName()
     assert window.cancel_button.accessibleName()
     assert window.log_view.accessibleName() == "Registro de atividade do trabalho"
