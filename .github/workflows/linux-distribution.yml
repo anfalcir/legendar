@@ -69,7 +69,7 @@ jobs:
         run: |
           archive="$(find dist -maxdepth 1 -name 'legendar-linux-x86_64-*.tar.gz' -print -quit)"
           test -n "$archive"
-          sha256sum --check "$archive.sha256"
+          (cd dist && sha256sum --check "$(basename "$archive").sha256")
           tar -tzf "$archive" > "$RUNNER_TEMP/legendar-archive-contents.txt"
           grep -q '/src/legendar/__main__.py$' "$RUNNER_TEMP/legendar-archive-contents.txt"
           grep -q '/packaging/linux/install.sh$' "$RUNNER_TEMP/legendar-archive-contents.txt"
