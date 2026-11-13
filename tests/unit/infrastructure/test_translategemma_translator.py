@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import re
 from urllib.error import HTTPError, URLError
 
@@ -12,12 +11,9 @@ from legendar.application.pipeline.translation import (
 )
 from legendar.domain.errors.catalog import TranslationError, UnsupportedLanguageError
 from legendar.domain.value_objects.language import Language
+import legendar.infrastructure.translation.translategemma as translategemma_module
 from legendar.infrastructure.translation.translategemma import TranslateGemmaTranslator
 
-
-translategemma_module = importlib.import_module(
-    "legendar.infrastructure.translation.translategemma"
-)
 
 _MARKER_PATTERN = re.compile(r"\[\[LG[0-9a-f]{10}_[A-Z0-9_]+\]\]")
 
