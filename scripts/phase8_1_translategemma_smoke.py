@@ -188,7 +188,7 @@ def translate_batch_check(
         "Translate each string value in the cues object into the target language. "
         "Use context_before and context_after only to understand context. "
         "Return only a JSON object with exactly the same numeric keys and one "
-        "non-empty translated string for each key. Do not translate the keys.\\n"
+        "non-empty translated string for each key. Do not translate the keys.\n"
         + input_json
     )
     payload = _base_payload(
@@ -293,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
     except (RuntimeError, ValueError) as exc:
-        parser.exit(2, f"Falha no smoke TranslateGemma: {exc}\\n")
+        parser.exit(2, f"Falha no smoke TranslateGemma: {exc}\n")
     return 0
 
 
