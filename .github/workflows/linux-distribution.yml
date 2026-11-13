@@ -50,8 +50,8 @@ jobs:
 
       - name: Check shell scripts
         run: |
-          bash -n packaging/linux/install.sh packaging/linux/launch.sh packaging/linux/uninstall.sh scripts/build_linux_bundle.sh
-          shellcheck packaging/linux/install.sh packaging/linux/launch.sh packaging/linux/uninstall.sh scripts/build_linux_bundle.sh
+          bash -n packaging/linux/install.sh packaging/linux/launch.sh packaging/linux/uninstall.sh scripts/build_linux_bundle.sh scripts/test_linux_launcher.sh
+          shellcheck packaging/linux/install.sh packaging/linux/launch.sh packaging/linux/uninstall.sh scripts/build_linux_bundle.sh scripts/test_linux_launcher.sh
 
       - name: Verify release tag matches application version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -61,6 +61,9 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not match application version v$version."
             exit 1
           }
+
+      - name: Smoke launcher offline check and consented repair
+        run: bash scripts/test_linux_launcher.sh
 
       - name: Build release bundle
         run: bash scripts/build_linux_bundle.sh
