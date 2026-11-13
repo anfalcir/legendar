@@ -14,6 +14,7 @@ Este diretório mantém na raiz somente documentos que orientam a operação atu
 - [Arquitetura](ARQUITETURA.md) — camadas, pipeline, portas, estados, recursos e publicação.
 - [Operação](OPERACAO.md) — jornada de uso, estados, cancelamento, arquivos e diagnóstico.
 - [Instalação](INSTALACAO.md) — requisitos, perfis, instalação, execução e verificação.
+- [Distribuição Linux](DISTRIBUICAO_LINUX.md) — estratégia do bundle por usuário, instalador, atualização, remoção, CI e gates de homologação.
 - [Homologação](HOMOLOGACAO.md) — roteiro prático com mídia real, hardware, avaliação estrutural e revisão do SRT.
 - [Decisões](DECISOES.md) — escolhas consolidadas e pontos ainda em avaliação.
 - [Matriz de dependências](MATRIZ_DEPENDENCIAS.md) — manifesto, lock, compatibilidade e candidatos em avaliação.

@@ -26,8 +26,8 @@ O comando abre a janela principal. Nada é processado sem confirmação explíci
 
 ### 2.1. Preferências de tradução
 
-- O backend padrão é NLLB-200 local; o Gemini Developer API é uma alternativa opcional.
-- Selecione o backend em **Preferências**. A escolha é persistida localmente e aplicada aos próximos trabalhos, sem reiniciar a aplicação.
+- TranslateGemma 4B é o novo motor local disponível e deve ser selecionado para a homologação da Fase 8.1. NLLB-200 permanece temporariamente selecionável como baseline legado; o Gemini Developer API é uma alternativa remota explícita. A preferência atualmente inicializa em NLLB para preservar a configuração legada até a homologação real.
+- Selecione o backend em **Preferências**. Para validar o novo motor, selecione **TranslateGemma 4B (local)**. A escolha é persistida localmente e aplicada aos próximos trabalhos, sem reiniciar a aplicação.
 - Para usar Gemini, configure a chave API no próprio painel de Preferências. É possível substituir ou remover a chave por ali.
 - A chave é armazenada em arquivo local privado, fora do QSettings, logs e relatórios de desempenho. Não a compartilhe nem a coloque no repositório.
 - Ao selecionar Gemini, o texto das cues é enviado à API externa do Google para tradução. Use essa opção somente quando estiver de acordo com esse fluxo de dados e houver conectividade.
@@ -41,7 +41,7 @@ O comando abre a janela principal. Nada é processado sem confirmação explíci
 | Validando entrada | conferindo mídia, idioma e destino | campos bloqueados |
 | Inspecionando / Preparando áudio | ffprobe e normalização | cancelar ativo |
 | Transcrevendo / Alinhando | Whisper e WhisperX | cancelar ativo |
-| Segmentando / Traduzindo | cues e NLLB | cancelar ativo |
+| Segmentando / Traduzindo | cues e backend escolhido (TranslateGemma, NLLB legado ou Gemini) | cancelar ativo |
 | Validando SRT | checagem estrutural/editorial atual | cancelar ativo |
 | Publicando | troca atômica do arquivo | cancelamento recusado |
 | Concluído | SRT publicado | abrir pasta |
@@ -93,7 +93,7 @@ Para consultar os últimos jobs:
 uv run --locked --no-sync python scripts/phase1_performance_summary.py --last 10
 ```
 
-O resumo apresenta tempo e RTF por etapa, estado de carga dos modelos (`cold`, `warm` ou `unused`) e throughput de geração NLLB quando disponível. Uma execução fria carrega o modelo sob demanda; a carga e eventual download são medidos separadamente da inferência.
+O resumo apresenta tempo e RTF por etapa, estado de carga dos modelos (`cold`, `warm` ou `unused`) e métricas do backend de tradução quando disponíveis. Os relatórios antigos podem conter métricas específicas do NLLB. Uma execução fria carrega o modelo sob demanda; a carga e eventual download são medidos separadamente da inferência.
 
 ### Protocolo prático para a mídia de 37 minutos
 

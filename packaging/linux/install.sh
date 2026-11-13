@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+APP_DIR="$HOME/.local/share/legendar/app"
+BIN_DIR="$HOME/.local/bin"
+UV_BIN_DIR="$HOME/.local/share/legendar/tools"
+UV_BIN="$UV_BIN_DIR/uv"
+DESKTOP_DIR="$HOME/.local/share/applications"
+ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
+UV_VERSION="0.13.7"
+SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
+BUNDLE_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+fail() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
+ask() {
+    local prompt="$1" answer
+    if [[ -t 0 ]]; then
+        read -r -p "$prompt [s/N] " answer
+        case "$answer" in s|S|sim|SIM|Sim) return 0 ;; *) return 1 ;; esac
+    elif command -v zenity >/dev/null 2>&1; then
+        zenity --question --title="Legendar" --text="$prompt"
+    else
+        printf '%s\n' "$prompt" "Abra um terminal e execute novamente para confirmar." >&2
+        return 1
+    fi
+}
+[[ "$(uname -s)" == "Linux" ]] || fail "Este pacote é destinado ao Linux."
+case "$(uname -m)" in x86_64|amd64) ;; *) fail "Arquitetura não suportada; exige Linux x86_64." ;; esac
+for required in pyproject.toml uv.lock src/legendar/__main__.py; do
+    [[ -f "$BUNDLE_ROOT/$required" ]] || fail "Pacote incompleto: $required ausente."
+done
+ensure_media_tools() {
+    local missing=0
+    command -v ffmpeg >/dev/null 2>&1 || missing=1
+    command -v ffprobe >/dev/null 2>&1 || missing=1
+    command -v zenity >/dev/null 2>&1 || missing=1
+    if command -v ldconfig >/dev/null 2>&1; then
+        for library in libEGL.so.1 libGL.so.1 libxkbcommon-x11.so.0 libxcb-cursor.so.0; do
+            ldconfig -p 2>/dev/null | grep -Fq "$library" || missing=1
+        done
+    fi
+    [[ "$missing" -eq 1 ]] || return
+    printf '\nO Legendar precisa de FFmpeg/ffprobe, bibliotecas nativas do Qt e suporte a diálogos gráficos.\n'
+    if ! command -v apt-get >/dev/null 2>&1 || ! command -v sudo >/dev/null 2>&1; then
+        fail "Instale manualmente FFmpeg, ffprobe e bibliotecas Qt/GL do sistema."
+    fi
+    ask "Deseja instalar FFmpeg e bibliotecas de interface pelo APT? Será solicitada a senha do sistema." \
+        || fail "Instalação cancelada; nenhuma alteração foi feita no sistema."
+    sudo apt-get update
+    sudo apt-get install --yes --no-install-recommends \
+        ffmpeg libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 \
+        libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 \
+        libxcb-randr0 libxcb-render-util0 libxcb-xfixes0 libx11-xcb1 zenity
+    command -v ffmpeg >/dev/null 2>&1 || fail "FFmpeg não foi instalado corretamente."
+    command -v ffprobe >/dev/null 2>&1 || fail "ffprobe não foi instalado corretamente."
+}
+ensure_uv() {
+    local installer
+    mkdir -p "$UV_BIN_DIR"
+    if [[ -x "$UV_BIN" ]] && "$UV_BIN" --version | grep -Fq " $UV_VERSION"; then return; fi
+    printf 'Instalando uv %s no diretório privado do usuário...\n' "$UV_VERSION"
+    installer="$(mktemp)"
+    if command -v curl >/dev/null 2>&1; then
+        curl --fail --location --silent --show-error "https://astral.sh/uv/$UV_VERSION/install.sh" --output "$installer"
+    elif command -v wget >/dev/null 2>&1; then
+        wget --quiet "https://astral.sh/uv/$UV_VERSION/install.sh" --output-document="$installer"
+    else
+        fail "Instale curl ou wget para preparar o uv."
+    fi
+    UV_INSTALL_DIR="$UV_BIN_DIR" UV_NO_MODIFY_PATH=1 sh "$installer"
+    rm -f "$installer"
+    [[ -x "$UV_BIN" ]] || fail "O instalador não produziu $UV_BIN."
+    "$UV_BIN" --version | grep -Fq " $UV_VERSION" || fail "Versão do uv divergente."
+}
+ensure_media_tools
+AVAILABLE_KB="$(df -Pk "$HOME" | awk 'NR == 2 { print $4 }')"
+if [[ -n "$AVAILABLE_KB" ]] && (( AVAILABLE_KB < 8 * 1024 * 1024 )); then
+    printf 'Aviso: há menos de 8 GiB livres no disco do diretório pessoal.\n'
+    ask "Deseja continuar mesmo assim? O ambiente Python e os modelos ocupam espaço adicional." || fail "Instalação cancelada por espaço insuficiente."
+fi
+ensure_uv
+export PATH="$BIN_DIR:$UV_BIN_DIR:$HOME/.cargo/bin:$PATH"
+printf '\nPreparando o Legendar em %s...\n' "$APP_DIR"
+mkdir -p "$APP_DIR" "$DESKTOP_DIR" "$ICON_DIR"
+cp -a "$BUNDLE_ROOT/src" "$APP_DIR/"
+cp -a "$BUNDLE_ROOT/pyproject.toml" "$BUNDLE_ROOT/uv.lock" "$BUNDLE_ROOT/README.md" "$BUNDLE_ROOT/LICENSE" "$APP_DIR/"
+cp -a "$BUNDLE_ROOT/packaging/linux/launch.sh" "$APP_DIR/launch.sh"
+cp -a "$BUNDLE_ROOT/packaging/linux/uninstall.sh" "$APP_DIR/uninstall.sh"
+mkdir -p "$HOME/.local/share/doc/legendar"
+cp -a "$BUNDLE_ROOT/docs/." "$HOME/.local/share/doc/legendar/"
+chmod 700 "$APP_DIR/launch.sh" "$APP_DIR/uninstall.sh"
+printf 'Preparando Python 3.12 gerenciado pelo uv...\n'
+"$UV_BIN" python install 3.12
+(cd "$APP_DIR" && "$UV_BIN" sync --locked --no-dev --extra runtime-cpu --python 3.12)
+if [[ -f "$BUNDLE_ROOT/src/legendar/presentation/qt/assets/legendar.svg" ]]; then
+    install -m 644 "$BUNDLE_ROOT/src/legendar/presentation/qt/assets/legendar.svg" "$ICON_DIR/legendar.svg"
+fi
+cat > "$BIN_DIR/legendar" <<EOF
+#!/usr/bin/env bash
+set -Eeuo pipefail
+exec "$APP_DIR/launch.sh" "\$@"
+EOF
+chmod 755 "$BIN_DIR/legendar"
+cat > "$DESKTOP_DIR/legendar.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Legendar
+Comment=Transcrição, alinhamento e tradução de legendas
+Exec="$BIN_DIR/legendar"
+Icon=legendar
+Terminal=false
+Categories=AudioVideo;Audio;Video;
+StartupNotify=true
+EOF
+chmod 644 "$DESKTOP_DIR/legendar.desktop"
+printf '\nInstalação concluída. Abra "Legendar" no menu ou execute: %s/legendar\n' "$BIN_DIR"
+printf 'Modelos, configurações e logs ficam fora da instalação e serão preservados nas atualizações.\n'
