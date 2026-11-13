@@ -44,11 +44,10 @@ ensure_uv() {
     local uv_bin="$BIN_DIR/uv" installer
     mkdir -p "$BIN_DIR"
     if [[ -x "$uv_bin" ]] && "$uv_bin" --version | grep -Fq " $UV_VERSION"; then return; fi
-    if command -v uv >/dev/null 2>&1 && uv --version | grep -Fq " $UV_VERSION"; then return; fi
     printf 'Instalando uv %s no diretório privado do usuário...\n' "$UV_VERSION"
     installer="$(mktemp)"
-    curl --fail --location --silent --show-error https://astral.sh/uv/install.sh --output "$installer"
-    UV_VERSION="$UV_VERSION" UV_INSTALL_DIR="$BIN_DIR" UV_NO_MODIFY_PATH=1 sh "$installer"
+    curl --fail --location --silent --show-error "https://astral.sh/uv/$UV_VERSION/install.sh" --output "$installer"
+    UV_INSTALL_DIR="$BIN_DIR" UV_NO_MODIFY_PATH=1 sh "$installer"
     rm -f "$installer"
     [[ -x "$uv_bin" ]] || fail "O instalador não produziu $uv_bin."
     "$uv_bin" --version | grep -Fq " $UV_VERSION" || fail "Versão do uv divergente."
