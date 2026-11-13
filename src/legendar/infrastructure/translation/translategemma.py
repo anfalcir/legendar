@@ -28,8 +28,8 @@ from legendar.domain.errors.catalog import (
 )
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.translation.llama_runtime import (
-    DEFAULT_MODEL_ALIAS,
     DEFAULT_CONTEXT_SIZE,
+    DEFAULT_MODEL_ALIAS,
     LlamaCppRuntimeManager,
 )
 
@@ -375,10 +375,7 @@ class TranslateGemmaTranslator:
         """
         source_chars = sum(len(unit.text) for unit in batch)
         estimate = math.ceil(source_chars / 2.5) + 8 * len(batch) + 48
-        return min(
-            _MAX_OUTPUT_TOKENS,
-            max(_MIN_OUTPUT_TOKENS, estimate),
-        )
+        return max(_MIN_OUTPUT_TOKENS, estimate)
 
     def _count_tokens(
         self,
@@ -484,12 +481,17 @@ class TranslateGemmaTranslator:
             )
             prompt_tokens = self._count_tokens(base_url, payload)
             output_tokens = self._estimate_output_tokens(batch)
-            if prompt_tokens + output_tokens + _CONTEXT_MARGIN_TOKENS > context_size:
+            if (
+                output_tokens > _MAX_OUTPUT_TOKENS
+                or prompt_tokens + output_tokens + _CONTEXT_MARGIN_TOKENS > context_size
+            ):
                 if len(batch) == 1:
                     raise TranslationError(
                         "A unidade de tradução "
-                        f"{batch[0].index} excede o contexto de {context_size} "
-                        "tokens do TranslateGemma; nenhuma entrada foi truncada."
+                        f"{batch[0].index} excede a capacidade de saída/contexto "
+                        f"do TranslateGemma ({context_size} tokens de contexto, "
+                        f"teto de {_MAX_OUTPUT_TOKENS} tokens de saída); "
+                        "nenhuma entrada foi truncada."
                     )
                 self._record("context_budget_splits", 1)
                 split_batches += 1
