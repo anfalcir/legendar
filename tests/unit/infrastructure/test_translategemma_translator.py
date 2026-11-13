@@ -628,11 +628,14 @@ def test_count_prompt_tokens_returns_integer_count(monkeypatch) -> None:
         "_post_json",
         lambda *_args, **_kwargs: {"input_tokens": 123},
     )
-    assert _module()._count_prompt_tokens(
-        "http://127.0.0.1:8080",
-        {},
-        60.0,
-    ) == 123
+    assert (
+        _module()._count_prompt_tokens(
+            "http://127.0.0.1:8080",
+            {},
+            60.0,
+        )
+        == 123
+    )
 
 
 def test_chat_completion_uses_expected_endpoint(monkeypatch) -> None:
