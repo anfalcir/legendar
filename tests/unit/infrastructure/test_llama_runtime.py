@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import subprocess
+import tarfile
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 
@@ -99,6 +101,51 @@ def _manager(tmp_path: Path, **overrides) -> tuple[LlamaCppRuntimeManager, list]
     }
     options.update(overrides)
     return LlamaCppRuntimeManager(**options), processes
+
+
+def _runtime_archive() -> bytes:
+    payload = io.BytesIO()
+    with tarfile.open(fileobj=payload, mode="w:gz") as archive:
+        root = tarfile.TarInfo(f"{llama_runtime.LLAMA_CPP_RELEASE}/")
+        root.type = tarfile.DIRTYPE
+        archive.addfile(root)
+        binary = tarfile.TarInfo(
+            f"{llama_runtime.LLAMA_CPP_RELEASE}/llama-server"
+        )
+        binary.mode = 0o755
+        binary.size = len(b"fake server")
+        archive.addfile(binary, io.BytesIO(b"fake server"))
+    return payload.getvalue()
+
+
+def test_runtime_install_requires_consent_and_is_idempotent(tmp_path, monkeypatch) -> None:
+    archive = _runtime_archive()
+    monkeypatch.setattr(
+        llama_runtime,
+        "LLAMA_CPP_SHA256",
+        hashlib.sha256(archive).hexdigest(),
+    )
+    response = DownloadResponse(
+        [archive],
+        headers={"Content-Length": str(len(archive))},
+    )
+    manager = LlamaCppRuntimeManager(
+        tmp_path / "models",
+        executable=tmp_path / "missing-llama",
+        model_path=tmp_path / "model.gguf",
+        runtime_opener=lambda *_args, **_kwargs: response,
+    )
+    monkeypatch.setattr(llama_runtime.sys, "platform", "linux")
+    monkeypatch.setattr(llama_runtime.platform, "machine", lambda: "x86_64")
+
+    with pytest.raises(ModelError, match="autorização explícita"):
+        manager.ensure_runtime(consent=False)
+
+    installed = manager.ensure_runtime(consent=True)
+    assert installed.name == "llama-server"
+    assert installed.is_file()
+    assert manager.discover_executable(tmp_path / "models") == installed
+    assert manager.ensure_runtime(consent=True) == installed
 
 
 def test_ensure_model_reuses_valid_cached_weights_without_consent(
