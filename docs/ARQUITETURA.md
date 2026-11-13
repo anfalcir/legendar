@@ -54,8 +54,7 @@ src/legendar/
 
 1. `MainWindow` monta `JobRequest` (uma origem exclusiva: mídia ou SRT, idiomas, tradução, faixa) e `JobContext` (job id, workspace, destino, token).
 2. `JobWorker` roda `JobController.run` em `QThread`; o controlador abre `VALIDATING_INPUT`.
-3. O caminho SRT usa `LOADING_SUBTITLES` para ler/validar as cues e salta todas as portas de mídia; o caminho de mídia mantém a sequência de aquisição e ASR.
-4. `SerialPipeline` percorre a rota escolhida: mídia segue aquisição/inspeção → áudio → Whisper → WhisperX → segmentação; SRT existente segue leitura/validação de cues sem chamar portas de mídia. Ambas podem executar tradução opcional, validação editorial e publicação.
+3. `SerialPipeline` percorre a rota escolhida: mídia segue aquisição/inspeção → áudio → Whisper → WhisperX → segmentação; SRT existente usa `LOADING_SUBTITLES`, lê/valida as cues e salta todas as portas de mídia. Ambas podem executar tradução opcional, validação editorial e publicação.
 4. Cada etapa reporta progresso por `ScaledProgress`, que mapeia a fração local para a faixa global.
 5. O controlador converte transições e mensagens em eventos; o resultado é um único evento terminal.
 6. `JobViewModel` transforma eventos em snapshot; a janela apenas desenha, habilita controles e limpa o workspace.
@@ -94,7 +93,7 @@ src/legendar/
 
 `read_srt_file` aceita UTF-8/UTF-8-BOM, UTF-16 com BOM e Windows-1252, rejeita codificação inválida e SRT estruturalmente incompatível, normaliza índices sequenciais e mantém ordem/texto/timestamps. A origem exige idioma explícito. A modalidade SRT não chama `MediaInspector`, `AudioPreparer`, `Transcriber` ou `Aligner`; a mesma porta `Translator` recebe uma unidade por cue e `apply_translation` mantém os intervalos originais. A publicação continua atômica e não pode sobrescrever a origem.
 
-## 7. Publicação SRT atual
+### 7.1. Segmentação e publicação do fluxo de mídia
 
 1. A segmentação atual usa palavras alinhadas e produz cues de até duas linhas de 42 caracteres; a política atual declara 1–7 s, pausa de 0,6 s e cerca de 17 CPS.
 2. A tradução opcional preserva `TimeRange` e correspondência 1:1 entre cue e texto traduzido.
