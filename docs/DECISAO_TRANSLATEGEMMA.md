@@ -2,7 +2,7 @@
 
 - **Data:** 12/11/2026
 - **Projeto:** Legendar
-- **Status:** decisão aprovada; runtime autônomo, adaptador com batching/contexto e composição no bootstrap/Preferências estão implementados na PR #36. Os sete workflows de CI passaram no head `39b7fefa76e1def6a78e82d7248588de0f7b4d9e`. O smoke com pesos reais e a homologação no hardware de referência continuam pendentes.
+- **Status:** decisão e implementação integradas à `main` pela PR #36 (squash `9b831806d914d8cf856b6501557b12516b7715ce`). A CI pós-merge da Fase 8 (run `43353241876`) passou nos cinco jobs. O smoke com pesos reais e a homologação no hardware de referência continuam pendentes.
 - **Decisão:** substituir integralmente NLLB-200 pelo Google TranslateGemma 4B como único motor de tradução local. Gemini Developer API continua como backend remoto independente e explicitamente selecionável.
 - **Modelo inicial:** TranslateGemma 4B Instruct, quantização GGUF Q4_K_M.
 - **Runtime candidato adotado para a integração:** servidor local do projeto llama.cpp, com API HTTP restrita a loopback e parâmetros de idioma por requisição (chat_template_kwargs). O runtime deverá ser iniciado e encerrado pelo adaptador do Legendar, sem exigir daemon externo persistente.
@@ -26,7 +26,7 @@
 
 ### Implementação autônoma atual
 
-A PR #36 agora inclui instalação assistida e idempotente do runtime CPU Linux x86_64 do llama.cpp, fixado no release `b12321`, com verificação SHA-256 do tarball, extração segura para o cache privado, retomada de download e carregamento das bibliotecas locais. A instalação ocorre somente após consentimento explícito; não usa sudo, não altera o PATH do sistema e não aceita licença/credencial em nome do usuário. O adaptador prepara runtime → modelo → servidor automaticamente antes da tradução e encerra apenas o processo que ele próprio iniciou. A validação do runtime real e do modelo real ainda depende do smoke no hardware de referência.
+A implementação integrada pela PR #36 inclui instalação assistida e idempotente do runtime CPU Linux x86_64 do llama.cpp, fixado no release `b12321`, com verificação SHA-256 do tarball, extração segura para o cache privado, retomada de download e carregamento das bibliotecas locais. A instalação ocorre somente após consentimento explícito; não usa sudo, não altera o PATH do sistema e não aceita licença/credencial em nome do usuário. O adaptador prepara runtime → modelo → servidor automaticamente antes da tradução e encerra apenas o processo que ele próprio iniciou. A validação do runtime real e do modelo real ainda depende do smoke no hardware de referência.
 
 ## Riscos e validações obrigatórias
 

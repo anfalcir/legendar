@@ -143,6 +143,20 @@ As fixtures sintéticas versionadas estão em [tests/fixtures/phase_8_1/README.m
 
 A amostra humana PT-BR deve ser revisada a partir do áudio autorizado e armazenada localmente em `corpus/phase_8_1/human_reference.json` (a pasta `corpus/` é ignorada pelo Git). O template vazio está em `tests/fixtures/phase_8_1/human_reference.template.json`. Também é necessário congelar/hash dos mesmos intermediários ASR/alinhamento a serem reutilizados nos testes isolados de segmentação e tradução. Enquanto isso não for feito, comparações de qualidade permanecem bloqueadas.
 
+## 9.4. Gate único de TranslateGemma — homologação inicial
+
+A integração de software está na `main`, mas o modelo real ainda não foi homologado. A primeira validação operacional deve ser **uma única execução representativa**, no Linux Mint do hardware de referência, sem repetir matrizes de teste.
+
+1. Abra o Legendar e selecione **TranslateGemma** como backend local.
+2. Na primeira preparação, confira o diagnóstico apresentado pelo aplicativo. Autorize a instalação do runtime llama.cpp quando solicitado. A instalação é privada ao cache do Legendar, sem `sudo` e sem alterar o PATH do sistema.
+3. Autorize o download do GGUF somente depois de conferir o modelo/licença. Se o Hugging Face exigir autenticação ou aceite de termos, faça isso explicitamente; o aplicativo não deve aceitar termos nem armazenar/exibir o token em logs.
+4. Use o SRT em inglês já gerado para o episódio Wingfeather Saga S4E2 e traduza para **português brasileiro**. Não rode uma nova transcrição nesta primeira etapa: o objetivo inicial é isolar a tradução e permitir comparação com a mesma origem.
+5. Confirme que o processo de tradução inicia o servidor automaticamente, que uma segunda preparação reutiliza runtime/modelo/servidor sem download duplicado e que a conclusão não deixa marcadores técnicos no SRT.
+6. Revise no resultado: cardinalidade e ordem das cues, timestamps inalterados, nomes próprios/cidades/raças/clãs, negações, naturalidade PT-BR, frases fragmentadas e ausência de texto em inglês residual.
+7. Registre duração de preparação (separada do tempo de tradução), tempo total, RAM máxima, resultado e versão do runtime/modelo. O relatório sanitizado fica em `~/.cache/legendar/logs/performance/`; não envie áudio, vídeo, transcrição ou credenciais.
+
+**Critério de decisão:** falha de runtime, perda/reordenação de cue ou marcador exposto bloqueia a homologação técnica. Qualidade PT-BR e preservação de nomes exigem revisão editorial; CI verde e SRT estruturalmente válido não bastam. NLLB continua disponível apenas como baseline selecionável até a aprovação explícita do resultado. Não há fallback automático.
+
 ## 10. Registro de resultado
 
 | Campo | Valor |

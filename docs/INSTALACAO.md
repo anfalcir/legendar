@@ -13,7 +13,7 @@
 | FFmpeg | qualquer versão estável recente | obrigatório no `PATH` |
 | ffprobe | mesma origem do FFmpeg | obrigatório no `PATH` |
 | Runtime JavaScript | Deno ≥ 2.3 ou Node ≥ 22 | necessário apenas para YouTube (`yt-dlp-ejs`) |
-| Espaço em disco | ≈ 6 GB livres | pesos NLLB (≈2,4 GB) + Whisper/WhisperX |
+| Espaço em disco | reservar pelo menos 8 GB livres | cache de Whisper/WhisperX e TranslateGemma GGUF (~2,5 GB); NLLB baseline pode ocupar espaço adicional |
 
 Sistemas operacionais oficialmente homologados ainda não foram declarados: a CI
 exercita Ubuntu com Python 3.10–3.13, e a validação em Windows/macOS depende da
@@ -74,7 +74,7 @@ uv sync --locked --group dev --group phase0 --extra runtime-cu128
 
 Observações:
 
-- `runtime-cpu` instala o stack PyTorch CPU, Whisper, WhisperX, NLLB (`transformers` + `sentencepiece`) e yt-dlp.
+- `runtime-cpu` instala o stack PyTorch CPU, Whisper, WhisperX, dependências da baseline NLLB (`transformers` + `sentencepiece`) e yt-dlp. O runtime llama.cpp/TranslateGemma é preparado pelo próprio aplicativo, sob demanda.
 - `runtime-cu128` é exclusivo para Linux/Windows com CUDA 12.8; macOS usa os wheels PyPI do perfil CPU e pode expor MPS em runtime.
 - Não combine os dois perfis: eles são declarados como conflitantes.
 - O perfil ROCm não é declarado nesta versão (o PyTorch disponível no índice ROCm 7.2 é incompatível com a faixa exigida pelo WhisperX 3.8.6).
@@ -134,7 +134,7 @@ demais continuam válidos.
 | `LEGENDAR_WHISPER_MODEL` | `base` | `tiny`, `base`, `small`, `medium`, `large`, `turbo` |
 | `LEGENDAR_WHISPER_DEVICE` | `auto` | `auto`, `cpu`, `cuda` |
 | `LEGENDAR_ALIGN_DEVICE` | `auto` | dispositivo do WhisperX |
-| `LEGENDAR_TRANSLATE_DEVICE` | `auto` | dispositivo do NLLB |
+| `LEGENDAR_TRANSLATE_DEVICE` | `auto` | dispositivo do backend NLLB mantido temporariamente como baseline |
 | `LEGENDAR_TRANSLATE_MODEL` | `facebook/nllb-200-distilled-600M` | checkpoint compatível |
 | `LEGENDAR_RESOURCE_PROFILE` | `auto` | `auto`, `low-memory`, `balanced` ou `performance`; `auto` é conservador abaixo de 16 GiB de RAM |
 | `LEGENDAR_CPU_THREADS` | definido pelo perfil | sobrescreve o número de threads CPU |
@@ -144,9 +144,12 @@ Configuração inválida não impede a janela de abrir: o recurso afetado fica
 desabilitado com o motivo no painel de prontidão. O perfil de recursos e os overrides
 de threads também podem ser definidos no ambiente antes de iniciar a aplicação.
 
-A chave Gemini não é uma variável obrigatória de instalação: configure-a localmente
-em **Preferências**. O backend Gemini é opcional e transmite o texto das cues à API
-externa quando selecionado; NLLB permanece o caminho local padrão.
+O backend local recomendado para a nova homologação é TranslateGemma. Ao selecioná-lo,
+o aplicativo verifica/prepara o runtime llama.cpp e o modelo sob demanda; a instalação
+do runtime e o download do modelo exigem consentimento explícito. O cache é preservado
+entre execuções. NLLB permanece temporariamente selecionável como baseline, sem fallback
+automático. A chave Gemini não é obrigatória: configure-a localmente em **Preferências**.
+O backend Gemini é opcional e transmite o texto das cues à API externa quando selecionado.
 
 ## 8. Instalação por pip (sem uv)
 
@@ -166,7 +169,9 @@ concorrer com `pyproject.toml`/`uv.lock`.
 
 `pyinstaller` está declarado no grupo `build`, mas o empacotamento ainda não é
 um entregável homologado: faltam validação de binários, tamanho e caminhos de
-modelos. Enquanto isso, a execução suportada é a partir do código com `uv`.
+modelos. Não há release binária publicada nem workflow de empacotamento configurado
+neste estado do repositório. Enquanto isso, a execução suportada é a partir do código
+com `uv`, conforme as etapas acima.
 
 ## 10. Desinstalar
 
