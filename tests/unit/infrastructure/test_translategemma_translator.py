@@ -6,7 +6,7 @@ from urllib.error import HTTPError, URLError
 
 import pytest
 
-from legendar.application.pipeline.translation import TranslationContext, TranslationUnit
+from legendar.application.pipeline.translation import (\n    TranslationContext,\n    TranslationUnit,\n)
 from legendar.domain.errors.catalog import TranslationError, UnsupportedLanguageError
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.translation.translategemma import TranslateGemmaTranslator
@@ -527,3 +527,42 @@ def test_count_prompt_tokens_rejects_invalid_count(monkeypatch) -> None:
             {},
             1.0,
         )
+
+
+
+def test_count_prompt_tokens_returns_integer_count(monkeypatch) -> None:
+    monkeypatch.setattr(
+        translategemma_module,
+        "_post_json",
+        lambda *_args, **_kwargs: {"input_tokens": 123},
+    )
+    assert translategemma_module._count_prompt_tokens(
+        "http://127.0.0.1:8080",
+        {},
+        60.0,
+    ) == 123
+
+
+def test_chat_completion_uses_expected_endpoint(monkeypatch) -> None:
+    calls = []
+    monkeypatch.setattr(
+        translategemma_module,
+        "_post_json",
+        lambda *args: calls.append(args) or {"choices": []},
+    )
+    payload = {"model": "translategemma-4b"}
+    assert translategemma_module._chat_completion(
+        "http://127.0.0.1:8080/",
+        payload,
+        10.0,
+    ) == {"choices": []}
+    assert calls[0][1] == "/v1/chat/completions"
+    assert calls[0][2] is payload
+
+
+def test_progress_slice_maps_and_clamps_fraction() -> None:
+    sink = FakeProgress()
+    progress = translategemma_module._ProgressSlice(sink, 0.2, 0.6)
+    progress.report(0.5, "meio")
+    progress.report(2.0, "fim")
+    assert sink.updates == [(0.4, "meio"), (0.6, "fim")]
