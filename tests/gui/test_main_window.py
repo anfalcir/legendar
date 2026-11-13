@@ -1025,7 +1025,7 @@ def test_srt_source_translates_without_whisper_whisperx_or_ffmpeg(
 ):
     source_path = tmp_path / "EN-baseline.srt"
     source_path.write_text(
-        "1\\n00:00:01,000 --> 00:00:02,500\\nHello, world!\\n",
+        "1\n00:00:01,000 --> 00:00:02,500\nHello, world!\n",
         encoding="utf-8",
     )
     ports = _ports(translator=FakeTranslator())
@@ -1072,7 +1072,7 @@ def test_srt_source_translates_without_whisper_whisperx_or_ffmpeg(
 def test_srt_source_requires_explicit_language(qtbot, tmp_path):
     source_path = tmp_path / "baseline.srt"
     source_path.write_text(
-        "1\\n00:00:01,000 --> 00:00:02,000\\nHello.\\n",
+        "1\n00:00:01,000 --> 00:00:02,000\nHello.\n",
         encoding="utf-8",
     )
     dependencies = replace(
@@ -1095,7 +1095,7 @@ def test_srt_source_requires_explicit_language(qtbot, tmp_path):
 def test_srt_source_cannot_be_overwritten_by_its_output(qtbot, tmp_path):
     source_path = tmp_path / "baseline.srt"
     original = (
-        "1\\n00:00:01,000 --> 00:00:02,000\\nHello.\\n"
+        "1\n00:00:01,000 --> 00:00:02,000\nHello.\n"
     )
     source_path.write_text(original, encoding="utf-8")
     dependencies = replace(
