@@ -90,7 +90,9 @@ def test_preferences_dialog_returns_edited_values(qtbot, tmp_path: Path) -> None
 
 
 
-def test_preferences_dialog_exposes_translategemma_backend(qtbot, tmp_path: Path) -> None:
+def test_preferences_dialog_exposes_translategemma_backend(
+    qtbot, tmp_path: Path
+) -> None:
     dialog = PreferencesDialog(UiPreferences(output_dir=tmp_path))
     qtbot.addWidget(dialog)
 
