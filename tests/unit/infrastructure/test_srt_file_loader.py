@@ -74,7 +74,9 @@ def test_read_srt_file_rejects_missing_and_empty_files(tmp_path: Path) -> None:
         read_srt_file(empty, language=Language.ENGLISH)
 
 
-def test_read_srt_file_rejects_invalid_encoding_without_replacement(tmp_path: Path) -> None:
+def test_read_srt_file_rejects_invalid_encoding_without_replacement(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "invalid.srt"
     path.write_bytes(b"1\n00:00:01,000 --> 00:00:02,000\n\x81\n")
 
