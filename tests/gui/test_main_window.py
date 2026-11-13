@@ -29,6 +29,7 @@ from tests.helpers.fakes import (
     FakeAudioPreparer,
     FakeInspector,
     FakePublisher,
+    FakeSrtSourceReader,
     FakeTranscriber,
     FakeTranslator,
     make_media_info,
@@ -45,6 +46,7 @@ def _ports(**overrides) -> PipelinePorts:
         "transcriber": FakeTranscriber(),
         "aligner": FakeAligner(),
         "publisher": FakePublisher(),
+        "srt_source_reader": FakeSrtSourceReader(),
     }
     values.update(overrides)
     return PipelinePorts(**values)
