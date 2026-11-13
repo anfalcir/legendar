@@ -1009,6 +1009,13 @@ class MainWindow(QMainWindow):
             else "Traduzir a fala para o idioma final"
         )
         self.source_label.setText("IDIOMA DO SRT" if srt_source else "IDIOMA FALADO")
+        if self.source_combo.count() and self.source_combo.itemData(0) is None:
+            self.source_combo.setItemText(
+                0,
+                "Selecione o idioma atual"
+                if srt_source
+                else "Detectar automaticamente",
+            )
         self.source_combo.setAccessibleName(
             "Idioma atual do SRT de origem" if srt_source else "Idioma falado na mídia"
         )
