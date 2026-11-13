@@ -289,6 +289,135 @@ class LlamaCppRuntimeManager:
                 return Path(located)
         return None
 
+    def ensure_runtime(
+        self,
+        *,
+        consent: bool,
+        token: CancellationToken | None = None,
+        progress: ProgressSink | None = None,
+    ) -> Path:
+        """Instala o runtime CPU Linux x86_64 fixado de forma idempotente."""
+        executable = self.discover_executable(self.models_dir)
+        if executable is not None:
+            self._runtime_download_required = False
+            return executable
+        if not self._is_supported_runtime_platform():
+            raise ModelError(
+                "A instalação assistida do llama.cpp nesta versão exige Linux x86_64."
+            )
+        if not consent:
+            raise ModelError(
+                "A instalação do runtime llama.cpp exige autorização explícita."
+            )
+        runtime_parent = self.models_dir / "runtime"
+        runtime_root = runtime_parent / LLAMA_CPP_RELEASE
+        archive_path = runtime_parent / f"{LLAMA_CPP_ARCHIVE}.part"
+        with self._lock, _InterProcessLock(runtime_parent / ".llama-cpp-download.lock"):
+            self._raise_if_cancelled(token)
+            executable = self.discover_executable(self.models_dir)
+            if executable is not None:
+                return executable
+            runtime_parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            offset = archive_path.stat().st_size if archive_path.is_file() else 0
+            headers = {"Range": f"bytes={offset}-"} if offset else {}
+            request = Request(LLAMA_CPP_DOWNLOAD_URL, headers=headers, method="GET")
+            try:
+                with self._runtime_opener(request, timeout=60.0) as response:
+                    status = self._response_status(response)
+                    if offset and status == 200:
+                        offset = 0
+                    elif offset and status != 206:
+                        raise ModelError("O servidor não aceitou a retomada do runtime llama.cpp.")
+                    elif not offset and status != 200:
+                        raise ModelError("O servidor respondeu de forma inesperada ao runtime llama.cpp.")
+                    content_length = self._response_header(response, "Content-Length")
+                    try:
+                        remaining = int(content_length or "")
+                    except ValueError:
+                        raise ModelError("O runtime llama.cpp não informou o tamanho do download.") from None
+                    total = offset + remaining
+                    digest = self._sha256_prefix(archive_path, offset, token)
+                    downloaded = offset
+                    with archive_path.open("ab" if offset else "wb") as output:
+                        while True:
+                            self._raise_if_cancelled(token)
+                            chunk = response.read(8 * 1024 * 1024)
+                            if not chunk:
+                                break
+                            output.write(chunk)
+                            digest.update(chunk)
+                            downloaded += len(chunk)
+                            if progress is not None:
+                                progress.report(
+                                    min(0.95, downloaded / total),
+                                    "Baixando runtime llama.cpp",
+                                )
+                        output.flush()
+                        os.fsync(output.fileno())
+            except ModelError:
+                raise
+            except (OSError, TimeoutError, URLError, HTTPError) as exc:
+                raise ModelError(
+                    "Falha ao baixar o runtime llama.cpp "
+                    f"({type(exc).__name__}); o arquivo parcial foi preservado."
+                ) from None
+            if downloaded != total or digest.hexdigest() != LLAMA_CPP_SHA256:
+                archive_path.unlink(missing_ok=True)
+                raise ModelError(
+                    "O SHA-256 do runtime llama.cpp não corresponde ao artefato fixado; "
+                    "download descartado."
+                )
+            staging = runtime_parent / f"{LLAMA_CPP_RELEASE}.staging.{time.time_ns()}"
+            try:
+                staging.mkdir(mode=0o700)
+                self._extract_runtime_archive(archive_path, staging)
+                executable = next(staging.rglob("llama-server"), None)
+                if executable is None or not executable.is_file():
+                    raise ModelError(
+                        "O pacote llama.cpp não contém o executável llama-server esperado."
+                    )
+                os.chmod(executable, os.stat(executable).st_mode | 0o700)
+                if runtime_root.exists():
+                    shutil.rmtree(runtime_root)
+                os.replace(staging, runtime_root)
+                archive_path.unlink(missing_ok=True)
+                executable = next(runtime_root.rglob("llama-server"), None)
+                if executable is None:
+                    raise ModelError(
+                        "A instalação do llama.cpp não produziu llama-server."
+                    )
+                self._runtime_download_required = False
+                if progress is not None:
+                    progress.report(
+                        1.0,
+                        f"Runtime llama.cpp {LLAMA_CPP_RELEASE} instalado",
+                    )
+                return executable
+            except Exception:
+                shutil.rmtree(staging, ignore_errors=True)
+                raise
+
+    @staticmethod
+    def _extract_runtime_archive(archive_path: Path, destination: Path) -> None:
+        """Extrai somente arquivos/diretórios regulares do tarball."""
+        destination = destination.resolve()
+        with tarfile.open(archive_path, "r:gz") as archive:
+            members = archive.getmembers()
+            for member in members:
+                path = Path(member.name)
+                if path.is_absolute() or ".." in path.parts:
+                    raise ModelError("O pacote llama.cpp contém caminho inseguro.")
+                if member.issym() or member.islnk() or not (
+                    member.isfile() or member.isdir()
+                ):
+                    raise ModelError("O pacote llama.cpp contém entrada não suportada.")
+                target = (destination / path).resolve()
+                if destination != target and destination not in target.parents:
+                    raise ModelError(
+                        "O pacote llama.cpp tenta sair do diretório de instalação."
+                    )
+            archive.extractall(destination)
+
     def inspect(self) -> RuntimeInspection:
         """Verifica arquivos locais de forma leve; não inicia nem baixa nada."""
         executable = self._configured_executable or self.discover_executable(
