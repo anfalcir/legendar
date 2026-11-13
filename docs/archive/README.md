@@ -1,14 +1,13 @@
 # Arquivo histórico
 
-Este diretório preserva planos, handoffs, relatórios e baselines concluídos ou substituídos que não devem mais ocupar a raiz da documentação viva.
+Este diretório preserva planos, handoffs, relatórios, baselines e decisões que já cumpriram seu papel ou foram substituídos. Os arquivos são mantidos para rastreabilidade e não devem ser tratados como instruções de execução vigentes.
 
-**Fonte de verdade atual:** [documentação viva](../README.md), especialmente [estado atual](../ESTADO_ATUAL.md) e [plano de correção e melhoria](../PLANO_CORRECAO_MELHORIA.md).
+**Fonte de verdade atual:** [documentação viva](../README.md), em especial [estado atual](../ESTADO_ATUAL.md), [homologação](../HOMOLOGACAO.md) e [decisão técnica TranslateGemma](../DECISAO_TRANSLATEGEMMA.md).
 
-## Conteúdo preservado
+## Conteúdo
 
-- [Fases 5 e 6 — planos e homologação](completed-phases/README.md): documentação específica das fases de aceleração ASR e tradução, mantida como registro histórico.
-- [Remodelação anterior — Fases 0–10](previous-remodeling/README.md): protocolos, planos, handoffs, relatório e baseline da implementação anterior.
-- [Plano mestre anterior](previous-remodeling/PLANO_REMODELAGEM.md): visão e requisitos usados na remodelação arquitetural já integrada.
-- [Baseline legada](previous-remodeling/LEGACY_BASELINE.md): caracterização da aplicação anterior.
+- [Fase 8 e Fase 8.1](phase-8.1/README.md): auditoria, planos corretivos e registro do encerramento funcional.
+- [Fases concluídas 5 e 6](completed-phases/README.md): planos e resultados históricos de ASR e tradução.
+- [Remodelação anterior](previous-remodeling/README.md): fases 0–10, handoffs, relatório e baseline da arquitetura anterior.
 
-Os documentos são mantidos como registro histórico. Quando houver conflito entre um documento arquivado e um documento vivo, prevalece o documento vivo atualizado.
+Quando houver divergência, prevalecem a documentação viva e o comportamento integrado à branch `main`. O arquivo histórico não define opções de runtime, dependências ou motores atuais.

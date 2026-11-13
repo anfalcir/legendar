@@ -199,7 +199,6 @@ class PreferencesDialog(QDialog):
         self.translation_backend_combo.addItem(
             "TranslateGemma 4B (local)", "translategemma"
         )
-        self.translation_backend_combo.addItem("NLLB-200 (local, legado)", "nllb")
         self.translation_backend_combo.addItem("Gemini (API)", "gemini")
         self.translation_backend_combo.setCurrentIndex(
             max(
@@ -239,9 +238,9 @@ class PreferencesDialog(QDialog):
         root.addWidget(self.log_expanded_check)
 
         note = QLabel(
-            "TranslateGemma é o novo motor local em homologação. O modelo exige "
-            "aceite dos termos Gemma e download inicial. NLLB permanece como "
-            "alternativa temporária; Gemini envia as cues à API do Google."
+            "TranslateGemma 4B é o motor local do Legendar. O primeiro uso pode "
+            "exigir autorização para instalar o runtime e baixar os pesos. Gemini "
+            "é uma alternativa remota opcional e envia as cues à API do Google."
         )
         note.setObjectName("fieldHint")
         note.setWordWrap(True)

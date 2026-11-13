@@ -146,14 +146,11 @@ def test_translator_port_is_per_cue_and_language_explicit():
     }
 
 
-def test_translation_adapter_is_the_only_module_that_knows_transformers():
-    """Só a infraestrutura de tradução importa ``transformers``/``sentencepiece``."""
+def test_removed_translation_packages_are_not_imported_directly():
+    """O código mantido não importa bibliotecas específicas do motor removido."""
     offenders: list[str] = []
     for path in sorted(SRC.rglob("*.py")):
-        relative = path.relative_to(SRC)
-        if relative.parts[0] == "infrastructure" and "translation" in relative.parts:
-            continue
         names = _imported_names(path)
         for name in sorted(names & {"transformers", "sentencepiece"}):
-            offenders.append(f"{relative} importa {name}")
+            offenders.append(f"{path.relative_to(SRC)} importa {name}")
     assert offenders == []

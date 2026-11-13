@@ -9,7 +9,7 @@ from PySide6.QtCore import QByteArray, QSettings
 
 from legendar.domain.value_objects.language import Language
 
-_TRANSLATION_BACKENDS = {"nllb", "gemini", "translategemma"}
+_TRANSLATION_BACKENDS = {"gemini", "translategemma"}
 
 _VALID_THEMES = {"system", "light", "dark"}
 
@@ -22,7 +22,7 @@ class UiPreferences:
     output_dir: Path = Path.home()
     target_language: Language = Language.PORTUGUESE
     log_expanded: bool = False
-    translation_backend: str = "nllb"
+    translation_backend: str = "translategemma"
 
     def __post_init__(self) -> None:
         if self.theme not in _VALID_THEMES:
@@ -53,9 +53,16 @@ def load_preferences(settings: QSettings, default_output_dir: Path) -> UiPrefere
     if not output_value.strip():
         output_dir = default_output_dir
 
-    backend = str(settings.value("translation/backend", "nllb")).strip().casefold()
+    stored_backend = str(
+        settings.value("translation/backend", "translategemma")
+    ).strip().casefold()
+    # Migração pontual do valor persistido pelo motor local anterior.
+    backend = "translategemma" if stored_backend == "nllb" else stored_backend
     if backend not in _TRANSLATION_BACKENDS:
-        backend = "nllb"
+        backend = "translategemma"
+    if backend != stored_backend:
+        settings.setValue("translation/backend", backend)
+        settings.sync()
 
     return UiPreferences(
         theme=theme,

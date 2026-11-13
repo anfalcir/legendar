@@ -22,6 +22,7 @@ def test_preferences_load_with_safe_defaults(tmp_path: Path) -> None:
     assert preferences.output_dir == tmp_path / "output"
     assert preferences.target_language is Language.PORTUGUESE
     assert preferences.log_expanded is False
+    assert preferences.translation_backend == "translategemma"
 
 
 def test_preferences_round_trip_without_persisting_media_paths(
@@ -52,6 +53,7 @@ def test_invalid_persisted_values_fall_back_to_safe_defaults(
     settings.setValue("ui/theme", "neon")
     settings.setValue("ui/target_language", "xx")
     settings.setValue("paths/output_dir", "")
+    settings.setValue("translation/backend", "unknown-backend")
     settings.sync()
 
     preferences = load_preferences(settings, tmp_path / "safe-output")
@@ -59,11 +61,23 @@ def test_invalid_persisted_values_fall_back_to_safe_defaults(
     assert preferences.theme == "system"
     assert preferences.target_language is Language.PORTUGUESE
     assert preferences.output_dir == tmp_path / "safe-output"
+    assert preferences.translation_backend == "translategemma"
 
 
 def test_preferences_reject_unknown_theme(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Tema inválido"):
         UiPreferences(theme="neon", output_dir=tmp_path)
+
+
+def test_legacy_nllb_preference_is_migrated_to_translategemma(tmp_path) -> None:
+    settings = QSettings(str(tmp_path / "legacy.ini"), QSettings.Format.IniFormat)
+    settings.setValue("translation/backend", "nllb")
+    settings.sync()
+
+    loaded = load_preferences(settings, tmp_path)
+
+    assert loaded.translation_backend == "translategemma"
+    assert settings.value("translation/backend") == "translategemma"
 
 
 def test_translation_backend_round_trip(qtbot, tmp_path) -> None:

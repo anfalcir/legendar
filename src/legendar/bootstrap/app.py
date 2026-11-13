@@ -39,7 +39,6 @@ from legendar.infrastructure.transcription.faster_whisper import (
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.llama_runtime import LlamaCppRuntimeManager
-from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.infrastructure.translation.translategemma import TranslateGemmaTranslator
 from legendar.presentation.qt.branding import app_icon
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
@@ -252,7 +251,7 @@ def build_ui_dependencies(
     translategemma_runtime.inspect()
 
     env_translation_backend = (
-        os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "nllb").strip().casefold()
+        os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "translategemma").strip().casefold()
     )
 
     def _configure_translation(
@@ -300,29 +299,6 @@ def build_ui_dependencies(
             )
             return translator, translator.is_configured, details
 
-        if backend == "nllb":
-            try:
-                transformers_installed = (
-                    importlib.util.find_spec("transformers") is not None
-                )
-            except (ImportError, ValueError):
-                transformers_installed = False
-            try:
-                translator = NllbTranslator.from_environment(settings.models_dir)
-            except ValueError as exc:
-                translator = NllbTranslator(settings.models_dir)
-                return translator, False, (f"Configuração NLLB inválida: {exc}",)
-            details = (
-                f"NLLB-200 distilled · modelo {translator.model_name}",
-                f"Dispositivo de tradução: {translator.requested_device}",
-                f"Pesos no cache local: {translator.download_root}",
-            )
-            if not transformers_installed:
-                details = (
-                    "transformers não instalado; sincronize runtime-cpu ou runtime-cu128.",
-                )
-            return translator, transformers_installed, details
-
         if backend == "translategemma":
             inspection = translategemma_runtime.inspect()
             translator = TranslateGemmaTranslator(translategemma_runtime)
@@ -359,10 +335,10 @@ def build_ui_dependencies(
             return translator, available, details
 
         return (
-            NllbTranslator(settings.models_dir),
+            TranslateGemmaTranslator(translategemma_runtime),
             False,
             (
-                "LEGENDAR_TRANSLATION_BACKEND inválido; use translategemma, nllb ou gemini.",
+                "LEGENDAR_TRANSLATION_BACKEND inválido; use translategemma ou gemini.",
             ),
         )
 
@@ -376,6 +352,9 @@ def build_ui_dependencies(
         .strip()
         .casefold()
     )
+    # Migra configurações antigas para o único motor local vigente.
+    if configured_backend == "nllb":
+        configured_backend = "translategemma"
     translator, translation_available, translation_details = _configure_translation(
         configured_backend,
         gemini_api_key or local_gemini_key or os.environ.get("GEMINI_API_KEY"),

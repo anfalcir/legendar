@@ -18,9 +18,6 @@ runtime-cpu = [
     "torchvision>=0.23,<0.24",
     "torchaudio>=2.8,<2.9",
     "whisperx>=3.8.6,<3.8.7",
-    # Tradução local NLLB-200 (Fase 6): pesos baixados sob demanda para o cache.
-    "transformers>=4.57,<5",
-    "sentencepiece>=0.2,<1",
 ]
 runtime-cu128 = [
     "openai-whisper>=20250625; sys_platform == 'linux' or sys_platform == 'win32'",
@@ -30,8 +27,6 @@ runtime-cu128 = [
     "torchvision>=0.23,<0.24; sys_platform == 'linux' or sys_platform == 'win32'",
     "torchaudio>=2.8,<2.9; sys_platform == 'linux' or sys_platform == 'win32'",
     "whisperx>=3.8.6,<3.8.7; sys_platform == 'linux' or sys_platform == 'win32'",
-    "transformers>=4.57,<5; sys_platform == 'linux' or sys_platform == 'win32'",
-    "sentencepiece>=0.2,<1; sys_platform == 'linux' or sys_platform == 'win32'",
 ]
 
 [dependency-groups]

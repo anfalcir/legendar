@@ -1,3 +1,7 @@
+> **ARQUIVADO EM 13/11/2026 — DOCUMENTO HISTÓRICO.** Este plano foi encerrado após a homologação funcional do TranslateGemma. O projeto está pausado; o resultado atual é suficiente para o uso pretendido, embora ainda não seja ótimo. As descrições de NLLB e os estados de implementação pendentes abaixo refletem o momento em que este plano foi escrito e não descrevem a configuração atual. Consulte [estado atual](../../ESTADO_ATUAL.md), [homologação](../../HOMOLOGACAO.md) e [decisão técnica](../../DECISAO_TRANSLATEGEMMA.md).
+
+---
+
 # Plano mestre de correção da qualidade e melhoria de desempenho
 
 - **Documento:** plano vigente de engenharia, critérios de aceite e handoff de execução.
@@ -7,7 +11,7 @@
 - **Status:** Fases 1–7 integradas à `main`; Fase 8 em homologação real. As etapas 8.1.0–8.1.6 estão integradas à `main` pela PR #36 (squash `9b831806d914d8cf856b6501557b12516b7715ce`). A CI pós-merge da Fase 8 (run `43353241876`) passou nos cinco jobs, incluindo documentação e Python 3.10–3.13 com suíte completa, cobertura, E2E, lint e formatação. TranslateGemma está integrado como motor local, NLLB permanece temporariamente como baseline selecionável e Gemini como rota remota independente. Permanecem pendentes smoke com pesos reais, validação no Linux Mint/Ryzen de referência, corpus-ouro/revisão humana PT-BR, snapshot real de ASR/alinhamento e gates quantitativos/editoriais seguintes. Não considerar a qualidade tradutória homologada apenas por CI verde.
 - **Princípio de aprovação:** melhorar tempo de execução sem degradar a qualidade textual, temporal ou editorial.
 
-Documentos relacionados: [estado atual](ESTADO_ATUAL.md), [arquitetura](ARQUITETURA.md), [decisões](DECISOES.md), [matriz de dependências](MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](HOMOLOGACAO.md).
+Documentos relacionados: [estado atual](../../ESTADO_ATUAL.md), [arquitetura](../../ARQUITETURA.md), [decisões](../../DECISOES.md), [matriz de dependências](../../MATRIZ_DEPENDENCIAS.md) e [roteiro de homologação](../../HOMOLOGACAO.md).
 
 ---
 
@@ -17,7 +21,7 @@ O baseline operacional consolidado em 11/11/2026 foi de aproximadamente **23min2
 
 A homologação real de 12/11/2026 trouxe novos achados: a execução NLLB concluiu em 45min49s, contra a mediana quente anterior de 23min21s; o estágio de transcrição levou 19min15s, o alinhamento 5min43s e a geração NLLB 20min32s. A execução nova usou PyTorch 2/1 threads, enquanto as três execuções quentes anteriores usavam 4/4. A topologia observada era 4 núcleos físicos/4 lógicos, mas a estimativa atual divide CPUs lógicas por dois. A regressão de threads é a hipótese de desempenho prioritária, ainda pendente de experimento controlado.
 
-O perfil `low-memory` registrou `retain_models=false`, mas os adaptadores terminaram carregados: o helper de liberação existe no pipeline e não é invocado. O Gemini falhou no terceiro lote após 64/927 unidades aceitas. O SRT PT novo manteve 71,0% de cues com até três palavras, apresentou três linhas acima de 42 caracteres e evidências de variante PT-PT/erros semânticos. A análise completa, com distinção entre fatos e hipóteses e plano executável, está em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md).
+O perfil `low-memory` registrou `retain_models=false`, mas os adaptadores terminaram carregados: o helper de liberação existe no pipeline e não é invocado. O Gemini falhou no terceiro lote após 64/927 unidades aceitas. O SRT PT novo manteve 71,0% de cues com até três palavras, apresentou três linhas acima de 42 caracteres e evidências de variante PT-PT/erros semânticos. A análise completa, com distinção entre fatos e hipóteses e plano executável, está em [FASE_8_1_PLANO.md](../../FASE_8_1_PLANO.md).
 
 O trabalho será conduzido em duas frentes coordenadas:
 
@@ -463,7 +467,7 @@ Configuração:
 - Criados testes unitários para parsing, riscos de leitura, sobreposição, fragmentação e timestamps inválidos.
 - O avaliador não altera o SRT e não substitui a inspeção audiovisual; seu gate é estrutural e reproduzível.
 
-**Estado:** o avaliador estrutural está integrado, mas a homologação real não está concluída. A rodada de 12/11/2026 já foi analisada: o SRT NLLB concluiu, porém com problemas de fragmentação, PT-BR e largura de linhas; a rota Gemini falhou durante a tradução. O NLLB levou 45min49s, quase o dobro da mediana quente histórica. As evidências e hipóteses estão em [FASE_8_1_PLANO.md](FASE_8_1_PLANO.md). A execução corretiva e a reinspeção em player real ainda estão pendentes. O benchmark comparativo amplo Gemini × NLLB permanece fora do escopo por decisão do usuário.
+**Estado:** o avaliador estrutural está integrado, mas a homologação real não está concluída. A rodada de 12/11/2026 já foi analisada: o SRT NLLB concluiu, porém com problemas de fragmentação, PT-BR e largura de linhas; a rota Gemini falhou durante a tradução. O NLLB levou 45min49s, quase o dobro da mediana quente histórica. As evidências e hipóteses estão em [FASE_8_1_PLANO.md](../../FASE_8_1_PLANO.md). A execução corretiva e a reinspeção em player real ainda estão pendentes. O benchmark comparativo amplo Gemini × NLLB permanece fora do escopo por decisão do usuário.
 
 
 
@@ -558,7 +562,7 @@ O lote atual de 16 cues já é uma otimização existente. A hipótese de ganho 
 
 **Status:** execução iniciada em 12/11/2026 pela etapa 8.1.0. As etapas 8.1.0–8.1.6 estão integradas à `main`; a PR #36 integrou o runtime autônomo e idempotente, instalador assistido, adaptador TranslateGemma e batching contextual. A CI pós-merge da Fase 8 (run `43353241876`) passou nos cinco jobs. A matriz redundante de 15 rodadas de CPU foi descartada em favor da política consolidada de perfis adaptativos. Permanecem abertos o gate quantitativo da 8.1.3, a referência humana PT-BR, o snapshot real de ASR/alinhamento, o smoke com pesos reais e a homologação E2E no hardware de referência.
 
-**Evidências congeladas:** os três SRTs em `temporario/` e os sete relatórios JSON em `temporario/logs/` foram conferidos por tamanho e SHA do blob Git; seus SHA-256 estão em [manifesto-fase-8.1.0.json](../temporario/manifesto-fase-8.1.0.json). Fixtures sintéticas para Gemini, fragmentação, limites físicos, nomes protegidos, agradecimento e negação estão em `tests/fixtures/phase_8_1/`. A workflow da Fase 6 foi ajustada para validar o SRT inglês congelado em `temporario/EN-baseline.srt`, que substitui o caminho obsoleto em `logs/`. A referência humana real ainda não foi produzida. A rodada mais recente de NLLB levou 45min49s para a mídia de 37min10s, com 2/1 threads; a mediana quente anterior foi 23min21s, com 4/4 threads. A rota Gemini aceitou 64 de 927 unidades e falhou no terceiro lote após 32min29s de execução total. O PT novo manteve 71,0% das cues com até três palavras, apresentou três linhas acima de 42 caracteres e erros claros de variante/semântica.
+**Evidências congeladas:** os três SRTs em `temporario/` e os sete relatórios JSON em `temporario/logs/` foram conferidos por tamanho e SHA do blob Git; seus SHA-256 estão em [manifesto-fase-8.1.0.json](../../../temporario/manifesto-fase-8.1.0.json). Fixtures sintéticas para Gemini, fragmentação, limites físicos, nomes protegidos, agradecimento e negação estão em `tests/fixtures/phase_8_1/`. A workflow da Fase 6 foi ajustada para validar o SRT inglês congelado em `temporario/EN-baseline.srt`, que substitui o caminho obsoleto em `logs/`. A referência humana real ainda não foi produzida. A rodada mais recente de NLLB levou 45min49s para a mídia de 37min10s, com 2/1 threads; a mediana quente anterior foi 23min21s, com 4/4 threads. A rota Gemini aceitou 64 de 927 unidades e falhou no terceiro lote após 32min29s de execução total. O PT novo manteve 71,0% das cues com até três palavras, apresentou três linhas acima de 42 caracteres e erros claros de variante/semântica.
 
 **Achados de código:** a segmentação já possui regras para pontuação final, mas não recompõe microcues adjacentes; a formatação pode manter overflow na última linha para não perder conteúdo; o validador de produção não verifica necessariamente a largura física de cada linha; o parser Gemini não recupera falhas de conteúdo; o perfil de CPU subestima os quatro núcleos físicos do equipamento auditado; e a rotina de liberação de modelos está definida, mas não é chamada pelo pipeline.
 
@@ -566,4 +570,4 @@ O lote atual de 16 cues já é uma otimização existente. A hipótese de ganho 
 
 **Estratégia Gemini:** 927 unidades gerariam teoricamente 29 pedidos com lote 32, 15 com 64 e 10 com 96/100, sem falhas. O branch implementa orçamento de entrada/saída, estimativa conservadora, recuperação por ID e subdivisão; os testes fakes verificam os pedidos teóricos. O padrão permanece em 32: redução sintética de chamadas não comprova latência, custo nem qualidade na API real. A promoção de lote maior exige experimento PT-BR controlado com `usageMetadata`, tempo por chamada, retries/subdivisões e revisão humana.
 
-**Critério de encerramento:** todos os gates definidos no [plano detalhado da Fase 8.1](FASE_8_1_PLANO.md) devem passar. A mediana de três execuções quentes da mídia de referência deve ficar em até 26min30s, sem regressão textual, semântica ou temporal. O status atual continua pendente; nenhum dos itens acima deve ser considerado implementado apenas por estar documentado.
+**Critério de encerramento:** todos os gates definidos no [plano detalhado da Fase 8.1](../../FASE_8_1_PLANO.md) devem passar. A mediana de três execuções quentes da mídia de referência deve ficar em até 26min30s, sem regressão textual, semântica ou temporal. O status atual continua pendente; nenhum dos itens acima deve ser considerado implementado apenas por estar documentado.

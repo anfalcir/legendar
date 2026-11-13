@@ -1,28 +1,27 @@
 # Documentação viva do Legendar
 
-Este diretório mantém na raiz somente documentos que orientam a operação atual, registram decisões vigentes ou conduzem a evolução em andamento. Planos específicos de fases encerradas, handoffs e relatórios substituídos ficam em `archive/`.
+A raiz de `docs/` contém somente documentos que descrevem o produto, a configuração, a operação ou decisões técnicas ainda aplicáveis. Planos encerrados, handoffs e relatórios substituídos ficam em [archive/](archive/README.md).
 
-## Estado e evolução
+## Estado e aceitação
 
-- [Estado atual](ESTADO_ATUAL.md) — fonte de verdade sobre o que está implementado, integrado, validado, pendente e em risco.
-- [Plano de correção, qualidade e desempenho](PLANO_CORRECAO_MELHORIA.md) — plano mestre vigente e sequência global das fases.
-- [Fase 8.1 — auditoria e execução](FASE_8_1_PLANO.md) — evidências reais, manifesto SHA-256, fixtures sintéticas, plano de batching/recovery Gemini, corpus-ouro e substituição do motor local.
-- [Decisão TranslateGemma](DECISAO_TRANSLATEGEMMA.md) — decisão aprovada, runtime local, contrato de idioma, licença, riscos e critérios de aceite.
+- [Estado atual](ESTADO_ATUAL.md) — fonte de verdade do produto, situação de pausa, motor vigente, evidências e melhorias possíveis.
+- [Homologação](HOMOLOGACAO.md) — resultado funcional real, avaliação de qualidade e limites da evidência.
+- [Decisão técnica TranslateGemma](DECISAO_TRANSLATEGEMMA.md) — modelo local, runtime, protocolo, privacidade e operação.
 
 ## Referência técnica e operacional
 
-- [Arquitetura](ARQUITETURA.md) — camadas, pipeline, portas, estados, recursos e publicação.
-- [Operação](OPERACAO.md) — jornada de uso, estados, cancelamento, arquivos e diagnóstico.
-- [Instalação](INSTALACAO.md) — requisitos, perfis, instalação, execução e verificação.
-- [Distribuição Linux](DISTRIBUICAO_LINUX.md) — estratégia do bundle por usuário, instalador, atualização, remoção, CI e gates de homologação.
-- [Homologação](HOMOLOGACAO.md) — roteiro prático com mídia real, hardware, avaliação estrutural e revisão do SRT.
-- [Decisões](DECISOES.md) — escolhas consolidadas e pontos ainda em avaliação.
-- [Matriz de dependências](MATRIZ_DEPENDENCIAS.md) — manifesto, lock, compatibilidade e candidatos em avaliação.
+- [Arquitetura](ARQUITETURA.md) — camadas, pipeline, portas, runtime e publicação.
+- [Operação](OPERACAO.md) — uso da interface, fontes de entrada, tradução, cancelamento e diagnóstico.
+- [Instalação](INSTALACAO.md) — dependências, perfis e execução.
+- [Distribuição Linux](DISTRIBUICAO_LINUX.md) — bundle de usuário, instalação, atualização e publicação.
+- [Decisões](DECISOES.md) — decisões vigentes e possibilidades ainda não aprovadas.
+- [Matriz de dependências](MATRIZ_DEPENDENCIAS.md) — dependências diretas, runtimes externos e política de atualização.
 
 ## Histórico
 
-- [Fases 5 e 6 — planos e registro de homologação](archive/completed-phases/): planos e evidências preservados após encerramento das fases.
-- [Remodelação anterior — Fases 0–10](archive/previous-remodeling/): protocolos, planos, handoffs, relatório e baseline da implementação anterior.
+- [Fase 8 e Fase 8.1](archive/phase-8.1/README.md) — auditoria, plano corretivo, decisões de migração e encerramento da homologação atual.
+- [Fases concluídas 5 e 6](archive/completed-phases/README.md) — planos e evidências históricas.
+- [Remodelação arquitetural anterior](archive/previous-remodeling/README.md) — fases 0–10, handoffs, relatório e baseline legada.
 - [Índice do arquivo histórico](archive/README.md).
 
-Os documentos arquivados são evidência histórica, não instruções operacionais atuais. Em caso de divergência, prevalecem os documentos vivos e o comportamento integrado à `main`.
+Os documentos arquivados são evidência histórica, não instruções operacionais. Em caso de divergência, prevalecem os documentos vivos e o comportamento integrado à `main`.

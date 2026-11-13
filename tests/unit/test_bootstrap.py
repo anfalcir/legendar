@@ -22,7 +22,6 @@ from legendar.infrastructure.transcription.faster_whisper import (
 )
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.gemini import GeminiTranslator
-from legendar.infrastructure.translation.nllb import NllbTranslator
 from legendar.infrastructure.translation.translategemma import (
     TranslateGemmaTranslator,
 )
@@ -101,7 +100,7 @@ def test_pipeline_composes_real_adapters_for_every_stage(tmp_path, monkeypatch) 
     assert isinstance(pipeline._ports.downloader, YtDlpDownloader)
     assert isinstance(pipeline._ports.transcriber, WhisperTranscriber)
     assert isinstance(pipeline._ports.aligner, WhisperXAligner)
-    assert isinstance(pipeline._ports.translator, NllbTranslator)
+    assert isinstance(pipeline._ports.translator, TranslateGemmaTranslator)
     assert isinstance(pipeline._ports.publisher, SrtPublisher)
     assert isinstance(pipeline._ports.srt_source_reader, SrtFileReader)
     assert dependencies.youtube_readiness_details[1].startswith(
@@ -125,13 +124,50 @@ def test_publishing_is_available_without_model_runtimes(tmp_path, monkeypatch) -
     assert "round-trip" in dependencies.publishing_readiness_details[1]
 
 
-def test_translation_is_available_when_transformers_is_installed(
+def test_translation_defaults_to_translategemma_without_nllb_dependencies(
     tmp_path, monkeypatch
 ) -> None:
-    _patch_modules(monkeypatch, "transformers")
-    monkeypatch.delenv("LEGENDAR_TRANSLATE_DEVICE", raising=False)
-    monkeypatch.delenv("LEGENDAR_TRANSLATE_MODEL", raising=False)
+    _patch_modules(monkeypatch)
+    monkeypatch.delenv("LEGENDAR_TRANSLATION_BACKEND", raising=False)
 
+    class ReadyRuntime:
+        def __init__(self, _models_dir) -> None:
+            pass
+
+        @property
+        def runtime_download_authorized(self) -> bool:
+            return True
+
+        @property
+        def needs_runtime_download_authorization(self) -> bool:
+            return False
+
+        @property
+        def download_authorized(self) -> bool:
+            return True
+
+        @property
+        def needs_download_authorization(self) -> bool:
+            return False
+
+        def inspect(self):
+            return SimpleNamespace(
+                executable_available=True,
+                model_available=True,
+                ready_to_start=True,
+                details=("Runtime e pesos disponíveis.",),
+            )
+
+        def authorize_runtime_download(self) -> None:
+            pass
+
+        def authorize_model_download(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
+
+    monkeypatch.setattr(bootstrap_app, "LlamaCppRuntimeManager", ReadyRuntime)
     dependencies = build_ui_dependencies(
         _settings(tmp_path),
         tool_locator=_locator(
@@ -142,28 +178,9 @@ def test_translation_is_available_when_transformers_is_installed(
 
     translator = dependencies.pipeline_factory()._ports.translator
 
+    assert dependencies.translation_backend == "translategemma"
     assert dependencies.translate_available
-    assert "NLLB" in dependencies.translate_readiness_details[0]
-    assert isinstance(translator, NllbTranslator)
-    assert translator.requested_device == "auto"
-    assert translator.download_root == tmp_path / "cache" / "models" / "nllb"
-
-
-def test_invalid_translation_device_keeps_the_ui_usable(tmp_path, monkeypatch) -> None:
-    _patch_modules(monkeypatch, "transformers")
-    monkeypatch.setenv("LEGENDAR_TRANSLATE_DEVICE", "mps")
-
-    dependencies = build_ui_dependencies(
-        _settings(tmp_path),
-        tool_locator=_locator(
-            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
-            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
-        ),
-    )
-
-    assert not dependencies.translate_available
-    assert "Configuração NLLB inválida" in dependencies.translate_readiness_details[0]
-    assert isinstance(dependencies.pipeline_factory()._ports.translator, NllbTranslator)
+    assert isinstance(translator, TranslateGemmaTranslator)
 
 
 def test_youtube_runtime_requires_supported_version_and_falls_back_to_node(
@@ -245,7 +262,7 @@ def test_missing_runtimes_are_reported_without_crashing_application(
         in dependencies.transcription_readiness_details[0]
     )
     assert "WhisperX não instalado" in dependencies.alignment_readiness_details[0]
-    assert "transformers não instalado" in dependencies.translate_readiness_details[0]
+    assert "llama.cpp" in " ".join(dependencies.translate_readiness_details)
     assert isinstance(
         dependencies.pipeline_factory()._ports.transcriber, WhisperTranscriber
     )
@@ -484,7 +501,7 @@ def test_translategemma_model_consent_enables_on_demand_preparation(
     monkeypatch.setattr(bootstrap_app, "LlamaCppRuntimeManager", FakeRuntime)
     dependencies = build_ui_dependencies(
         _settings(tmp_path),
-        translation_backend="nllb",
+        translation_backend="translategemma",
         tool_locator=_locator(
             ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
             ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
@@ -627,7 +644,7 @@ def test_gemini_backend_reports_missing_api_key_without_crashing(
 def test_unknown_translation_backend_is_not_silently_accepted(
     tmp_path, monkeypatch
 ) -> None:
-    _patch_modules(monkeypatch, "transformers")
+    _patch_modules(monkeypatch)
     monkeypatch.setenv("LEGENDAR_TRANSLATION_BACKEND", "unknown")
 
     dependencies = build_ui_dependencies(

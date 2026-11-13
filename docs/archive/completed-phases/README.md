@@ -1,6 +1,6 @@
-# Fases concluídas — arquivo histórico
+# Fases concluídas — histórico
 
-Os documentos desta pasta registram o planejamento e a homologação originalmente associados às Fases 5 e 6. As fases foram implementadas e integradas à `main`; estes arquivos não são mais guias de execução ativos.
+Este diretório guarda a documentação de encerramento e homologação das Fases 5 e 6. As instruções e decisões abaixo refletem o estado do repositório no momento daquelas entregas.
 
 ## Conteúdo
 
@@ -8,4 +8,4 @@ Os documentos desta pasta registram o planejamento e a homologação originalmen
 - [Plano da Fase 6](FASE_6_PLANO.md) — backends de tradução NLLB e Gemini, decisões e critérios originais.
 - [Homologação da Fase 6](FASE_6_HOMOLOGACAO.md) — registro histórico do smoke Gemini e evidências da integração.
 
-**Estado operacional vigente:** [estado atual](../../ESTADO_ATUAL.md). O usuário decidiu manter NLLB e Gemini como opções, sem executar agora o benchmark comparativo entre eles.
+**Estado operacional vigente:** [estado atual](../../ESTADO_ATUAL.md). Estes documentos descrevem decisões anteriores; o motor local atual é TranslateGemma e Gemini continua como opção remota explícita. As descrições de NLLB são exclusivamente históricas.

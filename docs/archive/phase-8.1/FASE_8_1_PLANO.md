@@ -1,3 +1,7 @@
+> **ARQUIVADO EM 13/11/2026 — DOCUMENTO HISTÓRICO.** Este plano foi encerrado após a homologação funcional do TranslateGemma. O projeto está pausado; o resultado atual é suficiente para o uso pretendido, embora ainda não seja ótimo. As descrições de NLLB e os estados de implementação pendentes abaixo refletem o momento em que este plano foi escrito e não descrevem a configuração atual. Consulte [estado atual](../../ESTADO_ATUAL.md), [homologação](../../HOMOLOGACAO.md) e [decisão técnica](../../DECISAO_TRANSLATEGEMMA.md).
+
+---
+
 # Fase 8.1 — Auditoria de regressão, confiabilidade de tradução, legibilidade PT-BR e desempenho
 
 - **Projeto:** Legendar — `anfalcir/legendar`
@@ -6,7 +10,7 @@
 - **Status:** etapas 8.1.0–8.1.6 integradas à `main` pela PR #36 (squash `9b831806d914d8cf856b6501557b12516b7715ce`). A CI pós-merge da Fase 8 (run `43353241876`) concluiu com sucesso: cinco jobs aprovados, incluindo documentação e Python 3.10–3.13 com suíte completa, cobertura, E2E, Ruff e formatação. Runtime autônomo, instalador assistido e primeira integração TranslateGemma estão na `main`; a PR #41 (squash `fe615fe246f777ee17e19dff45c66986c8e348fd`) integrou a correção que substitui marcadores longos por JSON compacto com IDs numéricos e gramática GBNF direta, além de orçamento dinâmico de saída e recuperação estrutural limitada. A CI pré-merge passou em 27 verificações, com 3 opcionais puladas; a CI pós-merge da Fase 8 concluiu com cinco jobs aprovados (run `43381434883`). Smoke com pesos reais, homologação no Linux Mint/Ryzen de referência, gate quantitativo da 8.1.3, referência humana PT-BR e snapshot real de ASR/alinhamento permanecem pendentes; a aprovação semântica final não foi concedida.
 - **Correção da fonte SRT:** em implementação na branch `feat/srt-source-translation`; adiciona entrada de SRT existente e fluxo direto de tradução, sem FFmpeg/Whisper/WhisperX. A homologação de TranslateGemma poderá usar `temporario/EN-baseline.srt` na interface, sem reexecutar ASR/alinhamento. PR e CI ainda pendentes.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
-- **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
+- **Documento de referência:** [plano mestre](../../PLANO_CORRECAO_MELHORIA.md) · [estado atual](../../ESTADO_ATUAL.md) · [roteiro de homologação](../../HOMOLOGACAO.md)
 
 ---
 
@@ -72,17 +76,17 @@ A execução deve preservar a arquitetura e os contratos existentes sempre que p
 
 SRTs:
 
-- [`temporario/EN-baseline.srt`](../temporario/EN-baseline.srt) — saída em inglês usada como referência de comparação; não é transcrição humana.
-- [`temporario/baseline.srt`](../temporario/baseline.srt) — saída PT anterior.
-- [`temporario/teste-2026.11.12.srt`](../temporario/teste-2026.11.12.srt) — saída PT da execução nova.
+- [`temporario/EN-baseline.srt`](../../../temporario/EN-baseline.srt) — saída em inglês usada como referência de comparação; não é transcrição humana.
+- [`temporario/baseline.srt`](../../../temporario/baseline.srt) — saída PT anterior.
+- [`temporario/teste-2026.11.12.srt`](../../../temporario/teste-2026.11.12.srt) — saída PT da execução nova.
 
 Relatórios:
 
-- [`job-2e5e93e3369c.json`](../temporario/logs/job-2e5e93e3369c.json) — NLLB, execução concluída.
-- [`job-b845be3d8e7f.json`](../temporario/logs/job-b845be3d8e7f.json) — Gemini, execução interrompida por falha de tradução.
-- [`job-2f6d8c3e5dad.json`](../temporario/logs/job-2f6d8c3e5dad.json), [`job-501f9e6ce91c.json`](../temporario/logs/job-501f9e6ce91c.json) e [`job-d796d6a8218f.json`](../temporario/logs/job-d796d6a8218f.json) — três execuções quentes completas anteriores, usadas para a mediana.
-- [`job-c8e8b3d46d76.json`](../temporario/logs/job-c8e8b3d46d76.json) — execução completa com carregamento inicial de modelos.
-- [`job-2b922358055c.json`](../temporario/logs/job-2b922358055c.json) — execução de referência sem tradução; não deve ser comparada como job completo.
+- [`job-2e5e93e3369c.json`](../../../temporario/logs/job-2e5e93e3369c.json) — NLLB, execução concluída.
+- [`job-b845be3d8e7f.json`](../../../temporario/logs/job-b845be3d8e7f.json) — Gemini, execução interrompida por falha de tradução.
+- [`job-2f6d8c3e5dad.json`](../../../temporario/logs/job-2f6d8c3e5dad.json), [`job-501f9e6ce91c.json`](../../../temporario/logs/job-501f9e6ce91c.json) e [`job-d796d6a8218f.json`](../../../temporario/logs/job-d796d6a8218f.json) — três execuções quentes completas anteriores, usadas para a mediana.
+- [`job-c8e8b3d46d76.json`](../../../temporario/logs/job-c8e8b3d46d76.json) — execução completa com carregamento inicial de modelos.
+- [`job-2b922358055c.json`](../../../temporario/logs/job-2b922358055c.json) — execução de referência sem tradução; não deve ser comparada como job completo.
 
 Todos os sete JSON disponíveis foram considerados na auditoria. A comparação principal de desempenho usa as três execuções anteriores marcadas como modelos já carregados antes do job, não mistura a execução fria na mediana quente.
 
@@ -170,7 +174,7 @@ No teste novo, o relatório registra:
 
 As três execuções quentes anteriores registram 4 threads intra-op e 4 inter-op.
 
-O código de [`profile.py`](../src/legendar/infrastructure/resources/profile.py) estima núcleos físicos como metade de `os.cpu_count()`. Isso assume dois processadores lógicos por núcleo físico. No equipamento observado, a proporção é 4/4, portanto a estimativa cai incorretamente de quatro para dois. Como o perfil de baixa memória limita threads com base nessa estimativa, o modo automático seleciona duas threads.
+O código de [`profile.py`](../../../src/legendar/infrastructure/resources/profile.py) estima núcleos físicos como metade de `os.cpu_count()`. Isso assume dois processadores lógicos por núcleo físico. No equipamento observado, a proporção é 4/4, portanto a estimativa cai incorretamente de quatro para dois. Como o perfil de baixa memória limita threads com base nessa estimativa, o modo automático seleciona duas threads.
 
 A coincidência é forte: a geração NLLB atual levou aproximadamente 47% mais que a mediana das três execuções quentes anteriores, com volume de tokens semelhante e metade das threads intra-op. Whisper e WhisperX também ficaram significativamente mais lentos.
 
@@ -178,7 +182,7 @@ A coincidência é forte: a geração NLLB atual levou aproximadamente 47% mais 
 
 ### 3.6. Ciclo de vida dos modelos: defeito confirmado, causa de tempo não comprovada
 
-A política atual grava `retain_models=false`, mas os snapshots terminam com Whisper, WhisperX e NLLB ainda carregados. Em [`serial_pipeline.py`](../src/legendar/application/pipeline/serial_pipeline.py), o helper `_release_resources()` está definido, mas não possui chamadas no fluxo do pipeline.
+A política atual grava `retain_models=false`, mas os snapshots terminam com Whisper, WhisperX e NLLB ainda carregados. Em [`serial_pipeline.py`](../../../src/legendar/application/pipeline/serial_pipeline.py), o helper `_release_resources()` está definido, mas não possui chamadas no fluxo do pipeline.
 
 Isso significa que a promessa da Fase 7 de liberar modelos em `low-memory` não está efetivamente cumprida nesse caminho. Os relatórios mostram RSS máximo de aproximadamente 5,33 GB e memória disponível do sistema em torno de 8,63 GB ao final da tradução; não há evidência nesses arquivos de que swapping ou esgotamento de RAM tenha causado a lentidão. Portanto:
 
@@ -197,10 +201,10 @@ A implementação deve seguir estes caminhos, e não se limitar à primeira fun�
 
 Arquivos principais:
 
-- [`gemini.py`](../src/legendar/infrastructure/translation/gemini.py)
-- [`translation.py`](../src/legendar/application/pipeline/translation.py)
-- [`serial_pipeline.py`](../src/legendar/application/pipeline/serial_pipeline.py)
-- [`test_gemini_translator.py`](../tests/unit/infrastructure/test_gemini_translator.py)
+- [`gemini.py`](../../../src/legendar/infrastructure/translation/gemini.py)
+- [`translation.py`](../../../src/legendar/application/pipeline/translation.py)
+- [`serial_pipeline.py`](../../../src/legendar/application/pipeline/serial_pipeline.py)
+- [`test_gemini_translator.py`](../../../tests/unit/infrastructure/test_gemini_translator.py)
 
 Estado observado na implementação da branch `phase-8-1-step-0-corpus-freeze` (ainda não integrada à `main`):
 
@@ -244,7 +248,7 @@ A sequência original de 3 requests / 2 batches / 64 unidades aceitas / 0 retrie
 
 ### 4.2. Segmentação — corrigir composição, não duplicar a regra de pontuação
 
-Arquivo principal: [`segmentation.py`](../src/legendar/application/pipeline/segmentation.py).
+Arquivo principal: [`segmentation.py`](../../../src/legendar/application/pipeline/segmentation.py).
 
 A implementação já tem regras de pontuação final. `_prefers_break_after()` reconhece ponto final, exclamação, interrogação e reticências; `_CLAUSE_ENDINGS` considera vírgula, ponto e vírgula, dois-pontos e travessões para preferir um limite de subdivisão. Portanto, **não basta adicionar novamente “quebrar no ponto final”**: essa regra já existe.
 
@@ -275,11 +279,11 @@ Não fixar um mínimo rígido de duas, três ou quatro palavras: isso penalizari
 
 Arquivos principais:
 
-- [`translation.py`](../src/legendar/application/pipeline/translation.py)
-- [`nllb.py`](../src/legendar/infrastructure/translation/nllb.py)
-- [`gemini.py`](../src/legendar/infrastructure/translation/gemini.py)
-- [`test_translation.py`](../tests/unit/application/test_translation.py)
-- [`test_nllb_translator.py`](../tests/unit/infrastructure/test_nllb_translator.py)
+- [`translation.py`](../../../src/legendar/application/pipeline/translation.py)
+- [`nllb.py`](../../../src/legendar/infrastructure/translation/nllb.py)
+- [`gemini.py`](../../../src/legendar/infrastructure/translation/gemini.py)
+- [`test_translation.py`](../../../tests/unit/application/test_translation.py)
+- [`test_nllb_translator.py`](../../../tests/unit/infrastructure/test_nllb_translator.py)
 
 Hoje a aplicação cria uma unidade para cada cue e exige uma saída 1:1. A tradução ocorre por cue, mesmo quando a cue contém apenas um fragmento sintático. O batching do NLLB agrupa requisições para inferência, mas não transforma automaticamente os textos em frases completas. O código NLLB usa `por_Latn`, sem parâmetro regional PT-BR explícito; ao contrário do Gemini, não existe prompt com instruções editoriais.
 
@@ -302,11 +306,11 @@ Hoje a aplicação cria uma unidade para cada cue e exige uma saída 1:1. A trad
 
 Arquivos principais:
 
-- [`text_layout.py`](../src/legendar/domain/value_objects/text_layout.py)
-- [`subtitle.py`](../src/legendar/domain/entities/subtitle.py)
-- [`srt.py`](../src/legendar/infrastructure/filesystem/srt.py)
-- [`validation.py`](../src/legendar/application/pipeline/validation.py)
-- [`phase8_srt_quality.py`](../scripts/phase8_srt_quality.py)
+- [`text_layout.py`](../../../src/legendar/domain/value_objects/text_layout.py)
+- [`subtitle.py`](../../../src/legendar/domain/entities/subtitle.py)
+- [`srt.py`](../../../src/legendar/infrastructure/filesystem/srt.py)
+- [`validation.py`](../../../src/legendar/application/pipeline/validation.py)
+- [`phase8_srt_quality.py`](../../../scripts/phase8_srt_quality.py)
 
 O layout atual tenta manter até duas linhas, mas, quando o texto não cabe, `_merge_overflow()` mantém todas as palavras na última linha disponível. Essa escolha evita perda silenciosa, mas pode produzir linha fisicamente muito maior que 42 caracteres. É comportamento intencional do formatador, não defeito isolado de serialização.
 
@@ -347,9 +351,9 @@ A sequência abaixo é deliberada. Não avançar para otimização de modelo ant
 Tarefas:
 
 1. preservar os três SRTs e os sete JSON atuais em `temporario/` como evidência histórica — **concluído e conferido**;
-2. registrar SHA-256, tamanho em bytes e Git blob SHA-1 dos dez artefatos no [manifesto imutável](../temporario/manifesto-fase-8.1.0.json) — **concluído**;
-3. criar trechos de teste pequenos e sanitizados que reproduzam os dez casos sintéticos — **criados; validação CI pendente** nas [fixtures sintéticas](../tests/fixtures/phase_8_1/README.md);
-4. criar referência PT-BR revisada por humano para uma amostra do áudio, armazenada localmente fora do Git quando houver mídia/texto protegido — **pendente**; existe somente o [template vazio](../tests/fixtures/phase_8_1/human_reference.template.json);
+2. registrar SHA-256, tamanho em bytes e Git blob SHA-1 dos dez artefatos no [manifesto imutável](../../../temporario/manifesto-fase-8.1.0.json) — **concluído**;
+3. criar trechos de teste pequenos e sanitizados que reproduzam os dez casos sintéticos — **criados; validação CI pendente** nas [fixtures sintéticas](../../../tests/fixtures/phase_8_1/README.md);
+4. criar referência PT-BR revisada por humano para uma amostra do áudio, armazenada localmente fora do Git quando houver mídia/texto protegido — **pendente**; existe somente o [template vazio](../../../tests/fixtures/phase_8_1/human_reference.template.json);
 5. separar explicitamente erros de ASR da origem e erros introduzidos pela tradução — **regra documentada** nas fixtures e no template; aplicação à amostra real depende da revisão humana;
 6. usar a mesma transcrição/alinhamento congelados para testar isoladamente segmentação e tradução — **pendente**; os relatórios sanitizados não contêm esses intermediários e os três SRTs não substituem o snapshot pré-tradução;
 7. registrar hash do áudio autorizado, versões/modelos, parâmetros, hardware e intermediários de entrada ao capturar a referência reprodutível — **pendente** até a amostra real;
@@ -534,7 +538,7 @@ Tarefas:
 
 **STATUS: IMPLEMENTAÇÃO INTEGRADA À MAIN; CI PÓS-MERGE APROVADA; HOMOLOGAÇÃO REAL E GATES EDITORIAIS PENDENTES**
 
-A PR #36 foi integrada à `main` por squash no commit `9b831806d914d8cf856b6501557b12516b7715ce`, e a correção do adaptador foi integrada pela PR #41 no commit `fe615fe246f777ee17e19dff45c66986c8e348fd`. A implementação inclui instalador assistido do runtime CPU Linux x86_64 e lifecycle idempotente. O adaptador corrigido: usa JSON compacto com IDs numéricos locais, gramática GBNF direta no llama.cpp `b12321`, contagem exata do prompt renderizado e recuperação estrutural limitada por lote. A CI pós-merge anterior (run `43353241876`) está aprovada; a validação real deste protocolo ainda depende do smoke com pesos. O smoke com pesos reais e os gates de qualidade/desempenho continuam pendentes. A decisão aprovada em 12/11/2026 é adotar TranslateGemma 4B Q4_K_M como único motor local após homologação; NLLB fica temporariamente disponível como baseline, sem fallback automático. Gemini permanece como opção remota independente. Ver [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
+A PR #36 foi integrada à `main` por squash no commit `9b831806d914d8cf856b6501557b12516b7715ce`, e a correção do adaptador foi integrada pela PR #41 no commit `fe615fe246f777ee17e19dff45c66986c8e348fd`. A implementação inclui instalador assistido do runtime CPU Linux x86_64 e lifecycle idempotente. O adaptador corrigido: usa JSON compacto com IDs numéricos locais, gramática GBNF direta no llama.cpp `b12321`, contagem exata do prompt renderizado e recuperação estrutural limitada por lote. A CI pós-merge anterior (run `43353241876`) está aprovada; a validação real deste protocolo ainda depende do smoke com pesos. O smoke com pesos reais e os gates de qualidade/desempenho continuam pendentes. A decisão aprovada em 12/11/2026 é adotar TranslateGemma 4B Q4_K_M como único motor local após homologação; NLLB fica temporariamente disponível como baseline, sem fallback automático. Gemini permanece como opção remota independente. Ver [DECISAO_TRANSLATEGEMMA.md](../../DECISAO_TRANSLATEGEMMA.md).
 
 ### Escopo fechado
 
@@ -725,8 +729,8 @@ Não modificar todos esses arquivos em um único commit sem uma divisão clara p
 
 A IA que executar esta fase deverá seguir este roteiro e não pular gates:
 
-1. Ler este documento inteiro, [estado atual](ESTADO_ATUAL.md), [plano mestre](PLANO_CORRECAO_MELHORIA.md), [decisões](DECISOES.md) e [homologação](HOMOLOGACAO.md).
-2. Conferir os dez artefatos contra o [manifesto SHA-256](../temporario/manifesto-fase-8.1.0.json); recalcular hashes antes de qualquer alteração e não modificar a evidência congelada.
+1. Ler este documento inteiro, [estado atual](../../ESTADO_ATUAL.md), [plano mestre](../../PLANO_CORRECAO_MELHORIA.md), [decisões](../../DECISOES.md) e [homologação](../../HOMOLOGACAO.md).
+2. Conferir os dez artefatos contra o [manifesto SHA-256](../../../temporario/manifesto-fase-8.1.0.json); recalcular hashes antes de qualquer alteração e não modificar a evidência congelada.
 3. Completar a referência humana PT-BR e capturar a mesma transcrição/alinhamento de entrada antes de iniciar experimentos comparativos.
 4. Reproduzir métricas dos SRTs e logs antes de modificar código.
 5. Abrir uma etapa de implementação por vez, com escopo fechado.
@@ -736,7 +740,7 @@ A IA que executar esta fase deverá seguir este roteiro e não pular gates:
 9. Fazer revisão de efeitos colaterais: timestamps, conteúdo, IDs, cancelamento, publicação, memória e concorrência.
 10. Atualizar este documento com resultado real, evidências e decisões; não marcar etapa como concluída sem teste.
 11. Repetir a mídia real no hardware de referência somente depois de os testes determinísticos passarem.
-12. A decisão aprovada de substituir NLLB por TranslateGemma está registrada em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md); validar o novo motor contra o corpus-ouro e a evidência histórica sem criar matriz extensa de hardware.
+12. A decisão aprovada de substituir NLLB por TranslateGemma está registrada em [DECISAO_TRANSLATEGEMMA.md](../../DECISAO_TRANSLATEGEMMA.md); validar o novo motor contra o corpus-ouro e a evidência histórica sem criar matriz extensa de hardware.
 13. Ao final, atualizar os documentos vivos e a matriz de dependências; arquivar qualquer plano substituído sem apagar evidência.
 14. Criar PR com commits por etapa, revisar diff integral, aguardar CI e só então fazer merge para `main`.
 15. Validar o estado pós-merge: commit, workflows, documentos, links, lockfile e testes.
@@ -793,7 +797,7 @@ A Fase 8.1 só poderá ser marcada como concluída quando:
 
 ### Requisito adicional aprovado — autonomia operacional
 
-O runtime local não poderá depender de instalação/inicialização manual em cada máquina. O Legendar deverá verificar dependências na abertura sem bloquear a GUI, propor instalação quando necessário, baixar pesos somente após autorização informada, iniciar automaticamente o servidor antes da etapa de tradução, aguardar health check, reutilizar instâncias próprias saudáveis e encerrar apenas o processo filho que iniciou. Repetir o fluxo deve ser idempotente e concorrência não pode produzir instalações ou servidores duplicados. Ver critérios completos em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md), seção “Operação autônoma e idempotente do runtime”.
+O runtime local não poderá depender de instalação/inicialização manual em cada máquina. O Legendar deverá verificar dependências na abertura sem bloquear a GUI, propor instalação quando necessário, baixar pesos somente após autorização informada, iniciar automaticamente o servidor antes da etapa de tradução, aguardar health check, reutilizar instâncias próprias saudáveis e encerrar apenas o processo filho que iniciou. Repetir o fluxo deve ser idempotente e concorrência não pode produzir instalações ou servidores duplicados. Ver critérios completos em [DECISAO_TRANSLATEGEMMA.md](../../DECISAO_TRANSLATEGEMMA.md), seção “Operação autônoma e idempotente do runtime”.
 
 
 **Implementação integrada pela PR #36 e corrigida nesta etapa:** diagnóstico local; instalador assistido e idempotente do runtime CPU Linux x86_64 em cache privado (sem sudo); download retomável do GGUF após consentimento e SHA-256; servidor em loopback com porta dinâmica, health check, cancelamento, locks, reutilização e encerramento seguro do processo próprio. O adaptador agrupa até 32 cues em JSON compacto com chaves locais, aplica gramática GBNF no campo `grammar`, mede o prompt renderizado pelo endpoint `/v1/chat/completions/input_tokens` e dimensiona a reserva de saída dinamicamente. Falhas de estrutura recebem recuperação limitada a três níveis por ramo; sem fallback para NLLB. Métricas sanitizadas registram tempo, chamadas, tokens, lotes aceitos, subdivisões e motivos de falha. Ainda faltam smoke com pesos reais, validação no Linux Mint/Ryzen de referência, avaliação humana PT-BR e homologação E2E. A implementação não deve ser apresentada como homologada antes desses gates.
