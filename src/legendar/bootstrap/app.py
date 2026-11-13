@@ -329,8 +329,16 @@ def build_ui_dependencies(
                 *inspection.details,
             )
             if not inspection.executable_available:
-                details += ("Instale o runtime llama.cpp para habilitar este motor.",)
-            elif not inspection.model_available:
+                if translategemma_runtime.runtime_download_authorized:
+                    details += (
+                        "Instalação do runtime autorizada; será concluída automaticamente "
+                        "no worker antes da primeira tradução.",
+                    )
+                else:
+                    details += (
+                        "Instale o runtime llama.cpp para habilitar este motor.",
+                    )
+            if not inspection.model_available:
                 if translategemma_runtime.download_authorized:
                     details += (
                         "Os pesos serão baixados no worker antes da primeira tradução.",
@@ -425,7 +433,10 @@ def build_ui_dependencies(
         ),
         runtime_authorize=translategemma_runtime.authorize_runtime_download,
         translation_authorization_required=lambda: (
-            translategemma_runtime.inspect().executable_available
+            (
+                translategemma_runtime.inspect().executable_available
+                or translategemma_runtime.runtime_download_authorized
+            )
             and translategemma_runtime.needs_download_authorization
             and not translategemma_runtime.download_authorized
         ),
