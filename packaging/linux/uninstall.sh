@@ -5,6 +5,7 @@ BIN_LINK="$HOME/.local/bin/legendar"
 DESKTOP_FILE="$HOME/.local/share/applications/legendar.desktop"
 ICON_FILE="$HOME/.local/share/icons/hicolor/scalable/apps/legendar.svg"
 DOC_DIR="$HOME/.local/share/doc/legendar"
+TOOLS_DIR="$HOME/.local/share/legendar/tools"
 printf 'O aplicativo e seu ambiente Python serão removidos.\n'
 printf 'Cache de modelos, configurações e logs serão preservados.\n'
 if [[ -t 0 ]]; then
@@ -16,7 +17,7 @@ else
     printf 'Execute este script em um terminal para confirmar a desinstalação.\n' >&2
     exit 1
 fi
-rm -rf -- "$APP_DIR"
+rm -rf -- "$APP_DIR" "$TOOLS_DIR"
 rm -f -- "$BIN_LINK" "$DESKTOP_FILE" "$ICON_FILE"
 rm -rf -- "$DOC_DIR"
 printf 'Legendar removido. O cache em ~/.cache/legendar foi preservado.\n'
