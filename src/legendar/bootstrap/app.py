@@ -333,9 +333,14 @@ def build_ui_dependencies(
                     "Instale o runtime llama.cpp para habilitar este motor.",
                 )
             elif not inspection.model_available:
-                details += (
-                    "Os pesos serão preparados sob autorização antes da primeira tradução.",
-                )
+                if translategemma_runtime.download_authorized:
+                    details += (
+                        "Os pesos serão baixados no worker antes da primeira tradução.",
+                    )
+                else:
+                    details += (
+                        "O download do GGUF aguarda autorização explícita nas Preferências.",
+                    )
             available = inspection.executable_available and (
                 inspection.model_available
                 or translategemma_runtime.download_authorized
