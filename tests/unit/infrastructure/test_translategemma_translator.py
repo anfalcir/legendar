@@ -1,13 +1,22 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 
-from legendar.application.pipeline.translation import TranslationUnit
+from legendar.application.pipeline.translation import (
+    TranslationContext,
+    TranslationUnit,
+)
 from legendar.domain.errors.catalog import TranslationError, UnsupportedLanguageError
 from legendar.domain.value_objects.language import Language
+from legendar.infrastructure.translation import translategemma as translator_module
 from legendar.infrastructure.translation.translategemma import (
     TranslateGemmaTranslator,
 )
+
+
+_MARKER_PATTERN = re.compile(r"\[\[LG[0-9a-f]{10}_[A-Z0-9_]+\]\]")
 
 
 class FakeProgress:
@@ -45,27 +54,88 @@ def _units() -> tuple[TranslationUnit, ...]:
     )
 
 
-def test_translate_uses_official_template_language_metadata_and_preserves_ids() -> None:
+def _markers(payload: dict[str, object]) -> list[str]:
+    messages = payload["messages"]
+    assert isinstance(messages, list)
+    message = messages[0]
+    assert isinstance(message, dict)
+    content = message["content"]
+    assert isinstance(content, str)
+    return _MARKER_PATTERN.findall(content)
+
+
+def _response_for_batch(
+    payload: dict[str, object],
+    target_texts: tuple[str, ...],
+) -> dict[str, object]:
+    messages = payload["messages"]
+    assert isinstance(messages, list)
+    message = messages[0]
+    assert isinstance(message, dict)
+    source = message["content"]
+    assert isinstance(source, str)
+    markers = _markers(payload)
+    target_markers = [marker for marker in markers if "_UNIT_" in marker]
+    assert len(target_markers) == len(target_texts)
+    translated = dict(zip(target_markers, target_texts, strict=True))
+    output: list[str] = []
+    for position, marker in enumerate(markers):
+        start = source.index(marker) + len(marker)
+        end = (
+            source.index(markers[position + 1])
+            if position + 1 < len(markers)
+            else len(source)
+        )
+        fallback_context = " ".join(source[start:end].split())
+        value = translated.get(marker, fallback_context)
+        output.append(f"{marker}\n{value}")
+    return {
+        "choices": [
+            {
+                "message": {"content": "\n\n".join(output)},
+                "finish_reason": "stop",
+            }
+        ]
+    }
+
+
+def _counter(_url: str, _payload: dict[str, object], _timeout: float) -> int:
+    return 64
+
+
+def _translator(runtime=None, requester=None, token_counter=_counter):
+    return TranslateGemmaTranslator(
+        runtime or FakeRuntime(),
+        requester=requester
+        or (lambda _url, _payload, _timeout: {
+            "choices": [{"message": {"content": "Eu voltei."}, "finish_reason": "stop"}]
+        }),
+        token_counter=token_counter,
+    )
+
+
+def test_translate_batches_units_with_official_language_metadata_and_preserves_ids() -> None:
     runtime = FakeRuntime()
     requests = []
+    token_payloads = []
     progress = FakeProgress()
 
     def requester(base_url, payload, timeout):
         requests.append((base_url, payload, timeout))
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "content": "Eu voltarei."
-                        if len(requests) == 1
-                        else "Estamos seguros."
-                    }
-                }
-            ]
-        }
+        return _response_for_batch(
+            payload,
+            ("Eu voltarei.", "Estamos seguros."),
+        )
 
-    translator = TranslateGemmaTranslator(runtime, requester=requester)
+    def counter(base_url, payload, timeout):
+        token_payloads.append((base_url, payload, timeout))
+        return 48
 
+    translator = _translator(
+        runtime,
+        requester=requester,
+        token_counter=counter,
+    )
     result = translator.translate(
         _units(),
         source_language=Language.ENGLISH,
@@ -81,31 +151,64 @@ def test_translate_uses_official_template_language_metadata_and_preserves_ids() 
     assert runtime.calls[0][2]._span == pytest.approx(0.15)
     assert runtime.calls[1][2]._start == pytest.approx(0.15)
     assert runtime.calls[1][2]._span == pytest.approx(0.60)
-    assert len(requests) == 2
+    assert len(requests) == 1
+    assert len(token_payloads) == 1
     assert requests[0][0] == runtime.url
-    assert requests[0][1]["messages"] == [
-        {"role": "user", "content": "I will be back."}
-    ]
-    assert requests[0][1]["chat_template_kwargs"] == {
+    payload = requests[0][1]
+    assert payload["chat_template_kwargs"] == {
         "source_lang_code": "en",
         "target_lang_code": "pt-BR",
     }
-    assert requests[0][1]["temperature"] == 0.0
+    assert payload["temperature"] == 0.0
+    assert payload["stream"] is False
+    assert payload["max_tokens"] >= 128
+    assert len(_markers(payload)) == 2
     fractions = [fraction for fraction, _message in progress.updates]
     assert fractions == sorted(fractions)
     assert progress.updates[-1][0] == 1.0
 
 
-def test_translate_supports_reverse_language_direction() -> None:
-    runtime = FakeRuntime()
+def test_batch_includes_neighboring_context_without_returning_context_as_units() -> None:
+    payloads = []
+
+    def requester(_url, payload, _timeout):
+        payloads.append(payload)
+        return _response_for_batch(payload, ("Primeira.", "Segunda."))
+
+    units = (
+        TranslationUnit(
+            index=7,
+            text="The door is open.",
+            context=TranslationContext(before=("We heard a noise.",)),
+        ),
+        TranslationUnit(
+            index=8,
+            text="Come in.",
+            context=TranslationContext(after=("Do not be afraid.",)),
+        ),
+    )
+    result = _translator(requester=requester).translate(
+        units,
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=FakeProgress(),
+    )
+
+    content = payloads[0]["messages"][0]["content"]
+    assert "We heard a noise." in content
+    assert "Do not be afraid." in content
+    assert result.unit_indexes == (7, 8)
+    assert result.texts == ("Primeira.", "Segunda.")
+
+
+def test_reverse_language_direction_uses_single_cue_request() -> None:
     payloads = []
 
     def requester(_url, payload, _timeout):
         payloads.append(payload)
         return {"choices": [{"message": {"content": "I am ready."}}]}
 
-    translator = TranslateGemmaTranslator(runtime, requester=requester)
-    result = translator.translate(
+    result = _translator(requester=requester).translate(
         (TranslationUnit(index=1, text="Estou pronto."),),
         source_language=Language.PORTUGUESE,
         target_language=Language.ENGLISH,
@@ -113,17 +216,17 @@ def test_translate_supports_reverse_language_direction() -> None:
     )
 
     assert result.texts == ("I am ready.",)
+    assert payloads[0]["messages"] == [
+        {"role": "user", "content": "Estou pronto."}
+    ]
     assert payloads[0]["chat_template_kwargs"] == {
         "source_lang_code": "pt-BR",
         "target_lang_code": "en",
     }
 
 
-def test_translate_rejects_same_language_and_empty_response() -> None:
-    translator = TranslateGemmaTranslator(
-        FakeRuntime(),
-        requester=lambda *_args: {"choices": [{"message": {"content": "  "}}]},
-    )
+def test_translate_rejects_same_language_and_empty_units() -> None:
+    translator = _translator()
     with pytest.raises(UnsupportedLanguageError):
         translator.translate(
             (TranslationUnit(index=1, text="Hello"),),
@@ -132,20 +235,6 @@ def test_translate_rejects_same_language_and_empty_response() -> None:
             progress=FakeProgress(),
         )
 
-    with pytest.raises(TranslationError, match="texto vazio"):
-        translator.translate(
-            (TranslationUnit(index=1, text="Hello"),),
-            source_language=Language.ENGLISH,
-            target_language=Language.PORTUGUESE,
-            progress=FakeProgress(),
-        )
-
-
-def test_translate_rejects_malformed_response_and_empty_units() -> None:
-    translator = TranslateGemmaTranslator(
-        FakeRuntime(),
-        requester=lambda *_args: {"choices": []},
-    )
     with pytest.raises(TranslationError, match="Nenhuma unidade"):
         translator.translate(
             (),
@@ -153,16 +242,167 @@ def test_translate_rejects_malformed_response_and_empty_units() -> None:
             target_language=Language.PORTUGUESE,
             progress=FakeProgress(),
         )
-    with pytest.raises(TranslationError, match="Resposta TranslateGemma inválida"):
+
+
+def test_translate_rejects_duplicate_unit_indexes_before_starting_runtime() -> None:
+    runtime = FakeRuntime()
+    translator = _translator(runtime)
+    units = (
+        TranslationUnit(index=1, text="First."),
+        TranslationUnit(index=1, text="Second."),
+    )
+    with pytest.raises(TranslationError, match="IDs de unidade duplicados"):
         translator.translate(
-            (TranslationUnit(index=1, text="Hello"),),
+            units,
+            source_language=Language.ENGLISH,
+            target_language=Language.PORTUGUESE,
+            progress=FakeProgress(),
+        )
+    assert runtime.calls == []
+
+
+def test_malformed_batch_is_split_and_recovered_without_backend_fallback() -> None:
+    requests = []
+
+    def requester(_url, payload, _timeout):
+        requests.append(payload)
+        if len(requests) == 1:
+            return {"choices": []}
+        text = payload["messages"][0]["content"]
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": (
+                            "Eu voltarei."
+                            if text == "I will be back."
+                            else "Estamos seguros."
+                        )
+                    },
+                    "finish_reason": "stop",
+                }
+            ]
+        }
+
+    result = _translator(requester=requester).translate(
+        _units(),
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=FakeProgress(),
+    )
+
+    assert result.unit_indexes == (4, 5)
+    assert result.texts == ("Eu voltarei.", "Estamos seguros.")
+    assert len(requests) == 3
+    assert all("nllb" not in str(payload).lower() for payload in requests)
+
+
+def test_reordered_batch_markers_trigger_safe_split() -> None:
+    requests = []
+
+    def requester(_url, payload, _timeout):
+        requests.append(payload)
+        if len(requests) == 1:
+            return _response_for_batch(payload, ("Estamos seguros.", "Eu voltarei.")) | {
+                "choices": [
+                    {
+                        "message": {
+                            "content": "\n\n".join(
+                                reversed(
+                                    _response_for_batch(
+                                        payload,
+                                        ("Estamos seguros.", "Eu voltarei."),
+                                    )["choices"][0]["message"]["content"].split("\n\n")
+                                )
+                            )
+                        },
+                        "finish_reason": "stop",
+                    }
+                ]
+            }
+        text = payload["messages"][0]["content"]
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": (
+                            "Eu voltarei."
+                            if text == "I will be back."
+                            else "Estamos seguros."
+                        )
+                    }
+                }
+            ]
+        }
+
+    result = _translator(requester=requester).translate(
+        _units(),
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=FakeProgress(),
+    )
+    assert result.texts == ("Eu voltarei.", "Estamos seguros.")
+    assert len(requests) == 3
+
+
+def test_prompt_over_budget_is_split_before_generation() -> None:
+    requests = []
+    counted = []
+
+    def requester(_url, payload, _timeout):
+        requests.append(payload)
+        text = payload["messages"][0]["content"]
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": (
+                            "Eu voltarei."
+                            if text == "I will be back."
+                            else "Estamos seguros."
+                        )
+                    }
+                }
+            ]
+        }
+
+    def counter(_url, payload, _timeout):
+        counted.append(payload)
+        content = payload["messages"][0]["content"]
+        return 1900 if "[[LG" in content else 20
+
+    result = _translator(
+        requester=requester,
+        token_counter=counter,
+    ).translate(
+        _units(),
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=FakeProgress(),
+    )
+
+    assert result.texts == ("Eu voltarei.", "Estamos seguros.")
+    assert len(counted) == 3
+    assert len(requests) == 2
+    assert all("[[LG" not in payload["messages"][0]["content"] for payload in requests)
+
+
+def test_single_unit_empty_response_is_an_explicit_error() -> None:
+    translator = _translator(
+        requester=lambda *_args: {
+            "choices": [{"message": {"content": "  "}, "finish_reason": "stop"}]
+        }
+    )
+    with pytest.raises(TranslationError, match="resposta inválida"):
+        translator.translate(
+            (TranslationUnit(index=9, text="Hello"),),
             source_language=Language.ENGLISH,
             target_language=Language.PORTUGUESE,
             progress=FakeProgress(),
         )
 
 
-def test_translate_checks_cancellation_between_units() -> None:
+def test_cancellation_is_checked_between_groups(monkeypatch) -> None:
     class CancelAfterFirst:
         def __init__(self) -> None:
             self.calls = 0
@@ -175,15 +415,16 @@ def test_translate_checks_cancellation_between_units() -> None:
             if self.is_cancelled:
                 raise RuntimeError("cancelled")
 
+    monkeypatch.setattr(translator_module, "_MAX_BATCH_UNITS", 1)
     token = CancelAfterFirst()
     requests = []
 
-    def requester(*_args):
+    def requester(_url, payload, _timeout):
         requests.append(True)
         token.calls += 1
-        return {"choices": [{"message": {"content": "Volto."}}]}
+        return {"choices": [{"message": {"content": "Volto."}, "finish_reason": "stop"}]}
 
-    translator = TranslateGemmaTranslator(FakeRuntime(), requester=requester)
+    translator = _translator(requester=requester)
     with pytest.raises(RuntimeError, match="cancelled"):
         translator.translate(
             _units(),
