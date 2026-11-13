@@ -56,23 +56,20 @@ def _units() -> tuple[TranslationUnit, ...]:
     )
 
 
-def _typed_text(payload: dict[str, object]) -> dict[str, str]:
+def _content(payload: dict[str, object]) -> str:
     messages = payload["messages"]
     assert isinstance(messages, list)
     message = messages[0]
     assert isinstance(message, dict)
-    content = message["content"]
-    assert isinstance(content, list) and len(content) == 1
-    item = content[0]
-    assert isinstance(item, dict)
-    return item
+    value = message["content"]
+    assert isinstance(value, str)
+    return value
 
 
 def _source_document(payload: dict[str, object]) -> dict[str, object]:
-    item = _typed_text(payload)
-    source = item["text"]
-    assert isinstance(source, str)
-    decoded = json.loads(source)
+    content = _content(payload)
+    input_json = content.rsplit("\n", 1)[-1]
+    decoded = json.loads(input_json)
     assert isinstance(decoded, dict)
     return decoded
 
@@ -81,8 +78,7 @@ def _response_for_batch(
     payload: dict[str, object],
     target_texts: tuple[str, ...],
 ) -> dict[str, object]:
-    document = _source_document(payload)
-    cues = document["cues"]
+    cues = _source_document(payload)["cues"]
     assert isinstance(cues, dict)
     keys = tuple(cues)
     assert len(keys) == len(target_texts)
@@ -121,7 +117,7 @@ def _translator(runtime=None, requester=None, token_counter=_counter):
     )
 
 
-def test_translate_uses_official_typed_content_and_schema_constrained_json() -> None:
+def test_translate_uses_llama_cpp_language_kwargs_and_compact_gbnf_mapping() -> None:
     runtime = FakeRuntime()
     requests = []
     token_payloads = []
@@ -162,24 +158,22 @@ def test_translate_uses_official_typed_content_and_schema_constrained_json() -> 
     assert requests[0][0] == runtime.url
 
     payload = requests[0][1]
-    typed = _typed_text(payload)
-    assert typed == {
-        "type": "text",
+    assert payload["chat_template_kwargs"] == {
         "source_lang_code": "en",
         "target_lang_code": "pt-BR",
-        "text": typed["text"],
     }
-    assert payload["response_format"]["type"] == "json_schema"
-    schema = payload["response_format"]["schema"]
-    assert schema["required"] == ["1", "2"]
-    assert set(schema["properties"]) == {"1", "2"}
-    assert payload["temperature"] == 0.0
-    assert payload["stream"] is False
-    assert 128 <= payload["max_tokens"] <= 1024
     assert _source_document(payload)["cues"] == {
         "1": "I will be back.",
         "2": "We are safe.",
     }
+    grammar = payload["grammar"]
+    assert 'root ::= "{" ws entrya "," ws entryb "}" ws' in grammar
+    assert 'entrya ::= "\\"1\\"" ws ":" ws string' in grammar
+    assert 'entryb ::= "\\"2\\"" ws ":" ws string' in grammar
+    assert 'string ::= "\\"" char+ "\\""' in grammar
+    assert payload["temperature"] == 0.0
+    assert payload["stream"] is False
+    assert 128 <= payload["max_tokens"] <= 1024
 
     fractions = [fraction for fraction, _message in progress.updates]
     assert fractions == sorted(fractions)
@@ -221,7 +215,7 @@ def test_batch_includes_boundary_context_as_non_output_input() -> None:
     assert result.texts == ("Primeira.", "Segunda.")
 
 
-def test_reverse_language_direction_uses_typed_content_codes() -> None:
+def test_reverse_language_direction_uses_chat_template_kwargs() -> None:
     payloads = []
 
     def requester(_url, payload, _timeout):
@@ -236,8 +230,10 @@ def test_reverse_language_direction_uses_typed_content_codes() -> None:
     )
 
     assert result.texts == ("I am ready.",)
-    assert _typed_text(payloads[0])["source_lang_code"] == "pt-BR"
-    assert _typed_text(payloads[0])["target_lang_code"] == "en"
+    assert payloads[0]["chat_template_kwargs"] == {
+        "source_lang_code": "pt-BR",
+        "target_lang_code": "en",
+    }
 
 
 def test_translate_rejects_same_language_and_empty_units() -> None:
@@ -465,7 +461,7 @@ def test_performance_snapshot_exposes_only_sanitized_metrics() -> None:
         progress=FakeProgress(),
     )
     snapshot = translator.performance_snapshot()
-    assert snapshot["configuration"]["structured_output"] == "json_schema"
+    assert snapshot["configuration"]["structured_output"] == "gbnf_json"
     assert snapshot["counters"]["generation_calls"] == 1
     assert snapshot["counters"]["accepted_batches"] == 1
     assert snapshot["counters"]["translated_units"] == 2
