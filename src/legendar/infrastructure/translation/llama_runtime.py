@@ -420,8 +420,12 @@ class LlamaCppRuntimeManager:
             for member in members:
                 target = destination / member.name
                 if member.isdir():
-                    target.mkdir(parents=True, exist_ok=True)
-                    os.chmod(target, member.mode & 0o777)
+                    # Keep extraction directories traversable while files are being
+                    # written. Archive directory modes are applied by tarfile only
+                    # after extraction; applying them immediately can remove the
+                    # execute bit from a parent directory (e.g. mode 0644) and make
+                    # subsequent child writes fail with PermissionError.
+                    target.mkdir(mode=0o700, parents=True, exist_ok=True)
                     continue
                 target.parent.mkdir(parents=True, exist_ok=True)
                 source = archive.extractfile(member)
