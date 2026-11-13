@@ -109,7 +109,10 @@ def _translator(runtime=None, requester=None, token_counter=_counter):
         or (
             lambda _url, _payload, _timeout: {
                 "choices": [
-                    {"message": {"content": '{"1": "Eu voltei."}'}, "finish_reason": "stop"}
+                    {
+                        "message": {"content": '{"1": "Eu voltei."}'},
+                        "finish_reason": "stop",
+                    }
                 ]
             }
         ),
@@ -281,7 +284,11 @@ def test_invalid_json_batch_is_split_and_recovered_with_same_engine() -> None:
             return {"choices": []}
         source = _source_document(payload)["cues"]
         only_text = next(iter(source.values()))
-        translated = "Eu voltarei." if only_text == "I will be back." else "Estamos seguros."
+        translated = (
+            "Eu voltarei."
+            if only_text == "I will be back."
+            else "Estamos seguros."
+        )
         return _response_for_batch(payload, (translated,))
 
     result = _translator(requester=requester).translate(
