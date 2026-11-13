@@ -339,10 +339,13 @@ def build_ui_dependencies(
                     details += (
                         "O download do GGUF aguarda autorização explícita nas Preferências.",
                     )
-            available = inspection.executable_available and (
-                inspection.model_available
-                or translategemma_runtime.download_authorized
+            runtime_ready_or_authorized = inspection.executable_available or (
+                translategemma_runtime.runtime_download_authorized
             )
+            model_ready_or_authorized = inspection.model_available or (
+                translategemma_runtime.download_authorized
+            )
+            available = runtime_ready_or_authorized and model_ready_or_authorized
             return translator, available, details
 
         return (
