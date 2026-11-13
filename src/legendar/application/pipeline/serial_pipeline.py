@@ -13,6 +13,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from legendar.application.job.context import JobContext
 from legendar.application.pipeline.performance import (
@@ -58,6 +59,7 @@ from legendar.domain.errors.catalog import (
 )
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
+from legendar.infrastructure.filesystem.srt import read_srt_file
 from legendar.infrastructure.resources.profile import (
     ResourcePolicy,
     resolve_resource_policy,
@@ -73,6 +75,7 @@ _PIPELINE_EXECUTION_LOCK = threading.Lock()
 
 _STAGE_RANGES: dict[JobState, tuple[float, float]] = {
     JobState.INSPECTING_MEDIA: (0.00, 0.05),
+    JobState.LOADING_SUBTITLES: (0.00, 0.10),
     JobState.PREPARING_AUDIO: (0.05, 0.15),
     JobState.TRANSCRIBING: (0.15, 0.55),
     JobState.ALIGNING: (0.55, 0.82),
@@ -80,6 +83,13 @@ _STAGE_RANGES: dict[JobState, tuple[float, float]] = {
     JobState.TRANSLATING: (0.86, 0.97),
     JobState.VALIDATING_SRT: (0.97, 0.99),
     JobState.PUBLISHING: (0.99, 1.00),
+}
+
+_SRT_STAGE_RANGES: dict[JobState, tuple[float, float]] = {
+    JobState.LOADING_SUBTITLES: (0.00, 0.12),
+    JobState.TRANSLATING: (0.12, 0.88),
+    JobState.VALIDATING_SRT: (0.88, 0.97),
+    JobState.PUBLISHING: (0.97, 1.00),
 }
 
 
@@ -91,13 +101,26 @@ class JobRequest:
     verdadeiro quando o idioma final difere do idioma de origem conhecido.
     """
 
-    source: MediaSource
+    source: MediaSource | None
     output_language: Language
     source_language: Language | None = None
     translate: bool = False
     stream_index: int | None = None
+    subtitle_path: Path | None = None
 
     def __post_init__(self) -> None:
+        if (self.source is None) == (self.subtitle_path is None):
+            raise InvalidInputError(
+                "Defina exatamente uma origem: mídia ou arquivo SRT."
+            )
+        if self.source is not None and not isinstance(self.source, MediaSource):
+            raise InvalidInputError("Origem de mídia inválida.")
+        if self.subtitle_path is not None:
+            object.__setattr__(self, "subtitle_path", Path(self.subtitle_path).expanduser())
+            if self.source_language is None:
+                raise InvalidInputError(
+                    "Informe o idioma atual do SRT; não há detecção automática confiável."
+                )
         if not isinstance(self.output_language, Language):
             raise UnsupportedLanguageError("Selecione o idioma final da legenda.")
         if self.translate and self.source_language is self.output_language:
@@ -132,7 +155,7 @@ class PipelineResult:
 
     output_path: str
     track: SubtitleTrack
-    segmentation: SegmentationResult
+    segmentation: SegmentationResult | None
     source_language: Language
     final_language: Language
     warnings: tuple[str, ...] = field(default_factory=tuple)
@@ -250,7 +273,9 @@ class SerialPipeline:
             logical_cpu_count=self._resource_policy.logical_cpu_count,
             physical_cpu_count=self._resource_policy.physical_cpu_count,
             cpu_topology_source=self._resource_policy.cpu_topology_source,
-            media_kind=request.source.kind.value,
+            media_kind=(
+                request.source.kind.value if request.source is not None else "srt_file"
+            ),
             requested_source_language=(
                 request.source_language.value if request.source_language else None
             ),
@@ -262,8 +287,26 @@ class SerialPipeline:
             token.raise_if_cancelled()
             if on_state is not None:
                 on_state(state)
-            start, end = _STAGE_RANGES[state]
+            ranges = (
+                _SRT_STAGE_RANGES
+                if request.subtitle_path is not None
+                else _STAGE_RANGES
+            )
+            start, end = ranges[state]
             return ScaledProgress(progress, start, end)
+
+        if request.subtitle_path is not None:
+            return self._execute_srt_source(
+                request,
+                context,
+                enter=enter,
+                warnings=warnings,
+                performance=performance,
+                released_adapter_ids=released_adapter_ids,
+            )
+
+        if request.source is None:
+            raise InvalidInputError("Origem de mídia não definida.")
 
         # 1. Aquisição (download quando necessário) + inspeção
         stage = enter(JobState.INSPECTING_MEDIA)
