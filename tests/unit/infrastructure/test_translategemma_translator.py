@@ -280,7 +280,7 @@ def test_translate_rejects_blank_source_before_runtime() -> None:
     translator = _translator(runtime)
     with pytest.raises(TranslationError, match="unidade de origem vazia"):
         translator.translate(
-            (TranslationUnit(index=1, text="  \\n"),),
+            (TranslationUnit(index=1, text="   "),),
             source_language=Language.ENGLISH,
             target_language=Language.PORTUGUESE,
             progress=FakeProgress(),
