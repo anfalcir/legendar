@@ -3,6 +3,7 @@
 - **Escopo:** instalar e executar a aplicação a partir do código versionado.
 - **Fonte de verdade das dependências:** `pyproject.toml` e `uv.lock`; a matriz detalhada está em [MATRIZ_DEPENDENCIAS.md](MATRIZ_DEPENDENCIAS.md).
 - **Operação:** [OPERACAO.md](OPERACAO.md).
+- **Distribuição Linux:** [DISTRIBUICAO_LINUX.md](DISTRIBUICAO_LINUX.md).
 
 ## 1. Requisitos
 
