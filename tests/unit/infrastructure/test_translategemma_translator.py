@@ -67,7 +67,7 @@ def test_translate_uses_official_template_language_metadata_and_preserves_ids() 
     assert runtime.calls[0][2]._start == 0.0
     assert runtime.calls[0][2]._span == 0.75
     assert runtime.calls[1][2]._start == 0.75
-    assert runtime.calls[1][2]._span == 0.15
+    assert runtime.calls[1][2]._span == pytest.approx(0.15)
     assert len(requests) == 2
     assert requests[0][0] == runtime.url
     assert requests[0][1]["messages"] == [
