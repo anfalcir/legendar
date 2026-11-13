@@ -47,7 +47,13 @@ def test_translate_uses_official_template_language_metadata_and_preserves_ids() 
         requests.append((base_url, payload, timeout))
         return {
             "choices": [
-                {"message": {"content": "Eu voltarei." if len(requests) == 1 else "Estamos seguros."}}
+                {
+                    "message": {
+                        "content": "Eu voltarei."
+                        if len(requests) == 1
+                        else "Estamos seguros."
+                    }
+                }
             ]
         }
 
