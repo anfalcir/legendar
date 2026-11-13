@@ -12,7 +12,7 @@ mkdir -p "$BUNDLE_DIR/packaging/linux" "$BUNDLE_DIR/docs"
 cp -a "$ROOT/src" "$BUNDLE_DIR/"
 cp -a "$ROOT/pyproject.toml" "$ROOT/uv.lock" "$ROOT/README.md" "$ROOT/LICENSE" "$BUNDLE_DIR/"
 cp -a "$ROOT/packaging/linux/install.sh" "$ROOT/packaging/linux/launch.sh" "$ROOT/packaging/linux/uninstall.sh" "$BUNDLE_DIR/packaging/linux/"
-cp -a "$ROOT/docs/INSTALACAO.md" "$ROOT/docs/OPERACAO.md" "$ROOT/docs/HOMOLOGACAO.md" "$BUNDLE_DIR/docs/"
+cp -a "$ROOT/docs/INSTALACAO.md" "$ROOT/docs/OPERACAO.md" "$ROOT/docs/HOMOLOGACAO.md" "$ROOT/docs/DISTRIBUICAO_LINUX.md" "$BUNDLE_DIR/docs/"
 printf '%s\n' "$VERSION" > "$BUNDLE_DIR/VERSION"
 chmod 755 "$BUNDLE_DIR/packaging/linux/"*.sh
 mkdir -p "$DIST_DIR"
