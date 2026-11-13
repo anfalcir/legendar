@@ -106,23 +106,23 @@ def _manager(tmp_path: Path, **overrides) -> tuple[LlamaCppRuntimeManager, list]
 def _runtime_archive(*, unsafe_symlink: bool = False) -> bytes:
     payload = io.BytesIO()
     with tarfile.open(fileobj=payload, mode="w:gz") as archive:
-        root = tarfile.TarInfo(f"{llama_runtime.LLAMA_CPP_RELEASE}/")
+        root = tarfile.TarInfo(f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/")
         root.type = tarfile.DIRTYPE
         archive.addfile(root)
 
-        lib_dir = tarfile.TarInfo(f"{llama_runtime.LLAMA_CPP_RELEASE}/lib/")
+        lib_dir = tarfile.TarInfo(f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/lib/")
         lib_dir.type = tarfile.DIRTYPE
         archive.addfile(lib_dir)
 
         library = tarfile.TarInfo(
-            f"{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so.0.9.0"
+            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so.0.9.0"
         )
         library.mode = 0o644
         library.size = len(b"fake library")
         archive.addfile(library, io.BytesIO(b"fake library"))
 
         versioned_link = tarfile.TarInfo(
-            f"{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so.0"
+            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so.0"
         )
         versioned_link.type = tarfile.SYMTYPE
         versioned_link.linkname = (
@@ -131,13 +131,13 @@ def _runtime_archive(*, unsafe_symlink: bool = False) -> bytes:
         archive.addfile(versioned_link)
 
         unversioned_link = tarfile.TarInfo(
-            f"{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so"
+            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so"
         )
         unversioned_link.type = tarfile.SYMTYPE
         unversioned_link.linkname = "libggml-base.so.0"
         archive.addfile(unversioned_link)
 
-        binary = tarfile.TarInfo(f"{llama_runtime.LLAMA_CPP_RELEASE}/llama-server")
+        binary = tarfile.TarInfo(f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/llama-server")
         binary.mode = 0o755
         binary.size = len(b"fake server")
         archive.addfile(binary, io.BytesIO(b"fake server"))
