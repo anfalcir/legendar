@@ -162,9 +162,7 @@ def test_batch_check_rejects_missing_or_duplicate_ids(monkeypatch) -> None:
             {
                 "choices": [
                     {
-                        "message": {
-                            "content": '{"1":"Um.","2":"Dois."}'
-                        },
+                        "message": {"content": '{"1":"Um.","2":"Dois."}'},
                         "finish_reason": "stop",
                     }
                 ]
