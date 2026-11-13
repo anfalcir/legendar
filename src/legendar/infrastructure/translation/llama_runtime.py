@@ -697,8 +697,7 @@ class LlamaCppRuntimeManager:
                 payload = json.loads(response.read().decode("utf-8"))
             models = payload.get("data") if isinstance(payload, dict) else None
             return isinstance(models, list) and any(
-                isinstance(model, dict)
-                and model.get("id") == DEFAULT_MODEL_ALIAS
+                isinstance(model, dict) and model.get("id") == DEFAULT_MODEL_ALIAS
                 for model in models
             )
         except (
