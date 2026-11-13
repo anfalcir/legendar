@@ -472,7 +472,7 @@ def test_post_json_decodes_object_response(monkeypatch) -> None:
 @pytest.mark.parametrize("body", [b"not-json", b"[]"])
 def test_post_json_rejects_invalid_json_shapes(monkeypatch, body) -> None:
     monkeypatch.setattr(
-        translategemma_module,
+        _translategemma_module(),
         "urlopen",
         lambda *_args, **_kwargs: _FakeHttpResponse(body),
     )
@@ -495,7 +495,7 @@ def test_post_json_normalizes_http_and_network_errors(monkeypatch) -> None:
             None,
         )
 
-    monkeypatch.setattr(translategemma_module, "urlopen", http_failure)
+    monkeypatch.setattr(_translategemma_module(), "urlopen", http_failure)
     with pytest.raises(TranslationError, match="HTTP 503"):
         _translategemma_module()._post_json(
             "http://127.0.0.1:8080",
@@ -507,7 +507,7 @@ def test_post_json_normalizes_http_and_network_errors(monkeypatch) -> None:
     def network_failure(*_args, **_kwargs):
         raise URLError("connection refused")
 
-    monkeypatch.setattr(translategemma_module, "urlopen", network_failure)
+    monkeypatch.setattr(_translategemma_module(), "urlopen", network_failure)
     with pytest.raises(TranslationError, match="URLError"):
         _translategemma_module()._post_json(
             "http://127.0.0.1:8080",
@@ -519,7 +519,7 @@ def test_post_json_normalizes_http_and_network_errors(monkeypatch) -> None:
 
 def test_count_prompt_tokens_rejects_invalid_count(monkeypatch) -> None:
     monkeypatch.setattr(
-        translategemma_module,
+        _translategemma_module(),
         "_post_json",
         lambda *_args, **_kwargs: {"input_tokens": True},
     )
@@ -533,7 +533,7 @@ def test_count_prompt_tokens_rejects_invalid_count(monkeypatch) -> None:
 
 def test_count_prompt_tokens_returns_integer_count(monkeypatch) -> None:
     monkeypatch.setattr(
-        translategemma_module,
+        _translategemma_module(),
         "_post_json",
         lambda *_args, **_kwargs: {"input_tokens": 123},
     )
@@ -547,7 +547,7 @@ def test_count_prompt_tokens_returns_integer_count(monkeypatch) -> None:
 def test_chat_completion_uses_expected_endpoint(monkeypatch) -> None:
     calls = []
     monkeypatch.setattr(
-        translategemma_module,
+        _translategemma_module(),
         "_post_json",
         lambda *args: calls.append(args) or {"choices": []},
     )
