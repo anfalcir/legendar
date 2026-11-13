@@ -988,6 +988,18 @@ class MainWindow(QMainWindow):
 
         if not hasattr(self, "language_hint"):
             return
+        srt_source = self._source_kind() == _SRT_SOURCE_KIND
+        self.translate_check.setText(
+            "Traduzir o SRT de origem para o idioma final"
+            if srt_source
+            else "Traduzir a fala para o idioma final"
+        )
+        self.source_label.setText("IDIOMA DO SRT" if srt_source else "IDIOMA FALADO")
+        self.source_combo.setAccessibleName(
+            "Idioma atual do SRT de origem"
+            if srt_source
+            else "Idioma falado na mídia"
+        )
         # A disponibilidade pode mudar depois das confirmações nas Preferências.
         # Atualizar o controle aqui evita deixá-lo desabilitado até um novo render.
         self.translate_check.setEnabled(
@@ -1002,8 +1014,13 @@ class MainWindow(QMainWindow):
         )
         if self._deps.translate_available:
             self.translate_check.setToolTip(
-                f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
-                "Com a opção desmarcada, a legenda sai no idioma falado."
+                (
+                    f"Traduz o texto das cues do SRT com {backend_label}, "
+                    "preservando exatamente os timestamps."
+                    if srt_source
+                    else f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
+                    "Com a opção desmarcada, a legenda sai no idioma falado."
+                )
             )
         else:
             details = " ".join(self._deps.translate_readiness_details)
@@ -1019,7 +1036,12 @@ class MainWindow(QMainWindow):
         self.target_combo.setToolTip(
             "Idioma final do arquivo. O texto só muda quando a tradução está marcada."
         )
-        if translating and source is None:
+        if srt_source and source is None:
+            hint = (
+                "Informe o idioma atual do SRT. Não há detecção automática confiável "
+                "de idioma em arquivos de legenda."
+            )
+        elif translating and source is None:
             hint = (
                 "Tradução marcada: o idioma falado será detectado e depois "
                 f"traduzido para {target.label_pt}."
@@ -1027,7 +1049,11 @@ class MainWindow(QMainWindow):
         elif translating and source is target:
             hint = (
                 f"Origem e destino são {target.label_pt}: não há o que traduzir. "
-                "A legenda sai no idioma falado."
+                + (
+                    "O SRT será republicado sem alterar os timestamps."
+                    if srt_source
+                    else "A legenda sai no idioma falado."
+                )
             )
         elif translating:
             backend_label = (
@@ -1039,13 +1065,24 @@ class MainWindow(QMainWindow):
             )
             hint = (
                 f"Tradução {source.label_pt} → {target.label_pt} com {backend_label}, "
-                "preservando os tempos originais."
+                + (
+                    "mantendo exatamente os timestamps do SRT."
+                    if srt_source
+                    else "preservando os tempos originais."
+                )
             )
         elif source is None:
-            hint = "Sem tradução: a legenda sai no idioma detectado na fala."
+            hint = (
+                "Sem tradução: informe o idioma atual do SRT."
+                if srt_source
+                else "Sem tradução: a legenda sai no idioma detectado na fala."
+            )
         else:
             hint = (
-                f"Sem tradução: a legenda sai em {source.label_pt}. "
+                f"Sem tradução: o SRT será mantido em {source.label_pt}. "
+                "Marque a tradução para publicar em outro idioma."
+                if srt_source
+                else f"Sem tradução: a legenda sai em {source.label_pt}. "
                 "Marque a tradução para publicar em outro idioma."
             )
         self.language_hint.setText(hint)
