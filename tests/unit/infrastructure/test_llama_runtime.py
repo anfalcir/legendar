@@ -51,6 +51,13 @@ class FakeResponse:
     def __exit__(self, *_args):
         return False
 
+    def read(self, _size: int = -1) -> bytes:
+        return (
+            '{"data":[{"id":"'
+            + DEFAULT_MODEL_ALIAS
+            + '"}]}'
+        ).encode("utf-8")
+
 
 class CancelToken:
     is_cancelled = False
@@ -266,6 +273,19 @@ def test_unhealthy_server_times_out_and_is_terminated(tmp_path) -> None:
     assert len(processes) == 1
     assert processes[0].terminated
     assert manager.base_url is None
+
+
+def test_readiness_rejects_a_different_model_on_a_healthy_port(tmp_path) -> None:
+    class ForeignModelResponse(FakeResponse):
+        def read(self, _size: int = -1) -> bytes:
+            return b'{"data":[{"id":"some-other-model"}]}'
+
+    manager, _ = _manager(
+        tmp_path,
+        opener=lambda *_args, **_kwargs: ForeignModelResponse(),
+    )
+
+    assert not manager._is_ready(12345)
 
 
 def test_standalone_llama_server_uses_server_cli_arguments(tmp_path) -> None:
