@@ -15,14 +15,16 @@ O comando abre a janela principal. Nada é processado sem confirmação explíci
 
 ## 2. Jornada na interface
 
-1. **Origem da mídia:** escolha *Arquivo local* ou *YouTube*.
-2. **Faixas de áudio:** inspecione e selecione a faixa correta quando necessário.
-3. **Idioma falado:** detectar automaticamente ou escolher explicitamente.
-4. **Idioma final:** PT-BR ou inglês. Habilite tradução quando origem e destino forem diferentes.
-5. **Destino:** selecione o caminho do SRT; sobrescrita exige confirmação.
+1. **Origem:** escolha *Arquivo de mídia*, *Arquivo SRT* ou *YouTube*.
+2. **Mídia:** em arquivo local, inspecione faixas quando necessário; no YouTube, o áudio é obtido automaticamente.
+3. **SRT existente:** escolha *Arquivo SRT* e selecione o arquivo .srt de origem. Informe obrigatoriamente o idioma atual; o formato SRT não contém metadados confiáveis de idioma.
+4. **Idioma final e tradução:** escolha PT-BR ou inglês e marque a tradução quando origem e destino forem diferentes.
+5. **Destino:** selecione outro caminho SRT. O arquivo de origem nunca pode ser sobrescrito.
 6. **Gerar legenda:** revise o resumo e confirme.
 7. Acompanhe **Andamento do trabalho** e **Atividade**; o log pode ser recolhido.
 8. Ao final, abra a pasta de destino.
+
+**Modo Arquivo SRT:** lê as cues existentes, traduz diretamente o texto e publica outro SRT preservando os timestamps. Não executa inspeção de mídia, FFmpeg, Whisper ou WhisperX.
 
 ### 2.1. Preferências de tradução
 
