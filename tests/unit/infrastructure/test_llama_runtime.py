@@ -153,9 +153,7 @@ def test_runtime_install_requires_consent_and_is_idempotent(
         "LLAMA_CPP_SHA256",
         hashlib.sha256(archive).hexdigest(),
     )
-    monkeypatch.setattr(
-        llama_runtime, "LLAMA_CPP_ARCHIVE_SIZE", len(archive)
-    )
+    monkeypatch.setattr(llama_runtime, "LLAMA_CPP_ARCHIVE_SIZE", len(archive))
     response = DownloadResponse(
         [archive],
         headers={"Content-Length": str(len(archive))},
@@ -238,10 +236,7 @@ def test_runtime_install_reuses_verified_archive_after_extraction_failure(
         manager.ensure_runtime(consent=True)
 
     cached_archive = (
-        tmp_path
-        / "models"
-        / "runtime"
-        / f"{llama_runtime.LLAMA_CPP_ARCHIVE}.part"
+        tmp_path / "models" / "runtime" / f"{llama_runtime.LLAMA_CPP_ARCHIVE}.part"
     )
     assert cached_archive.is_file()
     assert len(requests) == 1
