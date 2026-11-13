@@ -33,8 +33,8 @@ Após uma GitHub Release publicar `legendar-linux-x86_64-*.tar.gz`:
 
 O instalador:
 - aceita somente Linux x86_64;
-- exige `curl`;
-- instala `uv 0.13.7` em `~/.local/bin`, sem modificar perfis de shell;
+- exige `curl` ou `wget`;
+- instala `uv 0.13.7` em `~/.local/share/legendar/tools`, sem modificar perfis de shell;
 - instala Python 3.12 gerenciado pelo uv;
 - oferece instalar FFmpeg/ffprobe e bibliotecas Qt via APT se estiverem ausentes (a senha/sudo só é solicitada após confirmação);
 - instala o perfil CPU do `uv.lock` em ambiente isolado;
