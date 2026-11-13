@@ -969,3 +969,31 @@ def test_job_request_for_srt_requires_an_explicit_source_language():
             subtitle_path=Path("/tmp/source.srt"),
             source_language=None,
         )
+
+
+def test_srt_file_source_cannot_be_overwritten_by_pipeline_context(
+    job_context,
+    tmp_path,
+):
+    from dataclasses import replace
+
+    source_path = tmp_path / "baseline.srt"
+    original = "1\\n00:00:01,000 --> 00:00:02,000\\nHello.\\n"
+    source_path.write_text(original, encoding="utf-8")
+    pipeline, ports = _pipeline(translator=FakeTranslator())
+    context = replace(job_context, output_path=source_path)
+
+    with pytest.raises(InvalidInputError, match="não pode sobrescrever"):
+        pipeline.execute(
+            _request(
+                source=None,
+                subtitle_path=source_path,
+                source_language=Language.ENGLISH,
+                output_language=Language.PORTUGUESE,
+                translate=True,
+            ),
+            context,
+        )
+
+    assert source_path.read_text(encoding="utf-8") == original
+    assert ports["publisher"].calls == []
