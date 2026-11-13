@@ -500,6 +500,80 @@ def test_translategemma_model_consent_enables_on_demand_preparation(
     assert "Pesos TranslateGemma ausentes." in details
 
 
+def test_translategemma_runtime_consent_then_model_consent_enables_backend(
+    tmp_path, monkeypatch
+) -> None:
+    """Autorizar o runtime ausente deve liberar a confirmação do modelo."""
+
+    _patch_modules(monkeypatch)
+
+    class FakeRuntime:
+        def __init__(self, _models_dir) -> None:
+            self.runtime_authorized = False
+            self.model_authorized = False
+
+        @property
+        def runtime_download_authorized(self) -> bool:
+            return self.runtime_authorized
+
+        @property
+        def needs_runtime_download_authorization(self) -> bool:
+            return True
+
+        def authorize_runtime_download(self) -> None:
+            self.runtime_authorized = True
+
+        def inspect(self):
+            return SimpleNamespace(
+                executable_available=False,
+                model_available=False,
+                ready_to_start=False,
+                details=("llama.cpp ausente.", "GGUF ausente."),
+            )
+
+        @property
+        def download_authorized(self) -> bool:
+            return self.model_authorized
+
+        @property
+        def needs_download_authorization(self) -> bool:
+            return True
+
+        def authorize_model_download(self) -> None:
+            self.model_authorized = True
+
+        def shutdown(self) -> None:
+            pass
+
+    monkeypatch.setattr(bootstrap_app, "LlamaCppRuntimeManager", FakeRuntime)
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        translation_backend="nllb",
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert dependencies.runtime_authorization_required is not None
+    assert dependencies.runtime_authorization_required()
+    assert dependencies.runtime_authorize is not None
+    dependencies.runtime_authorize()
+
+    # Mesmo sem o binário já instalado, a autorização do runtime libera
+    # a segunda confirmação, referente exclusivamente aos pesos GGUF.
+    assert dependencies.translation_authorization_required is not None
+    assert dependencies.translation_authorization_required()
+    assert dependencies.translation_authorize is not None
+    dependencies.translation_authorize()
+
+    available, details = dependencies.translation_reconfigure("translategemma", None)
+
+    assert available
+    assert any("Instalação do runtime autorizada" in item for item in details)
+    assert any("baixados no worker" in item for item in details)
+
+
 def test_gemini_backend_is_selected_with_api_key(tmp_path, monkeypatch) -> None:
     _patch_modules(monkeypatch)
     monkeypatch.setenv("LEGENDAR_TRANSLATION_BACKEND", "gemini")
