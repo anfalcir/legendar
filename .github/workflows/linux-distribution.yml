@@ -46,6 +46,14 @@ jobs:
         run: |
           bash -n packaging/linux/install.sh packaging/linux/launch.sh packaging/linux/uninstall.sh scripts/build_linux_bundle.sh
           shellcheck packaging/linux/install.sh packaging/linux/launch.sh packaging/linux/uninstall.sh scripts/build_linux_bundle.sh
+      - name: Verify release tag matches application version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version="$(sed -n 's/^__version__ = "\([^"]*\)"/\1/p' src/legendar/__init__.py)"
+          test "$GITHUB_REF_NAME" = "v$version" || {
+            echo "::error::Tag $GITHUB_REF_NAME does not match application version v$version."
+            exit 1
+          }
       - name: Build release bundle
         run: bash scripts/build_linux_bundle.sh
       - name: Validate bundle layout and checksum
