@@ -196,8 +196,12 @@ def _build_batch_payload(
         ensure_ascii=False,
         separators=(",", ":"),
     )
+    target_name = "Brazilian Portuguese" if target_code == "pt-BR" else "English"
     content = (
-        "Translate each string value in the cues object into the target language. "
+        f"Translate each string value in the cues object into natural {target_name}. "
+        "Preserve character names, proper names, place names, races, clans, species "
+        "and in-universe terms unless the source clearly uses an established "
+        "localized form. Preserve negation, intent, numbers and speaker relationships. "
         "Use context_before and context_after only to understand context. "
         "Return only a JSON object with exactly the same numeric keys and one "
         "non-empty translated string for each key. Do not translate the keys.\n"
