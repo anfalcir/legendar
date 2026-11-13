@@ -12,6 +12,7 @@ from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
 from legendar.infrastructure.config.settings import AppSettings
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
+from legendar.infrastructure.filesystem.srt import SrtFileReader
 from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
 from legendar.infrastructure.media.probe import FfprobeInspector
 from legendar.infrastructure.media.tools import ToolStatus
@@ -102,6 +103,7 @@ def test_pipeline_composes_real_adapters_for_every_stage(tmp_path, monkeypatch) 
     assert isinstance(pipeline._ports.aligner, WhisperXAligner)
     assert isinstance(pipeline._ports.translator, NllbTranslator)
     assert isinstance(pipeline._ports.publisher, SrtPublisher)
+    assert isinstance(pipeline._ports.srt_source_reader, SrtFileReader)
     assert dependencies.youtube_readiness_details[1].startswith(
         "Runtime EJS selecionado: deno"
     )
