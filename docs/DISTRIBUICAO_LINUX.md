@@ -1,6 +1,6 @@
 # Distribuição para Linux Mint/Ubuntu x86_64
 
-- **Status:** primeira implementação do instalador por usuário em revisão; ainda não publicada em GitHub Releases nem homologada no Linux Mint de referência.
+- **Status:** implementação inicial concluída na PR #38; a pré-release ainda não foi publicada e a homologação real no Linux Mint de referência permanece pendente.
 - **Objetivo:** entregar uma instalação simples, isolada, atualizável e removível, sem alterar o Python do sistema nem exigir privilégios administrativos para o aplicativo.
 - **Plataforma inicial:** Linux x86_64 (inclui Linux Mint x86_64). Outras arquiteturas e sistemas operacionais não fazem parte deste artefato.
 
