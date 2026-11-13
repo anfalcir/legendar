@@ -322,6 +322,17 @@ def test_translategemma_backend_is_composed_when_runtime_and_model_exist(
         def __init__(self, _models_dir) -> None:
             self.shutdown_called = False
 
+        @property
+        def runtime_download_authorized(self) -> bool:
+            return True
+
+        @property
+        def needs_runtime_download_authorization(self) -> bool:
+            return False
+
+        def authorize_runtime_download(self) -> None:
+            pass
+
         def inspect(self):
             return SimpleNamespace(
                 executable_available=True,
@@ -369,6 +380,17 @@ def test_translategemma_backend_stays_disabled_until_runtime_and_model_exist(
 
     class FakeRuntime:
         def __init__(self, _models_dir) -> None:
+            pass
+
+        @property
+        def runtime_download_authorized(self) -> bool:
+            return False
+
+        @property
+        def needs_runtime_download_authorization(self) -> bool:
+            return True
+
+        def authorize_runtime_download(self) -> None:
             pass
 
         def inspect(self):
@@ -422,6 +444,17 @@ def test_translategemma_model_consent_enables_on_demand_preparation(
         authorized = False
 
         def __init__(self, _models_dir) -> None:
+            pass
+
+        @property
+        def runtime_download_authorized(self) -> bool:
+            return True
+
+        @property
+        def needs_runtime_download_authorization(self) -> bool:
+            return False
+
+        def authorize_runtime_download(self) -> None:
             pass
 
         def inspect(self):
