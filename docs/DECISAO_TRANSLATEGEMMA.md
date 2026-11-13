@@ -2,7 +2,7 @@
 
 - **Data:** 12/11/2026
 - **Projeto:** Legendar
-- **Status:** decisão aprovada; runtime autônomo, adaptador com batching/contexto e composição no bootstrap/Preferências estão na PR #36. A CI do incremento de batching está em execução; o smoke com pesos reais e a homologação no hardware de referência continuam pendentes.
+- **Status:** decisão aprovada; runtime autônomo, adaptador com batching/contexto e composição no bootstrap/Preferências estão implementados na PR #36. Os sete workflows de CI passaram no head `39b7fefa76e1def6a78e82d7248588de0f7b4d9e`. O smoke com pesos reais e a homologação no hardware de referência continuam pendentes.
 - **Decisão:** substituir integralmente NLLB-200 pelo Google TranslateGemma 4B como único motor de tradução local. Gemini Developer API continua como backend remoto independente e explicitamente selecionável.
 - **Modelo inicial:** TranslateGemma 4B Instruct, quantização GGUF Q4_K_M.
 - **Runtime candidato adotado para a integração:** servidor local do projeto llama.cpp, com API HTTP restrita a loopback e parâmetros de idioma por requisição (chat_template_kwargs). O runtime deverá ser iniciado e encerrado pelo adaptador do Legendar, sem exigir daemon externo persistente.
