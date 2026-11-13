@@ -25,6 +25,10 @@ Aplicação desktop para transcrever áudio, alinhar a fala à linha do tempo da
 
 ## Instalação e execução
 
+**Linux Mint/Ubuntu x86_64 — pacote para usuário:** quando houver uma versão publicada em Releases, baixe `legendar-linux-x86_64-*.tar.gz`, extraia o arquivo e execute `./packaging/linux/install.sh` no terminal. O instalador prepara Python 3.12 e o ambiente isolado em `~/.local/share/legendar`, solicita autorização antes de instalar dependências do sistema e cria um atalho no menu. Não usa `sudo` para instalar o aplicativo nem altera o Python do sistema; `sudo` só é solicitado se FFmpeg/bibliotecas do sistema estiverem ausentes. O cache de modelos fica separado e é preservado ao atualizar/desinstalar.
+
+**Execução a partir do código (desenvolvimento):**
+
 ```bash
 git clone https://github.com/anfalcir/legendar.git
 cd legendar
