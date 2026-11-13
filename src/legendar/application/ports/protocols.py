@@ -144,6 +144,20 @@ class Translator(Protocol):
 
 
 @runtime_checkable
+class SrtSourceReader(Protocol):
+    """Leitura/validação de um SRT existente, sem acessar a mídia original."""
+
+    def read(
+        self,
+        path: Path,
+        *,
+        language: Language,
+    ) -> tuple[SubtitleTrack, str]:
+        """Retorna a trilha e a codificação detectada, sem alterar o arquivo."""
+        ...
+
+
+@runtime_checkable
 class SubtitlePublisher(Protocol):
     """Publicação atômica do SRT no destino final."""
 
