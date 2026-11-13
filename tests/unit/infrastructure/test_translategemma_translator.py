@@ -4,7 +4,6 @@ import re
 
 import pytest
 
-import legendar.infrastructure.translation.translategemma as translator_module
 
 from legendar.application.pipeline.translation import (
     TranslationContext,
@@ -416,7 +415,10 @@ def test_cancellation_is_checked_between_groups(monkeypatch) -> None:
             if self.is_cancelled:
                 raise RuntimeError("cancelled")
 
-    monkeypatch.setattr(translator_module, "_MAX_BATCH_UNITS", 1)
+    monkeypatch.setattr(
+        "legendar.infrastructure.translation.translategemma._MAX_BATCH_UNITS",
+        1,
+    )
     token = CancelAfterFirst()
     requests = []
 
