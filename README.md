@@ -2,8 +2,8 @@
 
 Aplicação desktop para transcrever áudio, alinhar a fala à linha do tempo da mídia e produzir legendas SRT, com tradução opcional entre português brasileiro e inglês.
 
-- **Estado:** Fases 1–7 implementadas e integradas à `main`; Fase 8 em homologação. NLLB local e Gemini API permanecem como motores de tradução opcionais, com chave Gemini configurada localmente em Preferências.
-- **Base técnica:** Python 3.10–3.13, PySide6, FFmpeg, Whisper, WhisperX e NLLB-200.
+- **Estado:** TranslateGemma foi integrado à `main` pela PR #36. A Fase 8.1 segue em homologação real: faltam smoke com pesos reais, validação no Linux Mint/Ryzen de referência e aprovação editorial PT-BR. NLLB permanece temporariamente como baseline selecionável; Gemini continua como backend remoto explícito.
+- **Base técnica:** Python 3.10–3.13, PySide6, FFmpeg, Whisper, WhisperX e runtime local llama.cpp/TranslateGemma; NLLB permanece temporariamente no código como baseline.
 - **Qualidade:** validade estrutural não equivale a aprovação editorial ou audiovisual; a Fase 8 registra essa distinção.
 - **Licença do código:** MIT. As licenças dos modelos e pesos são independentes e devem ser observadas.
 
@@ -14,7 +14,7 @@ Aplicação desktop para transcrever áudio, alinhar a fala à linha do tempo da
 3. Transcreve a fala no idioma de origem com OpenAI Whisper (padrão) ou faster-whisper/CTranslate2 (seleção explícita, ainda em homologação operacional).
 4. Alinha palavras com WhisperX.
 5. Segmenta o texto em cues, valida e publica SRT por troca atômica.
-6. Opcionalmente traduz as cues com NLLB-200 local ou Gemini Developer API; o motor e a chave Gemini são configurados em Preferências.
+6. Opcionalmente traduz as cues com TranslateGemma local (runtime llama.cpp preparado sob demanda), NLLB como baseline temporária ou Gemini Developer API como rota remota; o backend é selecionado em Preferências.
 
 ## Requisitos
 
