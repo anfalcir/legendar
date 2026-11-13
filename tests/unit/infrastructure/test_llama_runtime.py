@@ -109,16 +109,16 @@ def _runtime_archive() -> bytes:
         root = tarfile.TarInfo(f"{llama_runtime.LLAMA_CPP_RELEASE}/")
         root.type = tarfile.DIRTYPE
         archive.addfile(root)
-        binary = tarfile.TarInfo(
-            f"{llama_runtime.LLAMA_CPP_RELEASE}/llama-server"
-        )
+        binary = tarfile.TarInfo(f"{llama_runtime.LLAMA_CPP_RELEASE}/llama-server")
         binary.mode = 0o755
         binary.size = len(b"fake server")
         archive.addfile(binary, io.BytesIO(b"fake server"))
     return payload.getvalue()
 
 
-def test_runtime_install_requires_consent_and_is_idempotent(tmp_path, monkeypatch) -> None:
+def test_runtime_install_requires_consent_and_is_idempotent(
+    tmp_path, monkeypatch
+) -> None:
     archive = _runtime_archive()
     monkeypatch.setattr(
         llama_runtime,
