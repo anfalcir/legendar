@@ -147,7 +147,9 @@ def read_srt_file(
             content = raw.decode("utf-16")
             encoding = "utf-16"
         except UnicodeDecodeError as exc:
-            raise SrtValidationError("O SRT possui codificação UTF-16 inválida.") from exc
+            raise SrtValidationError(
+                "O SRT possui codificação UTF-16 inválida."
+            ) from exc
     else:
         try:
             content = raw.decode("utf-8-sig")
