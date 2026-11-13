@@ -459,7 +459,11 @@ class LlamaCppRuntimeManager:
             normalized = posixpath.normpath(raw)
             if normalized in {"", "."}:
                 return ""
-            if normalized.startswith("../") or normalized == ".." or normalized.startswith("/"):
+            if (
+                normalized.startswith("../")
+                or normalized == ".."
+                or normalized.startswith("/")
+            ):
                 raise ModelError(
                     f"O pacote llama.cpp contém caminho inseguro: {raw!r}."
                 )
@@ -468,7 +472,6 @@ class LlamaCppRuntimeManager:
         with tarfile.open(archive_path, "r:gz") as archive:
             records: list[tuple[tarfile.TarInfo, str, str | None]] = []
             kinds: dict[str, str] = {}
-            symlink_paths: set[str] = set()
 
             # Primeira passagem: validar todos os nomes, tipos e destinos de links.
             for member in archive.getmembers():
@@ -511,7 +514,6 @@ class LlamaCppRuntimeManager:
                             f"do staging: {name!r} -> {raw_target!r}."
                         )
                     kind = "symlink"
-                    symlink_paths.add(name)
                 elif member.islnk():
                     kind = "hardlink"
                     link_target = safe_member_path(member.linkname)
@@ -535,16 +537,26 @@ class LlamaCppRuntimeManager:
                 kinds[name] = kind
                 records.append((member, name, link_target))
 
-            # Nunca escrever um filho por meio de um link presente no arquivo.
-            for member, name, _link_target in records:
+            # Nenhum arquivo/link pode funcionar como diretório ou ter filhos.
+            for _member, name, _link_target in records:
                 parts = PurePosixPath(name).parts
                 ancestors = (
                     posixpath.join(*parts[:index])
                     for index in range(1, len(parts))
                 )
-                if any(parent in symlink_paths for parent in ancestors):
+                for parent in ancestors:
+                    parent_kind = kinds.get(parent)
+                    if parent_kind is not None and parent_kind != "directory":
+                        raise ModelError(
+                            f"O pacote llama.cpp tenta gravar sob uma entrada "
+                            f"que não é diretório: {name!r}."
+                        )
+                if kinds[name] != "directory" and any(
+                    path.startswith(name + "/") for path in kinds
+                ):
                     raise ModelError(
-                        f"O pacote llama.cpp tenta gravar sob link simbólico: {name!r}."
+                        f"O pacote llama.cpp contém entradas dentro de "
+                        f"um caminho que não é diretório: {name!r}."
                     )
 
             regular_files = {name for name, kind in kinds.items() if kind == "file"}
