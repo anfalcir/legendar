@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: phase-8-quality-${{ github.workflow }}-${{ github.ref }}
+  group: phase-8-quality-${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 permissions:
