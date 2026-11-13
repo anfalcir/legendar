@@ -939,6 +939,9 @@ def test_translation_checkbox_refreshes_after_backend_becomes_ready(
     assert window.translate_check.isEnabled()
     assert "TranslateGemma 4B" in window.translate_check.toolTip()
 
+    english_index = window.source_combo.findData(Language.ENGLISH.value)
+    assert english_index >= 0
+    window.source_combo.setCurrentIndex(english_index)
     window.translate_check.setChecked(True)
     assert "TranslateGemma 4B" in window.language_hint.text()
 
