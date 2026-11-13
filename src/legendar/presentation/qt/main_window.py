@@ -776,7 +776,10 @@ class MainWindow(QMainWindow):
         if source_kind == MediaKind.YOUTUBE.value:
             self._output_touched = False
             self._suggest_output(Path("youtube-media"))
-        elif source_kind in {MediaKind.LOCAL_FILE.value, _SRT_SOURCE_KIND} and self.file_edit.text().strip():
+        elif (
+            source_kind in {MediaKind.LOCAL_FILE.value, _SRT_SOURCE_KIND}
+            and self.file_edit.text().strip()
+        ):
             self._suggest_output(Path(self.file_edit.text().strip()))
         self._sync_translation_controls()
         self._render(self._view_model.snapshot)
@@ -806,7 +809,10 @@ class MainWindow(QMainWindow):
     def _on_file_edited(self, text: str) -> None:
         self._invalidate_media_inspection()
         source_kind = self._source_kind()
-        if source_kind in {MediaKind.LOCAL_FILE.value, _SRT_SOURCE_KIND} and text.strip():
+        if (
+            source_kind in {MediaKind.LOCAL_FILE.value, _SRT_SOURCE_KIND}
+            and text.strip()
+        ):
             self._suggest_output(Path(text.strip()))
         elif source_kind == MediaKind.YOUTUBE.value and text.strip():
             self._suggest_output(Path("youtube-media"))
@@ -1004,9 +1010,7 @@ class MainWindow(QMainWindow):
         )
         self.source_label.setText("IDIOMA DO SRT" if srt_source else "IDIOMA FALADO")
         self.source_combo.setAccessibleName(
-            "Idioma atual do SRT de origem"
-            if srt_source
-            else "Idioma falado na mídia"
+            "Idioma atual do SRT de origem" if srt_source else "Idioma falado na mídia"
         )
         # A disponibilidade pode mudar depois das confirmações nas Preferências.
         # Atualizar o controle aqui evita deixá-lo desabilitado até um novo render.
@@ -1270,9 +1274,7 @@ class MainWindow(QMainWindow):
             if subtitle_path.suffix.lower() != ".srt":
                 raise InvalidInputError("Selecione um arquivo com extensão .srt.")
             if not subtitle_path.is_file():
-                raise InvalidInputError(
-                    f"Arquivo SRT não encontrado: {subtitle_path}"
-                )
+                raise InvalidInputError(f"Arquivo SRT não encontrado: {subtitle_path}")
             if (
                 source_language is not target_language
                 and not self._deps.translate_available
@@ -1287,7 +1289,8 @@ class MainWindow(QMainWindow):
             if not self._deps.transcription_available:
                 details = " ".join(self._deps.transcription_readiness_details)
                 raise InvalidInputError(
-                    "O reconhecimento Whisper não está pronto neste ambiente. " + details
+                    "O reconhecimento Whisper não está pronto neste ambiente. "
+                    + details
                 )
             if not self._deps.alignment_available:
                 details = " ".join(self._deps.alignment_readiness_details)
@@ -1708,12 +1711,8 @@ class MainWindow(QMainWindow):
                 return False
             target = self._target_language()
             requires_translation = source is not target
-            return (
-                not requires_translation
-                or (
-                    self.translate_check.isChecked()
-                    and self._deps.translate_available
-                )
+            return not requires_translation or (
+                self.translate_check.isChecked() and self._deps.translate_available
             )
         return (
             self._deps.readiness_ok
