@@ -2,7 +2,7 @@
 
 A API é chamada diretamente via urllib: não há dependência adicional nem
 credencial em URL/log. Cada lote preserva IDs de cue e é validado antes de
-seguir. O NLLB permanece disponível como backend local alternativo.
+seguir. TranslateGemma é o motor local; este adaptador é a opção remota explícita.
 """
 
 from __future__ import annotations

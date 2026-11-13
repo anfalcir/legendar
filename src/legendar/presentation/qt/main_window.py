@@ -142,7 +142,7 @@ class UiDependencies:
     alignment_readiness_details: tuple[str, ...] = ()
     publishing_available: bool = True
     publishing_readiness_details: tuple[str, ...] = ()
-    translation_backend: str = "nllb"
+    translation_backend: str = "translategemma"
     translation_reconfigure: (
         Callable[[str, str | None], tuple[bool, tuple[str, ...]]] | None
     ) = None
@@ -494,8 +494,6 @@ class MainWindow(QMainWindow):
                 "Gemini"
                 if self._deps.translation_backend == "gemini"
                 else "TranslateGemma 4B"
-                if self._deps.translation_backend == "translategemma"
-                else "NLLB-200"
             )
             self.translate_check.setToolTip(
                 f"A tradução {backend_label} não está pronta neste ambiente. " + details
@@ -505,8 +503,6 @@ class MainWindow(QMainWindow):
                 "Gemini (API)"
                 if self._deps.translation_backend == "gemini"
                 else "TranslateGemma 4B (local)"
-                if self._deps.translation_backend == "translategemma"
-                else "NLLB-200 (local)"
             )
             self.translate_check.setToolTip(
                 f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "

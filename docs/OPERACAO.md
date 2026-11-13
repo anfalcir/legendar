@@ -3,7 +3,7 @@
 - **Público:** usuário que executa a aplicação e precisa entender estados, logs, cache, cancelamento e mensagens de erro.
 - **Instalação:** [INSTALACAO.md](INSTALACAO.md).
 - **Arquitetura:** [ARQUITETURA.md](ARQUITETURA.md).
-- **Plano de qualidade e desempenho:** [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
+- **Estado e homologação:** [ESTADO_ATUAL.md](ESTADO_ATUAL.md) e [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 ## 1. Abrir a aplicação
 
@@ -28,12 +28,14 @@ O comando abre a janela principal. Nada é processado sem confirmação explíci
 
 ### 2.1. Preferências de tradução
 
-- TranslateGemma 4B é o novo motor local disponível e deve ser selecionado para a homologação da Fase 8.1. NLLB-200 permanece temporariamente selecionável como baseline legado; o Gemini Developer API é uma alternativa remota explícita. A preferência atualmente inicializa em NLLB para preservar a configuração legada até a homologação real.
-- Selecione o backend em **Preferências**. Para validar o novo motor, selecione **TranslateGemma 4B (local)**. A escolha é persistida localmente e aplicada aos próximos trabalhos, sem reiniciar a aplicação.
-- Para usar Gemini, configure a chave API no próprio painel de Preferências. É possível substituir ou remover a chave por ali.
+- TranslateGemma 4B (local) é o único motor local e a opção padrão. Ele está funcionalmente homologado para o uso atual.
+- Gemini Developer API é uma alternativa remota opcional. Selecione-a em **Preferências** e configure a chave API no próprio painel; o texto das cues será enviado ao serviço do Google.
+- A seleção é persistida localmente e aplicada aos próximos trabalhos, sem reiniciar a aplicação.
+- Não há fallback automático entre TranslateGemma e Gemini. Se o motor escolhido não estiver pronto, a aplicação informa a condição e não troca de backend silenciosamente.
+- Configurações persistidas antigas do motor local anterior são migradas para TranslateGemma.
 - A chave é armazenada em arquivo local privado, fora do QSettings, logs e relatórios de desempenho. Não a compartilhe nem a coloque no repositório.
 - Ao selecionar Gemini, o texto das cues é enviado à API externa do Google para tradução. Use essa opção somente quando estiver de acordo com esse fluxo de dados e houver conectividade.
-- Não existe fallback silencioso entre Gemini e NLLB: escolha/configuração inválida deve ser corrigida explicitamente.
+- Não existe fallback silencioso entre TranslateGemma e Gemini: escolha/configuração inválida deve ser corrigida explicitamente.
 
 ## 3. Estados exibidos
 
@@ -43,14 +45,14 @@ O comando abre a janela principal. Nada é processado sem confirmação explíci
 | Validando entrada | conferindo mídia, idioma e destino | campos bloqueados |
 | Inspecionando / Preparando áudio | ffprobe e normalização | cancelar ativo |
 | Transcrevendo / Alinhando | Whisper e WhisperX | cancelar ativo |
-| Segmentando / Traduzindo | cues e backend escolhido (TranslateGemma, NLLB legado ou Gemini) | cancelar ativo |
+| Segmentando / Traduzindo | cues e backend escolhido (TranslateGemma local ou Gemini remoto) | cancelar ativo |
 | Validando SRT | checagem estrutural/editorial atual | cancelar ativo |
 | Publicando | troca atômica do arquivo | cancelamento recusado |
 | Concluído | SRT publicado | abrir pasta |
 | Cancelado | interrompido em ponto seguro | campos ativos |
 | Falha | erro com categoria e mensagem | campos ativos |
 
-Percentual só aparece quando existe medida real. Quando não existe, a interface mostra o relógio de etapa sem inventar porcentagem. Esse relógio informa tempo decorrido da etapa; não substitui o benchmark estruturado por CPU/RAM e mediana de execuções planejado em [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
+Percentual só aparece quando existe medida real. Quando não existe, a interface mostra o relógio de etapa sem inventar porcentagem. Esse relógio informa tempo decorrido da etapa; não substitui medições estruturadas de CPU/RAM nem uma comparação controlada de execuções.
 
 ## 4. Cancelamento
 

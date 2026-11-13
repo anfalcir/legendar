@@ -100,6 +100,8 @@ def test_preferences_dialog_exposes_translategemma_backend(
     dialog.translation_backend_combo.setCurrentIndex(index)
 
     assert dialog.preferences.translation_backend == "translategemma"
+    assert dialog.translation_backend_combo.count() == 2
+    assert dialog.translation_backend_combo.findData("nllb") == -1
     assert "TranslateGemma" in " ".join(
         label.text() for label in dialog.findChildren(QLabel)
     )

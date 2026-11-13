@@ -310,7 +310,6 @@ def test_invalid_json_batch_is_split_and_recovered_with_same_engine() -> None:
     assert result.texts == ("Eu voltarei.", "Estamos seguros.")
     assert len(requests) == 3
     assert all(payload["model"] == "translategemma-4b" for payload in requests)
-    assert all("nllb" not in str(payload).lower() for payload in requests)
 
 
 def test_context_budget_splits_before_expensive_generation() -> None:

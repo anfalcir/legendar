@@ -2,8 +2,8 @@
 
 - **Escopo:** aplicação desktop PySide6 que transforma áudio/vídeo em SRT validado, com tradução local opcional.
 - **Princípio:** regras puras no domínio, orquestração na aplicação, integrações na infraestrutura, Qt apenas na apresentação e composição explícita no bootstrap.
-- **Evolução atual:** correções de integridade, segmentação editorial, gate de qualidade e desempenho são conduzidos pelo [plano vigente](PLANO_CORRECAO_MELHORIA.md).
-- **Documentos relacionados:** [estado atual](ESTADO_ATUAL.md), [operação](OPERACAO.md), [instalação](INSTALACAO.md), [decisões](DECISOES.md) e [plano de correção/melhoria](PLANO_CORRECAO_MELHORIA.md).
+- **Estado atual:** TranslateGemma está funcionalmente homologado; o desenvolvimento está pausado, com espaço documentado para melhorias futuras.
+- **Documentos relacionados:** [estado atual](ESTADO_ATUAL.md), [homologação](HOMOLOGACAO.md), [operação](OPERACAO.md), [instalação](INSTALACAO.md) e [decisões](DECISOES.md).
 
 ## 1. Camadas
 
@@ -37,7 +37,7 @@ src/legendar/
     media/{probe,ffmpeg,ffprobe,tools,youtube}.py
     transcription/whisper.py
     alignment/whisperx.py
-    translation/{nllb,gemini,llama_runtime,translategemma}.py
+    translation/{gemini,llama_runtime,translategemma}.py
     filesystem/{srt,publisher,atomic,workspace,paths}.py
     config/settings.py
     diagnostics/performance.py
@@ -113,8 +113,7 @@ src/legendar/
 | Dispositivo Whisper | `auto` | `LEGENDAR_WHISPER_DEVICE` |
 | Dispositivo do alinhador | `auto` | `LEGENDAR_ALIGN_DEVICE` |
 | Padding de recuperação do alinhamento | `0,75 s` no bootstrap de produção | `LEGENDAR_ALIGN_RECOVERY_PADDING_SECONDS` |
-| Dispositivo da tradução | `auto` | `LEGENDAR_TRANSLATE_DEVICE` |
-| Checkpoint de tradução | `facebook/nllb-200-distilled-600M` | `LEGENDAR_TRANSLATE_MODEL` |
+| Backend de tradução | `translategemma` | `LEGENDAR_TRANSLATION_BACKEND` (`translategemma` ou `gemini`) |
 
 Workspaces ficam em `<cache>/tmp` e são exclusivos por job; modelos ficam em `<cache>/models`. A chave Gemini é armazenada separadamente no perfil local do usuário, com arquivo privado `0600` quando suportado, e não faz parte do QSettings.
 
@@ -132,7 +131,7 @@ Os testes E2E de mídia atuais usam adaptadores falsos para reconhecimento e ali
 
 ## 10. Evolução sob o plano atual
 
-A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. A Fase 7 adiciona uma política transversal de recursos: perfis controlam retenção de modelos e threads CPU sem acoplar a UI aos runtimes. A Fase 6 mantém `NllbTranslator` e `GeminiTranslator` atrás da mesma porta; a migração da Fase 8.1.6 adiciona `TranslateGemmaTranslator` e o runtime gerenciado. A seleção persistida em Preferências altera o adaptador usado pelos próximos jobs sem reiniciar a GUI. As próximas mudanças devem preservar essas fronteiras.
+A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem evoluir adaptadores sem reescrever o pipeline. TranslateGemma é o único adaptador local; Gemini é o adaptador remoto opcional. A seleção persistida em Preferências altera o backend usado pelos próximos jobs sem reiniciar a GUI. As mudanças futuras devem preservar as fronteiras da arquitetura e nunca fazer fallback silencioso.
 
 A evolução proposta é:
 - instrumentar tempo e memória por estágio;
@@ -141,10 +140,10 @@ A evolução proposta é:
 - formar cues a partir de um fluxo contínuo de palavras alinhadas;
 - distinguir tempo de fala de tempo de exibição;
 - transformar riscos editoriais em um gate explícito;
-- avaliar faster-whisper/CTranslate2 e NLLB via CTranslate2 por benchmark;
+- avaliar faster-whisper/CTranslate2 para ASR, sob benchmark pareado;
 - gerenciar a residência dos modelos e threads por perfil de hardware.
 
-As próximas mudanças devem ser guiadas pelas evidências de homologação real da Fase 8. Escopo, critérios e pendências estão em [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
+As próximas mudanças, caso o projeto seja retomado, devem partir das melhorias registradas em [ESTADO_ATUAL.md](ESTADO_ATUAL.md) e [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 
 ## 11. Runtime local gerenciado e idempotente
@@ -158,4 +157,4 @@ O runtime TranslateGemma é uma dependência operacional sob responsabilidade do
 - Encerramento: parar somente o processo filho criado pelo Legendar; preservar pesos/cache e nunca matar processos externos.
 - Segurança: loopback exclusivo, versão fixada, integridade verificada, sem privilégios elevados silenciosos e sem credenciais em logs/configurações comuns.
 
-A máquina de estados operacional e seus eventos de progresso são testados sem baixar o modelo real. A PR #36 conecta o adaptador TranslateGemma e o diagnóstico do runtime ao bootstrap/Preferências; o adaptador prepara runtime e modelo sob demanda, inicializa/reutiliza o servidor em loopback e envia os códigos por `chat_template_kwargs`, como espera o parser especializado do llama.cpp `b12321`. A instalação assistida do binário e o download do GGUF após consentimento explícito ocorrem em worker, com retomada e SHA-256. O batching usa JSON compacto com chaves numéricas locais, gramática GBNF direta no parâmetro `grammar`, contagem exata do prompt renderizado, orçamento dinâmico de saída e recuperação estrutural limitada por lote. O snapshot sanitizado mede chamadas/duração/tokens/lotes/falhas sem armazenar texto. O smoke com pesos reais, a validação no hardware de referência e a avaliação editorial PT-BR continuam pendentes.
+A máquina de estados operacional e seus eventos de progresso são testados sem baixar o modelo real. A PR #36 conecta o adaptador TranslateGemma e o diagnóstico do runtime ao bootstrap/Preferências; o adaptador prepara runtime e modelo sob demanda, inicializa/reutiliza o servidor em loopback e envia os códigos por `chat_template_kwargs`, como espera o parser especializado do llama.cpp `b12321`. A instalação assistida do binário e o download do GGUF após consentimento explícito ocorrem em worker, com retomada e SHA-256. O batching usa JSON compacto com chaves numéricas locais, gramática GBNF direta no parâmetro `grammar`, contagem exata do prompt renderizado, orçamento dinâmico de saída e recuperação estrutural limitada por lote. O snapshot sanitizado mede chamadas/duração/tokens/lotes/falhas sem armazenar texto. A execução com pesos reais concluiu a homologação funcional; a avaliação editorial foi aceita como suficiente para o uso atual, mas ainda não é ótima nem quantitativamente certificada.

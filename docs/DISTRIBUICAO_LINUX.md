@@ -1,6 +1,6 @@
 # Distribuição para Linux Mint/Ubuntu x86_64
 
-- **Status:** implementação inicial concluída na PR #38; a pré-release ainda não foi publicada e a homologação real no Linux Mint de referência permanece pendente.
+- **Status:** bundle por usuário implementado e artefato Linux x86_64 construído com checksum verificado. TranslateGemma foi funcionalmente homologado no ambiente real; ainda não há release estável publicada nem certificação de distribuição para todas as variantes Linux.
 - **Objetivo:** entregar uma instalação simples, isolada, atualizável e removível, sem alterar o Python do sistema nem exigir privilégios administrativos para o aplicativo.
 - **Plataforma inicial:** Linux x86_64 (inclui Linux Mint x86_64). Outras arquiteturas e sistemas operacionais não fazem parte deste artefato.
 
@@ -63,7 +63,7 @@ O workflow `.github/workflows/linux-distribution.yml`:
 - gera o tarball com ordenação e timestamps determinísticos;
 - calcula SHA-256 e verifica os arquivos obrigatórios;
 - disponibiliza o artefato da execução do workflow;
-- publica uma GitHub Release em modo **pré-release** somente para tags `vX.Y.Z` que correspondam à versão em `src/legendar/__init__.py`. O artefato inicial não será marcado como estável até a homologação real no Linux Mint e o smoke TranslateGemma.
+- publica uma GitHub Release em modo **pré-release** somente para tags `vX.Y.Z` que correspondam à versão em `src/legendar/__init__.py`. A homologação funcional do TranslateGemma está concluída; a promoção a release estável ainda requer validação do ciclo de instalação, atualização e remoção do bundle no ambiente-alvo.
 
 O workflow não instala o ambiente pesado completo no runner: a validação de resolução é feita com dry-run. Portanto, a CI valida o pacote e seus scripts, mas não substitui a instalação real no Linux Mint.
 
@@ -74,7 +74,7 @@ O workflow não instala o ambiente pesado completo no runner: a validação de r
 - Abrir pelo menu e pela linha de comando.
 - Verificar reparo offline/online e repetição sem download redundante.
 - Confirmar que cache e preferências sobrevivem a atualização e desinstalação.
-- Executar o smoke TranslateGemma com pesos reais e a única tradução representativa descrita em [HOMOLOGACAO.md](HOMOLOGACAO.md).
+- Confirmar instalação, atualização e remoção do bundle de usuário no Linux Mint/Ubuntu de referência; o smoke funcional do TranslateGemma já foi executado e está registrado em [HOMOLOGACAO.md](HOMOLOGACAO.md).
 - Registrar tamanho do bundle, tempo de instalação, espaço ocupado e eventuais bibliotecas nativas ausentes.
 
-Até que esses gates sejam aprovados, o pacote deve ser descrito como **instalador experimental para homologação**, não como release estável.
+Até que esses gates de distribuição sejam aprovados, o pacote deve ser descrito como **instalador experimental**, não como release estável.

@@ -16,8 +16,6 @@ from check_doc_links import check_repository, markdown_files  # noqa: E402
 LIVING_DOCUMENTS = (
     "README.md",
     "docs/README.md",
-    "docs/PLANO_CORRECAO_MELHORIA.md",
-    "docs/FASE_8_1_PLANO.md",
     "docs/ESTADO_ATUAL.md",
     "docs/ARQUITETURA.md",
     "docs/OPERACAO.md",
@@ -31,6 +29,9 @@ LIVING_DOCUMENTS = (
 
 ARCHIVED_DOCUMENTS = (
     "docs/archive/README.md",
+    "docs/archive/phase-8.1/README.md",
+    "docs/archive/phase-8.1/FASE_8_1_PLANO.md",
+    "docs/archive/phase-8.1/PLANO_CORRECAO_MELHORIA.md",
     "docs/archive/completed-phases/README.md",
     "docs/archive/completed-phases/FASE_5_PLANO.md",
     "docs/archive/completed-phases/FASE_6_PLANO.md",
@@ -64,8 +65,6 @@ ARCHIVED_DOCUMENTS = (
 
 DOCS_ROOT_LIVING_FILES = {
     "README.md",
-    "PLANO_CORRECAO_MELHORIA.md",
-    "FASE_8_1_PLANO.md",
     "ESTADO_ATUAL.md",
     "ARQUITETURA.md",
     "OPERACAO.md",

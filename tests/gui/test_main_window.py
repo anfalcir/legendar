@@ -489,17 +489,20 @@ def test_translation_checkbox_is_disabled_without_translator(qtbot, tmp_path) ->
     assert not window.translate_check.isEnabled()
 
 
-def test_translation_checkbox_reports_missing_nllb_details(qtbot, tmp_path) -> None:
+def test_translation_checkbox_reports_missing_translategemma_runtime(
+    qtbot, tmp_path
+) -> None:
     dependencies = replace(
         _dependencies(tmp_path),
-        translate_readiness_details=("transformers não instalado.",),
+        translation_backend="translategemma",
+        translate_readiness_details=("llama.cpp não instalado.",),
     )
     window = _window(qtbot, dependencies, tmp_path)
 
     tooltip = window.translate_check.toolTip()
 
-    assert "NLLB" in tooltip
-    assert "transformers não instalado." in tooltip
+    assert "TranslateGemma 4B" in tooltip
+    assert "llama.cpp não instalado." in tooltip
     assert not window.translate_check.isEnabled()
 
 
@@ -513,14 +516,14 @@ def test_translation_checkbox_explains_the_effect_on_the_target(
     window.target_combo.setCurrentIndex(window.target_combo.findData("en"))
 
     assert window.translate_check.isEnabled()
-    assert "NLLB-200" in window.translate_check.toolTip()
+    assert "TranslateGemma 4B" in window.translate_check.toolTip()
     assert window.target_combo.isEnabled()
     assert "Sem tradução" in window.language_hint.text()
 
     window.translate_check.setChecked(True)
 
     assert window.target_combo.isEnabled()
-    assert "NLLB-200" in window.language_hint.text()
+    assert "TranslateGemma 4B" in window.language_hint.text()
 
 
 def test_translation_to_the_same_language_is_skipped(qtbot, tmp_path, media) -> None:

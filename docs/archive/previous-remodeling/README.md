@@ -27,4 +27,4 @@ Os documentos abaixo registram o trabalho de arquitetura, infraestrutura, GUI, m
 - [Relatório da Fase 8](RELATORIO_FASE_8.md)
 - [Baseline da aplicação legada](LEGACY_BASELINE.md)
 
-**Atenção:** os documentos são evidências históricas, não instruções para iniciar uma nova fase nem descrição garantida do código atual. Consulte sempre [estado atual](../../ESTADO_ATUAL.md) e [plano vigente](../../PLANO_CORRECAO_MELHORIA.md).
+**Atenção:** os documentos são evidências históricas, não instruções para iniciar uma nova fase nem descrição garantida do código atual. Consulte sempre [estado atual](../../ESTADO_ATUAL.md) e [plano vigente](../phase-8.1/PLANO_CORRECAO_MELHORIA.md).
