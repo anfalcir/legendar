@@ -62,7 +62,7 @@ O workflow `.github/workflows/linux-distribution.yml`:
 - gera o tarball com ordenação e timestamps determinísticos;
 - calcula SHA-256 e verifica os arquivos obrigatórios;
 - disponibiliza o artefato da execução do workflow;
-- publica uma GitHub Release somente para tags `vX.Y.Z` que correspondam à versão em `src/legendar/__init__.py`.
+- publica uma GitHub Release em modo **pré-release** somente para tags `vX.Y.Z` que correspondam à versão em `src/legendar/__init__.py`. O artefato inicial não será marcado como estável até a homologação real no Linux Mint e o smoke TranslateGemma.
 
 O workflow não instala o ambiente pesado completo no runner: a validação de resolução é feita com dry-run. Portanto, a CI valida o pacote e seus scripts, mas não substitui a instalação real no Linux Mint.
 
