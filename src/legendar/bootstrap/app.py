@@ -22,6 +22,7 @@ from legendar.infrastructure.config.credentials import load_gemini_api_key
 from legendar.infrastructure.config.settings import AppSettings, suggest_output_path
 from legendar.infrastructure.diagnostics.performance import JsonPerformanceReporter
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
+from legendar.infrastructure.filesystem.srt import SrtFileReader
 from legendar.infrastructure.filesystem.workspace import TempWorkspaceFactory
 from legendar.infrastructure.logging.setup import configure_logging
 from legendar.infrastructure.media.ffmpeg import FfmpegAudioPreparer
@@ -114,6 +115,7 @@ def _pipeline_factory(
             publisher=SrtPublisher(),
             translator=translator,
             downloader=downloader,
+            srt_source_reader=SrtFileReader(),
         ),
         performance_reporter=performance_reporter,
     )

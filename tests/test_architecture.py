@@ -114,6 +114,7 @@ def test_ports_are_protocols_and_cover_the_pipeline():
         "Transcriber",
         "Aligner",
         "Translator",
+        "SrtSourceReader",
         "SubtitlePublisher",
         "PerformanceReporter",
     }

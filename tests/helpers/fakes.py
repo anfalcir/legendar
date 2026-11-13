@@ -26,6 +26,7 @@ from legendar.domain.entities.transcript import (
 from legendar.domain.errors.catalog import JobCancelledError
 from legendar.domain.value_objects.language import Language
 from legendar.domain.value_objects.time import TimeRange
+from legendar.infrastructure.filesystem.srt import read_srt_file
 
 
 def make_media_info(*, audio: bool = True, duration: float = 12.0) -> MediaInfo:
@@ -137,10 +138,12 @@ class FakeTranscriber:
     transcript: Transcript = field(
         default_factory=lambda: make_transcript(language=Language.PORTUGUESE)
     )
+    calls: list = field(default_factory=list)
 
     def transcribe(
         self, audio, *, language=None, progress=None, token=None
     ) -> Transcript:
+        self.calls.append((audio, language))
         if progress is not None:
             progress.report(0.5, "Transcrevendo")
         if token is not None:
@@ -153,8 +156,10 @@ class FakeTranscriber:
 @dataclass
 class FakeAligner:
     alignment: AlignmentResult | None = None
+    calls: list = field(default_factory=list)
 
     def align(self, audio, transcript, *, progress=None, token=None) -> AlignmentResult:
+        self.calls.append((audio, transcript))
         if progress is not None:
             progress.report(0.5, "Alinhando")
         if token is not None:
@@ -200,6 +205,15 @@ class FakeTranslator:
         if progress is not None:
             progress.report(1.0, "Tradução concluída")
         return result
+
+
+@dataclass
+class FakeSrtSourceReader:
+    calls: list = field(default_factory=list)
+
+    def read(self, path, *, language):
+        self.calls.append((path, language))
+        return read_srt_file(path, language=language)
 
 
 @dataclass

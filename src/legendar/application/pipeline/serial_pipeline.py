@@ -13,6 +13,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from legendar.application.job.context import JobContext
 from legendar.application.pipeline.performance import (
@@ -39,6 +40,7 @@ from legendar.application.ports.protocols import (
     MediaDownloader,
     MediaInspector,
     PerformanceReporter,
+    SrtSourceReader,
     SubtitlePublisher,
     Transcriber,
     Translator,
@@ -73,6 +75,7 @@ _PIPELINE_EXECUTION_LOCK = threading.Lock()
 
 _STAGE_RANGES: dict[JobState, tuple[float, float]] = {
     JobState.INSPECTING_MEDIA: (0.00, 0.05),
+    JobState.LOADING_SUBTITLES: (0.00, 0.10),
     JobState.PREPARING_AUDIO: (0.05, 0.15),
     JobState.TRANSCRIBING: (0.15, 0.55),
     JobState.ALIGNING: (0.55, 0.82),
@@ -80,6 +83,13 @@ _STAGE_RANGES: dict[JobState, tuple[float, float]] = {
     JobState.TRANSLATING: (0.86, 0.97),
     JobState.VALIDATING_SRT: (0.97, 0.99),
     JobState.PUBLISHING: (0.99, 1.00),
+}
+
+_SRT_STAGE_RANGES: dict[JobState, tuple[float, float]] = {
+    JobState.LOADING_SUBTITLES: (0.00, 0.12),
+    JobState.TRANSLATING: (0.12, 0.88),
+    JobState.VALIDATING_SRT: (0.88, 0.97),
+    JobState.PUBLISHING: (0.97, 1.00),
 }
 
 
@@ -91,13 +101,35 @@ class JobRequest:
     verdadeiro quando o idioma final difere do idioma de origem conhecido.
     """
 
-    source: MediaSource
+    source: MediaSource | None
     output_language: Language
     source_language: Language | None = None
     translate: bool = False
     stream_index: int | None = None
+    subtitle_path: Path | None = None
 
     def __post_init__(self) -> None:
+        if (self.source is None) == (self.subtitle_path is None):
+            raise InvalidInputError(
+                "Defina exatamente uma origem: mídia ou arquivo SRT."
+            )
+        if self.source is not None and not isinstance(self.source, MediaSource):
+            raise InvalidInputError("Origem de mídia inválida.")
+        if self.subtitle_path is not None:
+            subtitle_path = Path(self.subtitle_path).expanduser()
+            object.__setattr__(self, "subtitle_path", subtitle_path)
+            if subtitle_path.suffix.lower() != ".srt":
+                raise InvalidInputError(
+                    "A origem de legenda precisa ser um arquivo .srt."
+                )
+            if self.source_language is None:
+                raise InvalidInputError(
+                    "Informe o idioma atual do SRT; não há detecção automática confiável."
+                )
+            if self.stream_index is not None:
+                raise InvalidInputError(
+                    "Seleção de faixa de áudio não se aplica ao SRT."
+                )
         if not isinstance(self.output_language, Language):
             raise UnsupportedLanguageError("Selecione o idioma final da legenda.")
         if self.translate and self.source_language is self.output_language:
@@ -124,6 +156,7 @@ class PipelinePorts:
     publisher: SubtitlePublisher
     translator: Translator | None = None
     downloader: MediaDownloader | None = None
+    srt_source_reader: SrtSourceReader | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,7 +165,7 @@ class PipelineResult:
 
     output_path: str
     track: SubtitleTrack
-    segmentation: SegmentationResult
+    segmentation: SegmentationResult | None
     source_language: Language
     final_language: Language
     warnings: tuple[str, ...] = field(default_factory=tuple)
@@ -250,7 +283,9 @@ class SerialPipeline:
             logical_cpu_count=self._resource_policy.logical_cpu_count,
             physical_cpu_count=self._resource_policy.physical_cpu_count,
             cpu_topology_source=self._resource_policy.cpu_topology_source,
-            media_kind=request.source.kind.value,
+            media_kind=(
+                request.source.kind.value if request.source is not None else "srt_file"
+            ),
             requested_source_language=(
                 request.source_language.value if request.source_language else None
             ),
@@ -262,8 +297,26 @@ class SerialPipeline:
             token.raise_if_cancelled()
             if on_state is not None:
                 on_state(state)
-            start, end = _STAGE_RANGES[state]
+            ranges = (
+                _SRT_STAGE_RANGES
+                if request.subtitle_path is not None
+                else _STAGE_RANGES
+            )
+            start, end = ranges[state]
             return ScaledProgress(progress, start, end)
+
+        if request.subtitle_path is not None:
+            return self._execute_srt_source(
+                request,
+                context,
+                enter=enter,
+                warnings=warnings,
+                performance=performance,
+                released_adapter_ids=released_adapter_ids,
+            )
+
+        if request.source is None:
+            raise InvalidInputError("Origem de mídia não definida.")
 
         # 1. Aquisição (download quando necessário) + inspeção
         stage = enter(JobState.INSPECTING_MEDIA)
@@ -434,6 +487,121 @@ class SerialPipeline:
                 context, track, alignment, segmentation, warnings, quality_report, enter
             )
 
+    def _execute_srt_source(
+        self,
+        request: JobRequest,
+        context: JobContext,
+        *,
+        enter: Callable[[JobState], ScaledProgress],
+        warnings: list[str],
+        performance: PipelinePerformanceSession,
+        released_adapter_ids: set[int],
+    ) -> PipelineResult:
+        """Traduz/republica um SRT sem tocar no pipeline de áudio ou ASR."""
+        source_path = request.subtitle_path
+        source_language = request.source_language
+        if source_path is None or source_language is None:
+            raise InvalidInputError(
+                "O trabalho SRT exige arquivo e idioma de origem explícito."
+            )
+        if source_path.suffix.lower() != ".srt":
+            raise InvalidInputError("O arquivo de origem precisa ter extensão .srt.")
+        if source_path.resolve() == Path(context.output_path).resolve():
+            raise InvalidInputError(
+                "O destino do SRT não pode sobrescrever o arquivo de origem."
+            )
+
+        token = context.token
+        reader = self._ports.srt_source_reader
+        if reader is None:
+            raise InvalidInputError(
+                "Leitor de arquivo SRT não foi configurado no bootstrap."
+            )
+        stage = enter(JobState.LOADING_SUBTITLES)
+        with performance.measure("srt_source_loading"):
+            source_track, source_encoding = reader.read(
+                source_path,
+                language=source_language,
+            )
+        token.raise_if_cancelled()
+        source_duration = max(cue.range.end for cue in source_track.cues)
+        performance.set_metadata(
+            source_input="srt_file",
+            source_encoding=source_encoding,
+            source_srt_duration_seconds=source_duration,
+        )
+        performance.set_count("source_subtitle_cues", len(source_track.cues))
+        stage.report(
+            1.0,
+            f"SRT carregado · {len(source_track.cues)} cues · "
+            f"origem {source_language.label_pt}",
+        )
+
+        track = source_track
+        if request.translate:
+            performance.set_count("translation_units", len(source_track.cues))
+            try:
+                with performance.measure("translation"):
+                    track = self._translate_track(
+                        request,
+                        source_language,
+                        source_track,
+                        enter,
+                        warnings,
+                        token,
+                    )
+            finally:
+                self._release_after_stage(
+                    "translation",
+                    "translation",
+                    self._ports.translator,
+                    performance,
+                    released_adapter_ids,
+                )
+        elif request.output_language is not source_language:
+            raise UnsupportedLanguageError(
+                "O idioma final difere do idioma informado para o SRT; "
+                "habilite a tradução."
+            )
+
+        stage = enter(JobState.VALIDATING_SRT)
+        with performance.measure("srt_validation"):
+            quality_report = validate_track(
+                track,
+                source_track=source_track if request.translate else None,
+            )
+        if quality_report.is_blocked:
+            raise SrtValidationError(quality_report.summary)
+        warnings.extend(quality_report.warnings)
+        performance.set_count("warning_count", len(warnings))
+        performance.set_count("editorial_issue_count", len(quality_report.issues))
+        performance.set_metadata(
+            editorial_quality_status=quality_report.status.value,
+        )
+        stage.report(
+            1.0,
+            "Revisão editorial necessária"
+            if quality_report.review_required
+            else "Qualidade editorial aprovada",
+        )
+
+        stage = enter(JobState.PUBLISHING)
+        with performance.measure("srt_publication"):
+            final_path = self._ports.publisher.publish(
+                track,
+                str(context.output_path),
+            )
+        stage.report(1.0, "SRT traduzido e publicado")
+        return PipelineResult(
+            output_path=final_path,
+            track=track,
+            segmentation=None,
+            source_language=source_language,
+            final_language=track.language,
+            warnings=tuple(warnings),
+            quality_report=quality_report,
+        )
+
     # -- etapas auxiliares -------------------------------------------------
 
     def _model_adapters(self) -> tuple[tuple[str, object | None], ...]:
@@ -544,17 +712,33 @@ class SerialPipeline:
         warnings: list[str],
         token: CancellationToken,
     ) -> SubtitleTrack:
+        # A transcrição pode divergir do idioma declarado pelo usuário.
+        return self._translate_track(
+            request,
+            alignment.transcript.language,
+            track,
+            enter,
+            warnings,
+            token,
+        )
+
+    def _translate_track(
+        self,
+        request: JobRequest,
+        source_language: Language,
+        track: SubtitleTrack,
+        enter: Callable[[JobState], ScaledProgress],
+        warnings: list[str],
+        token: CancellationToken,
+    ) -> SubtitleTrack:
         translator = self._ports.translator
         if translator is None:
             raise UnsupportedLanguageError(
                 "Tradução solicitada, mas nenhum tradutor está configurado."
             )
-        # O texto a traduzir está no idioma detectado na transcrição, não no
-        # idioma que o usuário declarou (que pode ter sido corrigido por aviso).
-        source_language = alignment.transcript.language
         if source_language is request.output_language:
             raise TranslationError(
-                "A mídia já está no idioma final; desabilite a tradução para publicar."
+                "A origem já está no idioma final; desabilite a tradução."
             )
         units = build_translation_units(track)
         stage = enter(JobState.TRANSLATING)

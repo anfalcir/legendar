@@ -1,6 +1,6 @@
 # Legendar
 
-Aplicação desktop para transcrever áudio, alinhar a fala à linha do tempo da mídia e produzir legendas SRT, com tradução opcional entre português brasileiro e inglês.
+Aplicação desktop para transcrever áudio/vídeo, produzir legendas SRT e traduzir diretamente arquivos SRT existentes entre português brasileiro e inglês, preservando os timestamps.
 
 - **Estado:** TranslateGemma foi integrado à `main` pela PR #36. A Fase 8.1 segue em homologação real: faltam smoke com pesos reais, validação no Linux Mint/Ryzen de referência e aprovação editorial PT-BR. NLLB permanece temporariamente como baseline selecionável; Gemini continua como backend remoto explícito.
 - **Base técnica:** Python 3.10–3.13, PySide6, FFmpeg, Whisper, WhisperX e runtime local llama.cpp/TranslateGemma; NLLB permanece temporariamente no código como baseline.
@@ -9,11 +9,11 @@ Aplicação desktop para transcrever áudio, alinhar a fala à linha do tempo da
 
 ## O que a aplicação faz
 
-1. Recebe mídia local ou URL do YouTube.
+1. Recebe mídia local, URL do YouTube ou um arquivo SRT existente para tradução direta.
 2. Inspeciona streams e normaliza o áudio para WAV PCM mono 16 kHz, preservando o offset da mídia.
-3. Transcreve a fala no idioma de origem com OpenAI Whisper (padrão) ou faster-whisper/CTranslate2 (seleção explícita, ainda em homologação operacional).
+3. Para mídia, transcreve a fala com OpenAI Whisper (padrão) ou faster-whisper/CTranslate2 (seleção explícita, ainda em homologação operacional).
 4. Alinha palavras com WhisperX.
-5. Segmenta o texto em cues, valida e publica SRT por troca atômica.
+5. Segmenta o texto em cues, valida e publica SRT por troca atômica. No modo SRT, executa somente leitura/tradução/validação/publicação, sem processamento de áudio, Whisper ou WhisperX.
 6. Opcionalmente traduz as cues com TranslateGemma local (runtime llama.cpp preparado sob demanda), NLLB como baseline temporária ou Gemini Developer API como rota remota; o backend é selecionado em Preferências.
 
 ## Requisitos

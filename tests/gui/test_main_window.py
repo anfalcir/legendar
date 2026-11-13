@@ -29,7 +29,9 @@ from tests.helpers.fakes import (
     FakeAudioPreparer,
     FakeInspector,
     FakePublisher,
+    FakeSrtSourceReader,
     FakeTranscriber,
+    FakeTranslator,
     make_media_info,
     make_transcript,
 )
@@ -44,6 +46,7 @@ def _ports(**overrides) -> PipelinePorts:
         "transcriber": FakeTranscriber(),
         "aligner": FakeAligner(),
         "publisher": FakePublisher(),
+        "srt_source_reader": FakeSrtSourceReader(),
     }
     values.update(overrides)
     return PipelinePorts(**values)
@@ -299,7 +302,7 @@ def test_progress_is_indeterminate_until_pipeline_reports_a_measurement(
 def test_keyboard_tab_order_and_accessible_names_are_explicit(qtbot, tmp_path) -> None:
     window = _window(qtbot, _dependencies(tmp_path), tmp_path)
 
-    assert window.file_edit.accessibleName() == "Arquivo ou URL da mídia"
+    assert window.file_edit.accessibleName() == "Arquivo SRT, arquivo de mídia ou URL"
     assert window.generate_button.accessibleName()
     assert window.cancel_button.accessibleName()
     assert window.log_view.accessibleName() == "Registro de atividade do trabalho"
@@ -1017,3 +1020,99 @@ def test_elapsed_labels_are_human_readable() -> None:
     assert _format_elapsed(9) == "9 s"
     assert _format_elapsed(65) == "1 min 05 s"
     assert _format_elapsed(3_725) == "1 h 02 min"
+
+
+def test_srt_source_translates_without_whisper_whisperx_or_ffmpeg(
+    qtbot,
+    tmp_path,
+):
+    source_path = tmp_path / "EN-baseline.srt"
+    source_path.write_text(
+        "1\n00:00:01,000 --> 00:00:02,500\nHello, world!\n",
+        encoding="utf-8",
+    )
+    ports = _ports(translator=FakeTranslator())
+    pipeline = SerialPipeline(ports)
+    dependencies = replace(
+        _dependencies(tmp_path, pipeline),
+        translate_available=True,
+        transcription_available=False,
+        alignment_available=False,
+        readiness_ok=False,
+        media_inspector=None,
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.media_kind_combo.setCurrentIndex(
+        window.media_kind_combo.findData("srt_file")
+    )
+    window.file_edit.setText(str(source_path))
+    window.source_combo.setCurrentIndex(window.source_combo.findData("en"))
+    window.target_combo.setCurrentIndex(window.target_combo.findData("pt"))
+    window.translate_check.setChecked(True)
+    window.output_edit.setText(str(tmp_path / "EN-baseline.pt.srt"))
+
+    assert not window.inspect_button.isVisible()
+    assert window.generate_button.isEnabled()
+    request, source_label, _output = window._build_job()
+    assert request.source is None
+    assert request.subtitle_path == source_path
+    assert request.source_language is Language.ENGLISH
+    assert request.output_language is Language.PORTUGUESE
+    assert request.translate is True
+    assert source_label == "SRT · EN-baseline.srt"
+
+    qtbot.mouseClick(window.generate_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not window.is_running, timeout=5000)
+
+    assert window.view_model.snapshot.state is JobState.COMPLETED
+    assert len(ports.publisher.calls) == 1
+    assert ports.transcriber.calls == []
+    assert ports.aligner.calls == []
+    assert ports.audio_preparer.calls == []
+    assert ports.inspector.calls == []
+
+
+def test_srt_source_requires_explicit_language(qtbot, tmp_path):
+    source_path = tmp_path / "baseline.srt"
+    source_path.write_text(
+        "1\n00:00:01,000 --> 00:00:02,000\nHello.\n",
+        encoding="utf-8",
+    )
+    dependencies = replace(
+        _dependencies(tmp_path),
+        translate_available=True,
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.media_kind_combo.setCurrentIndex(
+        window.media_kind_combo.findData("srt_file")
+    )
+    window.file_edit.setText(str(source_path))
+    window.source_combo.setCurrentIndex(window.source_combo.findData(None))
+    window.translate_check.setChecked(True)
+    window.output_edit.setText(str(tmp_path / "translated.srt"))
+
+    with pytest.raises(InvalidInputError, match="idioma atual do SRT"):
+        window._build_job()
+
+
+def test_srt_source_cannot_be_overwritten_by_its_output(qtbot, tmp_path):
+    source_path = tmp_path / "baseline.srt"
+    original = "1\n00:00:01,000 --> 00:00:02,000\nHello.\n"
+    source_path.write_text(original, encoding="utf-8")
+    dependencies = replace(
+        _dependencies(tmp_path),
+        translate_available=True,
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+    window.media_kind_combo.setCurrentIndex(
+        window.media_kind_combo.findData("srt_file")
+    )
+    window.file_edit.setText(str(source_path))
+    window.source_combo.setCurrentIndex(window.source_combo.findData("en"))
+    window.target_combo.setCurrentIndex(window.target_combo.findData("pt"))
+    window.translate_check.setChecked(True)
+    window.output_edit.setText(str(source_path))
+
+    with pytest.raises(InvalidInputError, match="não pode sobrescrever"):
+        window._build_job()
+    assert source_path.read_text(encoding="utf-8") == original

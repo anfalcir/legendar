@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 
 import pytest
 from tests.helpers.fakes import (
@@ -11,6 +12,7 @@ from tests.helpers.fakes import (
     FakeDownloader,
     FakeInspector,
     FakePublisher,
+    FakeSrtSourceReader,
     FakeTranscriber,
     FakeTranslator,
     make_media_info,
@@ -51,6 +53,7 @@ def _pipeline(**overrides) -> tuple[SerialPipeline, dict]:
         "transcriber": FakeTranscriber(),
         "aligner": FakeAligner(),
         "publisher": FakePublisher(),
+        "srt_source_reader": FakeSrtSourceReader(),
     }
     ports.update(overrides)
     return SerialPipeline(PipelinePorts(**ports)), ports
@@ -830,3 +833,167 @@ def test_separate_pipeline_instances_do_not_release_a_shared_active_model(
     assert entered_second.is_set()
     assert transcriber.max_active == 1
     assert transcriber.release_calls == 2
+
+
+def test_srt_file_source_translates_without_media_or_asr_stages(
+    job_context,
+    tmp_path,
+):
+    source_path = tmp_path / "EN-baseline.srt"
+    source_path.write_text(
+        "8\n00:00:01,000 --> 00:00:02,500\nHello, world!\n\n"
+        "14\n00:00:03,000 --> 00:00:04,000\nWe are safe.\n",
+        encoding="utf-8",
+    )
+    translator = FakeTranslator()
+    pipeline, ports = _pipeline(translator=translator)
+    seen: list[JobState] = []
+
+    result = pipeline.execute(
+        _request(
+            source=None,
+            subtitle_path=source_path,
+            source_language=Language.ENGLISH,
+            output_language=Language.PORTUGUESE,
+            translate=True,
+        ),
+        job_context,
+        on_state=seen.append,
+    )
+
+    assert seen == [
+        JobState.LOADING_SUBTITLES,
+        JobState.TRANSLATING,
+        JobState.VALIDATING_SRT,
+        JobState.PUBLISHING,
+    ]
+    assert result.segmentation is None
+    assert result.source_language is Language.ENGLISH
+    assert result.final_language is Language.PORTUGUESE
+    assert [cue.text for cue in result.track.cues] == [
+        "[pt] Hello, world!",
+        "[pt] We are safe.",
+    ]
+    assert [(cue.range.start, cue.range.end) for cue in result.track.cues] == [
+        (1.0, 2.5),
+        (3.0, 4.0),
+    ]
+    assert [unit.index for unit in translator.calls[0][0]] == [1, 2]
+    assert translator.calls[0][1:] == (Language.ENGLISH, Language.PORTUGUESE)
+    assert ports["inspector"].calls == []
+    assert ports["audio_preparer"].calls == []
+    assert ports["transcriber"].calls == []
+    assert ports["aligner"].calls == []
+    assert len(ports["publisher"].calls) == 1
+
+
+def test_srt_file_source_can_be_republished_without_translation(
+    job_context,
+    tmp_path,
+):
+    source_path = tmp_path / "PT-baseline.srt"
+    source_path.write_text(
+        "1\n00:00:01,000 --> 00:00:02,500\nOlá, mundo!\n",
+        encoding="utf-8",
+    )
+    translator = FakeTranslator()
+    pipeline, ports = _pipeline(translator=translator)
+    seen: list[JobState] = []
+
+    result = pipeline.execute(
+        _request(
+            source=None,
+            subtitle_path=source_path,
+            source_language=Language.PORTUGUESE,
+            output_language=Language.PORTUGUESE,
+            translate=False,
+        ),
+        job_context,
+        on_state=seen.append,
+    )
+
+    assert seen == [
+        JobState.LOADING_SUBTITLES,
+        JobState.VALIDATING_SRT,
+        JobState.PUBLISHING,
+    ]
+    assert result.track.cues[0].text == "Olá, mundo!"
+    assert result.track.cues[0].range.start == 1.0
+    assert translator.calls == []
+    assert len(ports["publisher"].calls) == 1
+    assert ports["inspector"].calls == []
+    assert ports["transcriber"].calls == []
+    assert ports["aligner"].calls == []
+
+
+def test_srt_file_source_requires_a_translator_when_translation_is_requested(
+    job_context,
+    tmp_path,
+):
+    source_path = tmp_path / "EN-baseline.srt"
+    source_path.write_text(
+        "1\n00:00:01,000 --> 00:00:02,500\nHello!\n",
+        encoding="utf-8",
+    )
+    pipeline, ports = _pipeline()
+
+    with pytest.raises(UnsupportedLanguageError, match="nenhum tradutor"):
+        pipeline.execute(
+            _request(
+                source=None,
+                subtitle_path=source_path,
+                source_language=Language.ENGLISH,
+                output_language=Language.PORTUGUESE,
+                translate=True,
+            ),
+            job_context,
+        )
+
+    assert ports["publisher"].calls == []
+
+
+def test_job_request_requires_exactly_one_source_kind():
+    with pytest.raises(InvalidInputError, match="exatamente uma origem"):
+        _request(source=None)
+
+    with pytest.raises(InvalidInputError, match="exatamente uma origem"):
+        _request(
+            subtitle_path=Path("/tmp/source.srt"),
+        )
+
+
+def test_job_request_for_srt_requires_an_explicit_source_language():
+    with pytest.raises(InvalidInputError, match="idioma atual do SRT"):
+        _request(
+            source=None,
+            subtitle_path=Path("/tmp/source.srt"),
+            source_language=None,
+        )
+
+
+def test_srt_file_source_cannot_be_overwritten_by_pipeline_context(
+    job_context,
+    tmp_path,
+):
+    from dataclasses import replace
+
+    source_path = tmp_path / "baseline.srt"
+    original = "1\n00:00:01,000 --> 00:00:02,000\nHello.\n"
+    source_path.write_text(original, encoding="utf-8")
+    pipeline, ports = _pipeline(translator=FakeTranslator())
+    context = replace(job_context, output_path=source_path)
+
+    with pytest.raises(InvalidInputError, match="não pode sobrescrever"):
+        pipeline.execute(
+            _request(
+                source=None,
+                subtitle_path=source_path,
+                source_language=Language.ENGLISH,
+                output_language=Language.PORTUGUESE,
+                translate=True,
+            ),
+            context,
+        )
+
+    assert source_path.read_text(encoding="utf-8") == original
+    assert ports["publisher"].calls == []

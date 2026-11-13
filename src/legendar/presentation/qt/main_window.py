@@ -89,6 +89,7 @@ _MEDIA_FILTER = (
     "Todos os arquivos (*)"
 )
 _SRT_FILTER = "Legenda SRT (*.srt)"
+_SRT_SOURCE_KIND = "srt_file"
 _CLOSE_WAIT_MS = 5000
 
 
@@ -389,19 +390,20 @@ class MainWindow(QMainWindow):
         return card
 
     def _build_input_panel(self) -> QFrame:
-        panel, layout = self._panel("Origem da mídia")
+        panel, layout = self._panel("Origem da mídia ou legenda")
 
         self.media_kind_combo = prepare_combo(QComboBox(panel))
         self.media_kind_combo.setObjectName("mediaKindCombo")
-        self.media_kind_combo.addItem("Arquivo local", MediaKind.LOCAL_FILE.value)
+        self.media_kind_combo.addItem("Arquivo de mídia", MediaKind.LOCAL_FILE.value)
+        self.media_kind_combo.addItem("Arquivo SRT", _SRT_SOURCE_KIND)
         self.media_kind_combo.addItem("YouTube", MediaKind.YOUTUBE.value)
-        self.media_kind_combo.setAccessibleName("Tipo de origem da mídia")
+        self.media_kind_combo.setAccessibleName("Tipo de origem da legenda ou mídia")
 
         self.file_edit = QLineEdit(panel)
         self.file_edit.setObjectName("fileEdit")
         self.file_edit.setPlaceholderText("Caminho do arquivo de áudio ou vídeo")
         self.file_edit.setClearButtonEnabled(True)
-        self.file_edit.setAccessibleName("Arquivo ou URL da mídia")
+        self.file_edit.setAccessibleName("Arquivo SRT, arquivo de mídia ou URL")
         self.browse_button = QPushButton("Selecionar arquivo…", panel)
         self.browse_button.setObjectName("browseButton")
         self.browse_button.setAccessibleName("Selecionar arquivo de mídia")
@@ -689,15 +691,26 @@ class MainWindow(QMainWindow):
                 return candidate
             counter += 1
 
-    def _source_kind(self) -> MediaKind:
-        return MediaKind(str(self.media_kind_combo.currentData()))
+    def _source_kind(self) -> str:
+        return str(self.media_kind_combo.currentData())
 
     def _sync_source_controls(self) -> None:
-        local = self._source_kind() is MediaKind.LOCAL_FILE
-        self.browse_button.setVisible(local)
-        self.browse_button.setEnabled(local and not self.is_running)
+        source_kind = self._source_kind()
+        local = source_kind == MediaKind.LOCAL_FILE.value
+        srt_source = source_kind == _SRT_SOURCE_KIND
+        youtube = source_kind == MediaKind.YOUTUBE.value
+        self.browse_button.setVisible(local or srt_source)
+        self.browse_button.setEnabled((local or srt_source) and not self.is_running)
+        self.browse_button.setText(
+            "Selecionar SRT…" if srt_source else "Selecionar arquivo…"
+        )
+        self.browse_button.setAccessibleName(
+            "Selecionar arquivo SRT" if srt_source else "Selecionar arquivo de mídia"
+        )
         self.file_edit.setPlaceholderText(
-            "Caminho do arquivo de áudio ou vídeo"
+            "Caminho do arquivo SRT de origem"
+            if srt_source
+            else "Caminho do arquivo de áudio ou vídeo"
             if local
             else "https://www.youtube.com/watch?v=..."
         )
@@ -712,18 +725,31 @@ class MainWindow(QMainWindow):
         self.inspect_cancel_button.setEnabled(
             self._inspection_thread is not None and not self._inspection_cancel_pending
         )
+        self.stream_combo.setVisible(not srt_source)
         self.stream_combo.setEnabled(
             local and self._stream_choice_available() and not self.is_running
         )
-        if not local:
+        if srt_source:
+            self._show_media_info(
+                "O texto e os timestamps serão lidos diretamente do SRT. "
+                "Whisper, WhisperX e FFmpeg não serão executados."
+            )
+            self._set_stream_placeholder("Não se aplica a arquivos SRT")
+        elif youtube:
             self._show_media_info(
                 "O áudio do vídeo será obtido automaticamente. "
                 "A seleção manual de faixa local não se aplica ao download."
             )
-            self.stream_combo.clear()
-            self.stream_combo.addItem(
-                "Faixa de áudio selecionada automaticamente", None
-            )
+            self._set_stream_placeholder("Faixa de áudio selecionada automaticamente")
+
+    def _set_stream_placeholder(self, label: str) -> None:
+        """Atualiza o placeholder da faixa somente quando necessário."""
+        if self.stream_combo.count() == 1 and self.stream_combo.itemText(0) == label:
+            return
+        self.stream_combo.blockSignals(True)
+        self.stream_combo.clear()
+        self.stream_combo.addItem(label, None)
+        self.stream_combo.blockSignals(False)
 
     def _show_media_info(self, text: str) -> None:
         """Mostra o estado real da mídia; texto vazio recolhe o rótulo."""
@@ -739,23 +765,32 @@ class MainWindow(QMainWindow):
 
     def _invalidate_media_inspection(self) -> None:
         self._media_info = None
-        self.stream_combo.clear()
-        self.stream_combo.addItem("Usar faixa padrão da mídia", None)
+        self._set_stream_placeholder("Usar faixa padrão da mídia")
         self.stream_combo.setEnabled(False)
         self._show_media_info("")
         self._sync_source_controls()
 
     def _on_media_kind_changed(self, _index: int) -> None:
         self._invalidate_media_inspection()
-        if self._source_kind() is MediaKind.YOUTUBE:
+        source_kind = self._source_kind()
+        if source_kind == MediaKind.YOUTUBE.value:
             self._output_touched = False
             self._suggest_output(Path("youtube-media"))
-        elif self.file_edit.text().strip():
+        elif (
+            source_kind in {MediaKind.LOCAL_FILE.value, _SRT_SOURCE_KIND}
+            and self.file_edit.text().strip()
+        ):
             self._suggest_output(Path(self.file_edit.text().strip()))
+        self._sync_translation_controls()
+        self._render(self._view_model.snapshot)
 
     def _choose_file(self) -> None:
+        srt_source = self._source_kind() == _SRT_SOURCE_KIND
         selected, _ = QFileDialog.getOpenFileName(
-            self, "Selecionar mídia", str(Path.home()), _MEDIA_FILTER
+            self,
+            "Selecionar SRT de origem" if srt_source else "Selecionar mídia",
+            str(Path.home()),
+            _SRT_FILTER if srt_source else _MEDIA_FILTER,
         )
         if selected:
             self.file_edit.setText(selected)
@@ -773,9 +808,13 @@ class MainWindow(QMainWindow):
 
     def _on_file_edited(self, text: str) -> None:
         self._invalidate_media_inspection()
-        if self._source_kind() is MediaKind.LOCAL_FILE and text.strip():
+        source_kind = self._source_kind()
+        if (
+            source_kind in {MediaKind.LOCAL_FILE.value, _SRT_SOURCE_KIND}
+            and text.strip()
+        ):
             self._suggest_output(Path(text.strip()))
-        elif self._source_kind() is MediaKind.YOUTUBE and text.strip():
+        elif source_kind == MediaKind.YOUTUBE.value and text.strip():
             self._suggest_output(Path("youtube-media"))
 
     def _suggest_output(self, source_path: Path) -> None:
@@ -946,9 +985,11 @@ class MainWindow(QMainWindow):
             target_language=self._target_language(),
             log_expanded=self._preferences.log_expanded,
         )
+        self._render(self._view_model.snapshot)
 
     def _on_translate_toggled(self, _checked: bool) -> None:
         self._sync_translation_controls()
+        self._render(self._view_model.snapshot)
 
     def _sync_translation_controls(self) -> None:
         """Mantém falado e final independentes e explica o efeito na legenda.
@@ -961,6 +1002,23 @@ class MainWindow(QMainWindow):
 
         if not hasattr(self, "language_hint"):
             return
+        srt_source = self._source_kind() == _SRT_SOURCE_KIND
+        self.translate_check.setText(
+            "Traduzir o SRT de origem para o idioma final"
+            if srt_source
+            else "Traduzir a fala para o idioma final"
+        )
+        self.source_label.setText("IDIOMA DO SRT" if srt_source else "IDIOMA FALADO")
+        if self.source_combo.count() and self.source_combo.itemData(0) is None:
+            self.source_combo.setItemText(
+                0,
+                "Selecione o idioma atual"
+                if srt_source
+                else "Detectar automaticamente",
+            )
+        self.source_combo.setAccessibleName(
+            "Idioma atual do SRT de origem" if srt_source else "Idioma falado na mídia"
+        )
         # A disponibilidade pode mudar depois das confirmações nas Preferências.
         # Atualizar o controle aqui evita deixá-lo desabilitado até um novo render.
         self.translate_check.setEnabled(
@@ -975,7 +1033,10 @@ class MainWindow(QMainWindow):
         )
         if self._deps.translate_available:
             self.translate_check.setToolTip(
-                f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
+                f"Traduz o texto das cues do SRT com {backend_label}, "
+                "preservando exatamente os timestamps."
+                if srt_source
+                else f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
                 "Com a opção desmarcada, a legenda sai no idioma falado."
             )
         else:
@@ -992,7 +1053,12 @@ class MainWindow(QMainWindow):
         self.target_combo.setToolTip(
             "Idioma final do arquivo. O texto só muda quando a tradução está marcada."
         )
-        if translating and source is None:
+        if srt_source and source is None:
+            hint = (
+                "Informe o idioma atual do SRT. Não há detecção automática confiável "
+                "de idioma em arquivos de legenda."
+            )
+        elif translating and source is None:
             hint = (
                 "Tradução marcada: o idioma falado será detectado e depois "
                 f"traduzido para {target.label_pt}."
@@ -1000,7 +1066,11 @@ class MainWindow(QMainWindow):
         elif translating and source is target:
             hint = (
                 f"Origem e destino são {target.label_pt}: não há o que traduzir. "
-                "A legenda sai no idioma falado."
+                + (
+                    "O SRT será republicado sem alterar os timestamps."
+                    if srt_source
+                    else "A legenda sai no idioma falado."
+                )
             )
         elif translating:
             backend_label = (
@@ -1012,13 +1082,24 @@ class MainWindow(QMainWindow):
             )
             hint = (
                 f"Tradução {source.label_pt} → {target.label_pt} com {backend_label}, "
-                "preservando os tempos originais."
+                + (
+                    "mantendo exatamente os timestamps do SRT."
+                    if srt_source
+                    else "preservando os tempos originais."
+                )
             )
         elif source is None:
-            hint = "Sem tradução: a legenda sai no idioma detectado na fala."
+            hint = (
+                "Sem tradução: informe o idioma atual do SRT."
+                if srt_source
+                else "Sem tradução: a legenda sai no idioma detectado na fala."
+            )
         else:
             hint = (
-                f"Sem tradução: a legenda sai em {source.label_pt}. "
+                f"Sem tradução: o SRT será mantido em {source.label_pt}. "
+                "Marque a tradução para publicar em outro idioma."
+                if srt_source
+                else f"Sem tradução: a legenda sai em {source.label_pt}. "
                 "Marque a tradução para publicar em outro idioma."
             )
         self.language_hint.setText(hint)
@@ -1175,34 +1256,63 @@ class MainWindow(QMainWindow):
     # -- confirmação e montagem do trabalho -------------------------------
 
     def _build_job(self) -> tuple[JobRequest, str, Path]:
-        if not self._deps.transcription_available:
-            details = " ".join(self._deps.transcription_readiness_details)
-            raise InvalidInputError(
-                "O reconhecimento Whisper não está pronto neste ambiente. " + details
-            )
-        if not self._deps.alignment_available:
-            details = " ".join(self._deps.alignment_readiness_details)
-            raise InvalidInputError(
-                "O alinhamento WhisperX não está pronto neste ambiente. " + details
-            )
         if not self._deps.publishing_available:
             details = " ".join(self._deps.publishing_readiness_details)
             raise InvalidInputError(
                 "A publicação final de legendas ainda não está disponível. " + details
             )
-        media_text = self.file_edit.text().strip()
-        if not media_text:
-            raise InvalidInputError("Selecione um arquivo ou informe uma URL.")
-        kind = self._source_kind()
-        source = MediaSource(kind=kind, location=media_text)
-        stream_index = None
 
-        if kind is MediaKind.LOCAL_FILE:
-            media_path = Path(media_text).expanduser()
+        source_text = self.file_edit.text().strip()
+        if not source_text:
+            raise InvalidInputError("Selecione um arquivo ou informe uma URL.")
+        source_kind = self._source_kind()
+        is_srt_source = source_kind == _SRT_SOURCE_KIND
+        source_language, target_language, translate = self._resolved_languages(
+            require_source=is_srt_source,
+        )
+
+        stream_index = None
+        media_path: Path | None = None
+        subtitle_path: Path | None = None
+        source: MediaSource | None = None
+
+        if is_srt_source:
+            subtitle_path = Path(source_text).expanduser()
+            if subtitle_path.suffix.lower() != ".srt":
+                raise InvalidInputError("Selecione um arquivo com extensão .srt.")
+            if not subtitle_path.is_file():
+                raise InvalidInputError(f"Arquivo SRT não encontrado: {subtitle_path}")
+            if (
+                source_language is not target_language
+                and not self._deps.translate_available
+            ):
+                details = " ".join(self._deps.translate_readiness_details)
+                raise InvalidInputError(
+                    "O tradutor não está pronto para converter este SRT. " + details
+                )
+            source_label = f"SRT · {subtitle_path.name}"
+            media_path = subtitle_path
+        elif source_kind == MediaKind.LOCAL_FILE.value:
+            if not self._deps.transcription_available:
+                details = " ".join(self._deps.transcription_readiness_details)
+                raise InvalidInputError(
+                    "O reconhecimento Whisper não está pronto neste ambiente. "
+                    + details
+                )
+            if not self._deps.alignment_available:
+                details = " ".join(self._deps.alignment_readiness_details)
+                raise InvalidInputError(
+                    "O alinhamento WhisperX não está pronto neste ambiente. " + details
+                )
+            media_path = Path(source_text).expanduser()
             if not media_path.is_file():
                 raise InvalidInputError(
                     f"Arquivo de mídia não encontrado: {media_path}"
                 )
+            source = MediaSource(
+                kind=MediaKind.LOCAL_FILE,
+                location=str(media_path),
+            )
             source_label = media_path.name
             selected_stream = self.stream_combo.currentData()
             if selected_stream is not None:
@@ -1212,14 +1322,30 @@ class MainWindow(QMainWindow):
                     )
                 stream_index = int(selected_stream)
                 self._media_info.stream_by_index(stream_index)
-        else:
+        elif source_kind == MediaKind.YOUTUBE.value:
+            if not self._deps.transcription_available:
+                details = " ".join(self._deps.transcription_readiness_details)
+                raise InvalidInputError(
+                    "O reconhecimento Whisper não está pronto neste ambiente. "
+                    + details
+                )
+            if not self._deps.alignment_available:
+                details = " ".join(self._deps.alignment_readiness_details)
+                raise InvalidInputError(
+                    "O alinhamento WhisperX não está pronto neste ambiente. " + details
+                )
             if not self._deps.youtube_available:
                 details = " ".join(self._deps.youtube_readiness_details)
                 raise InvalidInputError(
                     "O suporte ao YouTube não está pronto neste ambiente. " + details
                 )
+            source = MediaSource(
+                kind=MediaKind.YOUTUBE,
+                location=source_text,
+            )
             source_label = "vídeo do YouTube"
-            media_path = None
+        else:
+            raise InvalidInputError("Tipo de origem desconhecido.")
 
         output_text = self.output_edit.text().strip()
         if not output_text:
@@ -1231,7 +1357,7 @@ class MainWindow(QMainWindow):
         resolved_output = output_path.resolve()
         if media_path is not None and resolved_output == media_path.resolve():
             raise InvalidInputError(
-                "O destino da legenda não pode sobrescrever o arquivo de mídia."
+                "O destino da legenda não pode sobrescrever o arquivo de origem."
             )
         models_root = self._deps.cache_dir.resolve()
         if resolved_output == models_root or models_root in resolved_output.parents:
@@ -1239,9 +1365,9 @@ class MainWindow(QMainWindow):
                 "O destino da legenda não pode ficar dentro do cache de modelos."
             )
 
-        source_language, target_language, translate = self._resolved_languages()
         request = JobRequest(
             source=source,
+            subtitle_path=subtitle_path,
             output_language=target_language,
             source_language=source_language,
             translate=translate,
@@ -1249,27 +1375,39 @@ class MainWindow(QMainWindow):
         )
         return request, source_label, output_path
 
-    def _resolved_languages(self) -> tuple[Language | None, Language, bool]:
+    def _resolved_languages(
+        self,
+        *,
+        require_source: bool = False,
+    ) -> tuple[Language | None, Language, bool]:
         """Resolve o par de idiomas antes de qualquer trabalho começar.
 
-        Toda combinação impossível é recusada no pré-voo — com a janela ainda
-        respondendo — em vez de depois de minutos de transcrição.
+        SRT não carrega metadados de idioma confiáveis: nesse modo a origem deve
+        ser declarada pelo usuário, enquanto a mídia pode usar detecção automática.
         """
-
         source = self._source_language()
         target = self._target_language()
+        if require_source and source is None:
+            raise InvalidInputError(
+                "Informe o idioma atual do SRT antes de iniciar a tradução."
+            )
         translate = self.translate_check.isChecked() and self._deps.translate_available
         if translate and source is None:
             raise InvalidInputError(
                 "Para traduzir, informe também o idioma falado na mídia."
             )
         if translate and source is target:
-            # Nada a traduzir: publica no idioma declarado, sem etapa extra.
             return source, target, False
         if not translate and source is not None and target is not source:
+            if self.translate_check.isChecked() and not self._deps.translate_available:
+                details = " ".join(self._deps.translate_readiness_details)
+                raise InvalidInputError(
+                    "O tradutor não está pronto para o idioma final selecionado. "
+                    + details
+                )
             raise InvalidInputError(
                 f"Sem tradução, o idioma final precisa ser {source.label_pt}. "
-                "Marque 'Traduzir a fala para o idioma final' para converter o texto."
+                "Marque a opção de tradução para converter o texto."
             )
         return source, target, translate
 
@@ -1555,17 +1693,7 @@ class MainWindow(QMainWindow):
             scrollbar.setValue(scrollbar.maximum())
 
         if not busy:
-            source_ready = (
-                self._deps.readiness_ok
-                and self._deps.transcription_available
-                and self._deps.alignment_available
-                and self._deps.publishing_available
-                and (
-                    self._source_kind() is MediaKind.LOCAL_FILE
-                    or self._deps.youtube_available
-                )
-            )
-            self.generate_button.setEnabled(source_ready)
+            self.generate_button.setEnabled(self._source_ready())
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelar trabalho")
             self.preferences_button.setEnabled(True)
@@ -1580,15 +1708,39 @@ class MainWindow(QMainWindow):
         self._sync_source_controls()
         self._update_status_pill(snapshot, busy)
 
-    def _update_status_pill(self, snapshot: JobViewSnapshot, busy: bool) -> None:
-        local_source = self._source_kind() is MediaKind.LOCAL_FILE
-        source_ready = (
+    def _source_ready(self) -> bool:
+        """Prontidão mínima correspondente ao tipo de entrada selecionado."""
+        source_kind = self._source_kind()
+        if source_kind == _SRT_SOURCE_KIND:
+            if not self._deps.publishing_available:
+                return False
+            source = self._source_language()
+            if source is None:
+                return False
+            target = self._target_language()
+            requires_translation = source is not target
+            return not requires_translation or (
+                self.translate_check.isChecked() and self._deps.translate_available
+            )
+        return (
             self._deps.readiness_ok
             and self._deps.transcription_available
             and self._deps.alignment_available
             and self._deps.publishing_available
-            and (local_source or self._deps.youtube_available)
+            and (
+                source_kind == MediaKind.LOCAL_FILE.value
+                or (
+                    source_kind == MediaKind.YOUTUBE.value
+                    and self._deps.youtube_available
+                )
+            )
         )
+
+    def _update_status_pill(self, snapshot: JobViewSnapshot, busy: bool) -> None:
+        source_kind = self._source_kind()
+        is_srt_source = source_kind == _SRT_SOURCE_KIND
+        local_source = source_kind == MediaKind.LOCAL_FILE.value
+        source_ready = self._source_ready()
         if snapshot.state is JobState.FAILED:
             label, state = "Atenção necessária", "error"
         elif snapshot.state is JobState.COMPLETED:
@@ -1632,34 +1784,44 @@ class MainWindow(QMainWindow):
             else "yt-dlp e um runtime EJS compatível são necessários. "
         )
 
-        # O rodapé diz o essencial em uma frase; o inventário técnico completo
-        # fica no tooltip e no log, em vez de virar um parágrafo cinza fixo.
-        details = [
-            *self._deps.readiness_details,
-            *self._deps.transcription_readiness_details,
-            *self._deps.alignment_readiness_details,
-            *self._deps.publishing_readiness_details,
-        ]
-        if local_source:
+        details = [*self._deps.publishing_readiness_details]
+        if is_srt_source:
+            details.extend(self._deps.translate_readiness_details)
             if source_ready:
-                summary = "Ambiente pronto para gerar legendas neste computador."
+                summary = (
+                    "Pronto para ler e traduzir SRT diretamente, sem executar "
+                    "transcrição ou alinhamento."
+                )
             else:
                 summary = (
-                    "Geração local indisponível. "
-                    f"{media_requirement}{whisper_requirement}"
-                    f"{alignment_requirement}{publishing_requirement}"
+                    "Tradução de SRT indisponível. "
+                    f"{publishing_requirement}"
+                    + " ".join(self._deps.translate_readiness_details)
                 )
         else:
-            details.extend(self._deps.youtube_readiness_details)
-            if source_ready:
-                summary = "Ambiente pronto para gerar legendas do YouTube."
+            details.extend(self._deps.readiness_details)
+            details.extend(self._deps.transcription_readiness_details)
+            details.extend(self._deps.alignment_readiness_details)
+            if local_source:
+                if source_ready:
+                    summary = "Ambiente pronto para gerar legendas neste computador."
+                else:
+                    summary = (
+                        "Geração local indisponível. "
+                        f"{media_requirement}{whisper_requirement}"
+                        f"{alignment_requirement}{publishing_requirement}"
+                    )
             else:
-                summary = (
-                    "YouTube indisponível. "
-                    f"{media_requirement}{whisper_requirement}"
-                    f"{alignment_requirement}{publishing_requirement}"
-                    f"{youtube_requirement}"
-                )
+                details.extend(self._deps.youtube_readiness_details)
+                if source_ready:
+                    summary = "Ambiente pronto para gerar legendas do YouTube."
+                else:
+                    summary = (
+                        "YouTube indisponível. "
+                        f"{media_requirement}{whisper_requirement}"
+                        f"{alignment_requirement}{publishing_requirement}"
+                        f"{youtube_requirement}"
+                    )
         self._update_readiness_footer(summary, details, ok=source_ready)
         self.status_pill.setToolTip(" ".join(part for part in details if part))
 
@@ -1716,18 +1878,16 @@ class MainWindow(QMainWindow):
     def _set_inputs_enabled(self, enabled: bool) -> None:
         self.media_kind_combo.setEnabled(enabled)
         self.file_edit.setEnabled(enabled)
+        source_kind = self._source_kind()
+        local = source_kind == MediaKind.LOCAL_FILE.value
         self.browse_button.setEnabled(
-            enabled and self._source_kind() is MediaKind.LOCAL_FILE
+            enabled and (local or source_kind == _SRT_SOURCE_KIND)
         )
         self.inspect_button.setEnabled(
-            enabled
-            and self._source_kind() is MediaKind.LOCAL_FILE
-            and self._deps.media_inspector is not None
+            enabled and local and self._deps.media_inspector is not None
         )
         self.stream_combo.setEnabled(
-            enabled
-            and self._source_kind() is MediaKind.LOCAL_FILE
-            and self._stream_choice_available()
+            enabled and local and self._stream_choice_available()
         )
         self.output_edit.setEnabled(enabled)
         self.output_browse_button.setEnabled(enabled)

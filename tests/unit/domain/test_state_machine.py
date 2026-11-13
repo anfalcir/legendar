@@ -80,3 +80,24 @@ def test_history_records_transitions():
         JobState.INSPECTING_MEDIA,
     ]
     assert machine.history[-1].reason == "teste"
+
+
+def test_srt_source_sequence_skips_all_media_states():
+    machine = StateMachine()
+    for state in (
+        JobState.VALIDATING_INPUT,
+        JobState.LOADING_SUBTITLES,
+        JobState.TRANSLATING,
+        JobState.VALIDATING_SRT,
+        JobState.PUBLISHING,
+        JobState.COMPLETED,
+    ):
+        machine.transition(state)
+    assert machine.state is JobState.COMPLETED
+
+
+def test_srt_source_can_skip_translation_when_languages_match():
+    assert can_transition(
+        JobState.LOADING_SUBTITLES,
+        JobState.VALIDATING_SRT,
+    )
