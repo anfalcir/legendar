@@ -61,10 +61,131 @@ jobs:
           archive="$(find dist -maxdepth 1 -name 'legendar-linux-x86_64-*.tar.gz' -print -quit)"
           test -n "$archive"
           sha256sum --check "$archive.sha256"
-          tar -tzf "$archive" | grep -q '/src/legendar/__main__.py$'
-          tar -tzf "$archive" | grep -q '/packaging/linux/install.sh$'
-          tar -tzf "$archive" | grep -q '/packaging/linux/launch.sh$'
-          tar -tzf "$archive" | grep -q '/packaging/linux/uninstall.sh$'
+          contents="$(tar -tzf "$archive")"
+          grep -q '/src/legendar/__main__.py
+      - name: Upload Linux user bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: |
+            dist/legendar-linux-x86_64-*.tar.gz
+            dist/legendar-linux-x86_64-*.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish tagged Linux release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          gh release create "$tag" dist/legendar-linux-x86_64-*.tar.gz dist/legendar-linux-x86_64-*.tar.gz.sha256 --title "Legendar $tag" --generate-notes
+ <<< "$contents"
+          grep -q '/packaging/linux/install.sh
+      - name: Upload Linux user bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: |
+            dist/legendar-linux-x86_64-*.tar.gz
+            dist/legendar-linux-x86_64-*.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish tagged Linux release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          gh release create "$tag" dist/legendar-linux-x86_64-*.tar.gz dist/legendar-linux-x86_64-*.tar.gz.sha256 --title "Legendar $tag" --generate-notes
+ <<< "$contents"
+          grep -q '/packaging/linux/launch.sh
+      - name: Upload Linux user bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: |
+            dist/legendar-linux-x86_64-*.tar.gz
+            dist/legendar-linux-x86_64-*.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish tagged Linux release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          gh release create "$tag" dist/legendar-linux-x86_64-*.tar.gz dist/legendar-linux-x86_64-*.tar.gz.sha256 --title "Legendar $tag" --generate-notes
+ <<< "$contents"
+          grep -q '/packaging/linux/uninstall.sh
+      - name: Upload Linux user bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: |
+            dist/legendar-linux-x86_64-*.tar.gz
+            dist/legendar-linux-x86_64-*.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish tagged Linux release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          gh release create "$tag" dist/legendar-linux-x86_64-*.tar.gz dist/legendar-linux-x86_64-*.tar.gz.sha256 --title "Legendar $tag" --generate-notes
+ <<< "$contents"
       - name: Upload Linux user bundle
         uses: actions/upload-artifact@v4
         with:
