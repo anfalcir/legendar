@@ -11,8 +11,11 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import platform
 import socket
 import subprocess
+import sys
+import tarfile
 import threading
 import time
 from collections.abc import Callable
@@ -29,6 +32,14 @@ DEFAULT_MODEL_FILENAME = "translategemma-4b-it-Q4_K_M.gguf"
 MODEL_REPOSITORY = "bullerwins/translategemma-4b-it-GGUF"
 MODEL_REVISION = "7c938465a870d8624bcfa98a8e4a3510053c19a8"
 MODEL_SHA256 = "7f7357c14abd9da4eb200b38b05da502cd6e10d7e1d403fbc9f78c19f3209b72"
+LLAMA_CPP_RELEASE = "b12321"
+LLAMA_CPP_ARCHIVE = f"llama-{LLAMA_CPP_RELEASE}-bin-ubuntu-x64.tar.gz"
+LLAMA_CPP_DOWNLOAD_URL = (
+    "https://github.com/ggml-org/llama.cpp/releases/download/"
+    f"{LLAMA_CPP_RELEASE}/{LLAMA_CPP_ARCHIVE}"
+)
+LLAMA_CPP_SHA256 = "7f0c4e221874ebb131f0da2154cccba4e60ca9f878477290e301ba042dde6603"
+
 MODEL_DOWNLOAD_URL = (
     "https://huggingface.co/"
     f"{MODEL_REPOSITORY}/resolve/{MODEL_REVISION}/{DEFAULT_MODEL_FILENAME}"
@@ -149,6 +160,7 @@ class LlamaCppRuntimeManager:
         monotonic: Callable[[], float] = time.monotonic,
         model_sha256: str = MODEL_SHA256,
         token_provider: Callable[[], str | None] = _huggingface_token,
+        runtime_opener: Callable[..., Any] = urlopen,
     ) -> None:
         if host != "127.0.0.1":
             raise ValueError(
@@ -172,6 +184,7 @@ class LlamaCppRuntimeManager:
         self.startup_timeout = startup_timeout
         self.model_sha256 = model_sha256
         self._token_provider = token_provider
+        self._runtime_opener = runtime_opener
         self._configured_executable = (
             Path(executable).expanduser() if executable else None
         )
@@ -189,6 +202,8 @@ class LlamaCppRuntimeManager:
         self._validated_model_signature: tuple[int, int, int] | None = None
         self._download_authorized = False
         self._download_required = False
+        self._runtime_download_authorized = False
+        self._runtime_download_required = False
 
     @property
     def needs_download_authorization(self) -> bool:
@@ -241,6 +256,7 @@ class LlamaCppRuntimeManager:
                 Path(models_dir) / "runtime" / "bin" / f"llama-server{suffix}",
                 Path(models_dir) / "runtime" / f"llama{suffix}",
                 Path(models_dir) / "runtime" / f"llama-server{suffix}",
+                Path(models_dir) / LLAMA_CPP_RELEASE / f"llama-server{suffix}",
             )
         )
         for candidate in candidates:
