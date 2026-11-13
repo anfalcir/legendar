@@ -8,6 +8,7 @@ duplicados entre instâncias; somente o processo próprio é encerrado.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import socket
@@ -478,7 +479,6 @@ class LlamaCppRuntimeManager:
     @staticmethod
     def _sha256_prefix(path: Path, size: int, token: CancellationToken | None) -> Any:
         import hashlib
-import json
 
         digest = hashlib.sha256()
         if size:
