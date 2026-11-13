@@ -193,8 +193,9 @@ aplicativo sob demanda, com consentimentos separados.
 
 O lançador verifica o ambiente de forma idempotente em modo offline a cada abertura.
 Se detectar dependências inconsistentes, oferece reparo online antes de alterar o
-ambiente. O desinstalador remove o aplicativo e o ambiente Python, mas preserva
-`~/.cache/legendar` (modelos, configurações e logs).
+ambiente. O desinstalador remove o aplicativo, o ambiente Python, o uv privado e o atalho,
+mas preserva `~/.cache/legendar` (modelos, configurações e logs) e `~/.cache/uv`
+(Python gerenciado/cache de wheels, que pode ser compartilhado com outros projetos).
 
 O workflow `Linux distribution` valida ShellCheck, lockfile e conteúdo do arquivo;
 publica o pacote em Releases somente quando uma tag de versão é criada. A primeira
