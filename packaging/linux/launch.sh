@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 APP_DIR="$HOME/.local/share/legendar/app"
-UV_BIN="$HOME/.local/bin/uv"
+UV_BIN="$HOME/.local/share/legendar/tools/uv"
 LOG_DIR="$HOME/.cache/legendar/logs"
 LOG_FILE="$LOG_DIR/launcher.log"
 fail() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
