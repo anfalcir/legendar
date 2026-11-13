@@ -1,9 +1,9 @@
-"""Gerenciamento do processo local llama.cpp para TranslateGemma.
+"""Instalação e gerenciamento autônomo do runtime llama.cpp para TranslateGemma.
 
-O módulo não instala o binário llama.cpp. O download do GGUF é explícito,
-retomável e validado por SHA-256; a camada de aplicação/UI deve solicitar
-consentimento antes de chamá-lo. Locks de arquivo evitam downloads e servidores
-duplicados entre instâncias; somente o processo próprio é encerrado.
+A instalação do runtime CPU Linux x86_64 e o download do GGUF são retomáveis,
+validados por SHA-256 e publicados atomicamente após consentimento explícito.
+Locks entre processos evitam downloads e servidores duplicados; somente o
+processo filho iniciado por esta instância é encerrado.
 """
 
 from __future__ import annotations
