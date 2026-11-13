@@ -478,6 +478,7 @@ class LlamaCppRuntimeManager:
     @staticmethod
     def _sha256_prefix(path: Path, size: int, token: CancellationToken | None) -> Any:
         import hashlib
+import json
 
         digest = hashlib.sha256()
         if size:
@@ -545,7 +546,7 @@ class LlamaCppRuntimeManager:
                 if (
                     self._process.poll() is None
                     and self._port is not None
-                    and self._is_healthy(self._port)
+                    and self._is_ready(self._port)
                     and self._process.poll() is None
                 ):
                     if progress is not None:
@@ -658,7 +659,7 @@ class LlamaCppRuntimeManager:
             process = self._process
             if process is None or process.poll() is not None:
                 raise ModelError("O servidor llama.cpp encerrou antes de ficar pronto.")
-            if self._port is not None and self._is_healthy(self._port):
+            if self._port is not None and self._is_ready(self._port):
                 return
             if progress is not None:
                 remaining = max(0.0, deadline - self._monotonic())
@@ -680,6 +681,35 @@ class LlamaCppRuntimeManager:
                     status = response.getcode()
                 return 200 <= int(status) < 300
         except (OSError, TimeoutError, URLError, ValueError):
+            return False
+
+    def _is_ready(self, port: int) -> bool:
+        """Exige health check e identidade do modelo esperado no endpoint local."""
+        if not self._is_healthy(port):
+            return False
+        request = Request(
+            f"http://{self.host}:{port}/v1/models",
+            headers={"Accept": "application/json"},
+            method="GET",
+        )
+        try:
+            with self._opener(request, timeout=_HEALTH_TIMEOUT) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            models = payload.get("data") if isinstance(payload, dict) else None
+            return isinstance(models, list) and any(
+                isinstance(model, dict)
+                and model.get("id") == DEFAULT_MODEL_ALIAS
+                for model in models
+            )
+        except (
+            OSError,
+            TimeoutError,
+            URLError,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+            AttributeError,
+            TypeError,
+        ):
             return False
 
     def _available_port(self) -> int:
