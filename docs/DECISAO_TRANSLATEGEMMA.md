@@ -24,6 +24,10 @@
 - [Documentação do servidor llama.cpp](https://github.com/ggml-org/llama.cpp/tree/master/tools/server): referência para API HTTP local.
 - [Termos Gemma](https://ai.google.dev/gemma/terms): termos legais aplicáveis.
 
+### Implementação autônoma atual
+
+A PR #36 agora inclui instalação assistida e idempotente do runtime CPU Linux x86_64 do llama.cpp, fixado no release `b12321`, com verificação SHA-256 do tarball, extração segura para o cache privado, retomada de download e carregamento das bibliotecas locais. A instalação ocorre somente após consentimento explícito; não usa sudo, não altera o PATH do sistema e não aceita licença/credencial em nome do usuário. O adaptador prepara runtime → modelo → servidor automaticamente antes da tradução e encerra apenas o processo que ele próprio iniciou. A validação do runtime real e do modelo real ainda depende do smoke no hardware de referência.
+
 ## Riscos e validações obrigatórias
 
 1. Confirmar que a versão do llama.cpp distribuída/instalada reconhece o template TranslateGemma e aplica os códigos de idioma por requisição.
