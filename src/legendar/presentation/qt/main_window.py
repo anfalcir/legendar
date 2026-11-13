@@ -489,7 +489,11 @@ class MainWindow(QMainWindow):
         if not self._deps.translate_available:
             details = " ".join(self._deps.translate_readiness_details)
             backend_label = (
-                "Gemini" if self._deps.translation_backend == "gemini" else "NLLB-200"
+                "Gemini"
+                if self._deps.translation_backend == "gemini"
+                else "TranslateGemma 4B"
+                if self._deps.translation_backend == "translategemma"
+                else "NLLB-200"
             )
             self.translate_check.setToolTip(
                 f"A tradução {backend_label} não está pronta neste ambiente. " + details
@@ -957,6 +961,28 @@ class MainWindow(QMainWindow):
 
         if not hasattr(self, "language_hint"):
             return
+        # A disponibilidade pode mudar depois das confirmações nas Preferências.
+        # Atualizar o controle aqui evita deixá-lo desabilitado até um novo render.
+        self.translate_check.setEnabled(
+            self._deps.translate_available and not self.is_running
+        )
+        backend_label = (
+            "Gemini (API)"
+            if self._deps.translation_backend == "gemini"
+            else "TranslateGemma 4B (local)"
+            if self._deps.translation_backend == "translategemma"
+            else "NLLB-200 (local)"
+        )
+        if self._deps.translate_available:
+            self.translate_check.setToolTip(
+                f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
+                "Com a opção desmarcada, a legenda sai no idioma falado."
+            )
+        else:
+            details = " ".join(self._deps.translate_readiness_details)
+            self.translate_check.setToolTip(
+                f"A tradução {backend_label} não está pronta neste ambiente. {details}"
+            )
         translating = (
             self.translate_check.isChecked() and self._deps.translate_available
         )
