@@ -433,6 +433,10 @@ class TranslateGemmaTranslator:
         indexes = tuple(unit.index for unit in units)
         if len(set(indexes)) != len(indexes):
             raise TranslationError("TranslateGemma recebeu IDs de unidade duplicados.")
+        if any(not unit.text.strip() for unit in units):
+            raise TranslationError(
+                "TranslateGemma recebeu uma unidade de origem vazia."
+            )
 
         source_code = _LANGUAGE_CODES[source_language]
         target_code = _LANGUAGE_CODES[target_language]
@@ -479,6 +483,11 @@ class TranslateGemmaTranslator:
                 model=self.model,
                 source_code=source_code,
                 target_code=target_code,
+            )
+            progress.report(
+                0.9 + 0.1 * completed_units / total,
+                "TranslateGemma · preparando lote de "
+                f"{len(batch)} unidades · contando tokens",
             )
             prompt_tokens = self._count_tokens(base_url, payload)
             output_tokens = self._estimate_output_tokens(batch)
