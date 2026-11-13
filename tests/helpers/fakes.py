@@ -137,10 +137,12 @@ class FakeTranscriber:
     transcript: Transcript = field(
         default_factory=lambda: make_transcript(language=Language.PORTUGUESE)
     )
+    calls: list = field(default_factory=list)
 
     def transcribe(
         self, audio, *, language=None, progress=None, token=None
     ) -> Transcript:
+        self.calls.append((audio, language))
         if progress is not None:
             progress.report(0.5, "Transcrevendo")
         if token is not None:
@@ -153,8 +155,10 @@ class FakeTranscriber:
 @dataclass
 class FakeAligner:
     alignment: AlignmentResult | None = None
+    calls: list = field(default_factory=list)
 
     def align(self, audio, transcript, *, progress=None, token=None) -> AlignmentResult:
+        self.calls.append((audio, transcript))
         if progress is not None:
             progress.report(0.5, "Alinhando")
         if token is not None:
