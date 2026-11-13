@@ -138,7 +138,7 @@ def test_translate_rejects_malformed_response_and_empty_units() -> None:
             target_language=Language.PORTUGUESE,
             progress=FakeProgress(),
         )
-    with pytest.raises(TranslationError, match="resposta inválida"):
+    with pytest.raises(TranslationError, match="Resposta TranslateGemma inválida"):
         translator.translate(
             (TranslationUnit(index=1, text="Hello"),),
             source_language=Language.ENGLISH,
