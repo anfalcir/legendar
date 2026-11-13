@@ -174,8 +174,8 @@ def test_batch_check_rejects_missing_or_duplicate_ids(monkeypatch) -> None:
 def test_gbnf_has_fixed_json_keys_and_non_empty_values() -> None:
     grammar = _json_grammar(("1", "2"))
     assert 'root ::= "{" ws entrya "," ws entryb "}" ws' in grammar
-    assert 'entrya ::= "\"1\"" ws ":" ws string' in grammar
-    assert 'entryb ::= "\"2\"" ws ":" ws string' in grammar
+    assert 'entrya ::= "\\"1\\"" ws ":" ws string' in grammar
+    assert 'entryb ::= "\\"2\\"" ws ":" ws string' in grammar
     assert 'string ::= "\\"" char+ "\\""' in grammar
 
 
