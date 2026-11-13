@@ -31,6 +31,7 @@ ensure_media_tools() {
     local missing=0
     command -v ffmpeg >/dev/null 2>&1 || missing=1
     command -v ffprobe >/dev/null 2>&1 || missing=1
+    command -v zenity >/dev/null 2>&1 || missing=1
     if command -v ldconfig >/dev/null 2>&1; then
         for library in libEGL.so.1 libGL.so.1 libxkbcommon-x11.so.0 libxcb-cursor.so.0; do
             ldconfig -p 2>/dev/null | grep -Fq "$library" || missing=1
@@ -47,7 +48,7 @@ ensure_media_tools() {
     sudo apt-get install --yes --no-install-recommends \
         ffmpeg libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 \
         libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 \
-        libxcb-randr0 libxcb-render-util0 libxcb-xfixes0 libx11-xcb1
+        libxcb-randr0 libxcb-render-util0 libxcb-xfixes0 libx11-xcb1 zenity
     command -v ffmpeg >/dev/null 2>&1 || fail "FFmpeg não foi instalado corretamente."
     command -v ffprobe >/dev/null 2>&1 || fail "ffprobe não foi instalado corretamente."
 }
