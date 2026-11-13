@@ -174,6 +174,18 @@ def read_srt_file(
     return SubtitleTrack(language=language, cues=cues), encoding
 
 
+class SrtFileReader:
+    """Adaptador de infraestrutura para ler um SRT de origem."""
+
+    def read(
+        self,
+        path: str | Path,
+        *,
+        language: Language,
+    ) -> tuple[SubtitleTrack, str]:
+        return read_srt_file(path, language=language)
+
+
 def validate_roundtrip(track: SubtitleTrack, content: str) -> None:
     """Garante que o SRT serializado reabre com os mesmos índices e tempos."""
     parsed = parse_srt(content)
