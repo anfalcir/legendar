@@ -3,7 +3,7 @@
 - **Projeto:** Legendar — `anfalcir/legendar`
 - **Data da auditoria:** 12/11/2026
 - **Base auditada:** `main` após PR #34 (8.1.5), commit `9350438674d3e83537392e73c7e95e4dd27dad36`
-- **Status:** etapas 8.1.0 a 8.1.5 integradas à `main`; a primeira fatia da 8.1.6 (decisão técnica, smoke de protocolo e testes determinísticos) foi integrada pela PR #35, squash `e0ba71080243972158272cf4792c1efdde0649df`, após os sete workflows passarem. O smoke com o modelo TranslateGemma real ainda não foi executado; portanto, o runtime e a tradução local ainda não estão homologados. A primeira implementação da 8.1.3 está integrada, mas seu gate quantitativo no corpus congelado permanece pendente. A referência humana PT-BR e o snapshot real de ASR/alinhamento também continuam pendentes; a aprovação semântica final não foi concedida.
+- **Status:** etapas 8.1.0 a 8.1.5 integradas à `main`; a decisão técnica e o smoke de protocolo foram integrados pela PR #35 (`e0ba7108`). A PR #36 evolui a integração com runtime autônomo, instalador assistido, adaptador com batching contextual por marcadores e contagem do prompt renderizado via endpoint do llama.cpp. Os sete workflows de CI passaram no head `39b7fefa76e1def6a78e82d7248588de0f7b4d9e`; a PR permanece aberta, sem merge. O smoke com pesos reais e a homologação no hardware de referência ainda não foram executados. O gate quantitativo da 8.1.3, a referência humana PT-BR e o snapshot real de ASR/alinhamento também continuam pendentes; a aprovação semântica final não foi concedida.
 - **Relação com a Fase 8:** incremento corretivo da homologação. A Fase 8 continua aberta até que a implementação da Fase 8.1 seja concluída e a homologação integral volte a passar.
 - **Documento de referência:** [plano mestre](PLANO_CORRECAO_MELHORIA.md) · [estado atual](ESTADO_ATUAL.md) · [roteiro de homologação](HOMOLOGACAO.md)
 
@@ -531,16 +531,16 @@ Tarefas:
 
 ### Etapa 8.1.6 — substituição do motor local por TranslateGemma
 
-**STATUS: PRIMEIRA FATIA INTEGRADA; IMPLEMENTAÇÃO E HOMOLOGAÇÃO DO MOTOR PENDENTES**
+**STATUS: DECISÃO/SMOKE DE PROTOCOLO INTEGRADOS; RUNTIME E BATCHING NA PR #36; CI DO HEAD ATUAL E HOMOLOGAÇÃO REAL PENDENTES**
 
-A PR #35 foi integrada à `main` por squash no commit `e0ba71080243972158272cf4792c1efdde0649df`, com sete workflows aprovados. Ela registra a decisão e adiciona o smoke determinístico do protocolo HTTP local; não inclui ainda o smoke com pesos reais nem o adaptador de produção. A decisão de produto foi aprovada pelo usuário em 12/11/2026: remover NLLB e adotar TranslateGemma 4B Q4_K_M como único motor local. Gemini permanece como opção remota independente. A decisão técnica, o runtime candidato, o contrato de idioma, os riscos de licença e os gates estão em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
+A PR #35 foi integrada à `main` por squash no commit `e0ba71080243972158272cf4792c1efdde0649df`, com sete workflows aprovados. A PR #36, ainda aberta, implementa instalador assistido do runtime CPU Linux x86_64, lifecycle idempotente, adaptador de produção TranslateGemma e batching contextual. O adaptador usa marcadores exclusivos para mapear cada cue, conta os tokens do prompt já renderizado em `/v1/chat/completions/input_tokens` e divide recursivamente lotes cuja estrutura se perca, seja reordenada ou exceda o contexto de 2K. A CI do head atual precisa terminar sem falhas; o smoke com pesos reais e os gates de qualidade/desempenho continuam pendentes. A decisão aprovada em 12/11/2026 é remover NLLB e adotar TranslateGemma 4B Q4_K_M como único motor local. Gemini permanece como opção remota independente. Ver [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md).
 
 ### Escopo fechado
 
 1. Provar o template TranslateGemma no runtime llama.cpp, com source_lang_code e target_lang_code enviados por requisição; usar scripts/phase8_1_translategemma_smoke.py contra um servidor local real.
-2. Implementar adaptador local com o contrato existente, processamento contextual limitado pelo contexto oficial de 2K tokens, validação de cardinalidade/IDs e recuperação segura.
-3. Gerenciar servidor e modelo localmente, com loopback, cache, download verificável, cancelamento e encerramento confiável.
-4. Migrar bootstrap, Preferências, dependências e documentação para TranslateGemma como única rota local.
+2. Implementar adaptador local com o contrato existente, batching de cues consecutivas, contexto de fronteira, contagem exata do prompt renderizado no llama.cpp, limite de contexto de 2K tokens, validação de cardinalidade/IDs e recuperação recursiva segura.
+3. Gerenciar servidor e modelo localmente de forma autônoma e idempotente: diagnóstico leve na abertura, instalação proposta sob demanda, download verificável após consentimento, inicialização automática antes da tradução, health check, reutilização sem duplicação, cancelamento e encerramento confiável.
+4. Migrar bootstrap, Preferências, dependências e documentação para TranslateGemma como única rota local, com o Legendar responsável por todo o ciclo de vida do runtime e sem exigir comandos manuais do usuário na operação normal.
 5. Remover NLLB integralmente após os testes substitutos passarem.
 6. Validar no hardware de referência e no corpus-ouro; não aprovar qualidade apenas por CI.
 
@@ -788,3 +788,11 @@ A Fase 8.1 só poderá ser marcada como concluída quando:
 
 **Resultado esperado:** uma homologação repetível, com falhas recuperáveis, tradução em PT-BR natural, cues construídas por unidades de sentido, layout consistente e desempenho novamente próximo da baseline histórica — sem sacrificar rastreabilidade textual ou temporal.
 
+
+
+### Requisito adicional aprovado — autonomia operacional
+
+O runtime local não poderá depender de instalação/inicialização manual em cada máquina. O Legendar deverá verificar dependências na abertura sem bloquear a GUI, propor instalação quando necessário, baixar pesos somente após autorização informada, iniciar automaticamente o servidor antes da etapa de tradução, aguardar health check, reutilizar instâncias próprias saudáveis e encerrar apenas o processo filho que iniciou. Repetir o fluxo deve ser idempotente e concorrência não pode produzir instalações ou servidores duplicados. Ver critérios completos em [DECISAO_TRANSLATEGEMMA.md](DECISAO_TRANSLATEGEMMA.md), seção “Operação autônoma e idempotente do runtime”.
+
+
+**Fatia atual da PR #36:** diagnóstico local; instalador assistido e idempotente do runtime CPU Linux x86_64 em cache privado (sem sudo); download retomável do GGUF após consentimento e SHA-256; servidor em loopback com porta dinâmica, health check, cancelamento, locks, reutilização e encerramento seguro do processo próprio. O adaptador `TranslateGemmaTranslator` está conectado ao bootstrap/Preferências e agrupa cues com contexto das cues adjacentes nas fronteiras do lote. O endpoint `/v1/chat/completions/input_tokens` mede o prompt renderizado; lotes com orçamento excedido ou resposta sem marcadores válidos são divididos recursivamente, sem fallback para NLLB. Foi acrescentado smoke específico de lote. Os sete workflows de CI passaram no head `39b7fefa76e1def6a78e82d7248588de0f7b4d9e`. Ainda faltam smoke de marcadores com pesos reais, validação no Linux Mint/Ryzen de referência, avaliação humana PT-BR e homologação E2E. A implementação não deve ser apresentada como homologada antes desses gates.

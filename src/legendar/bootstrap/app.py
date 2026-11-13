@@ -37,7 +37,9 @@ from legendar.infrastructure.transcription.faster_whisper import (
 )
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.gemini import GeminiTranslator
+from legendar.infrastructure.translation.llama_runtime import LlamaCppRuntimeManager
 from legendar.infrastructure.translation.nllb import NllbTranslator
+from legendar.infrastructure.translation.translategemma import TranslateGemmaTranslator
 from legendar.presentation.qt.branding import app_icon
 from legendar.presentation.qt.main_window import MainWindow, UiDependencies
 from legendar.presentation.qt.preferences import load_preferences
@@ -243,6 +245,10 @@ def build_ui_dependencies(
         )
     alignment_available = whisperx_installed and alignment_configuration_ok
 
+    translategemma_runtime = LlamaCppRuntimeManager(settings.models_dir)
+    # Diagnóstico leve e local em toda abertura; não faz hash, rede ou spawn.
+    translategemma_runtime.inspect()
+
     env_translation_backend = (
         os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "nllb").strip().casefold()
     )
@@ -315,10 +321,39 @@ def build_ui_dependencies(
                 )
             return translator, transformers_installed, details
 
+        if backend == "translategemma":
+            inspection = translategemma_runtime.inspect()
+            translator = TranslateGemmaTranslator(translategemma_runtime)
+            details = (
+                "TranslateGemma 4B IT · GGUF Q4_K_M · execução local",
+                *inspection.details,
+            )
+            if not inspection.executable_available:
+                details += ("Instale o runtime llama.cpp para habilitar este motor.",)
+            elif not inspection.model_available:
+                if translategemma_runtime.download_authorized:
+                    details += (
+                        "Os pesos serão baixados no worker antes da primeira tradução.",
+                    )
+                else:
+                    details += (
+                        "O download do GGUF aguarda autorização explícita nas Preferências.",
+                    )
+            runtime_ready_or_authorized = inspection.executable_available or (
+                translategemma_runtime.runtime_download_authorized
+            )
+            model_ready_or_authorized = inspection.model_available or (
+                translategemma_runtime.download_authorized
+            )
+            available = runtime_ready_or_authorized and model_ready_or_authorized
+            return translator, available, details
+
         return (
             NllbTranslator(settings.models_dir),
             False,
-            ("LEGENDAR_TRANSLATION_BACKEND inválido; use nllb ou gemini.",),
+            (
+                "LEGENDAR_TRANSLATION_BACKEND inválido; use translategemma, nllb ou gemini.",
+            ),
         )
 
     local_gemini_key = load_gemini_api_key()
@@ -383,6 +418,18 @@ def build_ui_dependencies(
             "Publicação SRT atômica em UTF-8 (até 2 linhas por cue).",
             "Validação round-trip concluída antes de escrever no destino.",
         ),
+        runtime_shutdown=translategemma_runtime.shutdown,
+        runtime_authorization_required=lambda: (
+            translategemma_runtime.needs_runtime_download_authorization
+            and not translategemma_runtime.runtime_download_authorized
+        ),
+        runtime_authorize=translategemma_runtime.authorize_runtime_download,
+        translation_authorization_required=lambda: (
+            translategemma_runtime.inspect().executable_available
+            and translategemma_runtime.needs_download_authorization
+            and not translategemma_runtime.download_authorized
+        ),
+        translation_authorize=translategemma_runtime.authorize_model_download,
     )
 
 
@@ -410,13 +457,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     app.setApplicationName("Legendar")
     app.setApplicationVersion(__version__)
     app.setWindowIcon(app_icon())
-    window = MainWindow(
-        build_ui_dependencies(
-            settings,
-            translation_backend=selected_backend,
-            gemini_api_key=gemini_key,
-        ),
-        settings=qt_settings,
+    dependencies = build_ui_dependencies(
+        settings,
+        translation_backend=selected_backend,
+        gemini_api_key=gemini_key,
     )
+    if dependencies.runtime_shutdown is not None:
+        app.aboutToQuit.connect(dependencies.runtime_shutdown)
+    window = MainWindow(dependencies, settings=qt_settings)
     window.show()
     return int(app.exec())

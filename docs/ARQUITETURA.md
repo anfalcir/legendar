@@ -37,7 +37,7 @@ src/legendar/
     media/{probe,ffmpeg,ffprobe,tools,youtube}.py
     transcription/whisper.py
     alignment/whisperx.py
-    translation/{nllb,gemini}.py
+    translation/{nllb,gemini,llama_runtime,translategemma}.py
     filesystem/{srt,publisher,atomic,workspace,paths}.py
     config/settings.py
     diagnostics/performance.py
@@ -127,7 +127,7 @@ Os testes E2E de mídia atuais usam adaptadores falsos para reconhecimento e ali
 
 ## 10. Evolução sob o plano atual
 
-A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. A Fase 7 adiciona uma política transversal de recursos: perfis controlam retenção de modelos e threads CPU sem acoplar a UI aos runtimes. A Fase 6 mantém `NllbTranslator` e `GeminiTranslator` atrás da mesma porta; a seleção persistida em Preferências altera o adaptador usado pelos próximos jobs sem reiniciar a GUI. As próximas mudanças devem preservar essas fronteiras.
+A arquitetura em camadas e as portas `Transcriber`, `Aligner` e `Translator` permitem avaliar adaptadores alternativos sem reescrever a aplicação. A Fase 7 adiciona uma política transversal de recursos: perfis controlam retenção de modelos e threads CPU sem acoplar a UI aos runtimes. A Fase 6 mantém `NllbTranslator` e `GeminiTranslator` atrás da mesma porta; a migração da Fase 8.1.6 adiciona `TranslateGemmaTranslator` e o runtime gerenciado. A seleção persistida em Preferências altera o adaptador usado pelos próximos jobs sem reiniciar a GUI. As próximas mudanças devem preservar essas fronteiras.
 
 A evolução proposta é:
 - instrumentar tempo e memória por estágio;
@@ -140,3 +140,17 @@ A evolução proposta é:
 - gerenciar a residência dos modelos e threads por perfil de hardware.
 
 As próximas mudanças devem ser guiadas pelas evidências de homologação real da Fase 8. Escopo, critérios e pendências estão em [PLANO_CORRECAO_MELHORIA.md](PLANO_CORRECAO_MELHORIA.md).
+
+
+## 11. Runtime local gerenciado e idempotente
+
+O runtime TranslateGemma é uma dependência operacional sob responsabilidade do bootstrap/infraestrutura, não uma tarefa manual do usuário. A camada de infraestrutura deve expor um gerenciador com operações idempotentes de diagnóstico, preparação, inicialização, health check e encerramento. A apresentação consome estados/progresso por worker e nunca executa instalação, rede, I/O pesado ou espera de processo na thread Qt.
+
+- Na abertura: diagnóstico leve, sem download nem bloqueio da janela.
+- Na seleção/execução da tradução local: preflight atualizado; propor instalação do runtime/modelo ausente e solicitar consentimentos necessários.
+- Antes de TRANSLATING: garantir modelo válido, iniciar/reutilizar apenas processo gerenciado e aguardar readiness.
+- Concorrência: locks para impedir instalações, downloads ou servidores duplicados; arquivos temporários e publicação atômica do modelo.
+- Encerramento: parar somente o processo filho criado pelo Legendar; preservar pesos/cache e nunca matar processos externos.
+- Segurança: loopback exclusivo, versão fixada, integridade verificada, sem privilégios elevados silenciosos e sem credenciais em logs/configurações comuns.
+
+A máquina de estados operacional e seus eventos de progresso são testados sem baixar o modelo real. A PR #36 conecta o adaptador TranslateGemma e o diagnóstico do runtime ao bootstrap/Preferências; o adaptador prepara o runtime e o modelo sob demanda, inicializa/reutiliza o servidor em loopback e envia códigos de idioma por requisição. A instalação assistida do binário e o download do GGUF após consentimento explícito ocorrem em worker, com retomada e SHA-256. O batching contextual, a contagem do prompt renderizado e a recuperação recursiva de lotes inválidos estão implementados e cobertos por testes determinísticos. O smoke com pesos reais, a validação no hardware de referência e a avaliação editorial PT-BR continuam pendentes.

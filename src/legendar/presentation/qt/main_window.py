@@ -145,6 +145,11 @@ class UiDependencies:
     translation_reconfigure: (
         Callable[[str, str | None], tuple[bool, tuple[str, ...]]] | None
     ) = None
+    runtime_shutdown: Callable[[], None] | None = None
+    runtime_authorization_required: Callable[[], bool] | None = None
+    runtime_authorize: Callable[[], None] | None = None
+    translation_authorization_required: Callable[[], bool] | None = None
+    translation_authorize: Callable[[], None] | None = None
 
 
 class MainWindow(QMainWindow):
@@ -493,6 +498,8 @@ class MainWindow(QMainWindow):
             backend_label = (
                 "Gemini (API)"
                 if self._deps.translation_backend == "gemini"
+                else "TranslateGemma 4B (local)"
+                if self._deps.translation_backend == "translategemma"
                 else "NLLB-200 (local)"
             )
             self.translate_check.setToolTip(
@@ -973,6 +980,8 @@ class MainWindow(QMainWindow):
             backend_label = (
                 "Gemini (API)"
                 if self._deps.translation_backend == "gemini"
+                else "TranslateGemma 4B"
+                if self._deps.translation_backend == "translategemma"
                 else "NLLB-200"
             )
             hint = (
@@ -1005,6 +1014,52 @@ class MainWindow(QMainWindow):
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         new_preferences = dialog.preferences
+        if (
+            new_preferences.translation_backend == "translategemma"
+            and self._deps.runtime_authorization_required is not None
+            and self._deps.runtime_authorization_required()
+        ):
+            answer = QMessageBox.question(
+                self,
+                "Instalar llama.cpp",
+                "O Legendar precisa do runtime CPU llama.cpp para executar o TranslateGemma localmente. "
+                "O pacote oficial fixado ocupa cerca de 22 MB e será instalado somente no cache privado "
+                "do aplicativo, sem sudo e sem alterar o sistema. Autoriza a instalação automática?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                if self._deps.runtime_authorize is not None:
+                    self._deps.runtime_authorize()
+            else:
+                new_preferences = replace(
+                    new_preferences,
+                    translation_backend=self._preferences.translation_backend,
+                )
+        if (
+            new_preferences.translation_backend == "translategemma"
+            and self._deps.translation_authorization_required is not None
+            and self._deps.translation_authorization_required()
+        ):
+            answer = QMessageBox.question(
+                self,
+                "Preparar TranslateGemma",
+                "O modelo TranslateGemma 4B Q4_K_M ocupa aproximadamente 2,49 GB. "
+                "Autoriza o Legendar a baixá-lo automaticamente na primeira tradução? "
+                "O download será retomável e validado por SHA-256. "
+                "É necessário aceitar previamente os termos Gemma no Hugging Face; "
+                "a autenticação local existente será reutilizada, sem copiar o token.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                if self._deps.translation_authorize is not None:
+                    self._deps.translation_authorize()
+            else:
+                new_preferences = replace(
+                    new_preferences,
+                    translation_backend=self._preferences.translation_backend,
+                )
         api_key_input = dialog.gemini_api_key_input
         try:
             if api_key_input:
@@ -1043,6 +1098,24 @@ class MainWindow(QMainWindow):
                 translate_readiness_details=details,
                 translation_backend=self._preferences.translation_backend,
             )
+            if (
+                self._preferences.translation_backend == "translategemma"
+                and not available
+            ):
+                if any("llama.cpp não encontrado" in item for item in details):
+                    QMessageBox.information(
+                        self,
+                        "TranslateGemma ainda não está pronto",
+                        "O runtime llama.cpp ainda não está disponível. Autorize sua instalação "
+                        "nas Preferências e tente novamente.",
+                    )
+                elif any("aguarda autorização explícita" in item for item in details):
+                    QMessageBox.information(
+                        self,
+                        "Download do TranslateGemma não autorizado",
+                        "A tradução local permanece desabilitada até que você autorize "
+                        "o download do modelo nas Preferências.",
+                    )
         self._apply_preferences()
         if not self._output_touched:
             self.output_edit.setText(str(self._default_output_path("legenda")))
@@ -1064,6 +1137,7 @@ class MainWindow(QMainWindow):
             output_dir=self._preferences.output_dir,
             target_language=self._preferences.target_language,
             log_expanded=expanded,
+            translation_backend=self._preferences.translation_backend,
         )
 
     def _set_log_expanded(self, expanded: bool) -> None:

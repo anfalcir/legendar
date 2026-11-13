@@ -87,3 +87,19 @@ def test_preferences_dialog_returns_edited_values(qtbot, tmp_path: Path) -> None
     assert preferences.target_language is Language.ENGLISH
     assert preferences.output_dir == tmp_path / "new-output"
     assert preferences.log_expanded is False
+
+
+def test_preferences_dialog_exposes_translategemma_backend(
+    qtbot, tmp_path: Path
+) -> None:
+    dialog = PreferencesDialog(UiPreferences(output_dir=tmp_path))
+    qtbot.addWidget(dialog)
+
+    index = dialog.translation_backend_combo.findData("translategemma")
+    assert index >= 0
+    dialog.translation_backend_combo.setCurrentIndex(index)
+
+    assert dialog.preferences.translation_backend == "translategemma"
+    assert "TranslateGemma" in " ".join(
+        label.text() for label in dialog.findChildren(QLabel)
+    )

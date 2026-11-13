@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from legendar.application.pipeline.serial_pipeline import SerialPipeline
+from legendar.bootstrap import app as bootstrap_app
 from legendar.bootstrap.app import build_ui_dependencies
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.alignment.whisperx import WhisperXAligner
@@ -20,6 +22,9 @@ from legendar.infrastructure.transcription.faster_whisper import (
 from legendar.infrastructure.transcription.whisper import WhisperTranscriber
 from legendar.infrastructure.translation.gemini import GeminiTranslator
 from legendar.infrastructure.translation.nllb import NllbTranslator
+from legendar.infrastructure.translation.translategemma import (
+    TranslateGemmaTranslator,
+)
 
 
 def _settings(tmp_path: Path) -> AppSettings:
@@ -306,6 +311,193 @@ def test_unknown_asr_backend_is_not_silently_accepted(tmp_path, monkeypatch) -> 
         "LEGENDAR_ASR_BACKEND inválido"
         in dependencies.transcription_readiness_details[0]
     )
+
+
+def test_translategemma_backend_is_composed_when_runtime_and_model_exist(
+    tmp_path, monkeypatch
+) -> None:
+    _patch_modules(monkeypatch)
+
+    class FakeRuntime:
+        def __init__(self, _models_dir) -> None:
+            self.shutdown_called = False
+
+        @property
+        def runtime_download_authorized(self) -> bool:
+            return True
+
+        @property
+        def needs_runtime_download_authorization(self) -> bool:
+            return False
+
+        def authorize_runtime_download(self) -> None:
+            pass
+
+        def inspect(self):
+            return SimpleNamespace(
+                executable_available=True,
+                model_available=True,
+                ready_to_start=True,
+                details=("Runtime e pesos disponíveis.",),
+            )
+
+        @property
+        def download_authorized(self) -> bool:
+            return False
+
+        @property
+        def needs_download_authorization(self) -> bool:
+            return False
+
+        def authorize_model_download(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            self.shutdown_called = True
+
+    monkeypatch.setattr(bootstrap_app, "LlamaCppRuntimeManager", FakeRuntime)
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        translation_backend="translategemma",
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    translator = dependencies.pipeline_factory()._ports.translator
+
+    assert dependencies.translate_available
+    assert isinstance(translator, TranslateGemmaTranslator)
+    assert "TranslateGemma 4B IT" in dependencies.translate_readiness_details[0]
+    assert dependencies.runtime_shutdown is not None
+
+
+def test_translategemma_backend_stays_disabled_until_runtime_and_model_exist(
+    tmp_path, monkeypatch
+) -> None:
+    _patch_modules(monkeypatch)
+
+    class FakeRuntime:
+        def __init__(self, _models_dir) -> None:
+            pass
+
+        @property
+        def runtime_download_authorized(self) -> bool:
+            return False
+
+        @property
+        def needs_runtime_download_authorization(self) -> bool:
+            return True
+
+        def authorize_runtime_download(self) -> None:
+            pass
+
+        def inspect(self):
+            return SimpleNamespace(
+                executable_available=False,
+                model_available=False,
+                ready_to_start=False,
+                details=("llama.cpp ausente.", "GGUF ausente."),
+            )
+
+        @property
+        def download_authorized(self) -> bool:
+            return False
+
+        @property
+        def needs_download_authorization(self) -> bool:
+            return True
+
+        def authorize_model_download(self) -> None:
+            pass
+
+        def shutdown(self) -> None:
+            pass
+
+    monkeypatch.setattr(bootstrap_app, "LlamaCppRuntimeManager", FakeRuntime)
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        translation_backend="translategemma",
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert not dependencies.translate_available
+    assert any(
+        "Instale o runtime llama.cpp" in item
+        for item in dependencies.translate_readiness_details
+    )
+    assert any(
+        "GGUF ausente" in item for item in dependencies.translate_readiness_details
+    )
+
+
+def test_translategemma_model_consent_enables_on_demand_preparation(
+    tmp_path, monkeypatch
+) -> None:
+    _patch_modules(monkeypatch)
+
+    class FakeRuntime:
+        authorized = False
+
+        def __init__(self, _models_dir) -> None:
+            pass
+
+        @property
+        def runtime_download_authorized(self) -> bool:
+            return True
+
+        @property
+        def needs_runtime_download_authorization(self) -> bool:
+            return False
+
+        def authorize_runtime_download(self) -> None:
+            pass
+
+        def inspect(self):
+            return SimpleNamespace(
+                executable_available=True,
+                model_available=False,
+                ready_to_start=False,
+                details=("Pesos TranslateGemma ausentes.",),
+            )
+
+        @property
+        def download_authorized(self) -> bool:
+            return self.authorized
+
+        @property
+        def needs_download_authorization(self) -> bool:
+            return True
+
+        def authorize_model_download(self) -> None:
+            self.authorized = True
+
+        def shutdown(self) -> None:
+            pass
+
+    monkeypatch.setattr(bootstrap_app, "LlamaCppRuntimeManager", FakeRuntime)
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        translation_backend="nllb",
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert dependencies.translation_authorization_required is not None
+    assert dependencies.translation_authorization_required()
+    assert dependencies.translation_authorize is not None
+    dependencies.translation_authorize()
+
+    available, details = dependencies.translation_reconfigure("translategemma", None)
+
+    assert available
+    assert "Pesos TranslateGemma ausentes." in details
 
 
 def test_gemini_backend_is_selected_with_api_key(tmp_path, monkeypatch) -> None:
