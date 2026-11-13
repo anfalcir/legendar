@@ -105,4 +105,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="$GITHUB_REF_NAME"
-          gh release create "$tag" dist/legendar-linux-x86_64-*.tar.gz dist/legendar-linux-x86_64-*.tar.gz.sha256 --title "Legendar $tag" --generate-notes
+          gh release create "$tag" dist/legendar-linux-x86_64-*.tar.gz dist/legendar-linux-x86_64-*.tar.gz.sha256 \
+            --title "Legendar $tag — experimental Linux installer" \
+            --notes "Pré-release para homologação no Linux Mint x86_64. Não é uma versão estável: ainda requer validação operacional e smoke TranslateGemma com pesos reais." \
+            --prerelease
