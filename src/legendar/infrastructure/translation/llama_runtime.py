@@ -205,6 +205,27 @@ class LlamaCppRuntimeManager:
         self._runtime_download_authorized = False
         self._runtime_download_required = False
 
+    @staticmethod
+    def _is_supported_runtime_platform() -> bool:
+        return sys.platform.startswith("linux") and platform.machine().lower() in {
+            "x86_64",
+            "amd64",
+        }
+
+    @property
+    def needs_runtime_download_authorization(self) -> bool:
+        return self._runtime_download_required or (
+            self._is_supported_runtime_platform()
+            and self.discover_executable(self.models_dir) is None
+        )
+
+    @property
+    def runtime_download_authorized(self) -> bool:
+        return self._runtime_download_authorized
+
+    def authorize_runtime_download(self) -> None:
+        self._runtime_download_authorized = True
+
     @property
     def needs_download_authorization(self) -> bool:
         """Indica ausência ou corrupção detectada dos pesos locais."""
