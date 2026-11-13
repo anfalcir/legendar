@@ -18,6 +18,7 @@ from legendar.infrastructure.translation.translategemma import TranslateGemmaTra
 def _translategemma_module():
     return importlib.import_module("legendar.infrastructure.translation.translategemma")
 
+
 _MARKER_PATTERN = re.compile(r"\[\[LG[0-9a-f]{10}_[A-Z0-9_]+\]\]")
 
 
@@ -109,14 +110,20 @@ def _translator(runtime=None, requester=None, token_counter=_counter):
     return TranslateGemmaTranslator(
         runtime or FakeRuntime(),
         requester=requester
-        or (lambda _url, _payload, _timeout: {
-            "choices": [{"message": {"content": "Eu voltei."}, "finish_reason": "stop"}]
-        }),
+        or (
+            lambda _url, _payload, _timeout: {
+                "choices": [
+                    {"message": {"content": "Eu voltei."}, "finish_reason": "stop"}
+                ]
+            }
+        ),
         token_counter=token_counter,
     )
 
 
-def test_translate_batches_units_with_official_language_metadata_and_preserves_ids() -> None:
+def test_translate_batches_units_with_official_language_metadata_and_preserves_ids() -> (
+    None
+):
     runtime = FakeRuntime()
     requests = []
     token_payloads = []
@@ -170,7 +177,9 @@ def test_translate_batches_units_with_official_language_metadata_and_preserves_i
     assert progress.updates[-1][0] == 1.0
 
 
-def test_batch_includes_neighboring_context_without_returning_context_as_units() -> None:
+def test_batch_includes_neighboring_context_without_returning_context_as_units() -> (
+    None
+):
     payloads = []
 
     def requester(_url, payload, _timeout):
@@ -218,9 +227,7 @@ def test_reverse_language_direction_uses_single_cue_request() -> None:
     )
 
     assert result.texts == ("I am ready.",)
-    assert payloads[0]["messages"] == [
-        {"role": "user", "content": "Estou pronto."}
-    ]
+    assert payloads[0]["messages"] == [{"role": "user", "content": "Estou pronto."}]
     assert payloads[0]["chat_template_kwargs"] == {
         "source_lang_code": "pt-BR",
         "target_lang_code": "en",
@@ -305,7 +312,9 @@ def test_reordered_batch_markers_trigger_safe_split() -> None:
     def requester(_url, payload, _timeout):
         requests.append(payload)
         if len(requests) == 1:
-            return _response_for_batch(payload, ("Estamos seguros.", "Eu voltarei.")) | {
+            return _response_for_batch(
+                payload, ("Estamos seguros.", "Eu voltarei.")
+            ) | {
                 "choices": [
                     {
                         "message": {
@@ -427,7 +436,9 @@ def test_cancellation_is_checked_between_groups(monkeypatch) -> None:
     def requester(_url, payload, _timeout):
         requests.append(True)
         token.calls += 1
-        return {"choices": [{"message": {"content": "Volto."}, "finish_reason": "stop"}]}
+        return {
+            "choices": [{"message": {"content": "Volto."}, "finish_reason": "stop"}]
+        }
 
     translator = _translator(requester=requester)
     with pytest.raises(RuntimeError, match="cancelled"):
@@ -537,11 +548,14 @@ def test_count_prompt_tokens_returns_integer_count(monkeypatch) -> None:
         "_post_json",
         lambda *_args, **_kwargs: {"input_tokens": 123},
     )
-    assert _translategemma_module()._count_prompt_tokens(
-        "http://127.0.0.1:8080",
-        {},
-        60.0,
-    ) == 123
+    assert (
+        _translategemma_module()._count_prompt_tokens(
+            "http://127.0.0.1:8080",
+            {},
+            60.0,
+        )
+        == 123
+    )
 
 
 def test_chat_completion_uses_expected_endpoint(monkeypatch) -> None:
