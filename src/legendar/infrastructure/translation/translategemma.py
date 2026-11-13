@@ -129,9 +129,14 @@ class TranslateGemmaTranslator:
 
         source_code = _LANGUAGE_CODES[source_language]
         target_code = _LANGUAGE_CODES[target_language]
+        self.runtime.ensure_runtime(
+            consent=self.runtime.runtime_download_authorized,
+            token=token,
+            progress=_ProgressSlice(progress, 0.0, 0.15),
+        )
         self.runtime.ensure_model(
             token=token,
-            progress=_ProgressSlice(progress, 0.0, 0.75),
+            progress=_ProgressSlice(progress, 0.15, 0.75),
         )
         base_url = self.runtime.ensure_running(
             token=token,
