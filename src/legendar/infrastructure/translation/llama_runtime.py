@@ -768,6 +768,7 @@ class LlamaCppRuntimeManager:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     close_fds=True,
+                    env=self._runtime_environment(inspection.executable),
                 )
             except Exception as exc:
                 self._release_runtime_lock_locked()
@@ -784,6 +785,17 @@ class LlamaCppRuntimeManager:
             if progress is not None:
                 progress.report(1.0, "Servidor TranslateGemma pronto")
             return f"http://{self.host}:{port}"
+
+    @staticmethod
+    def _runtime_environment(executable: Path) -> dict[str, str]:
+        env = os.environ.copy()
+        if sys.platform.startswith("linux"):
+            library_path = str(executable.parent)
+            existing = env.get("LD_LIBRARY_PATH", "")
+            env["LD_LIBRARY_PATH"] = (
+                f"{library_path}:{existing}" if existing else library_path
+            )
+        return env
 
     def shutdown(self, *, grace_seconds: float = 5.0) -> None:
         """Encerra somente o filho criado por esta instância; preserva o cache."""
