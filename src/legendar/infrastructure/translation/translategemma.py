@@ -453,9 +453,7 @@ class TranslateGemmaTranslator:
             progress=_ProgressSlice(progress, 0.75, 0.9),
         )
 
-        context_size = int(
-            getattr(self.runtime, "context_size", DEFAULT_CONTEXT_SIZE)
-        )
+        context_size = int(getattr(self.runtime, "context_size", DEFAULT_CONTEXT_SIZE))
         if context_size < _MIN_OUTPUT_TOKENS + _CONTEXT_MARGIN_TOKENS + 1:
             raise TranslationError(
                 "O contexto configurado para TranslateGemma é insuficiente."
