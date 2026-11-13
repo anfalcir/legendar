@@ -371,6 +371,11 @@ class LlamaCppRuntimeManager:
             try:
                 staging.mkdir(mode=0o700)
                 self._extract_runtime_archive(archive_path, staging)
+                extracted_root = staging / LLAMA_CPP_RELEASE
+                if extracted_root.is_dir():
+                    for child in extracted_root.iterdir():
+                        os.replace(child, staging / child.name)
+                    extracted_root.rmdir()
                 executable = next(staging.rglob("llama-server"), None)
                 if executable is None or not executable.is_file():
                     raise ModelError(
