@@ -371,17 +371,13 @@ class LlamaCppRuntimeManager:
             try:
                 staging.mkdir(mode=0o700)
                 self._extract_runtime_archive(archive_path, staging)
-                extracted_root = staging / LLAMA_CPP_RELEASE
-                if extracted_root.is_dir():
-                    for child in extracted_root.iterdir():
-                        os.replace(child, staging / child.name)
-                    extracted_root.rmdir()
                 executable = next(staging.rglob("llama-server"), None)
                 if executable is None or not executable.is_file():
                     raise ModelError(
                         "O pacote llama.cpp não contém o executável llama-server esperado."
                     )
-                os.chmod(executable, os.stat(executable).st_mode | 0o700)
+                if os.name != "nt" and not os.access(executable, os.X_OK):
+                    raise ModelError("O pacote llama.cpp contém llama-server sem permissão de execução.")
                 if runtime_root.exists():
                     shutil.rmtree(runtime_root)
                 os.replace(staging, runtime_root)
