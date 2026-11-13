@@ -110,19 +110,15 @@ def _runtime_archive(*, unsafe_symlink: bool = False) -> bytes:
         root.type = tarfile.DIRTYPE
         archive.addfile(root)
 
-        lib_dir = tarfile.TarInfo(f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/lib/")
-        lib_dir.type = tarfile.DIRTYPE
-        archive.addfile(lib_dir)
-
         library = tarfile.TarInfo(
-            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so.0.9.0"
+            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/libggml-base.so.0.9.0"
         )
         library.mode = 0o644
         library.size = len(b"fake library")
         archive.addfile(library, io.BytesIO(b"fake library"))
 
         versioned_link = tarfile.TarInfo(
-            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so.0"
+            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/libggml-base.so.0"
         )
         versioned_link.type = tarfile.SYMTYPE
         versioned_link.linkname = (
@@ -131,7 +127,7 @@ def _runtime_archive(*, unsafe_symlink: bool = False) -> bytes:
         archive.addfile(versioned_link)
 
         unversioned_link = tarfile.TarInfo(
-            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so"
+            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/libggml-base.so"
         )
         unversioned_link.type = tarfile.SYMTYPE
         unversioned_link.linkname = "libggml-base.so.0"
@@ -176,7 +172,7 @@ def test_runtime_install_requires_consent_and_is_idempotent(
     assert installed.name == "llama-server"
     assert installed.is_file()
     assert manager.discover_executable(tmp_path / "models") == installed
-    library_dir = installed.parent / "lib"
+    library_dir = installed.parent
     assert (library_dir / "libggml-base.so").is_symlink()
     assert (library_dir / "libggml-base.so.0").is_symlink()
     assert (library_dir / "libggml-base.so").read_bytes() == b"fake library"
