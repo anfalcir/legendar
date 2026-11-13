@@ -11,9 +11,9 @@ Aplicação desktop para transcrever áudio/vídeo, produzir legendas SRT e trad
 
 1. Recebe mídia local ou URL do YouTube.
 2. Inspeciona streams e normaliza o áudio para WAV PCM mono 16 kHz, preservando o offset da mídia.
-3. Transcreve a fala no idioma de origem com OpenAI Whisper (padrão) ou faster-whisper/CTranslate2 (seleção explícita, ainda em homologação operacional).
+3. Para mídia, transcreve a fala com OpenAI Whisper (padrão) ou faster-whisper/CTranslate2 (seleção explícita, ainda em homologação operacional).
 4. Alinha palavras com WhisperX.
-5. Segmenta o texto em cues, valida e publica SRT por troca atômica. Também aceita um SRT existente como origem, executando somente tradução/validação/publicação sem refazer áudio, Whisper ou WhisperX.
+5. Segmenta o texto em cues, valida e publica SRT por troca atômica. No modo SRT, executa somente leitura/tradução/validação/publicação, sem processamento de áudio, Whisper ou WhisperX.
 6. Opcionalmente traduz as cues com TranslateGemma local (runtime llama.cpp preparado sob demanda), NLLB como baseline temporária ou Gemini Developer API como rota remota; o backend é selecionado em Preferências.
 
 ## Requisitos
