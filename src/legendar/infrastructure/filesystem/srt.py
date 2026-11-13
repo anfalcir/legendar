@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
-from legendar.domain.entities.subtitle import SubtitleTrack
+from legendar.domain.entities.subtitle import SubtitleCue, SubtitleTrack
 from legendar.domain.errors.catalog import SrtValidationError
+from legendar.domain.value_objects.language import Language
 from legendar.domain.value_objects.text_layout import (
     DEFAULT_MAX_CHARS_PER_LINE,
     DEFAULT_MAX_LINES,
@@ -112,6 +114,64 @@ def parse_srt(content: str) -> tuple[ParsedCue, ...]:
     if not cues:
         raise SrtValidationError("Nenhuma cue SRT reconhecida.")
     return tuple(cues)
+
+
+def read_srt_file(
+    path: str | Path,
+    *,
+    language: Language,
+) -> tuple[SubtitleTrack, str]:
+    """Carrega um SRT de origem sem executar qualquer etapa de mídia.
+
+    UTF-8/UTF-8-BOM é preferido. SRTs antigos em Windows-1252 também são
+    aceitos; não há decode com substituição silenciosa. A numeração de entrada
+    é normalizada para 1..N, enquanto ordem, texto e timestamps são preservados.
+    """
+    if not isinstance(language, Language):
+        raise SrtValidationError("Informe o idioma conhecido do SRT de origem.")
+
+    source = Path(path).expanduser()
+    if not source.is_file():
+        raise SrtValidationError(f"Arquivo SRT não encontrado: {source.name}.")
+    try:
+        raw = source.read_bytes()
+    except OSError as exc:
+        raise SrtValidationError(
+            f"Não foi possível ler o arquivo SRT: {source.name}."
+        ) from exc
+    if not raw:
+        raise SrtValidationError("Arquivo SRT vazio.")
+
+    if raw.startswith((b"\\xff\\xfe", b"\\xfe\\xff")):
+        try:
+            content = raw.decode("utf-16")
+            encoding = "utf-16"
+        except UnicodeDecodeError as exc:
+            raise SrtValidationError("O SRT possui codificação UTF-16 inválida.") from exc
+    else:
+        try:
+            content = raw.decode("utf-8-sig")
+            encoding = "utf-8"
+        except UnicodeDecodeError:
+            try:
+                content = raw.decode("cp1252")
+                encoding = "cp1252"
+            except UnicodeDecodeError as exc:
+                raise SrtValidationError(
+                    "A codificação do SRT não é UTF-8 nem Windows-1252."
+                ) from exc
+
+    parsed = parse_srt(content)
+    cues = tuple(
+        SubtitleCue(
+            index=index,
+            text=item.text,
+            range=item.range,
+            language=language,
+        )
+        for index, item in enumerate(parsed, start=1)
+    )
+    return SubtitleTrack(language=language, cues=cues), encoding
 
 
 def validate_roundtrip(track: SubtitleTrack, content: str) -> None:
