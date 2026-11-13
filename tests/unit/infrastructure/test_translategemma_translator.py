@@ -275,6 +275,19 @@ def test_translate_rejects_duplicate_unit_indexes_before_runtime() -> None:
     assert runtime.calls == []
 
 
+def test_translate_rejects_blank_source_before_runtime() -> None:
+    runtime = FakeRuntime()
+    translator = _translator(runtime)
+    with pytest.raises(TranslationError, match="unidade de origem vazia"):
+        translator.translate(
+            (TranslationUnit(index=1, text="  \\n"),),
+            source_language=Language.ENGLISH,
+            target_language=Language.PORTUGUESE,
+            progress=FakeProgress(),
+        )
+    assert runtime.calls == []
+
+
 def test_invalid_json_batch_is_split_and_recovered_with_same_engine() -> None:
     requests = []
 
