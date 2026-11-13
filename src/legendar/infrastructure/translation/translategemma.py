@@ -161,7 +161,7 @@ def _json_grammar(keys: tuple[str, ...]) -> str:
         for index, key in enumerate(keys)
     ]
     root = 'root ::= "{" ws ' + ' "," ws '.join(entry_names) + ' "}" ws'
-    return "\\n".join(
+    return "\n".join(
         (
             root,
             *entries,
@@ -199,7 +199,7 @@ def _build_batch_payload(
         "Translate each string value in the cues object into the target language. "
         "Use context_before and context_after only to understand context. "
         "Return only a JSON object with exactly the same numeric keys and one "
-        "non-empty translated string for each key. Do not translate the keys.\\n"
+        "non-empty translated string for each key. Do not translate the keys.\n"
         + input_json
     )
     payload: dict[str, object] = {
