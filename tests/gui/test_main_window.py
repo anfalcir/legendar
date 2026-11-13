@@ -1097,9 +1097,7 @@ def test_srt_source_requires_explicit_language(qtbot, tmp_path):
 
 def test_srt_source_cannot_be_overwritten_by_its_output(qtbot, tmp_path):
     source_path = tmp_path / "baseline.srt"
-    original = (
-        "1\n00:00:01,000 --> 00:00:02,000\nHello.\n"
-    )
+    original = "1\n00:00:01,000 --> 00:00:02,000\nHello.\n"
     source_path.write_text(original, encoding="utf-8")
     dependencies = replace(
         _dependencies(tmp_path),
