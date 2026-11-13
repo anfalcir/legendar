@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Smoke test local do TranslateGemma via API OpenAI-compatible do llama.cpp.
+"""Smoke local do TranslateGemma pela API OpenAI-compatível do llama.cpp.
 
-O servidor deve estar iniciado em loopback com o GGUF TranslateGemma 4B.
-O modo --batch-check valida, com uma única geração, a preservação dos
-marcadores usados pelo adaptador de produção.
+O modo --batch-check valida o protocolo de produção: conteúdo tipado oficial,
+códigos de idioma por conteúdo e saída JSON limitada por schema, com IDs
+curtos e exatos para preservar o vínculo entre legendas e traduções.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
@@ -48,7 +47,7 @@ def _post_json(
 ) -> dict[str, object]:
     request = Request(
         f"{base_url}{endpoint}",
-        data=json.dumps(payload, ensure_ascii=False).encode(),
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
     )
@@ -72,17 +71,22 @@ def _post_json(
     return result
 
 
-def build_user_content(text: str, source: str, target: str) -> str:
-    """Valida o par e mantém o texto puro, como exige o chat template oficial."""
-    if source not in LANGUAGES or target not in LANGUAGES:
-        raise ValueError("Par de idiomas não suportado pelo smoke test.")
-    if not text.strip():
-        raise ValueError("O texto de entrada não pode ficar vazio.")
-    return text.strip()
+def _message(text: str, source: str, target: str) -> dict[str, object]:
+    return {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "source_lang_code": source,
+                "target_lang_code": target,
+                "text": text,
+            }
+        ],
+    }
 
 
 def _base_payload(
-    content: str,
+    text: str,
     *,
     model: str,
     source: str,
@@ -90,11 +94,16 @@ def _base_payload(
 ) -> dict[str, object]:
     return {
         "model": model,
-        "messages": [{"role": "user", "content": content}],
-        "chat_template_kwargs": {
-            "source_lang_code": source,
-            "target_lang_code": target,
-        },
+        "messages": [_message(text, source, target)],
+    }
+
+
+def _batch_schema(keys: tuple[str, ...]) -> dict[str, object]:
+    return {
+        "type": "object",
+        "properties": {key: {"type": "string"} for key in keys},
+        "required": list(keys),
+        "additionalProperties": False,
     }
 
 
@@ -107,11 +116,14 @@ def translate(
     target: str = "pt-BR",
     timeout: float = 600,
 ) -> str:
-    """Envia uma única mensagem com metadados de idioma por requisição."""
+    """Envia uma única mensagem no formato tipado oficial do TranslateGemma."""
     endpoint = _validate_endpoint(base_url, timeout)
-    user_content = build_user_content(text, source, target)
+    if source not in LANGUAGES or target not in LANGUAGES or source == target:
+        raise ValueError("Par de idiomas não suportado pelo smoke test.")
+    if not text.strip():
+        raise ValueError("O texto de entrada não pode ficar vazio.")
     payload = _base_payload(
-        user_content,
+        text.strip(),
         model=model,
         source=source,
         target=target,
@@ -135,26 +147,24 @@ def translate_batch_check(
     target: str = "pt-BR",
     timeout: float = 600,
 ) -> tuple[str, ...]:
-    """Valida contagem de contexto e marcadores em três cues consecutivas."""
+    """Valida um lote com IDs em JSON e grammar limitada pelo schema."""
     endpoint = _validate_endpoint(base_url, timeout)
     if source not in LANGUAGES or target not in LANGUAGES or source == target:
         raise ValueError("Par de idiomas não suportado pelo smoke test.")
 
-    seed = "\0".join(_BATCH_SAMPLE)
-    digest = hashlib.sha256(seed.encode()).hexdigest()[:10]
-    prefix = f"[[LG{digest}_"
-    markers = tuple(f"{prefix}UNIT_{position:010d}]]" for position in range(1, 4))
-    content = "\n\n".join(
-        f"{marker}\n{text}"
-        for marker, text in zip(markers, _BATCH_SAMPLE, strict=True)
-    )
+    keys = tuple(str(index) for index in range(1, len(_BATCH_SAMPLE) + 1))
+    input_document = {
+        "context_before": [],
+        "cues": dict(zip(keys, _BATCH_SAMPLE, strict=True)),
+        "context_after": [],
+    }
+    text = json.dumps(input_document, ensure_ascii=False, separators=(",", ":"))
     payload = _base_payload(
-        content,
+        text,
         model=model,
         source=source,
         target=target,
     )
-
     token_result = _post_json(
         endpoint,
         "/v1/chat/completions/input_tokens",
@@ -168,12 +178,23 @@ def translate_batch_check(
         or input_tokens < 0
     ):
         raise RuntimeError("llama.cpp não retornou contagem válida de tokens.")
-    if input_tokens + 512 + 64 > 2048:
+    output_reserve = 256
+    if input_tokens + output_reserve + 64 > 2048:
         raise RuntimeError(
             "O teste de lote excede o contexto de 2K; reduza o conjunto de smoke."
         )
 
-    payload.update({"temperature": 0, "max_tokens": 512, "stream": False})
+    payload.update(
+        {
+            "temperature": 0,
+            "max_tokens": output_reserve,
+            "stream": False,
+            "response_format": {
+                "type": "json_schema",
+                "schema": _batch_schema(keys),
+            },
+        }
+    )
     result = _post_json(endpoint, "/v1/chat/completions", payload, timeout)
     try:
         choice = result["choices"][0]
@@ -187,25 +208,18 @@ def translate_batch_check(
         )
     if not isinstance(output, str) or not output.strip():
         raise RuntimeError("TranslateGemma retornou lote vazio.")
-
-    positions = []
-    for marker in markers:
-        if output.count(marker) != 1:
-            raise RuntimeError(
-                "TranslateGemma removeu ou duplicou marcador; lote não é confiável."
-            )
-        positions.append(output.index(marker))
-    if positions != sorted(positions) or output[: positions[0]].strip():
-        raise RuntimeError("TranslateGemma alterou a ordem dos marcadores.")
-
+    try:
+        decoded = json.loads(output)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("TranslateGemma não respeitou o JSON do lote.") from exc
+    if not isinstance(decoded, dict) or set(decoded) != set(keys):
+        raise RuntimeError("TranslateGemma não preservou os IDs do lote.")
     translations = []
-    for index, marker in enumerate(markers):
-        start = positions[index] + len(marker)
-        end = positions[index + 1] if index + 1 < len(positions) else len(output)
-        translated = " ".join(output[start:end].split())
-        if not translated:
-            raise RuntimeError(f"Tradução vazia no item {index + 1} do lote.")
-        translations.append(translated)
+    for key in keys:
+        translated = decoded[key]
+        if not isinstance(translated, str) or not translated.strip():
+            raise RuntimeError(f"Tradução vazia no item {key} do lote.")
+        translations.append(" ".join(translated.split()))
     return tuple(translations)
 
 
