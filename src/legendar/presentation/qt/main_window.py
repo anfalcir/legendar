@@ -1077,15 +1077,22 @@ class MainWindow(QMainWindow):
             if (
                 self._preferences.translation_backend == "translategemma"
                 and not available
-                and not any("Pesos serão preparados" in item for item in details)
             ):
-                QMessageBox.information(
-                    self,
-                    "TranslateGemma ainda não está pronto",
-                    "O runtime llama.cpp não foi encontrado. A instalação assistida "
-                    "do executável ainda está em implementação. Consulte a decisão "
-                    "técnica em docs/DECISAO_TRANSLATEGEMMA.md.",
-                )
+                if any("llama.cpp não encontrado" in item for item in details):
+                    QMessageBox.information(
+                        self,
+                        "TranslateGemma ainda não está pronto",
+                        "O runtime llama.cpp não foi encontrado. A instalação assistida "
+                        "do executável ainda está em implementação. Consulte a decisão "
+                        "técnica em docs/DECISAO_TRANSLATEGEMMA.md.",
+                    )
+                elif any("aguarda autorização explícita" in item for item in details):
+                    QMessageBox.information(
+                        self,
+                        "Download do TranslateGemma não autorizado",
+                        "A tradução local permanece desabilitada até que você autorize "
+                        "o download do modelo nas Preferências.",
+                    )
         self._apply_preferences()
         if not self._output_touched:
             self.output_edit.setText(str(self._default_output_path("legenda")))
