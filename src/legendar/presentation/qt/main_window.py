@@ -1702,8 +1702,10 @@ class MainWindow(QMainWindow):
             if not self._deps.publishing_available:
                 return False
             source = self._source_language()
+            if source is None:
+                return False
             target = self._target_language()
-            requires_translation = source is not None and source is not target
+            requires_translation = source is not target
             return (
                 not requires_translation
                 or (
