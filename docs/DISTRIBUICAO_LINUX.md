@@ -59,6 +59,7 @@ Para remover, execute `~/.local/share/legendar/app/uninstall.sh`. O desinstalado
 O workflow `.github/workflows/linux-distribution.yml`:
 - verifica `uv.lock` e resolução do perfil CPU;
 - executa `bash -n` e ShellCheck nos scripts;
+- testa o launcher com `uv` simulado nos caminhos saudável/offline e reparo online consentido;
 - gera o tarball com ordenação e timestamps determinísticos;
 - calcula SHA-256 e verifica os arquivos obrigatórios;
 - disponibiliza o artefato da execução do workflow;
