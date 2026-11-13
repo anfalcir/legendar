@@ -10,7 +10,7 @@ from legendar.application.pipeline.translation import (
 )
 from legendar.domain.errors.catalog import TranslationError, UnsupportedLanguageError
 from legendar.domain.value_objects.language import Language
-from legendar.infrastructure.translation import translategemma as translator_module
+import legendar.infrastructure.translation.translategemma as translator_module
 from legendar.infrastructure.translation.translategemma import (
     TranslateGemmaTranslator,
 )
