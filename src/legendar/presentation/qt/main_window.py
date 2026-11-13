@@ -146,6 +146,8 @@ class UiDependencies:
         Callable[[str, str | None], tuple[bool, tuple[str, ...]]] | None
     ) = None
     runtime_shutdown: Callable[[], None] | None = None
+    runtime_authorization_required: Callable[[], bool] | None = None
+    runtime_authorize: Callable[[], None] | None = None
     translation_authorization_required: Callable[[], bool] | None = None
     translation_authorize: Callable[[], None] | None = None
 
@@ -1014,6 +1016,28 @@ class MainWindow(QMainWindow):
         new_preferences = dialog.preferences
         if (
             new_preferences.translation_backend == "translategemma"
+            and self._deps.runtime_authorization_required is not None
+            and self._deps.runtime_authorization_required()
+        ):
+            answer = QMessageBox.question(
+                self,
+                "Instalar llama.cpp",
+                "O Legendar precisa do runtime CPU llama.cpp para executar o TranslateGemma localmente. "
+                "O pacote oficial fixado ocupa cerca de 22 MB e será instalado somente no cache privado "
+                "do aplicativo, sem sudo e sem alterar o sistema. Autoriza a instalação automática?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                if self._deps.runtime_authorize is not None:
+                    self._deps.runtime_authorize()
+            else:
+                new_preferences = replace(
+                    new_preferences,
+                    translation_backend=self._preferences.translation_backend,
+                )
+        if (
+            new_preferences.translation_backend == "translategemma"
             and self._deps.translation_authorization_required is not None
             and self._deps.translation_authorization_required()
         ):
@@ -1082,9 +1106,8 @@ class MainWindow(QMainWindow):
                     QMessageBox.information(
                         self,
                         "TranslateGemma ainda não está pronto",
-                        "O runtime llama.cpp não foi encontrado. A instalação assistida "
-                        "do executável ainda está em implementação. Consulte a decisão "
-                        "técnica em docs/DECISAO_TRANSLATEGEMMA.md.",
+                        "O runtime llama.cpp ainda não está disponível. Autorize sua instalação "
+                        "nas Preferências e tente novamente.",
                     )
                 elif any("aguarda autorização explícita" in item for item in details):
                     QMessageBox.information(
