@@ -78,6 +78,8 @@ def test_translate_uses_official_template_language_metadata_and_preserves_ids() 
         "target_lang_code": "pt-BR",
     }
     assert requests[0][1]["temperature"] == 0.0
+    fractions = [fraction for fraction, _message in progress.updates]
+    assert fractions == sorted(fractions)
     assert progress.updates[-1][0] == 1.0
 
 
