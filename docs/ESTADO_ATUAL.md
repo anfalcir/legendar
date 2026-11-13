@@ -10,7 +10,7 @@
 
 O Legendar é uma aplicação desktop PySide6 com três origens: mídia local, YouTube e arquivo SRT. Para mídia, executa aquisição/inspeção, preparação de áudio, ASR, alinhamento, segmentação, tradução opcional e publicação. Para uma origem SRT, executa leitura, tradução opcional, validação e publicação diretamente, sem reprocessar áudio.
 
-A origem `Arquivo SRT` foi integrada pela [PR #43](https://github.com/anfalcir/legendar/pull/43), commit `483ec3ff6c9ef544553ea994084493ebe25cef72`. Ela exige idioma de origem explícito, preserva a ordem e os intervalos das cues e impede sobrescrever o arquivo de entrada. A rota foi coberta por testes de infraestrutura, aplicação, GUI e arquitetura.
+A origem `Arquivo SRT` foi integrada pela [PR #43](https://github.com/anfalcir/legendar/pull/43), commit `483ec3ff6c9ef544553ea994084493ebe25cef72`. Ela exige idioma de origem explícito, preserva a ordem, o texto e os timestamps das cues e impede sobrescrever o arquivo de entrada. A rota foi coberta por testes de infraestrutura, aplicação, GUI e arquitetura. O bundle Linux `0.1.0` foi construído a partir da mesma árvore de código integrada.
 
 ## Tradução vigente
 
@@ -40,6 +40,7 @@ Detalhes e limites estão em [HOMOLOGACAO.md](HOMOLOGACAO.md).
 - A CI da PR #41 aprovou 27 verificações; 3 verificações opcionais foram puladas e nenhuma falhou.
 - A CI pós-merge da Fase 8 concluiu 5/5 jobs com sucesso.
 - A CI da origem SRT na PR #43 aprovou 27 verificações; 3 opcionais foram puladas e nenhuma falhou.
+- A PR documental #44 foi fechada sem merge independente ao ser substituída pela consolidação da PR #45. Seu registro da entrada SRT foi recuperado integralmente no plano arquivado em `docs/archive/phase-8.1/FASE_8_1_PLANO.md`; os documentos vivos já refletem esse estado consolidado.
 - O bundle Linux x86_64 foi construído e teve seu checksum verificado; ainda não existe uma release estável publicada.
 
 Os números de CI acima comprovam os contratos de software exercitados, não qualidade editorial por si só.
