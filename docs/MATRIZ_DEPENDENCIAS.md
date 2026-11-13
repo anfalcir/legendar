@@ -95,7 +95,7 @@ Referência: [NLLB-200 distilled 600M](https://huggingface.co/facebook/nllb-200-
 
 ### 5.4. Gemini Developer API para tradução contextual
 
-O adaptador `GeminiTranslator` usa HTTPS via biblioteca padrão `urllib`; não adiciona SDK ou dependência Python ao runtime. A chamada exige `GEMINI_API_KEY` no ambiente e transmite o texto das cues à API externa. O backend é opt-in e o NLLB local permanece padrão.
+O adaptador `GeminiTranslator` usa HTTPS via biblioteca padrão `urllib`; não adiciona SDK ou dependência Python ao runtime. A chamada exige `GEMINI_API_KEY` e transmite o texto das cues à API externa. Gemini é uma rota remota explicitamente selecionável. TranslateGemma é o novo motor local em homologação; NLLB permanece temporariamente selecionável como baseline legado, sem fallback automático.
 
 - Modelo padrão `gemini-3.8-flash`, estável/GA segundo a documentação oficial consultada em 11/11/2026.
 - Gemini 3 usa `thinkingLevel=LOW` no payload para reduzir latência; `temperature` não é enviado.
