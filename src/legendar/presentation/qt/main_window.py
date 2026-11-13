@@ -89,6 +89,7 @@ _MEDIA_FILTER = (
     "Todos os arquivos (*)"
 )
 _SRT_FILTER = "Legenda SRT (*.srt)"
+_SRT_SOURCE_KIND = "srt_file"
 _CLOSE_WAIT_MS = 5000
 
 
@@ -389,19 +390,20 @@ class MainWindow(QMainWindow):
         return card
 
     def _build_input_panel(self) -> QFrame:
-        panel, layout = self._panel("Origem da mídia")
+        panel, layout = self._panel("Origem da mídia ou legenda")
 
         self.media_kind_combo = prepare_combo(QComboBox(panel))
         self.media_kind_combo.setObjectName("mediaKindCombo")
-        self.media_kind_combo.addItem("Arquivo local", MediaKind.LOCAL_FILE.value)
+        self.media_kind_combo.addItem("Arquivo de mídia", MediaKind.LOCAL_FILE.value)
+        self.media_kind_combo.addItem("Arquivo SRT", _SRT_SOURCE_KIND)
         self.media_kind_combo.addItem("YouTube", MediaKind.YOUTUBE.value)
-        self.media_kind_combo.setAccessibleName("Tipo de origem da mídia")
+        self.media_kind_combo.setAccessibleName("Tipo de origem da legenda ou mídia")
 
         self.file_edit = QLineEdit(panel)
         self.file_edit.setObjectName("fileEdit")
         self.file_edit.setPlaceholderText("Caminho do arquivo de áudio ou vídeo")
         self.file_edit.setClearButtonEnabled(True)
-        self.file_edit.setAccessibleName("Arquivo ou URL da mídia")
+        self.file_edit.setAccessibleName("Arquivo SRT, arquivo de mídia ou URL")
         self.browse_button = QPushButton("Selecionar arquivo…", panel)
         self.browse_button.setObjectName("browseButton")
         self.browse_button.setAccessibleName("Selecionar arquivo de mídia")
@@ -689,15 +691,26 @@ class MainWindow(QMainWindow):
                 return candidate
             counter += 1
 
-    def _source_kind(self) -> MediaKind:
-        return MediaKind(str(self.media_kind_combo.currentData()))
+    def _source_kind(self) -> str:
+        return str(self.media_kind_combo.currentData())
 
     def _sync_source_controls(self) -> None:
-        local = self._source_kind() is MediaKind.LOCAL_FILE
-        self.browse_button.setVisible(local)
-        self.browse_button.setEnabled(local and not self.is_running)
+        source_kind = self._source_kind()
+        local = source_kind == MediaKind.LOCAL_FILE.value
+        srt_source = source_kind == _SRT_SOURCE_KIND
+        youtube = source_kind == MediaKind.YOUTUBE.value
+        self.browse_button.setVisible(local or srt_source)
+        self.browse_button.setEnabled((local or srt_source) and not self.is_running)
+        self.browse_button.setText(
+            "Selecionar SRT…" if srt_source else "Selecionar arquivo…"
+        )
+        self.browse_button.setAccessibleName(
+            "Selecionar arquivo SRT" if srt_source else "Selecionar arquivo de mídia"
+        )
         self.file_edit.setPlaceholderText(
-            "Caminho do arquivo de áudio ou vídeo"
+            "Caminho do arquivo SRT de origem"
+            if srt_source
+            else "Caminho do arquivo de áudio ou vídeo"
             if local
             else "https://www.youtube.com/watch?v=..."
         )
@@ -715,7 +728,14 @@ class MainWindow(QMainWindow):
         self.stream_combo.setEnabled(
             local and self._stream_choice_available() and not self.is_running
         )
-        if not local:
+        if srt_source:
+            self._show_media_info(
+                "O texto e os timestamps serão lidos diretamente do SRT. "
+                "Whisper, WhisperX e FFmpeg não serão executados."
+            )
+            self.stream_combo.clear()
+            self.stream_combo.addItem("Não se aplica a arquivos SRT", None)
+        elif youtube:
             self._show_media_info(
                 "O áudio do vídeo será obtido automaticamente. "
                 "A seleção manual de faixa local não se aplica ao download."
@@ -747,15 +767,21 @@ class MainWindow(QMainWindow):
 
     def _on_media_kind_changed(self, _index: int) -> None:
         self._invalidate_media_inspection()
-        if self._source_kind() is MediaKind.YOUTUBE:
+        source_kind = self._source_kind()
+        if source_kind == MediaKind.YOUTUBE.value:
             self._output_touched = False
             self._suggest_output(Path("youtube-media"))
-        elif self.file_edit.text().strip():
+        elif source_kind in {MediaKind.LOCAL_FILE.value, _SRT_SOURCE_KIND} and self.file_edit.text().strip():
             self._suggest_output(Path(self.file_edit.text().strip()))
+        self._sync_translation_controls()
 
     def _choose_file(self) -> None:
+        srt_source = self._source_kind() == _SRT_SOURCE_KIND
         selected, _ = QFileDialog.getOpenFileName(
-            self, "Selecionar mídia", str(Path.home()), _MEDIA_FILTER
+            self,
+            "Selecionar SRT de origem" if srt_source else "Selecionar mídia",
+            str(Path.home()),
+            _SRT_FILTER if srt_source else _MEDIA_FILTER,
         )
         if selected:
             self.file_edit.setText(selected)
@@ -773,9 +799,10 @@ class MainWindow(QMainWindow):
 
     def _on_file_edited(self, text: str) -> None:
         self._invalidate_media_inspection()
-        if self._source_kind() is MediaKind.LOCAL_FILE and text.strip():
+        source_kind = self._source_kind()
+        if source_kind in {MediaKind.LOCAL_FILE.value, _SRT_SOURCE_KIND} and text.strip():
             self._suggest_output(Path(text.strip()))
-        elif self._source_kind() is MediaKind.YOUTUBE and text.strip():
+        elif source_kind == MediaKind.YOUTUBE.value and text.strip():
             self._suggest_output(Path("youtube-media"))
 
     def _suggest_output(self, source_path: Path) -> None:
