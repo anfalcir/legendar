@@ -22,7 +22,8 @@ tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owne
     -C "$DIST_DIR" -cf "$TAR_FILE" "$BUNDLE_NAME"
 gzip -n -f "$TAR_FILE"
 (cd "$DIST_DIR" && sha256sum "$(basename "$ARCHIVE")" > "$(basename "$ARCHIVE").sha256")
-tar -tzf "$ARCHIVE" | grep -Fq "$BUNDLE_NAME/packaging/linux/install.sh"
-tar -tzf "$ARCHIVE" | grep -Fq "$BUNDLE_NAME/uv.lock"
+CONTENTS="$(tar -tzf "$ARCHIVE")"
+grep -Fq "$BUNDLE_NAME/packaging/linux/install.sh" <<< "$CONTENTS"
+grep -Fq "$BUNDLE_NAME/uv.lock" <<< "$CONTENTS"
 printf 'Bundle: %s\n' "$ARCHIVE"
 printf 'SHA-256: %s\n' "$ARCHIVE.sha256"
