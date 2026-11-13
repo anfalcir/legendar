@@ -155,7 +155,7 @@ def _json_grammar(keys: tuple[str, ...]) -> str:
     response_format/json_schema para o sampler. O parâmetro GBNF direto é
     aplicado pelo servidor e mantém os IDs sem depender de marcadores no texto.
     """
-    entry_names = [f'entry{_rule_suffix(index)}' for index in range(len(keys))]
+    entry_names = [f"entry{_rule_suffix(index)}" for index in range(len(keys))]
     entries = [
         f'entry{_rule_suffix(index)} ::= "\\"{key}\\"" ws ":" ws string'
         for index, key in enumerate(keys)
@@ -165,10 +165,10 @@ def _json_grammar(keys: tuple[str, ...]) -> str:
         (
             root,
             *entries,
-            'string ::= "\\\"" char+ "\\\""',
+            'string ::= "\\"" char+ "\\""',
             'char ::= [^"\\\\\\x7F\\x00-\\x1F] | '
             '[\\\\] (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})',
-            'ws ::= [ \\t\\n]*',
+            "ws ::= [ \\t\\n]*",
         )
     )
 
@@ -182,10 +182,7 @@ def _build_batch_payload(
 ) -> tuple[dict[str, object], tuple[str, ...]]:
     """Cria entrada compacta e schema de saída com IDs locais determinísticos."""
     keys = _batch_keys(len(batch))
-    cues = {
-        key: unit.text.strip()
-        for key, unit in zip(keys, batch, strict=True)
-    }
+    cues = {key: unit.text.strip() for key, unit in zip(keys, batch, strict=True)}
     source_document = {
         "context_before": list(batch[0].context.before[-2:]),
         "cues": cues,
@@ -340,9 +337,7 @@ class TranslateGemmaTranslator:
         """Métricas de tradução sem texto, prompt, resposta ou credenciais."""
         with self._metrics_lock:
             counters = dict(self._metrics)
-        context_size = int(
-            getattr(self.runtime, "context_size", DEFAULT_CONTEXT_SIZE)
-        )
+        context_size = int(getattr(self.runtime, "context_size", DEFAULT_CONTEXT_SIZE))
         return {
             "configuration": {
                 "adapter": "translategemma-llama.cpp",
