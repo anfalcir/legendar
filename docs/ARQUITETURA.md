@@ -54,8 +54,8 @@ src/legendar/
 
 1. `MainWindow` monta `JobRequest` (uma origem exclusiva: mídia ou SRT, idiomas, tradução, faixa) e `JobContext` (job id, workspace, destino, token).
 2. `JobWorker` roda `JobController.run` em `QThread`; o controlador abre `VALIDATING_INPUT`.
-3. Para mídia, o fluxo segue aquisição/inspeção → áudio → Whisper → WhisperX → segmentação. Para SRT, `LOADING_SUBTITLES` lê/valida as cues e salta todas as portas de mídia, seguindo diretamente para tradução opcional → validação → publicação.
-3. `SerialPipeline` executa, em ordem: aquisição, inspeção, preparação de áudio, transcrição, alinhamento, segmentação, tradução opcional, validação e publicação; a sessão de desempenho mede cada etapa sem interferir no fluxo.
+3. O caminho SRT usa `LOADING_SUBTITLES` para ler/validar as cues e salta todas as portas de mídia; o caminho de mídia mantém a sequência de aquisição e ASR.
+4. `SerialPipeline` percorre a rota escolhida: mídia segue aquisição/inspeção → áudio → Whisper → WhisperX → segmentação; SRT existente segue leitura/validação de cues sem chamar portas de mídia. Ambas podem executar tradução opcional, validação editorial e publicação.
 4. Cada etapa reporta progresso por `ScaledProgress`, que mapeia a fração local para a faixa global.
 5. O controlador converte transições e mensagens em eventos; o resultado é um único evento terminal.
 6. `JobViewModel` transforma eventos em snapshot; a janela apenas desenha, habilita controles e limpa o workspace.
