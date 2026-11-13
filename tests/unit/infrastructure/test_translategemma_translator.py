@@ -165,6 +165,9 @@ def test_translate_uses_llama_cpp_language_kwargs_and_compact_gbnf_mapping() -> 
         "source_lang_code": "en",
         "target_lang_code": "pt-BR",
     }
+    assert "natural Brazilian Portuguese" in _content(payload)
+    assert "races, clans, species" in _content(payload)
+    assert "Preserve negation, intent, numbers" in _content(payload)
     assert _source_document(payload)["cues"] == {
         "1": "I will be back.",
         "2": "We are safe.",
