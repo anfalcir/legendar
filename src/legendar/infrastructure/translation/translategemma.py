@@ -133,7 +133,7 @@ def _marker_prefix(units: tuple[TranslationUnit, ...]) -> str:
     counter = 0
     all_source = [unit.text for unit in units] + list(before) + list(after)
     while True:
-        digest = hashlib.sha256(f"{seed}:{counter}".encode("utf-8")).hexdigest()[:10]
+        digest = hashlib.sha256(f"{seed}:{counter}".encode()).hexdigest()[:10]
         prefix = f"[[LG{digest}_"
         if not any(prefix in text for text in all_source):
             return prefix
