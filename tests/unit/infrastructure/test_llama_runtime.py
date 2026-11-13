@@ -103,12 +103,40 @@ def _manager(tmp_path: Path, **overrides) -> tuple[LlamaCppRuntimeManager, list]
     return LlamaCppRuntimeManager(**options), processes
 
 
-def _runtime_archive() -> bytes:
+def _runtime_archive(*, unsafe_symlink: bool = False) -> bytes:
     payload = io.BytesIO()
     with tarfile.open(fileobj=payload, mode="w:gz") as archive:
         root = tarfile.TarInfo(f"{llama_runtime.LLAMA_CPP_RELEASE}/")
         root.type = tarfile.DIRTYPE
         archive.addfile(root)
+
+        lib_dir = tarfile.TarInfo(f"{llama_runtime.LLAMA_CPP_RELEASE}/lib/")
+        lib_dir.type = tarfile.DIRTYPE
+        archive.addfile(lib_dir)
+
+        library = tarfile.TarInfo(
+            f"{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so.0.9.0"
+        )
+        library.mode = 0o644
+        library.size = len(b"fake library")
+        archive.addfile(library, io.BytesIO(b"fake library"))
+
+        versioned_link = tarfile.TarInfo(
+            f"{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so.0"
+        )
+        versioned_link.type = tarfile.SYMTYPE
+        versioned_link.linkname = (
+            "../../../outside" if unsafe_symlink else "libggml-base.so.0.9.0"
+        )
+        archive.addfile(versioned_link)
+
+        unversioned_link = tarfile.TarInfo(
+            f"{llama_runtime.LLAMA_CPP_RELEASE}/lib/libggml-base.so"
+        )
+        unversioned_link.type = tarfile.SYMTYPE
+        unversioned_link.linkname = "libggml-base.so.0"
+        archive.addfile(unversioned_link)
+
         binary = tarfile.TarInfo(f"{llama_runtime.LLAMA_CPP_RELEASE}/llama-server")
         binary.mode = 0o755
         binary.size = len(b"fake server")
@@ -124,6 +152,9 @@ def test_runtime_install_requires_consent_and_is_idempotent(
         llama_runtime,
         "LLAMA_CPP_SHA256",
         hashlib.sha256(archive).hexdigest(),
+    )
+    monkeypatch.setattr(
+        llama_runtime, "LLAMA_CPP_ARCHIVE_SIZE", len(archive)
     )
     response = DownloadResponse(
         [archive],
@@ -145,7 +176,80 @@ def test_runtime_install_requires_consent_and_is_idempotent(
     assert installed.name == "llama-server"
     assert installed.is_file()
     assert manager.discover_executable(tmp_path / "models") == installed
+    library_dir = installed.parent / "lib"
+    assert (library_dir / "libggml-base.so").is_symlink()
+    assert (library_dir / "libggml-base.so.0").is_symlink()
+    assert (library_dir / "libggml-base.so").read_bytes() == b"fake library"
     assert manager.ensure_runtime(consent=True) == installed
+
+
+def test_runtime_install_rejects_symlink_escaping_staging(tmp_path) -> None:
+    archive = _runtime_archive(unsafe_symlink=True)
+    archive_path = tmp_path / "unsafe.tar.gz"
+    archive_path.write_bytes(archive)
+    destination = tmp_path / "staging"
+    destination.mkdir()
+
+    with pytest.raises(ModelError, match="tenta sair do staging"):
+        LlamaCppRuntimeManager._extract_runtime_archive(archive_path, destination)
+
+    assert not (tmp_path / "outside").exists()
+
+
+def test_runtime_install_reuses_verified_archive_after_extraction_failure(
+    tmp_path, monkeypatch
+) -> None:
+    archive = _runtime_archive()
+    monkeypatch.setattr(
+        llama_runtime, "LLAMA_CPP_SHA256", hashlib.sha256(archive).hexdigest()
+    )
+    monkeypatch.setattr(llama_runtime, "LLAMA_CPP_ARCHIVE_SIZE", len(archive))
+    requests = []
+    response = DownloadResponse(
+        [archive],
+        headers={"Content-Length": str(len(archive))},
+    )
+
+    def opener(*_args, **_kwargs):
+        requests.append(True)
+        return response
+
+    manager = LlamaCppRuntimeManager(
+        tmp_path / "models",
+        executable=tmp_path / "missing-llama",
+        model_path=tmp_path / "model.gguf",
+        runtime_opener=opener,
+    )
+    monkeypatch.setattr(llama_runtime.sys, "platform", "linux")
+    monkeypatch.setattr(llama_runtime.platform, "machine", lambda: "x86_64")
+    extract = manager._extract_runtime_archive
+    attempts = []
+
+    def fail_once(*_args, **_kwargs):
+        attempts.append(True)
+        if len(attempts) == 1:
+            raise ModelError("falha simulada na extração")
+        return extract(*_args, **_kwargs)
+
+    monkeypatch.setattr(
+        LlamaCppRuntimeManager, "_extract_runtime_archive", staticmethod(fail_once)
+    )
+    with pytest.raises(ModelError, match="falha simulada"):
+        manager.ensure_runtime(consent=True)
+
+    cached_archive = (
+        tmp_path
+        / "models"
+        / "runtime"
+        / f"{llama_runtime.LLAMA_CPP_ARCHIVE}.part"
+    )
+    assert cached_archive.is_file()
+    assert len(requests) == 1
+
+    installed = manager.ensure_runtime(consent=True)
+    assert installed.is_file()
+    assert len(requests) == 1
+    assert len(attempts) == 2
 
 
 def test_ensure_model_reuses_valid_cached_weights_without_consent(
