@@ -12,6 +12,7 @@ from tests.helpers.fakes import (
     FakeDownloader,
     FakeInspector,
     FakePublisher,
+    FakeSrtSourceReader,
     FakeTranscriber,
     FakeTranslator,
     make_media_info,
@@ -52,6 +53,7 @@ def _pipeline(**overrides) -> tuple[SerialPipeline, dict]:
         "transcriber": FakeTranscriber(),
         "aligner": FakeAligner(),
         "publisher": FakePublisher(),
+        "srt_source_reader": FakeSrtSourceReader(),
     }
     ports.update(overrides)
     return SerialPipeline(PipelinePorts(**ports)), ports
