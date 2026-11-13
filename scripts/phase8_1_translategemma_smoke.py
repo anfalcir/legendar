@@ -48,7 +48,7 @@ def _post_json(
 ) -> dict[str, object]:
     request = Request(
         f"{base_url}{endpoint}",
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        data=json.dumps(payload, ensure_ascii=False).encode(),
         headers={"Content-Type": "application/json"},
         method="POST",
     )
