@@ -49,7 +49,14 @@ def test_translate_sends_plain_text_and_language_codes_per_request(monkeypatch) 
         assert "grammar" not in payload
         assert payload["stream"] is False
         return _Response(
-            {"choices": [{"message": {"content": "Eu vou voltar."}, "finish_reason": "stop"}]}
+            {
+                "choices": [
+                    {
+                        "message": {"content": "Eu vou voltar."},
+                        "finish_reason": "stop",
+                    }
+                ]
+            }
         )
 
     monkeypatch.setattr(
