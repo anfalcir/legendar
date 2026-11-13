@@ -529,7 +529,6 @@ def test_count_prompt_tokens_rejects_invalid_count(monkeypatch) -> None:
         )
 
 
-
 def test_count_prompt_tokens_returns_integer_count(monkeypatch) -> None:
     monkeypatch.setattr(
         translategemma_module,
