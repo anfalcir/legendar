@@ -2,6 +2,8 @@
 set -Eeuo pipefail
 APP_DIR="$HOME/.local/share/legendar/app"
 BIN_DIR="$HOME/.local/bin"
+UV_BIN_DIR="$HOME/.local/share/legendar/tools"
+UV_BIN="$UV_BIN_DIR/uv"
 DESKTOP_DIR="$HOME/.local/share/applications"
 ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
 UV_VERSION="0.13.7"
@@ -50,9 +52,9 @@ ensure_media_tools() {
     command -v ffprobe >/dev/null 2>&1 || fail "ffprobe não foi instalado corretamente."
 }
 ensure_uv() {
-    local uv_bin="$BIN_DIR/uv" installer
-    mkdir -p "$BIN_DIR"
-    if [[ -x "$uv_bin" ]] && "$uv_bin" --version | grep -Fq " $UV_VERSION"; then return; fi
+    local installer
+    mkdir -p "$UV_BIN_DIR"
+    if [[ -x "$UV_BIN" ]] && "$UV_BIN" --version | grep -Fq " $UV_VERSION"; then return; fi
     printf 'Instalando uv %s no diretório privado do usuário...\n' "$UV_VERSION"
     installer="$(mktemp)"
     if command -v curl >/dev/null 2>&1; then
@@ -62,10 +64,10 @@ ensure_uv() {
     else
         fail "Instale curl ou wget para preparar o uv."
     fi
-    UV_INSTALL_DIR="$BIN_DIR" UV_NO_MODIFY_PATH=1 sh "$installer"
+    UV_INSTALL_DIR="$UV_BIN_DIR" UV_NO_MODIFY_PATH=1 sh "$installer"
     rm -f "$installer"
-    [[ -x "$uv_bin" ]] || fail "O instalador não produziu $uv_bin."
-    "$uv_bin" --version | grep -Fq " $UV_VERSION" || fail "Versão do uv divergente."
+    [[ -x "$UV_BIN" ]] || fail "O instalador não produziu $UV_BIN."
+    "$UV_BIN" --version | grep -Fq " $UV_VERSION" || fail "Versão do uv divergente."
 }
 ensure_media_tools
 AVAILABLE_KB="$(df -Pk "$HOME" | awk 'NR == 2 { print $4 }')"
@@ -74,7 +76,7 @@ if [[ -n "$AVAILABLE_KB" ]] && (( AVAILABLE_KB < 8 * 1024 * 1024 )); then
     ask "Deseja continuar mesmo assim? O ambiente Python e os modelos ocupam espaço adicional." || fail "Instalação cancelada por espaço insuficiente."
 fi
 ensure_uv
-export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
+export PATH="$BIN_DIR:$UV_BIN_DIR:$HOME/.cargo/bin:$PATH"
 printf '\nPreparando o Legendar em %s...\n' "$APP_DIR"
 mkdir -p "$APP_DIR" "$DESKTOP_DIR" "$ICON_DIR"
 cp -a "$BUNDLE_ROOT/src" "$APP_DIR/"
@@ -85,8 +87,8 @@ mkdir -p "$HOME/.local/share/doc/legendar"
 cp -a "$BUNDLE_ROOT/docs/." "$HOME/.local/share/doc/legendar/"
 chmod 700 "$APP_DIR/launch.sh" "$APP_DIR/uninstall.sh"
 printf 'Preparando Python 3.12 gerenciado pelo uv...\n'
-uv python install 3.12
-(cd "$APP_DIR" && uv sync --locked --no-dev --extra runtime-cpu --python 3.12)
+"$UV_BIN" python install 3.12
+(cd "$APP_DIR" && "$UV_BIN" sync --locked --no-dev --extra runtime-cpu --python 3.12)
 if [[ -f "$BUNDLE_ROOT/src/legendar/presentation/qt/assets/legendar.svg" ]]; then
     install -m 644 "$BUNDLE_ROOT/src/legendar/presentation/qt/assets/legendar.svg" "$ICON_DIR/legendar.svg"
 fi
