@@ -461,7 +461,7 @@ def test_post_json_decodes_object_response(monkeypatch) -> None:
         "urlopen",
         lambda *_args, **_kwargs: _FakeHttpResponse(b'{"ok": true}'),
     )
-    assert translategemma_module._post_json(
+    assert _translategemma_module()._post_json(
         "http://127.0.0.1:8080",
         "/test",
         {"value": 1},
@@ -477,7 +477,7 @@ def test_post_json_rejects_invalid_json_shapes(monkeypatch, body) -> None:
         lambda *_args, **_kwargs: _FakeHttpResponse(body),
     )
     with pytest.raises(TranslationError):
-        translategemma_module._post_json(
+        _translategemma_module()._post_json(
             "http://127.0.0.1:8080",
             "/test",
             {},
@@ -497,7 +497,7 @@ def test_post_json_normalizes_http_and_network_errors(monkeypatch) -> None:
 
     monkeypatch.setattr(translategemma_module, "urlopen", http_failure)
     with pytest.raises(TranslationError, match="HTTP 503"):
-        translategemma_module._post_json(
+        _translategemma_module()._post_json(
             "http://127.0.0.1:8080",
             "/test",
             {},
@@ -509,7 +509,7 @@ def test_post_json_normalizes_http_and_network_errors(monkeypatch) -> None:
 
     monkeypatch.setattr(translategemma_module, "urlopen", network_failure)
     with pytest.raises(TranslationError, match="URLError"):
-        translategemma_module._post_json(
+        _translategemma_module()._post_json(
             "http://127.0.0.1:8080",
             "/test",
             {},
@@ -524,7 +524,7 @@ def test_count_prompt_tokens_rejects_invalid_count(monkeypatch) -> None:
         lambda *_args, **_kwargs: {"input_tokens": True},
     )
     with pytest.raises(TranslationError, match="contagem válida"):
-        translategemma_module._count_prompt_tokens(
+        _translategemma_module()._count_prompt_tokens(
             "http://127.0.0.1:8080",
             {},
             1.0,
@@ -537,7 +537,7 @@ def test_count_prompt_tokens_returns_integer_count(monkeypatch) -> None:
         "_post_json",
         lambda *_args, **_kwargs: {"input_tokens": 123},
     )
-    assert translategemma_module._count_prompt_tokens(
+    assert _translategemma_module()._count_prompt_tokens(
         "http://127.0.0.1:8080",
         {},
         60.0,
@@ -552,7 +552,7 @@ def test_chat_completion_uses_expected_endpoint(monkeypatch) -> None:
         lambda *args: calls.append(args) or {"choices": []},
     )
     payload = {"model": "translategemma-4b"}
-    assert translategemma_module._chat_completion(
+    assert _translategemma_module()._chat_completion(
         "http://127.0.0.1:8080/",
         payload,
         10.0,
