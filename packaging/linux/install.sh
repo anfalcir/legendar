@@ -25,12 +25,19 @@ case "$(uname -m)" in x86_64|amd64) ;; *) fail "Arquitetura não suportada; exig
 for required in pyproject.toml uv.lock src/legendar/__main__.py; do
     [[ -f "$BUNDLE_ROOT/$required" ]] || fail "Pacote incompleto: $required ausente."
 done
-command -v curl >/dev/null 2>&1 || fail "Instale curl para continuar."
 ensure_media_tools() {
-    if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1; then return; fi
-    printf '\nO Legendar precisa de FFmpeg e ffprobe para processar mídia.\n'
+    local missing=0
+    command -v ffmpeg >/dev/null 2>&1 || missing=1
+    command -v ffprobe >/dev/null 2>&1 || missing=1
+    if command -v ldconfig >/dev/null 2>&1; then
+        for library in libEGL.so.1 libGL.so.1 libxkbcommon-x11.so.0 libxcb-cursor.so.0; do
+            ldconfig -p 2>/dev/null | grep -Fq "$library" || missing=1
+        done
+    fi
+    [[ "$missing" -eq 1 ]] || return
+    printf '\nO Legendar precisa de FFmpeg/ffprobe e bibliotecas nativas do Qt.\n'
     if ! command -v apt-get >/dev/null 2>&1 || ! command -v sudo >/dev/null 2>&1; then
-        fail "Instale manualmente ffmpeg, libegl1, libgl1 e libxkbcommon-x11-0."
+        fail "Instale manualmente FFmpeg, ffprobe e bibliotecas Qt/GL do sistema."
     fi
     ask "Deseja instalar FFmpeg e bibliotecas de interface pelo APT? Será solicitada a senha do sistema." \
         || fail "Instalação cancelada; nenhuma alteração foi feita no sistema."
@@ -48,7 +55,13 @@ ensure_uv() {
     if [[ -x "$uv_bin" ]] && "$uv_bin" --version | grep -Fq " $UV_VERSION"; then return; fi
     printf 'Instalando uv %s no diretório privado do usuário...\n' "$UV_VERSION"
     installer="$(mktemp)"
-    curl --fail --location --silent --show-error "https://astral.sh/uv/$UV_VERSION/install.sh" --output "$installer"
+    if command -v curl >/dev/null 2>&1; then
+        curl --fail --location --silent --show-error "https://astral.sh/uv/$UV_VERSION/install.sh" --output "$installer"
+    elif command -v wget >/dev/null 2>&1; then
+        wget --quiet "https://astral.sh/uv/$UV_VERSION/install.sh" --output-document="$installer"
+    else
+        fail "Instale curl ou wget para preparar o uv."
+    fi
     UV_INSTALL_DIR="$BIN_DIR" UV_NO_MODIFY_PATH=1 sh "$installer"
     rm -f "$installer"
     [[ -x "$uv_bin" ]] || fail "O instalador não produziu $uv_bin."
@@ -68,6 +81,8 @@ cp -a "$BUNDLE_ROOT/src" "$APP_DIR/"
 cp -a "$BUNDLE_ROOT/pyproject.toml" "$BUNDLE_ROOT/uv.lock" "$BUNDLE_ROOT/README.md" "$BUNDLE_ROOT/LICENSE" "$APP_DIR/"
 cp -a "$BUNDLE_ROOT/packaging/linux/launch.sh" "$APP_DIR/launch.sh"
 cp -a "$BUNDLE_ROOT/packaging/linux/uninstall.sh" "$APP_DIR/uninstall.sh"
+mkdir -p "$HOME/.local/share/doc/legendar"
+cp -a "$BUNDLE_ROOT/docs/." "$HOME/.local/share/doc/legendar/"
 chmod 700 "$APP_DIR/launch.sh" "$APP_DIR/uninstall.sh"
 printf 'Preparando Python 3.12 gerenciado pelo uv...\n'
 uv python install 3.12
