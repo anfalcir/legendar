@@ -725,6 +725,7 @@ class MainWindow(QMainWindow):
         self.inspect_cancel_button.setEnabled(
             self._inspection_thread is not None and not self._inspection_cancel_pending
         )
+        self.stream_combo.setVisible(not srt_source)
         self.stream_combo.setEnabled(
             local and self._stream_choice_available() and not self.is_running
         )
