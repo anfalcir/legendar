@@ -10,6 +10,11 @@ fail() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
 mkdir -p "$LOG_DIR"
 chmod 700 "$LOG_DIR" 2>/dev/null || true
 cd "$APP_DIR"
+if [[ -n "${PYTHONPATH:-}" ]]; then
+    export PYTHONPATH="$APP_DIR/src:$PYTHONPATH"
+else
+    export PYTHONPATH="$APP_DIR/src"
+fi
 # Verificação offline idempotente. Só tenta reparar pela rede após consentimento.
 if ! "$UV_BIN" sync --locked --no-dev --extra runtime-cpu --python 3.12 --offline >"$LOG_FILE" 2>&1; then
     prompt="Foram detectadas dependências ausentes ou inconsistentes. Deseja reparar a instalação agora? O reparo pode baixar pacotes Python."
