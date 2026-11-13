@@ -733,17 +733,22 @@ class MainWindow(QMainWindow):
                 "O texto e os timestamps serão lidos diretamente do SRT. "
                 "Whisper, WhisperX e FFmpeg não serão executados."
             )
-            self.stream_combo.clear()
-            self.stream_combo.addItem("Não se aplica a arquivos SRT", None)
+            self._set_stream_placeholder("Não se aplica a arquivos SRT")
         elif youtube:
             self._show_media_info(
                 "O áudio do vídeo será obtido automaticamente. "
                 "A seleção manual de faixa local não se aplica ao download."
             )
-            self.stream_combo.clear()
-            self.stream_combo.addItem(
-                "Faixa de áudio selecionada automaticamente", None
-            )
+            self._set_stream_placeholder("Faixa de áudio selecionada automaticamente")
+
+    def _set_stream_placeholder(self, label: str) -> None:
+        """Atualiza o placeholder da faixa somente quando necessário."""
+        if self.stream_combo.count() == 1 and self.stream_combo.itemText(0) == label:
+            return
+        self.stream_combo.blockSignals(True)
+        self.stream_combo.clear()
+        self.stream_combo.addItem(label, None)
+        self.stream_combo.blockSignals(False)
 
     def _show_media_info(self, text: str) -> None:
         """Mostra o estado real da mídia; texto vazio recolhe o rótulo."""
@@ -759,8 +764,7 @@ class MainWindow(QMainWindow):
 
     def _invalidate_media_inspection(self) -> None:
         self._media_info = None
-        self.stream_combo.clear()
-        self.stream_combo.addItem("Usar faixa padrão da mídia", None)
+        self._set_stream_placeholder("Usar faixa padrão da mídia")
         self.stream_combo.setEnabled(False)
         self._show_media_info("")
         self._sync_source_controls()
@@ -1676,17 +1680,7 @@ class MainWindow(QMainWindow):
             scrollbar.setValue(scrollbar.maximum())
 
         if not busy:
-            source_ready = (
-                self._deps.readiness_ok
-                and self._deps.transcription_available
-                and self._deps.alignment_available
-                and self._deps.publishing_available
-                and (
-                    self._source_kind() is MediaKind.LOCAL_FILE
-                    or self._deps.youtube_available
-                )
-            )
-            self.generate_button.setEnabled(source_ready)
+            self.generate_button.setEnabled(self._source_ready())
             self.cancel_button.setEnabled(False)
             self.cancel_button.setText("Cancelar trabalho")
             self.preferences_button.setEnabled(True)
@@ -1701,15 +1695,41 @@ class MainWindow(QMainWindow):
         self._sync_source_controls()
         self._update_status_pill(snapshot, busy)
 
-    def _update_status_pill(self, snapshot: JobViewSnapshot, busy: bool) -> None:
-        local_source = self._source_kind() is MediaKind.LOCAL_FILE
-        source_ready = (
+    def _source_ready(self) -> bool:
+        """Prontidão mínima correspondente ao tipo de entrada selecionado."""
+        source_kind = self._source_kind()
+        if source_kind == _SRT_SOURCE_KIND:
+            if not self._deps.publishing_available:
+                return False
+            source = self._source_language()
+            target = self._target_language()
+            requires_translation = source is not None and source is not target
+            return (
+                not requires_translation
+                or (
+                    self.translate_check.isChecked()
+                    and self._deps.translate_available
+                )
+            )
+        return (
             self._deps.readiness_ok
             and self._deps.transcription_available
             and self._deps.alignment_available
             and self._deps.publishing_available
-            and (local_source or self._deps.youtube_available)
+            and (
+                source_kind == MediaKind.LOCAL_FILE.value
+                or (
+                    source_kind == MediaKind.YOUTUBE.value
+                    and self._deps.youtube_available
+                )
+            )
         )
+
+    def _update_status_pill(self, snapshot: JobViewSnapshot, busy: bool) -> None:
+        source_kind = self._source_kind()
+        is_srt_source = source_kind == _SRT_SOURCE_KIND
+        local_source = source_kind == MediaKind.LOCAL_FILE.value
+        source_ready = self._source_ready()
         if snapshot.state is JobState.FAILED:
             label, state = "Atenção necessária", "error"
         elif snapshot.state is JobState.COMPLETED:
@@ -1753,34 +1773,44 @@ class MainWindow(QMainWindow):
             else "yt-dlp e um runtime EJS compatível são necessários. "
         )
 
-        # O rodapé diz o essencial em uma frase; o inventário técnico completo
-        # fica no tooltip e no log, em vez de virar um parágrafo cinza fixo.
-        details = [
-            *self._deps.readiness_details,
-            *self._deps.transcription_readiness_details,
-            *self._deps.alignment_readiness_details,
-            *self._deps.publishing_readiness_details,
-        ]
-        if local_source:
+        details = [*self._deps.publishing_readiness_details]
+        if is_srt_source:
+            details.extend(self._deps.translate_readiness_details)
             if source_ready:
-                summary = "Ambiente pronto para gerar legendas neste computador."
+                summary = (
+                    "Pronto para ler e traduzir SRT diretamente, sem executar "
+                    "transcrição ou alinhamento."
+                )
             else:
                 summary = (
-                    "Geração local indisponível. "
-                    f"{media_requirement}{whisper_requirement}"
-                    f"{alignment_requirement}{publishing_requirement}"
+                    "Tradução de SRT indisponível. "
+                    f"{publishing_requirement}"
+                    + " ".join(self._deps.translate_readiness_details)
                 )
         else:
-            details.extend(self._deps.youtube_readiness_details)
-            if source_ready:
-                summary = "Ambiente pronto para gerar legendas do YouTube."
+            details.extend(self._deps.readiness_details)
+            details.extend(self._deps.transcription_readiness_details)
+            details.extend(self._deps.alignment_readiness_details)
+            if local_source:
+                if source_ready:
+                    summary = "Ambiente pronto para gerar legendas neste computador."
+                else:
+                    summary = (
+                        "Geração local indisponível. "
+                        f"{media_requirement}{whisper_requirement}"
+                        f"{alignment_requirement}{publishing_requirement}"
+                    )
             else:
-                summary = (
-                    "YouTube indisponível. "
-                    f"{media_requirement}{whisper_requirement}"
-                    f"{alignment_requirement}{publishing_requirement}"
-                    f"{youtube_requirement}"
-                )
+                details.extend(self._deps.youtube_readiness_details)
+                if source_ready:
+                    summary = "Ambiente pronto para gerar legendas do YouTube."
+                else:
+                    summary = (
+                        "YouTube indisponível. "
+                        f"{media_requirement}{whisper_requirement}"
+                        f"{alignment_requirement}{publishing_requirement}"
+                        f"{youtube_requirement}"
+                    )
         self._update_readiness_footer(summary, details, ok=source_ready)
         self.status_pill.setToolTip(" ".join(part for part in details if part))
 
@@ -1837,18 +1867,16 @@ class MainWindow(QMainWindow):
     def _set_inputs_enabled(self, enabled: bool) -> None:
         self.media_kind_combo.setEnabled(enabled)
         self.file_edit.setEnabled(enabled)
+        source_kind = self._source_kind()
+        local = source_kind == MediaKind.LOCAL_FILE.value
         self.browse_button.setEnabled(
-            enabled and self._source_kind() is MediaKind.LOCAL_FILE
+            enabled and (local or source_kind == _SRT_SOURCE_KIND)
         )
         self.inspect_button.setEnabled(
-            enabled
-            and self._source_kind() is MediaKind.LOCAL_FILE
-            and self._deps.media_inspector is not None
+            enabled and local and self._deps.media_inspector is not None
         )
         self.stream_combo.setEnabled(
-            enabled
-            and self._source_kind() is MediaKind.LOCAL_FILE
-            and self._stream_choice_available()
+            enabled and local and self._stream_choice_available()
         )
         self.output_edit.setEnabled(enabled)
         self.output_browse_button.setEnabled(enabled)
