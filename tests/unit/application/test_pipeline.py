@@ -839,8 +839,8 @@ def test_srt_file_source_translates_without_media_or_asr_stages(
 ):
     source_path = tmp_path / "EN-baseline.srt"
     source_path.write_text(
-        "8\\n00:00:01,000 --> 00:00:02,500\\nHello, world!\\n\\n"
-        "14\\n00:00:03,000 --> 00:00:04,000\\nWe are safe.\\n",
+        "8\n00:00:01,000 --> 00:00:02,500\nHello, world!\n\n"
+        "14\n00:00:03,000 --> 00:00:04,000\nWe are safe.\n",
         encoding="utf-8",
     )
     translator = FakeTranslator()
@@ -891,7 +891,7 @@ def test_srt_file_source_can_be_republished_without_translation(
 ):
     source_path = tmp_path / "PT-baseline.srt"
     source_path.write_text(
-        "1\\n00:00:01,000 --> 00:00:02,500\\nOlá, mundo!\\n",
+        "1\n00:00:01,000 --> 00:00:02,500\nOlá, mundo!\n",
         encoding="utf-8",
     )
     translator = FakeTranslator()
@@ -930,7 +930,7 @@ def test_srt_file_source_requires_a_translator_when_translation_is_requested(
 ):
     source_path = tmp_path / "EN-baseline.srt"
     source_path.write_text(
-        "1\\n00:00:01,000 --> 00:00:02,500\\nHello!\\n",
+        "1\n00:00:01,000 --> 00:00:02,500\nHello!\n",
         encoding="utf-8",
     )
     pipeline, ports = _pipeline()
