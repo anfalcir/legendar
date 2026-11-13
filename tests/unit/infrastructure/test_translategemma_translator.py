@@ -4,7 +4,6 @@ import re
 
 import pytest
 
-
 from legendar.application.pipeline.translation import (
     TranslationContext,
     TranslationUnit,
