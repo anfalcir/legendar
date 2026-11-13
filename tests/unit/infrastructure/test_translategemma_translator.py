@@ -354,6 +354,54 @@ def test_output_budget_is_bounded_by_real_remaining_context() -> None:
     assert captured[0]["max_tokens"] + 1800 + 64 <= 2048
 
 
+def test_output_estimate_over_cap_splits_batch_before_generation() -> None:
+    generated = []
+
+    def requester(_url, payload, _timeout):
+        generated.append(payload)
+        keys = tuple(_source_document(payload)["cues"])
+        return _response_for_batch(
+            payload,
+            tuple(f"Tradução {key}." for key in keys),
+        )
+
+    units = (
+        TranslationUnit(index=1, text="A" * 1400),
+        TranslationUnit(index=2, text="B" * 1300),
+    )
+    result = _translator(
+        requester=requester,
+        token_counter=lambda *_args: 64,
+    ).translate(
+        units,
+        source_language=Language.ENGLISH,
+        target_language=Language.PORTUGUESE,
+        progress=FakeProgress(),
+    )
+
+    assert result.unit_indexes == (1, 2)
+    assert len(result.texts) == 2
+    assert len(generated) == 2
+    assert all(len(_source_document(item)["cues"]) == 1 for item in generated)
+    assert all(item["max_tokens"] <= 1024 for item in generated)
+
+
+def test_single_unit_above_output_cap_fails_without_generation() -> None:
+    generated = []
+    translator = _translator(
+        requester=lambda *_args: generated.append(True) or {},
+        token_counter=lambda *_args: 64,
+    )
+    with pytest.raises(TranslationError, match="capacidade de saída/contexto"):
+        translator.translate(
+            (TranslationUnit(index=11, text="X" * 2500),),
+            source_language=Language.ENGLISH,
+            target_language=Language.PORTUGUESE,
+            progress=FakeProgress(),
+        )
+    assert generated == []
+
+
 def test_single_unit_empty_response_is_an_explicit_error() -> None:
     translator = _translator(
         requester=lambda *_args: {
