@@ -546,14 +546,6 @@ class LlamaCppRuntimeManager:
                     raise ModelError(
                         f"O pacote llama.cpp tenta gravar sob link simbólico: {name!r}."
                     )
-                if any(
-                    link.startswith(name + "/")
-                    for link in symlink_paths
-                    if kinds.get(name) != "symlink"
-                ):
-                    raise ModelError(
-                        f"O pacote llama.cpp contém entradas dentro de um link: {name!r}."
-                    )
 
             regular_files = {name for name, kind in kinds.items() if kind == "file"}
             for member, name, target in records:
