@@ -53,9 +53,9 @@ def load_preferences(settings: QSettings, default_output_dir: Path) -> UiPrefere
     if not output_value.strip():
         output_dir = default_output_dir
 
-    stored_backend = str(
-        settings.value("translation/backend", "translategemma")
-    ).strip().casefold()
+    stored_backend = (
+        str(settings.value("translation/backend", "translategemma")).strip().casefold()
+    )
     # Migração pontual do valor persistido pelo motor local anterior.
     backend = "translategemma" if stored_backend == "nllb" else stored_backend
     if backend not in _TRANSLATION_BACKENDS:

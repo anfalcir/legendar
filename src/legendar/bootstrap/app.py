@@ -251,7 +251,9 @@ def build_ui_dependencies(
     translategemma_runtime.inspect()
 
     env_translation_backend = (
-        os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "translategemma").strip().casefold()
+        os.environ.get("LEGENDAR_TRANSLATION_BACKEND", "translategemma")
+        .strip()
+        .casefold()
     )
 
     def _configure_translation(
@@ -337,9 +339,7 @@ def build_ui_dependencies(
         return (
             TranslateGemmaTranslator(translategemma_runtime),
             False,
-            (
-                "LEGENDAR_TRANSLATION_BACKEND inválido; use translategemma ou gemini.",
-            ),
+            ("LEGENDAR_TRANSLATION_BACKEND inválido; use translategemma ou gemini.",),
         )
 
     local_gemini_key = load_gemini_api_key()
