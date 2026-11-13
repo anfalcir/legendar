@@ -137,7 +137,9 @@ def _runtime_archive(*, unsafe_symlink: bool = False) -> bytes:
         unversioned_link.linkname = "libggml-base.so.0"
         archive.addfile(unversioned_link)
 
-        binary = tarfile.TarInfo(f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/llama-server")
+        binary = tarfile.TarInfo(
+            f"llama-{llama_runtime.LLAMA_CPP_RELEASE}/llama-server"
+        )
         binary.mode = 0o755
         binary.size = len(b"fake server")
         archive.addfile(binary, io.BytesIO(b"fake server"))
