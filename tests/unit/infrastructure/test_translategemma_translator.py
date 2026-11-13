@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+import importlib
 import re
 from urllib.error import HTTPError, URLError
 
 import pytest
 
-import legendar.infrastructure.translation.translategemma as translategemma_module
 from legendar.application.pipeline.translation import TranslationContext, TranslationUnit
 from legendar.domain.errors.catalog import TranslationError, UnsupportedLanguageError
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.translation.translategemma import TranslateGemmaTranslator
 
+
+translategemma_module = importlib.import_module(
+    "legendar.infrastructure.translation.translategemma"
+)
 
 _MARKER_PATTERN = re.compile(r"\[\[LG[0-9a-f]{10}_[A-Z0-9_]+\]\]")
 
@@ -435,7 +439,6 @@ def test_cancellation_is_checked_between_groups(monkeypatch) -> None:
     assert len(requests) == 1
 
 
-
 class _FakeHttpResponse:
     def __init__(self, body: bytes) -> None:
         self.body = body
@@ -482,7 +485,13 @@ def test_post_json_rejects_invalid_json_shapes(monkeypatch, body) -> None:
 
 def test_post_json_normalizes_http_and_network_errors(monkeypatch) -> None:
     def http_failure(*_args, **_kwargs):
-        raise HTTPError("http://127.0.0.1:8080/test", 503, "unavailable", None, None)
+        raise HTTPError(
+            "http://127.0.0.1:8080/test",
+            503,
+            "unavailable",
+            None,
+            None,
+        )
 
     monkeypatch.setattr(translategemma_module, "urlopen", http_failure)
     with pytest.raises(TranslationError, match="HTTP 503"):
