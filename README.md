@@ -63,6 +63,7 @@ Documentos vivos:
 - [Arquitetura](docs/ARQUITETURA.md)
 - [Operação](docs/OPERACAO.md)
 - [Instalação](docs/INSTALACAO.md)
+- [Distribuição Linux](docs/DISTRIBUICAO_LINUX.md)
 - [Homologação](docs/HOMOLOGACAO.md)
 - [Decisões](docs/DECISOES.md)
 - [Matriz de dependências](docs/MATRIZ_DEPENDENCIAS.md)
