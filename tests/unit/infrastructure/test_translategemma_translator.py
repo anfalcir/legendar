@@ -465,7 +465,7 @@ def test_recovery_stops_after_configured_depth_without_partial_result() -> None:
 
     units = tuple(
         TranslationUnit(index=index, text=f"Source sentence {index}.")
-        for index in range(8)
+        for index in range(1, 9)
     )
     with pytest.raises(TranslationError, match="sem publicar resultado parcial"):
         _translator(requester=requester).translate(
