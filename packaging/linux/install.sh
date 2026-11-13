@@ -38,7 +38,7 @@ ensure_media_tools() {
         done
     fi
     [[ "$missing" -eq 1 ]] || return
-    printf '\nO Legendar precisa de FFmpeg/ffprobe e bibliotecas nativas do Qt.\n'
+    printf '\nO Legendar precisa de FFmpeg/ffprobe, bibliotecas nativas do Qt e suporte a diálogos gráficos.\n'
     if ! command -v apt-get >/dev/null 2>&1 || ! command -v sudo >/dev/null 2>&1; then
         fail "Instale manualmente FFmpeg, ffprobe e bibliotecas Qt/GL do sistema."
     fi
