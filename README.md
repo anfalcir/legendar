@@ -9,7 +9,7 @@ Aplicação desktop para transcrever áudio/vídeo, produzir legendas SRT e trad
 
 ## O que a aplicação faz
 
-1. Recebe mídia local ou URL do YouTube.
+1. Recebe mídia local, URL do YouTube ou um arquivo SRT existente para tradução direta.
 2. Inspeciona streams e normaliza o áudio para WAV PCM mono 16 kHz, preservando o offset da mídia.
 3. Para mídia, transcreve a fala com OpenAI Whisper (padrão) ou faster-whisper/CTranslate2 (seleção explícita, ainda em homologação operacional).
 4. Alinha palavras com WhisperX.
