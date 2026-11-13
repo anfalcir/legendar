@@ -118,7 +118,7 @@ A referência do arquivo e seu checksum foram conferidos na página do artefato 
 A PR #36 adiciona `infrastructure/translation/llama_runtime.py` e `infrastructure/translation/translategemma.py` com:
 - inspeção local rápida de executável e arquivo GGUF, sem rede; download do GGUF após consentimento explícito, com retomada HTTP Range, arquivo parcial separado, SHA-256 fixado e publicação atômica;
 - início do subcomando `llama serve` com loopback exclusivo, porta dinâmica, contexto de 2K e um slot;
-- health check `/health` com timeout, cancelamento e detecção de saída prematura;
+- health check `/health` e identidade do modelo esperado em `/v1/models`, com timeout, cancelamento e detecção de saída prematura;
 - locks de thread e de arquivo entre processos para downloads/servidores duplicados, reutilização apenas do processo filho próprio e encerramento gracioso/forçado desse filho;
 - preservação do modelo/cache e testes unitários determinísticos com processo/HTTP simulados.
 
