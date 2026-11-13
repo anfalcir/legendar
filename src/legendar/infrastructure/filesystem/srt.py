@@ -142,7 +142,7 @@ def read_srt_file(
     if not raw:
         raise SrtValidationError("Arquivo SRT vazio.")
 
-    if raw.startswith((b"\\xff\\xfe", b"\\xfe\\xff")):
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
         try:
             content = raw.decode("utf-16")
             encoding = "utf-16"
