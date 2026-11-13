@@ -913,6 +913,36 @@ def test_open_folder_without_a_publication_explains_the_state(qtbot, tmp_path) -
     )
 
 
+def test_translation_checkbox_refreshes_after_backend_becomes_ready(
+    qtbot, tmp_path
+) -> None:
+    """Preferências podem liberar o backend sem reconstruir a janela."""
+
+    dependencies = replace(
+        _dependencies(tmp_path),
+        translate_available=False,
+        translate_readiness_details=("llama.cpp autorizado; preparação pendente.",),
+        translation_backend="translategemma",
+    )
+    window = _window(qtbot, dependencies, tmp_path)
+
+    assert not window.translate_check.isEnabled()
+    assert "TranslateGemma" in window.translate_check.toolTip()
+
+    window._deps = replace(
+        window._deps,
+        translate_available=True,
+        translate_readiness_details=("Runtime e modelo autorizados.",),
+    )
+    window._sync_translation_controls()
+
+    assert window.translate_check.isEnabled()
+    assert "TranslateGemma 4B" in window.translate_check.toolTip()
+
+    window.translate_check.setChecked(True)
+    assert "TranslateGemma 4B" in window.language_hint.text()
+
+
 def test_local_validation_failure_is_shown_in_a_banner(qtbot, tmp_path) -> None:
     """Achado 11: a falha aparece no topo, não só como linha do histórico."""
 
