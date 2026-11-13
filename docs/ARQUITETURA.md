@@ -70,6 +70,7 @@ src/legendar/
 | `Transcriber` | `transcribe(audio, language, progress, token) -> Transcript` |
 | `Aligner` | `align(audio, transcript, progress, token) -> AlignmentResult` |
 | `Translator` | `translate(units, source_language, target_language, progress, token) -> TranslationResult` |
+| `SrtSourceReader` | `read(path, language) -> (SubtitleTrack, encoding)` |
 | `SubtitlePublisher` | `publish(track, destino) -> caminho publicado` |
 | `PerformanceReporter` | captura recursos e persiste relatório sanitizado local, opcional ao pipeline |
 | `CancellationToken` | `is_cancelled`, `raise_if_cancelled()` |
