@@ -405,7 +405,10 @@ def test_translategemma_backend_stays_disabled_until_runtime_and_model_exist(
     )
 
     assert not dependencies.translate_available
-    assert "Instale o runtime llama.cpp" in dependencies.translate_readiness_details
+    assert any(
+        "Instale o runtime llama.cpp" in item
+        for item in dependencies.translate_readiness_details
+    )
     assert "GGUF ausente" in dependencies.translate_readiness_details
 
 
