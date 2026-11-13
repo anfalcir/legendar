@@ -477,7 +477,7 @@ def test_recovery_stops_after_configured_depth_without_partial_result() -> None:
             target_language=Language.PORTUGUESE,
             progress=FakeProgress(),
         )
-    assert len(requests) == 15
+    assert len(requests) == 4
 
 
 def test_cancellation_is_checked_between_batches(monkeypatch) -> None:
