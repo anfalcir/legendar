@@ -461,9 +461,7 @@ def test_translategemma_model_consent_enables_on_demand_preparation(
     assert dependencies.translation_authorize is not None
     dependencies.translation_authorize()
 
-    available, details = dependencies.translation_reconfigure(
-        "translategemma", None
-    )
+    available, details = dependencies.translation_reconfigure("translategemma", None)
 
     assert available
     assert "Pesos TranslateGemma ausentes." in details
