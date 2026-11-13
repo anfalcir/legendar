@@ -119,13 +119,17 @@ class JobRequest:
             subtitle_path = Path(self.subtitle_path).expanduser()
             object.__setattr__(self, "subtitle_path", subtitle_path)
             if subtitle_path.suffix.lower() != ".srt":
-                raise InvalidInputError("A origem de legenda precisa ser um arquivo .srt.")
+                raise InvalidInputError(
+                    "A origem de legenda precisa ser um arquivo .srt."
+                )
             if self.source_language is None:
                 raise InvalidInputError(
                     "Informe o idioma atual do SRT; não há detecção automática confiável."
                 )
             if self.stream_index is not None:
-                raise InvalidInputError("Seleção de faixa de áudio não se aplica ao SRT.")
+                raise InvalidInputError(
+                    "Seleção de faixa de áudio não se aplica ao SRT."
+                )
         if not isinstance(self.output_language, Language):
             raise UnsupportedLanguageError("Selecione o idioma final da legenda.")
         if self.translate and self.source_language is self.output_language:
