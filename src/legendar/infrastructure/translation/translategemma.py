@@ -151,9 +151,7 @@ def _build_batch_content(
 
     for position, text in enumerate(first_context, start=1):
         if text.strip():
-            entries.append(
-                (f"{prefix}CTX_PRE_{position:02d}]]", text.strip(), None)
-            )
+            entries.append((f"{prefix}CTX_PRE_{position:02d}]]", text.strip(), None))
 
     for unit in units:
         marker = f"{prefix}UNIT_{unit.index:010d}]]"
@@ -161,9 +159,7 @@ def _build_batch_content(
 
     for position, text in enumerate(last_context, start=1):
         if text.strip():
-            entries.append(
-                (f"{prefix}CTX_POST_{position:02d}]]", text.strip(), None)
-            )
+            entries.append((f"{prefix}CTX_POST_{position:02d}]]", text.strip(), None))
 
     content = "\n\n".join(f"{marker}\n{text}" for marker, text, _ in entries)
     specs = tuple((marker, index) for marker, _text, index in entries)
@@ -207,11 +203,7 @@ def _parse_batch_output(
     translated: dict[int, str] = {}
     for position, (marker, index) in enumerate(marker_specs):
         start = positions[position] + len(marker)
-        end = (
-            positions[position + 1]
-            if position + 1 < len(positions)
-            else len(output)
-        )
+        end = positions[position + 1] if position + 1 < len(positions) else len(output)
         value = " ".join(output[start:end].split())
         if not value:
             raise _RecoverableBatchError(
@@ -220,9 +212,7 @@ def _parse_batch_output(
         if index is not None:
             translated[index] = value
 
-    expected_indexes = {
-        index for _marker, index in marker_specs if index is not None
-    }
+    expected_indexes = {index for _marker, index in marker_specs if index is not None}
     if set(translated) != expected_indexes:
         raise _RecoverableBatchError(
             "TranslateGemma não preservou todos os IDs do lote."
@@ -320,9 +310,7 @@ class TranslateGemmaTranslator:
             raise TranslationError("Nenhuma unidade foi enviada ao TranslateGemma.")
         indexes = tuple(unit.index for unit in units)
         if len(set(indexes)) != len(indexes):
-            raise TranslationError(
-                "TranslateGemma recebeu IDs de unidade duplicados."
-            )
+            raise TranslationError("TranslateGemma recebeu IDs de unidade duplicados.")
 
         source_code = _LANGUAGE_CODES[source_language]
         target_code = _LANGUAGE_CODES[target_language]
@@ -340,9 +328,7 @@ class TranslateGemmaTranslator:
             progress=_ProgressSlice(progress, 0.75, 0.9),
         )
 
-        context_size = int(
-            getattr(self.runtime, "context_size", _DEFAULT_CONTEXT_SIZE)
-        )
+        context_size = int(getattr(self.runtime, "context_size", _DEFAULT_CONTEXT_SIZE))
         if context_size < _MIN_OUTPUT_TOKENS + _CONTEXT_MARGIN_TOKENS + 1:
             raise TranslationError(
                 "O contexto configurado para TranslateGemma é insuficiente."
@@ -444,9 +430,7 @@ class TranslateGemmaTranslator:
                 )
                 raw_text = _response_content(response, indexes=batch_indexes)
                 if len(batch) == 1:
-                    values = {
-                        batch[0].index: " ".join(raw_text.split())
-                    }
+                    values = {batch[0].index: " ".join(raw_text.split())}
                 else:
                     values = _parse_batch_output(
                         raw_text,
