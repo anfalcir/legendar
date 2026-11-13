@@ -1239,34 +1239,64 @@ class MainWindow(QMainWindow):
     # -- confirmação e montagem do trabalho -------------------------------
 
     def _build_job(self) -> tuple[JobRequest, str, Path]:
-        if not self._deps.transcription_available:
-            details = " ".join(self._deps.transcription_readiness_details)
-            raise InvalidInputError(
-                "O reconhecimento Whisper não está pronto neste ambiente. " + details
-            )
-        if not self._deps.alignment_available:
-            details = " ".join(self._deps.alignment_readiness_details)
-            raise InvalidInputError(
-                "O alinhamento WhisperX não está pronto neste ambiente. " + details
-            )
         if not self._deps.publishing_available:
             details = " ".join(self._deps.publishing_readiness_details)
             raise InvalidInputError(
                 "A publicação final de legendas ainda não está disponível. " + details
             )
-        media_text = self.file_edit.text().strip()
-        if not media_text:
-            raise InvalidInputError("Selecione um arquivo ou informe uma URL.")
-        kind = self._source_kind()
-        source = MediaSource(kind=kind, location=media_text)
-        stream_index = None
 
-        if kind is MediaKind.LOCAL_FILE:
-            media_path = Path(media_text).expanduser()
+        source_text = self.file_edit.text().strip()
+        if not source_text:
+            raise InvalidInputError("Selecione um arquivo ou informe uma URL.")
+        source_kind = self._source_kind()
+        is_srt_source = source_kind == _SRT_SOURCE_KIND
+        source_language, target_language, translate = self._resolved_languages(
+            require_source=is_srt_source,
+        )
+
+        stream_index = None
+        media_path: Path | None = None
+        subtitle_path: Path | None = None
+        source: MediaSource | None = None
+
+        if is_srt_source:
+            subtitle_path = Path(source_text).expanduser()
+            if subtitle_path.suffix.lower() != ".srt":
+                raise InvalidInputError("Selecione um arquivo com extensão .srt.")
+            if not subtitle_path.is_file():
+                raise InvalidInputError(
+                    f"Arquivo SRT não encontrado: {subtitle_path}"
+                )
+            if (
+                source_language is not target_language
+                and not self._deps.translate_available
+            ):
+                details = " ".join(self._deps.translate_readiness_details)
+                raise InvalidInputError(
+                    "O tradutor não está pronto para converter este SRT. " + details
+                )
+            source_label = f"SRT · {subtitle_path.name}"
+            media_path = subtitle_path
+        elif source_kind == MediaKind.LOCAL_FILE.value:
+            if not self._deps.transcription_available:
+                details = " ".join(self._deps.transcription_readiness_details)
+                raise InvalidInputError(
+                    "O reconhecimento Whisper não está pronto neste ambiente. " + details
+                )
+            if not self._deps.alignment_available:
+                details = " ".join(self._deps.alignment_readiness_details)
+                raise InvalidInputError(
+                    "O alinhamento WhisperX não está pronto neste ambiente. " + details
+                )
+            media_path = Path(source_text).expanduser()
             if not media_path.is_file():
                 raise InvalidInputError(
                     f"Arquivo de mídia não encontrado: {media_path}"
                 )
+            source = MediaSource(
+                kind=MediaKind.LOCAL_FILE,
+                location=str(media_path),
+            )
             source_label = media_path.name
             selected_stream = self.stream_combo.currentData()
             if selected_stream is not None:
@@ -1276,14 +1306,29 @@ class MainWindow(QMainWindow):
                     )
                 stream_index = int(selected_stream)
                 self._media_info.stream_by_index(stream_index)
-        else:
+        elif source_kind == MediaKind.YOUTUBE.value:
+            if not self._deps.transcription_available:
+                details = " ".join(self._deps.transcription_readiness_details)
+                raise InvalidInputError(
+                    "O reconhecimento Whisper não está pronto neste ambiente. " + details
+                )
+            if not self._deps.alignment_available:
+                details = " ".join(self._deps.alignment_readiness_details)
+                raise InvalidInputError(
+                    "O alinhamento WhisperX não está pronto neste ambiente. " + details
+                )
             if not self._deps.youtube_available:
                 details = " ".join(self._deps.youtube_readiness_details)
                 raise InvalidInputError(
                     "O suporte ao YouTube não está pronto neste ambiente. " + details
                 )
+            source = MediaSource(
+                kind=MediaKind.YOUTUBE,
+                location=source_text,
+            )
             source_label = "vídeo do YouTube"
-            media_path = None
+        else:
+            raise InvalidInputError("Tipo de origem desconhecido.")
 
         output_text = self.output_edit.text().strip()
         if not output_text:
@@ -1295,7 +1340,7 @@ class MainWindow(QMainWindow):
         resolved_output = output_path.resolve()
         if media_path is not None and resolved_output == media_path.resolve():
             raise InvalidInputError(
-                "O destino da legenda não pode sobrescrever o arquivo de mídia."
+                "O destino da legenda não pode sobrescrever o arquivo de origem."
             )
         models_root = self._deps.cache_dir.resolve()
         if resolved_output == models_root or models_root in resolved_output.parents:
@@ -1303,9 +1348,9 @@ class MainWindow(QMainWindow):
                 "O destino da legenda não pode ficar dentro do cache de modelos."
             )
 
-        source_language, target_language, translate = self._resolved_languages()
         request = JobRequest(
             source=source,
+            subtitle_path=subtitle_path,
             output_language=target_language,
             source_language=source_language,
             translate=translate,
@@ -1313,27 +1358,39 @@ class MainWindow(QMainWindow):
         )
         return request, source_label, output_path
 
-    def _resolved_languages(self) -> tuple[Language | None, Language, bool]:
+    def _resolved_languages(
+        self,
+        *,
+        require_source: bool = False,
+    ) -> tuple[Language | None, Language, bool]:
         """Resolve o par de idiomas antes de qualquer trabalho começar.
 
-        Toda combinação impossível é recusada no pré-voo — com a janela ainda
-        respondendo — em vez de depois de minutos de transcrição.
+        SRT não carrega metadados de idioma confiáveis: nesse modo a origem deve
+        ser declarada pelo usuário, enquanto a mídia pode usar detecção automática.
         """
-
         source = self._source_language()
         target = self._target_language()
+        if require_source and source is None:
+            raise InvalidInputError(
+                "Informe o idioma atual do SRT antes de iniciar a tradução."
+            )
         translate = self.translate_check.isChecked() and self._deps.translate_available
         if translate and source is None:
             raise InvalidInputError(
                 "Para traduzir, informe também o idioma falado na mídia."
             )
         if translate and source is target:
-            # Nada a traduzir: publica no idioma declarado, sem etapa extra.
             return source, target, False
         if not translate and source is not None and target is not source:
+            if self.translate_check.isChecked() and not self._deps.translate_available:
+                details = " ".join(self._deps.translate_readiness_details)
+                raise InvalidInputError(
+                    "O tradutor não está pronto para o idioma final selecionado. "
+                    + details
+                )
             raise InvalidInputError(
                 f"Sem tradução, o idioma final precisa ser {source.label_pt}. "
-                "Marque 'Traduzir a fala para o idioma final' para converter o texto."
+                "Marque a opção de tradução para converter o texto."
             )
         return source, target, translate
 
