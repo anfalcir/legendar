@@ -52,11 +52,7 @@ class FakeResponse:
         return False
 
     def read(self, _size: int = -1) -> bytes:
-        return (
-            '{"data":[{"id":"'
-            + DEFAULT_MODEL_ALIAS
-            + '"}]}'
-        ).encode("utf-8")
+        return ('{"data":[{"id":"' + DEFAULT_MODEL_ALIAS + '"}]}').encode("utf-8")
 
 
 class CancelToken:
