@@ -134,34 +134,45 @@ def _count_prompt_tokens(
     return count
 
 
-def _typed_text_content(
-    text: str,
-    source_code: str,
-    target_code: str,
-) -> list[dict[str, str]]:
-    """Formato de conteúdo tipado exigido pelo chat template TranslateGemma."""
-    return [
-        {
-            "type": "text",
-            "source_lang_code": source_code,
-            "target_lang_code": target_code,
-            "text": text,
-        }
-    ]
-
-
 def _batch_keys(size: int) -> tuple[str, ...]:
     return tuple(str(position) for position in range(1, size + 1))
 
 
-def _response_schema(keys: tuple[str, ...]) -> dict[str, object]:
-    """Impõe um objeto com exatamente uma propriedade para cada unidade."""
-    return {
-        "type": "object",
-        "properties": {key: {"type": "string"} for key in keys},
-        "required": list(keys),
-        "additionalProperties": False,
-    }
+def _rule_suffix(index: int) -> str:
+    """Converte índice em identificador GBNF formado somente por letras."""
+    letters = "abcdefghijklmnopqrstuvwxyz"
+    result = ""
+    value = index + 1
+    while value:
+        value, remainder = divmod(value - 1, len(letters))
+        result = letters[remainder] + result
+    return result
+
+
+def _json_grammar(keys: tuple[str, ...]) -> str:
+    """Restringe a saída a JSON com chaves fixas e strings não vazias.
+
+    O parser especializado TranslateGemma do llama.cpp b12321 não transfere
+    response_format/json_schema para o sampler. O parâmetro GBNF direto é
+    aplicado pelo servidor e mantém os IDs sem depender de marcadores no texto.
+    """
+    entries = [
+        f'entry{_rule_suffix(index)} ::= "\\\\"{key}\\\\"" ws ":" ws string'
+        for index, key in enumerate(keys)
+    ]
+    sequence = ' ("," ws '.join(
+        f'entry{_rule_suffix(index)}' for index in range(len(keys))
+    )
+    root = f'root ::= "{{" ws {sequence} "}}" ws'
+    return "\\n".join(
+        (
+            root,
+            *entries,
+            'string ::= "\\\"" char+ "\\\""',
+            'char ::= [^"\\\\\\x7F\\x00-\\x1F] | "\\\\" (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})',
+            'ws ::= [ \\t\\n]*',
+        )
+    )
 
 
 def _build_batch_payload(
@@ -182,23 +193,26 @@ def _build_batch_payload(
         "cues": cues,
         "context_after": list(batch[-1].context.after[:2]),
     }
-    content = json.dumps(
+    input_json = json.dumps(
         source_document,
         ensure_ascii=False,
         separators=(",", ":"),
     )
+    content = (
+        "Translate each string value in the cues object into the target language. "
+        "Use context_before and context_after only to understand context. "
+        "Return only a JSON object with exactly the same numeric keys and one "
+        "non-empty translated string for each key. Do not translate the keys.\\n"
+        + input_json
+    )
     payload: dict[str, object] = {
         "model": model,
-        "messages": [
-            {
-                "role": "user",
-                "content": _typed_text_content(content, source_code, target_code),
-            }
-        ],
-        "response_format": {
-            "type": "json_schema",
-            "schema": _response_schema(keys),
+        "messages": [{"role": "user", "content": content}],
+        "chat_template_kwargs": {
+            "source_lang_code": source_code,
+            "target_lang_code": target_code,
         },
+        "grammar": _json_grammar(keys),
         "temperature": 0.0,
         "stream": False,
     }
@@ -337,8 +351,8 @@ class TranslateGemmaTranslator:
                 "max_output_tokens": _MAX_OUTPUT_TOKENS,
                 "context_margin_tokens": _CONTEXT_MARGIN_TOKENS,
                 "recovery_split_depth": _MAX_RECOVERY_SPLIT_DEPTH,
-                "structured_output": "json_schema",
-                "content_format": "translategemma_typed_text",
+                "structured_output": "gbnf_json",
+                "content_format": "plain_text_with_chat_template_kwargs",
                 "timeout_seconds": self.timeout_seconds,
                 "threads": getattr(self.runtime, "threads", None),
             },
