@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Smoke local do TranslateGemma pela API OpenAI-compatível do llama.cpp.
+"""Smoke de TranslateGemma via a API local OpenAI-compatível do llama.cpp.
 
-O modo --batch-check valida o protocolo de produção: conteúdo tipado oficial,
-códigos de idioma por conteúdo e saída JSON limitada por schema, com IDs
-curtos e exatos para preservar o vínculo entre legendas e traduções.
+O modo --batch-check exercita o mesmo protocolo do adaptador de produção:
+entrada textual, chat_template_kwargs do llama.cpp, lote JSON compacto e
+gramática GBNF que restringe chaves/valores da resposta sem marcadores no texto.
 """
 
 from __future__ import annotations
@@ -71,22 +71,17 @@ def _post_json(
     return result
 
 
-def _message(text: str, source: str, target: str) -> dict[str, object]:
-    return {
-        "role": "user",
-        "content": [
-            {
-                "type": "text",
-                "source_lang_code": source,
-                "target_lang_code": target,
-                "text": text,
-            }
-        ],
-    }
+def build_user_content(text: str, source: str, target: str) -> str:
+    """Valida o par e mantém texto puro; idiomas são metadados da requisição."""
+    if source not in LANGUAGES or target not in LANGUAGES or source == target:
+        raise ValueError("Par de idiomas não suportado pelo smoke test.")
+    if not text.strip():
+        raise ValueError("O texto de entrada não pode ficar vazio.")
+    return text.strip()
 
 
 def _base_payload(
-    text: str,
+    content: str,
     *,
     model: str,
     source: str,
@@ -94,17 +89,42 @@ def _base_payload(
 ) -> dict[str, object]:
     return {
         "model": model,
-        "messages": [_message(text, source, target)],
+        "messages": [{"role": "user", "content": content}],
+        "chat_template_kwargs": {
+            "source_lang_code": source,
+            "target_lang_code": target,
+        },
     }
 
 
-def _batch_schema(keys: tuple[str, ...]) -> dict[str, object]:
-    return {
-        "type": "object",
-        "properties": {key: {"type": "string"} for key in keys},
-        "required": list(keys),
-        "additionalProperties": False,
-    }
+def _rule_suffix(index: int) -> str:
+    letters = "abcdefghijklmnopqrstuvwxyz"
+    result = ""
+    value = index + 1
+    while value:
+        value, remainder = divmod(value - 1, len(letters))
+        result = letters[remainder] + result
+    return result
+
+
+def _json_grammar(keys: tuple[str, ...]) -> str:
+    if not keys or len(set(keys)) != len(keys):
+        raise ValueError("As chaves da gramática devem ser únicas e não vazias.")
+    entry_names = [f"entry{_rule_suffix(index)}" for index in range(len(keys))]
+    entries = [
+        f'entry{_rule_suffix(index)} ::= "\\"{key}\\"" ws ":" ws string'
+        for index, key in enumerate(keys)
+    ]
+    root = 'root ::= "{" ws ' + ' "," ws '.join(entry_names) + ' "}" ws'
+    return "\n".join(
+        (
+            root,
+            *entries,
+            'string ::= "\\\"" char+ "\\\""',
+            'char ::= [^"\\\\\\x7F\\x00-\\x1F] | "\\\\" (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})',
+            'ws ::= [ \\t\\n]*',
+        )
+    )
 
 
 def translate(
@@ -116,14 +136,11 @@ def translate(
     target: str = "pt-BR",
     timeout: float = 600,
 ) -> str:
-    """Envia uma única mensagem no formato tipado oficial do TranslateGemma."""
+    """Envia texto simples com códigos de idioma por chat_template_kwargs."""
     endpoint = _validate_endpoint(base_url, timeout)
-    if source not in LANGUAGES or target not in LANGUAGES or source == target:
-        raise ValueError("Par de idiomas não suportado pelo smoke test.")
-    if not text.strip():
-        raise ValueError("O texto de entrada não pode ficar vazio.")
+    content = build_user_content(text, source, target)
     payload = _base_payload(
-        text.strip(),
+        content,
         model=model,
         source=source,
         target=target,
@@ -131,9 +148,13 @@ def translate(
     payload.update({"temperature": 0, "max_tokens": 256, "stream": False})
     result = _post_json(endpoint, "/v1/chat/completions", payload, timeout)
     try:
-        output = result["choices"][0]["message"]["content"]
+        choice = result["choices"][0]
+        output = choice["message"]["content"]
+        finish_reason = choice.get("finish_reason")
     except (KeyError, IndexError, TypeError) as exc:
         raise RuntimeError("Resposta do TranslateGemma sem conteúdo traduzido.") from exc
+    if finish_reason not in {None, "stop"}:
+        raise RuntimeError(f"TranslateGemma encerrou a geração ({finish_reason}).")
     if not isinstance(output, str) or not output.strip():
         raise RuntimeError("TranslateGemma retornou uma tradução vazia.")
     return output.strip()
@@ -147,7 +168,7 @@ def translate_batch_check(
     target: str = "pt-BR",
     timeout: float = 600,
 ) -> tuple[str, ...]:
-    """Valida um lote com IDs em JSON e grammar limitada pelo schema."""
+    """Valida contagem e saída GBNF/JSON do lote em uma única geração."""
     endpoint = _validate_endpoint(base_url, timeout)
     if source not in LANGUAGES or target not in LANGUAGES or source == target:
         raise ValueError("Par de idiomas não suportado pelo smoke test.")
@@ -158,9 +179,20 @@ def translate_batch_check(
         "cues": dict(zip(keys, _BATCH_SAMPLE, strict=True)),
         "context_after": [],
     }
-    text = json.dumps(input_document, ensure_ascii=False, separators=(",", ":"))
+    input_json = json.dumps(
+        input_document,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    content = (
+        "Translate each string value in the cues object into the target language. "
+        "Use context_before and context_after only to understand context. "
+        "Return only a JSON object with exactly the same numeric keys and one "
+        "non-empty translated string for each key. Do not translate the keys.\\n"
+        + input_json
+    )
     payload = _base_payload(
-        text,
+        content,
         model=model,
         source=source,
         target=target,
@@ -189,10 +221,7 @@ def translate_batch_check(
             "temperature": 0,
             "max_tokens": output_reserve,
             "stream": False,
-            "response_format": {
-                "type": "json_schema",
-                "schema": _batch_schema(keys),
-            },
+            "grammar": _json_grammar(keys),
         }
     )
     result = _post_json(endpoint, "/v1/chat/completions", payload, timeout)
@@ -211,7 +240,7 @@ def translate_batch_check(
     try:
         decoded = json.loads(output)
     except json.JSONDecodeError as exc:
-        raise RuntimeError("TranslateGemma não respeitou o JSON do lote.") from exc
+        raise RuntimeError("TranslateGemma não respeitou a gramática JSON do lote.") from exc
     if not isinstance(decoded, dict) or set(decoded) != set(keys):
         raise RuntimeError("TranslateGemma não preservou os IDs do lote.")
     translations = []
@@ -264,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
     except (RuntimeError, ValueError) as exc:
-        parser.exit(2, f"Falha no smoke TranslateGemma: {exc}\n")
+        parser.exit(2, f"Falha no smoke TranslateGemma: {exc}\\n")
     return 0
 
 
