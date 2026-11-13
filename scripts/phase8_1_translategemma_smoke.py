@@ -60,7 +60,8 @@ def _post_json(
         ) from exc
     except URLError as exc:
         raise RuntimeError(
-            "Servidor llama.cpp indisponível em loopback; confirme o processo e a porta."
+            "Servidor llama.cpp indisponível em loopback; confirme o processo "
+            "e a porta."
         ) from exc
     except (TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RuntimeError(
@@ -121,7 +122,8 @@ def _json_grammar(keys: tuple[str, ...]) -> str:
             root,
             *entries,
             'string ::= "\\\"" char+ "\\\""',
-            'char ::= [^"\\\\\\x7F\\x00-\\x1F] | "\\\\" (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})',
+            'char ::= [^"\\\\\\x7F\\x00-\\x1F] | '
+            '[\\\\] (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})',
             'ws ::= [ \\t\\n]*',
         )
     )
@@ -152,7 +154,9 @@ def translate(
         output = choice["message"]["content"]
         finish_reason = choice.get("finish_reason")
     except (KeyError, IndexError, TypeError) as exc:
-        raise RuntimeError("Resposta do TranslateGemma sem conteúdo traduzido.") from exc
+        raise RuntimeError(
+            "Resposta do TranslateGemma sem conteúdo traduzido."
+        ) from exc
     if finish_reason not in {None, "stop"}:
         raise RuntimeError(f"TranslateGemma encerrou a geração ({finish_reason}).")
     if not isinstance(output, str) or not output.strip():
@@ -230,7 +234,9 @@ def translate_batch_check(
         output = choice["message"]["content"]
         finish_reason = choice.get("finish_reason")
     except (KeyError, IndexError, TypeError) as exc:
-        raise RuntimeError("Resposta inválida no smoke de lote TranslateGemma.") from exc
+        raise RuntimeError(
+            "Resposta inválida no smoke de lote TranslateGemma."
+        ) from exc
     if finish_reason not in {None, "stop"}:
         raise RuntimeError(
             f"TranslateGemma encerrou o smoke de lote com {finish_reason}."
@@ -240,7 +246,9 @@ def translate_batch_check(
     try:
         decoded = json.loads(output)
     except json.JSONDecodeError as exc:
-        raise RuntimeError("TranslateGemma não respeitou a gramática JSON do lote.") from exc
+        raise RuntimeError(
+            "TranslateGemma não respeitou a gramática JSON do lote."
+        ) from exc
     if not isinstance(decoded, dict) or set(decoded) != set(keys):
         raise RuntimeError("TranslateGemma não preservou os IDs do lote.")
     translations = []
