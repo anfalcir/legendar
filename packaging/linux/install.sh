@@ -36,7 +36,9 @@ ensure_media_tools() {
         || fail "Instalação cancelada; nenhuma alteração foi feita no sistema."
     sudo apt-get update
     sudo apt-get install --yes --no-install-recommends \
-        ffmpeg libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0
+        ffmpeg libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 \
+        libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 \
+        libxcb-randr0 libxcb-render-util0 libxcb-xfixes0 libx11-xcb1
     command -v ffmpeg >/dev/null 2>&1 || fail "FFmpeg não foi instalado corretamente."
     command -v ffprobe >/dev/null 2>&1 || fail "ffprobe não foi instalado corretamente."
 }
@@ -53,6 +55,11 @@ ensure_uv() {
     "$uv_bin" --version | grep -Fq " $UV_VERSION" || fail "Versão do uv divergente."
 }
 ensure_media_tools
+AVAILABLE_KB="$(df -Pk "$HOME" | awk 'NR == 2 { print $4 }')"
+if [[ -n "$AVAILABLE_KB" ]] && (( AVAILABLE_KB < 8 * 1024 * 1024 )); then
+    printf 'Aviso: há menos de 8 GiB livres no disco do diretório pessoal.\n'
+    ask "Deseja continuar mesmo assim? O ambiente Python e os modelos ocupam espaço adicional." || fail "Instalação cancelada por espaço insuficiente."
+fi
 ensure_uv
 export PATH="$BIN_DIR:$HOME/.cargo/bin:$PATH"
 printf '\nPreparando o Legendar em %s...\n' "$APP_DIR"
