@@ -1,0 +1,88 @@
+name: Linux distribution
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packaging/linux/**"
+      - "scripts/build_linux_bundle.sh"
+      - "src/legendar/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "docs/INSTALACAO.md"
+      - "docs/OPERACAO.md"
+      - "docs/HOMOLOGACAO.md"
+      - ".github/workflows/linux-distribution.yml"
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and validate Linux x86_64 user bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned uv
+        run: python -m pip install --disable-pip-version-check "uv==0.13.7"
+      - name: Verify lock and CPU dependency resolution
+        run: |
+          uv lock --check --no-progress
+          uv sync --locked --no-dev --extra runtime-cpu --dry-run --no-progress
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install --yes shellcheck
+      - name: Check shell scripts
+        run: |
+          bash -n packaging/linux/install.sh packaging/linux/launch.sh packaging/linux/uninstall.sh scripts/build_linux_bundle.sh
+          shellcheck packaging/linux/install.sh packaging/linux/launch.sh packaging/linux/uninstall.sh scripts/build_linux_bundle.sh
+      - name: Build release bundle
+        run: bash scripts/build_linux_bundle.sh
+      - name: Validate bundle layout and checksum
+        run: |
+          archive="$(find dist -maxdepth 1 -name 'legendar-linux-x86_64-*.tar.gz' -print -quit)"
+          test -n "$archive"
+          sha256sum --check "$archive.sha256"
+          tar -tzf "$archive" | grep -q '/src/legendar/__main__.py$'
+          tar -tzf "$archive" | grep -q '/packaging/linux/install.sh$'
+          tar -tzf "$archive" | grep -q '/packaging/linux/launch.sh$'
+          tar -tzf "$archive" | grep -q '/packaging/linux/uninstall.sh$'
+      - name: Upload Linux user bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: |
+            dist/legendar-linux-x86_64-*.tar.gz
+            dist/legendar-linux-x86_64-*.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish tagged Linux release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: legendar-linux-x86_64-user-bundle
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          gh release create "$tag" dist/legendar-linux-x86_64-*.tar.gz dist/legendar-linux-x86_64-*.tar.gz.sha256 --title "Legendar $tag" --generate-notes
