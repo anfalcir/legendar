@@ -4,7 +4,6 @@ import json
 from urllib.error import URLError
 
 import pytest
-
 from scripts.phase8_1_translategemma_smoke import (
     _json_grammar,
     build_user_content,
