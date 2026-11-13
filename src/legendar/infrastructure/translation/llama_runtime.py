@@ -421,7 +421,19 @@ class LlamaCppRuntimeManager:
                     raise ModelError(
                         "O pacote llama.cpp tenta sair do diretório de instalação."
                     )
-            archive.extractall(destination)
+            for member in members:
+                target = destination / member.name
+                if member.isdir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    os.chmod(target, member.mode & 0o777)
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                source = archive.extractfile(member)
+                if source is None:
+                    raise ModelError("Não foi possível ler uma entrada do pacote llama.cpp.")
+                with target.open("wb") as output:
+                    shutil.copyfileobj(source, output)
+                os.chmod(target, member.mode & 0o777)
 
     def inspect(self) -> RuntimeInspection:
         """Verifica arquivos locais de forma leve; não inicia nem baixa nada."""
