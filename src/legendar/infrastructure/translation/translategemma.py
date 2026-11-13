@@ -456,7 +456,11 @@ class TranslateGemmaTranslator:
         split_batches = 0
         total = len(units)
 
-        def recover(batch: tuple[TranslationUnit, ...]) -> None:
+        def recover(
+            batch: tuple[TranslationUnit, ...],
+            *,
+            recovery_depth: int = 0,
+        ) -> None:
             nonlocal completed_units, generation_calls, accepted_batches
             nonlocal split_batches
             self._check_cancelled(token)
@@ -519,12 +523,12 @@ class TranslateGemmaTranslator:
             except _RecoverableBatchError as exc:
                 self._record("response_failures", 1)
                 self._record(f"response_failure_{exc.category}", 1)
-                if len(batch) > 1 and split_batches < _MAX_RECOVERY_SPLIT_DEPTH:
+                if len(batch) > 1 and recovery_depth < _MAX_RECOVERY_SPLIT_DEPTH:
                     self._record("split_batches", 1)
                     split_batches += 1
                     middle = len(batch) // 2
-                    recover(batch[:middle])
-                    recover(batch[middle:])
+                    recover(batch[:middle], recovery_depth=recovery_depth + 1)
+                    recover(batch[middle:], recovery_depth=recovery_depth + 1)
                     return
                 raise TranslationError(
                     "TranslateGemma não conseguiu validar um lote de "
