@@ -78,9 +78,9 @@ def test_translate_uses_official_template_language_metadata_and_preserves_ids() 
     assert result.texts == ("Eu voltarei.", "Estamos seguros.")
     assert [call[0] for call in runtime.calls] == ["runtime", "model", "server"]
     assert runtime.calls[0][2]._start == 0.0
-    assert runtime.calls[0][2]._span == 0.75
-    assert runtime.calls[1][2]._start == 0.75
-    assert runtime.calls[1][2]._span == pytest.approx(0.15)
+    assert runtime.calls[0][2]._span == pytest.approx(0.15)
+    assert runtime.calls[1][2]._start == pytest.approx(0.15)
+    assert runtime.calls[1][2]._span == pytest.approx(0.60)
     assert len(requests) == 2
     assert requests[0][0] == runtime.url
     assert requests[0][1]["messages"] == [
