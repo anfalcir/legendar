@@ -1,10 +1,9 @@
-"""Adaptador TranslateGemma com protocolo estruturado e lotes verificáveis.
+"""Adaptador TranslateGemma com lotes JSON compactos e GBNF no llama.cpp.
 
-O conteúdo segue o formato tipado oficial do TranslateGemma. Os lotes são
-serializados como JSON e a resposta usa schema-constrained JSON do llama.cpp,
-eliminando marcadores artificiais extensos. IDs locais curtos preservam o
-vínculo cue↔texto; qualquer resposta incompleta é rejeitada e recuperada com
-subdivisão limitada, sem fallback para outro motor.
+O texto mantém o contrato de chat_template_kwargs do parser especializado
+TranslateGemma do llama.cpp. IDs locais numéricos preservam o vínculo cue↔texto;
+a gramática GBNF restringe a estrutura da resposta sem marcadores artificiais.
+Respostas incompletas são validadas e recuperadas com limite por lote.
 """
 
 from __future__ import annotations
