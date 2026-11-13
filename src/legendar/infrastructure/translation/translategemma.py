@@ -369,9 +369,9 @@ class TranslateGemmaTranslator:
         """Reserva saída para texto traduzido e estrutura JSON compacta.
 
         A contagem de entrada é exata no llama.cpp. A reserva de saída usa uma
-        estimativa conservadora baseada no texto-fonte e no número de chaves,
-        com teto explícito; se não couber no contexto, o lote é dividido antes
-        de consumir tempo de geração.
+        estimativa conservadora baseada no texto-fonte e no número de chaves.
+        Lotes cuja estimativa exceda 1.024 tokens são subdivididos antes da
+        geração; uma unidade isolada acima do teto falha sem truncamento.
         """
         source_chars = sum(len(unit.text) for unit in batch)
         estimate = math.ceil(source_chars / 2.5) + 8 * len(batch) + 48
