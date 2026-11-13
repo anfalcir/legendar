@@ -38,16 +38,16 @@ FAKE_ZENITY
 chmod 700 "$BIN_DIR/zenity"
 
 expected_path="$APP_DIR/src"
-output="$(HOME="$TEMP_HOME" PATH="$BIN_DIR:$PATH" FAKE_UV_REPAIR=0 bash "$APP_DIR/launch.sh")"
+output="$(env -u PYTHONPATH HOME="$TEMP_HOME" PATH="$BIN_DIR:$PATH" FAKE_UV_REPAIR=0 bash "$APP_DIR/launch.sh")"
 grep -Fq "PYTHONPATH=$expected_path" <<< "$output"
 grep -Fq "sync --locked --no-dev --extra runtime-cpu --python 3.12 --offline" "$TEMP_HOME/uv-calls.log"
 grep -Fq "run --locked --no-sync --python 3.12 python -m legendar" "$TEMP_HOME/uv-calls.log"
 
 : > "$TEMP_HOME/uv-calls.log"
-output="$(HOME="$TEMP_HOME" PATH="$BIN_DIR:$PATH" FAKE_UV_REPAIR=1 bash "$APP_DIR/launch.sh")"
+output="$(env -u PYTHONPATH HOME="$TEMP_HOME" PATH="$BIN_DIR:$PATH" FAKE_UV_REPAIR=1 bash "$APP_DIR/launch.sh")"
 grep -Fq "PYTHONPATH=$expected_path" <<< "$output"
 grep -Fq "sync --locked --no-dev --extra runtime-cpu --python 3.12 --offline" "$TEMP_HOME/uv-calls.log"
-grep -Fq "sync --locked --no-dev --extra runtime-cpu --python 3.12" "$TEMP_HOME/uv-calls.log"
+grep -Fxq "sync --locked --no-dev --extra runtime-cpu --python 3.12" "$TEMP_HOME/uv-calls.log"
 grep -Fq "run --locked --no-sync --python 3.12 python -m legendar" "$TEMP_HOME/uv-calls.log"
 
 printf 'Linux launcher smoke (healthy + consented repair): OK\n'
