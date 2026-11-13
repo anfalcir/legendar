@@ -506,6 +506,10 @@ class SerialPipeline:
             )
         if source_path.suffix.lower() != ".srt":
             raise InvalidInputError("O arquivo de origem precisa ter extensão .srt.")
+        if source_path.resolve() == Path(context.output_path).resolve():
+            raise InvalidInputError(
+                "O destino do SRT não pode sobrescrever o arquivo de origem."
+            )
 
         token = context.token
         reader = self._ports.srt_source_reader
