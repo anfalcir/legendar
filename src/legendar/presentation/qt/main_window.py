@@ -1022,13 +1022,11 @@ class MainWindow(QMainWindow):
         )
         if self._deps.translate_available:
             self.translate_check.setToolTip(
-                (
-                    f"Traduz o texto das cues do SRT com {backend_label}, "
-                    "preservando exatamente os timestamps."
-                    if srt_source
-                    else f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
-                    "Com a opção desmarcada, a legenda sai no idioma falado."
-                )
+                f"Traduz o texto das cues do SRT com {backend_label}, "
+                "preservando exatamente os timestamps."
+                if srt_source
+                else f"Traduz PT-BR ↔ EN com {backend_label}, preservando os tempos. "
+                "Com a opção desmarcada, a legenda sai no idioma falado."
             )
         else:
             details = " ".join(self._deps.translate_readiness_details)
