@@ -165,13 +165,43 @@ python -m pip install -r requirements-export.txt
 O antigo `requirements.txt` da baseline foi removido na Fase 9 para não
 concorrer com `pyproject.toml`/`uv.lock`.
 
-## 9. Empacotamento
+## 9. Pacote de usuário para Linux Mint/Ubuntu x86_64
 
-`pyinstaller` está declarado no grupo `build`, mas o empacotamento ainda não é
-um entregável homologado: faltam validação de binários, tamanho e caminhos de
-modelos. Não há release binária publicada nem workflow de empacotamento configurado
-neste estado do repositório. Enquanto isso, a execução suportada é a partir do código
-com `uv`, conforme as etapas acima.
+O projeto disponibiliza um pacote de instalação por usuário (não é um executável
+PyInstaller monolítico). O arquivo contém o código versionado, o lockfile, o
+instalador, o lançador e o desinstalador. O instalador prepara um Python 3.12
+isolado com `uv`, instala o perfil CPU a partir de `uv.lock` e cria um atalho no
+menu. O aplicativo e o ambiente Python ficam em `~/.local/share/legendar/app`;
+o executável de entrada fica em `~/.local/bin/legendar`. Modelos, configurações
+e logs permanecem fora desse diretório e não são removidos por atualizações.
+
+Quando uma GitHub Release Linux estiver publicada, baixe o arquivo
+`legendar-linux-x86_64-*.tar.gz`, extraia-o e execute no terminal:
+
+```bash
+cd legendar-linux-x86_64-*/
+./packaging/linux/install.sh
+```
+
+O instalador não usa `sudo` para instalar o aplicativo, Python ou dependências
+Python. Se FFmpeg/ffprobe ou bibliotecas Qt do sistema estiverem ausentes, oferece
+instalação via APT e só prossegue após confirmação explícita. A primeira instalação
+baixa Python e o stack CPU do lockfile; reserve conexão estável e pelo menos 8 GB
+livres. TranslateGemma/llama.cpp e o GGUF continuam sendo preparados pelo próprio
+aplicativo sob demanda, com consentimentos separados.
+
+O lançador verifica o ambiente de forma idempotente em modo offline a cada abertura.
+Se detectar dependências inconsistentes, oferece reparo online antes de alterar o
+ambiente. O desinstalador remove o aplicativo e o ambiente Python, mas preserva
+`~/.cache/legendar` (modelos, configurações e logs).
+
+O workflow `Linux distribution` valida ShellCheck, lockfile e conteúdo do arquivo;
+publica o pacote em Releases somente quando uma tag de versão é criada. A primeira
+versão desse instalador ainda precisa de homologação operacional no Linux Mint do
+hardware de referência. Não confundir pacote gerado/CI verde com homologação real.
+
+O grupo `build` ainda mantém PyInstaller para experimentos, mas não é usado por
+esse fluxo de distribuição.
 
 ## 10. Desinstalar
 
