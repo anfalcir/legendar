@@ -416,6 +416,11 @@ def build_ui_dependencies(
             "Validação round-trip concluída antes de escrever no destino.",
         ),
         runtime_shutdown=translategemma_runtime.shutdown,
+        runtime_authorization_required=lambda: (
+            translategemma_runtime.needs_runtime_download_authorization
+            and not translategemma_runtime.runtime_download_authorized
+        ),
+        runtime_authorize=translategemma_runtime.authorize_runtime_download,
         translation_authorization_required=lambda: (
             translategemma_runtime.inspect().executable_available
             and translategemma_runtime.needs_download_authorization
