@@ -26,7 +26,7 @@
 | 18 | Snapshot legado | `requirements.txt` removido | exportação por `uv export` documentada em [INSTALACAO.md](INSTALACAO.md) |
 | 19 | Temporários | Workspace exclusivo por job; cache de modelos não é apagado para cancelar | limpeza segura em conclusão, falha e cancelamento |
 | 20 | Logs | Log rotativo com home redigido; UI recebe mensagens amigáveis | não registrar caminho pessoal ou segredo |
-| 21 | Privacidade | Fluxo padrão NLLB permanece local; Gemini é integração externa opt-in e transmite o texto das cues à API | chave fora do repositório/logs; escolha explícita do backend |
+| 21 | Privacidade | TranslateGemma é o novo motor local em homologação; Gemini é rota externa opt-in; NLLB permanece temporariamente como baseline legado | chave fora do repositório/logs; seleção explícita; nenhum fallback automático |
 | 22 | Testes | Suíte determinística sem rede/modelos; integração/E2E real depende de ferramentas | CI instala FFmpeg |
 | 23 | Baseline legada | `main.py`, `core/` e `gui/` preservados e caracterizados | histórico em [baseline arquivada](archive/previous-remodeling/LEGACY_BASELINE.md) |
 | 24 | Integração anterior | Fases 6–9 foram integradas por squash local quando PR não estava disponível | histórico detalhado preservado no arquivo |
