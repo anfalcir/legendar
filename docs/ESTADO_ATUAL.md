@@ -27,6 +27,8 @@
 
 A Fase 8.1.6 também passou a exigir operação autônoma e idempotente do TranslateGemma: diagnóstico leve ao abrir, instalação assistida sob demanda, download do modelo após consentimento, inicialização e health check automáticos antes da tradução, reutilização sem duplicação e encerramento seguro apenas do processo gerenciado. A primeira fatia de lifecycle está em desenvolvimento na PR #36 (gerenciador de processo local, download do modelo com consentimento/retomada/SHA-256 e testes simulados), e a PR #36 já conecta o adaptador e o bootstrap/Preferências. Permanecem pendentes a instalação assistida do binário, batching/contexto editorial, CI da nova fatia e homologação real; os locks entre processos para download e servidor estão implementados e testados.
 
+A implementação da PR #36 passou a incluir a instalação assistida do runtime CPU Linux x86_64 do llama.cpp, fixado em `b12321`, com checksum, extração segura, cache privado, retomada e consentimento explícito. O adaptador agora prepara runtime → modelo → servidor automaticamente antes da tradução. Ainda permanecem pendentes CI verde da cabeça atual da PR, batching/contexto editorial, smoke com pesos reais e homologação E2E; NLLB continua na `main` até esses gates serem concluídos.
+
 ## 1. Resumo executivo
 
 O Legendar é uma aplicação desktop PySide6 que recebe áudio/vídeo, normaliza o áudio, transcreve com Whisper, alinha palavras com WhisperX, forma legendas, traduz localmente com NLLB-200 quando solicitado, valida o trilho e publica SRT por troca atômica.
