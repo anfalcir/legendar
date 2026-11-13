@@ -275,16 +275,10 @@ def test_translate_rejects_duplicate_unit_indexes_before_runtime() -> None:
     assert runtime.calls == []
 
 
-def test_translate_rejects_blank_source_before_runtime() -> None:
+def test_translation_unit_rejects_blank_source_before_runtime() -> None:
     runtime = FakeRuntime()
-    translator = _translator(runtime)
-    with pytest.raises(TranslationError, match="unidade de origem vazia"):
-        translator.translate(
-            (TranslationUnit(index=1, text="   "),),
-            source_language=Language.ENGLISH,
-            target_language=Language.PORTUGUESE,
-            progress=FakeProgress(),
-        )
+    with pytest.raises(TranslationError, match="sem texto"):
+        TranslationUnit(index=1, text="   ")
     assert runtime.calls == []
 
 
@@ -450,7 +444,7 @@ def test_response_recovery_is_bounded_per_branch_not_per_job() -> None:
 
     units = tuple(
         TranslationUnit(index=index, text=f"Source sentence {index}.")
-        for index in range(8)
+        for index in range(1, 9)
     )
     result = _translator(requester=requester).translate(
         units,
