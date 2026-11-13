@@ -166,7 +166,8 @@ def _json_grammar(keys: tuple[str, ...]) -> str:
             root,
             *entries,
             'string ::= "\\\"" char+ "\\\""',
-            'char ::= [^"\\\\\\x7F\\x00-\\x1F] | "\\\\" (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})',
+            'char ::= [^"\\\\\\x7F\\x00-\\x1F] | '
+            '[\\\\] (["\\\\bfnrt] | "u" [0-9a-fA-F]{4})',
             'ws ::= [ \\t\\n]*',
         )
     )
