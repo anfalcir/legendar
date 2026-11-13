@@ -278,7 +278,11 @@ class LlamaCppRuntimeManager:
                 Path(models_dir) / "runtime" / f"llama{suffix}",
                 Path(models_dir) / "runtime" / f"llama-server{suffix}",
                 Path(models_dir) / LLAMA_CPP_RELEASE / f"llama-server{suffix}",
-                Path(models_dir) / "runtime" / LLAMA_CPP_RELEASE / LLAMA_CPP_RELEASE / f"llama-server{suffix}",
+                Path(models_dir)
+                / "runtime"
+                / LLAMA_CPP_RELEASE
+                / LLAMA_CPP_RELEASE
+                / f"llama-server{suffix}",
             )
         )
         for candidate in candidates:
@@ -328,14 +332,20 @@ class LlamaCppRuntimeManager:
                     if offset and status == 200:
                         offset = 0
                     elif offset and status != 206:
-                        raise ModelError("O servidor não aceitou a retomada do runtime llama.cpp.")
+                        raise ModelError(
+                            "O servidor não aceitou a retomada do runtime llama.cpp."
+                        )
                     elif not offset and status != 200:
-                        raise ModelError("O servidor respondeu de forma inesperada ao runtime llama.cpp.")
+                        raise ModelError(
+                            "O servidor respondeu de forma inesperada ao runtime llama.cpp."
+                        )
                     content_length = self._response_header(response, "Content-Length")
                     try:
                         remaining = int(content_length or "")
                     except ValueError:
-                        raise ModelError("O runtime llama.cpp não informou o tamanho do download.") from None
+                        raise ModelError(
+                            "O runtime llama.cpp não informou o tamanho do download."
+                        ) from None
                     total = offset + remaining
                     digest = self._sha256_prefix(archive_path, offset, token)
                     downloaded = offset
@@ -378,7 +388,9 @@ class LlamaCppRuntimeManager:
                         "O pacote llama.cpp não contém o executável llama-server esperado."
                     )
                 if os.name != "nt" and not os.access(executable, os.X_OK):
-                    raise ModelError("O pacote llama.cpp contém llama-server sem permissão de execução.")
+                    raise ModelError(
+                        "O pacote llama.cpp contém llama-server sem permissão de execução."
+                    )
                 if runtime_root.exists():
                     shutil.rmtree(runtime_root)
                 os.replace(staging, runtime_root)
@@ -409,8 +421,10 @@ class LlamaCppRuntimeManager:
                 path = Path(member.name)
                 if path.is_absolute() or ".." in path.parts:
                     raise ModelError("O pacote llama.cpp contém caminho inseguro.")
-                if member.issym() or member.islnk() or not (
-                    member.isfile() or member.isdir()
+                if (
+                    member.issym()
+                    or member.islnk()
+                    or not (member.isfile() or member.isdir())
                 ):
                     raise ModelError("O pacote llama.cpp contém entrada não suportada.")
                 target = (destination / path).resolve()
@@ -431,7 +445,9 @@ class LlamaCppRuntimeManager:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 source = archive.extractfile(member)
                 if source is None:
-                    raise ModelError("Não foi possível ler uma entrada do pacote llama.cpp.")
+                    raise ModelError(
+                        "Não foi possível ler uma entrada do pacote llama.cpp."
+                    )
                 with target.open("wb") as output:
                     shutil.copyfileobj(source, output)
                 os.chmod(target, member.mode & 0o777)
