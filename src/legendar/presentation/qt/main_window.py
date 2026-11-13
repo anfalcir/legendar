@@ -1319,7 +1319,8 @@ class MainWindow(QMainWindow):
             if not self._deps.transcription_available:
                 details = " ".join(self._deps.transcription_readiness_details)
                 raise InvalidInputError(
-                    "O reconhecimento Whisper não está pronto neste ambiente. " + details
+                    "O reconhecimento Whisper não está pronto neste ambiente. "
+                    + details
                 )
             if not self._deps.alignment_available:
                 details = " ".join(self._deps.alignment_readiness_details)
