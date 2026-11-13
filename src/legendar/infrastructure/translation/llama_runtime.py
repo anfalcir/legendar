@@ -273,6 +273,7 @@ class LlamaCppRuntimeManager:
         if configured:
             candidates.append(Path(configured).expanduser())
         suffix = ".exe" if os.name == "nt" else ""
+        runtime_root = Path(models_dir) / "runtime" / LLAMA_CPP_RELEASE
         candidates.extend(
             (
                 Path(models_dir) / "runtime" / "bin" / f"llama{suffix}",
@@ -287,6 +288,11 @@ class LlamaCppRuntimeManager:
                 / f"llama-server{suffix}",
             )
         )
+        # Upstream tarballs may contain a prefixed root (llama-bNNNN/).
+        # Search only the private, pinned release directory to support both
+        # the flat and prefixed layouts without scanning model/media caches.
+        if runtime_root.is_dir():
+            candidates.extend(runtime_root.rglob(f"llama-server{suffix}"))
         for candidate in candidates:
             if candidate.is_file():
                 return candidate
