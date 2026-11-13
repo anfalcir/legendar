@@ -17,8 +17,10 @@ printf '%s\n' "$VERSION" > "$BUNDLE_DIR/VERSION"
 chmod 755 "$BUNDLE_DIR/packaging/linux/"*.sh
 mkdir -p "$DIST_DIR"
 SOURCE_DATE_EPOCH="$(printenv SOURCE_DATE_EPOCH || printf '0')"
+TAR_FILE="$DIST_DIR/$BUNDLE_NAME.tar"
 tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner \
-    -C "$DIST_DIR" -cf - "$BUNDLE_NAME" | gzip -n > "$ARCHIVE"
+    -C "$DIST_DIR" -cf "$TAR_FILE" "$BUNDLE_NAME"
+gzip -n -f "$TAR_FILE"
 (cd "$DIST_DIR" && sha256sum "$(basename "$ARCHIVE")" > "$(basename "$ARCHIVE").sha256")
 tar -tzf "$ARCHIVE" | grep -Fq "$BUNDLE_NAME/packaging/linux/install.sh"
 tar -tzf "$ARCHIVE" | grep -Fq "$BUNDLE_NAME/uv.lock"
