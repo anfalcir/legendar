@@ -295,9 +295,7 @@ def test_invalid_json_batch_is_split_and_recovered_with_same_engine() -> None:
         source = _source_document(payload)["cues"]
         only_text = next(iter(source.values()))
         translated = (
-            "Eu voltarei."
-            if only_text == "I will be back."
-            else "Estamos seguros."
+            "Eu voltarei." if only_text == "I will be back." else "Estamos seguros."
         )
         return _response_for_batch(payload, (translated,))
 
