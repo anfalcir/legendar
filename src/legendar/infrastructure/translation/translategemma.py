@@ -113,7 +113,10 @@ class TranslateGemmaTranslator:
         progress: ProgressSink,
         token: CancellationToken | None = None,
     ) -> TranslationResult:
-        if source_language not in _LANGUAGE_CODES or target_language not in _LANGUAGE_CODES:
+        if (
+            source_language not in _LANGUAGE_CODES
+            or target_language not in _LANGUAGE_CODES
+        ):
             raise UnsupportedLanguageError(
                 "TranslateGemma suporta somente PT-BR e inglês neste produto."
             )
