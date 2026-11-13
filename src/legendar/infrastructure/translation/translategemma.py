@@ -156,14 +156,12 @@ def _json_grammar(keys: tuple[str, ...]) -> str:
     response_format/json_schema para o sampler. O parâmetro GBNF direto é
     aplicado pelo servidor e mantém os IDs sem depender de marcadores no texto.
     """
+    entry_names = [f'entry{_rule_suffix(index)}' for index in range(len(keys))]
     entries = [
-        f'entry{_rule_suffix(index)} ::= "\\\\"{key}\\\\"" ws ":" ws string'
+        f'entry{_rule_suffix(index)} ::= "\\"{key}\\"" ws ":" ws string'
         for index, key in enumerate(keys)
     ]
-    sequence = ' ("," ws '.join(
-        f'entry{_rule_suffix(index)}' for index in range(len(keys))
-    )
-    root = f'root ::= "{{" ws {sequence} "}}" ws'
+    root = 'root ::= "{" ws ' + ' "," ws '.join(entry_names) + ' "}" ws'
     return "\\n".join(
         (
             root,
