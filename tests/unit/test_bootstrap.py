@@ -413,6 +413,62 @@ def test_translategemma_backend_stays_disabled_until_runtime_and_model_exist(
     )
 
 
+def test_translategemma_model_consent_enables_on_demand_preparation(
+    tmp_path, monkeypatch
+) -> None:
+    _patch_modules(monkeypatch)
+
+    class FakeRuntime:
+        authorized = False
+
+        def __init__(self, _models_dir) -> None:
+            pass
+
+        def inspect(self):
+            return SimpleNamespace(
+                executable_available=True,
+                model_available=False,
+                ready_to_start=False,
+                details=("Pesos TranslateGemma ausentes.",),
+            )
+
+        @property
+        def download_authorized(self) -> bool:
+            return self.authorized
+
+        @property
+        def needs_download_authorization(self) -> bool:
+            return True
+
+        def authorize_model_download(self) -> None:
+            self.authorized = True
+
+        def shutdown(self) -> None:
+            pass
+
+    monkeypatch.setattr(bootstrap_app, "LlamaCppRuntimeManager", FakeRuntime)
+    dependencies = build_ui_dependencies(
+        _settings(tmp_path),
+        translation_backend="nllb",
+        tool_locator=_locator(
+            ToolStatus(name="ffmpeg", path="/usr/bin/ffmpeg"),
+            ToolStatus(name="ffprobe", path="/usr/bin/ffprobe"),
+        ),
+    )
+
+    assert dependencies.translation_authorization_required is not None
+    assert dependencies.translation_authorization_required()
+    assert dependencies.translation_authorize is not None
+    dependencies.translation_authorize()
+
+    available, details = dependencies.translation_reconfigure(
+        "translategemma", None
+    )
+
+    assert available
+    assert "Pesos TranslateGemma ausentes." in details
+
+
 def test_gemini_backend_is_selected_with_api_key(tmp_path, monkeypatch) -> None:
     _patch_modules(monkeypatch)
     monkeypatch.setenv("LEGENDAR_TRANSLATION_BACKEND", "gemini")
