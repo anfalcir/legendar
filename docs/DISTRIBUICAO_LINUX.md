@@ -52,7 +52,7 @@ A idempotência do instalador é distinta da idempotência do runtime TranslateG
 
 Para atualizar, execute o instalador de uma versão mais recente. O ambiente é sincronizado a partir do lockfile da versão instalada. O cache de modelos, logs e configurações permanece separado do código.
 
-Para remover, execute `~/.local/share/legendar/app/uninstall.sh`. O desinstalador pede confirmação e remove o aplicativo, o ambiente Python, o atalho e o comando de entrada. Por padrão, preserva `~/.cache/legendar`; a limpeza desse cache deve ser uma decisão separada do usuário.
+Para remover, execute `~/.local/share/legendar/app/uninstall.sh`. O desinstalador pede confirmação e remove o aplicativo, o ambiente Python, o uv privado, a documentação, o atalho e o comando de entrada. Por padrão, preserva `~/.cache/legendar` (modelos/logs/configurações) e `~/.cache/uv` (Python gerenciado/cache de wheels); a limpeza desses caches deve ser uma decisão separada do usuário.
 
 ## 5. CI e publicação
 
