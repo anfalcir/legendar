@@ -477,6 +477,112 @@ class SerialPipeline:
                 context, track, alignment, segmentation, warnings, quality_report, enter
             )
 
+    def _execute_srt_source(
+        self,
+        request: JobRequest,
+        context: JobContext,
+        *,
+        enter: Callable[[JobState], ScaledProgress],
+        warnings: list[str],
+        performance: PipelinePerformanceSession,
+        released_adapter_ids: set[int],
+    ) -> PipelineResult:
+        """Traduz/republica um SRT sem tocar no pipeline de áudio ou ASR."""
+        source_path = request.subtitle_path
+        source_language = request.source_language
+        if source_path is None or source_language is None:
+            raise InvalidInputError(
+                "O trabalho SRT exige arquivo e idioma de origem explícito."
+            )
+        if source_path.suffix.lower() != ".srt":
+            raise InvalidInputError("O arquivo de origem precisa ter extensão .srt.")
+
+        token = context.token
+        stage = enter(JobState.LOADING_SUBTITLES)
+        with performance.measure("srt_source_loading"):
+            source_track, source_encoding = read_srt_file(
+                source_path,
+                language=source_language,
+            )
+        token.raise_if_cancelled()
+        source_duration = max(cue.range.end for cue in source_track.cues)
+        performance.set_metadata(
+            source_input="srt_file",
+            source_encoding=source_encoding,
+            source_srt_duration_seconds=source_duration,
+        )
+        performance.set_count("source_subtitle_cues", len(source_track.cues))
+        stage.report(
+            1.0,
+            f"SRT carregado · {len(source_track.cues)} cues · "
+            f"origem {source_language.label_pt}",
+        )
+
+        track = source_track
+        if request.translate:
+            performance.set_count("translation_units", len(source_track.cues))
+            try:
+                with performance.measure("translation"):
+                    track = self._translate_track(
+                        request,
+                        source_language,
+                        source_track,
+                        enter,
+                        warnings,
+                        token,
+                    )
+            finally:
+                self._release_after_stage(
+                    "translation",
+                    "translation",
+                    self._ports.translator,
+                    performance,
+                    released_adapter_ids,
+                )
+        elif request.output_language is not source_language:
+            raise UnsupportedLanguageError(
+                "O idioma final difere do idioma informado para o SRT; "
+                "habilite a tradução."
+            )
+
+        stage = enter(JobState.VALIDATING_SRT)
+        with performance.measure("srt_validation"):
+            quality_report = validate_track(
+                track,
+                source_track=source_track if request.translate else None,
+            )
+        if quality_report.is_blocked:
+            raise SrtValidationError(quality_report.summary)
+        warnings.extend(quality_report.warnings)
+        performance.set_count("warning_count", len(warnings))
+        performance.set_count("editorial_issue_count", len(quality_report.issues))
+        performance.set_metadata(
+            editorial_quality_status=quality_report.status.value,
+        )
+        stage.report(
+            1.0,
+            "Revisão editorial necessária"
+            if quality_report.review_required
+            else "Qualidade editorial aprovada",
+        )
+
+        stage = enter(JobState.PUBLISHING)
+        with performance.measure("srt_publication"):
+            final_path = self._ports.publisher.publish(
+                track,
+                str(context.output_path),
+            )
+        stage.report(1.0, "SRT traduzido e publicado")
+        return PipelineResult(
+            output_path=final_path,
+            track=track,
+            segmentation=None,
+            source_language=source_language,
+            final_language=track.language,
+            warnings=tuple(warnings),
+            quality_report=quality_report,
+        )
+
     # -- etapas auxiliares -------------------------------------------------
 
     def _model_adapters(self) -> tuple[tuple[str, object | None], ...]:
@@ -587,17 +693,33 @@ class SerialPipeline:
         warnings: list[str],
         token: CancellationToken,
     ) -> SubtitleTrack:
+        # A transcrição pode divergir do idioma declarado pelo usuário.
+        return self._translate_track(
+            request,
+            alignment.transcript.language,
+            track,
+            enter,
+            warnings,
+            token,
+        )
+
+    def _translate_track(
+        self,
+        request: JobRequest,
+        source_language: Language,
+        track: SubtitleTrack,
+        enter: Callable[[JobState], ScaledProgress],
+        warnings: list[str],
+        token: CancellationToken,
+    ) -> SubtitleTrack:
         translator = self._ports.translator
         if translator is None:
             raise UnsupportedLanguageError(
                 "Tradução solicitada, mas nenhum tradutor está configurado."
             )
-        # O texto a traduzir está no idioma detectado na transcrição, não no
-        # idioma que o usuário declarou (que pode ter sido corrigido por aviso).
-        source_language = alignment.transcript.language
         if source_language is request.output_language:
             raise TranslationError(
-                "A mídia já está no idioma final; desabilite a tradução para publicar."
+                "A origem já está no idioma final; desabilite a tradução."
             )
         units = build_translation_units(track)
         stage = enter(JobState.TRANSLATING)
