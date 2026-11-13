@@ -112,6 +112,8 @@ def test_batch_check_uses_token_count_and_direct_grammar(monkeypatch) -> None:
             "source_lang_code": "en",
             "target_lang_code": "pt-BR",
         }
+        assert "natural Brazilian Portuguese" in payload["messages"][0]["content"]
+        assert "Preserve negation, intent, numbers" in payload["messages"][0]["content"]
         assert payload["messages"][0]["content"].endswith(
             '{"context_before":[],"cues":{"1":"We are safe.","2":"I will be back.",'
             '"3":"Do not be afraid."},"context_after":[]}'
