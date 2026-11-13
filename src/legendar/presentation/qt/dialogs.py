@@ -196,7 +196,9 @@ class PreferencesDialog(QDialog):
 
         self.translation_backend_combo = prepare_combo(QComboBox(self))
         self.translation_backend_combo.setObjectName("translationBackendCombo")
-        self.translation_backend_combo.addItem("TranslateGemma 4B (local)", "translategemma")
+        self.translation_backend_combo.addItem(
+            "TranslateGemma 4B (local)", "translategemma"
+        )
         self.translation_backend_combo.addItem("NLLB-200 (local, legado)", "nllb")
         self.translation_backend_combo.addItem("Gemini (API)", "gemini")
         self.translation_backend_combo.setCurrentIndex(
