@@ -1,16 +1,20 @@
-"""Adaptador local TranslateGemma com batching seguro e recuperação por unidade.
+"""Adaptador TranslateGemma com protocolo estruturado e lotes verificáveis.
 
-O conteúdo segue no campo de texto do schema especializado TranslateGemma.
-Lotes usam marcadores estáveis para preservar o vínculo cue↔resultado; respostas
-que alterem, percam ou reordenem marcadores são divididas recursivamente. Cada
-sub-lote só é aceito quando os marcadores correspondem exatamente aos esperados.
+O conteúdo segue o formato tipado oficial do TranslateGemma. Os lotes são
+serializados como JSON e a resposta usa schema-constrained JSON do llama.cpp,
+eliminando marcadores artificiais extensos. IDs locais curtos preservam o
+vínculo cue↔texto; qualquer resposta incompleta é rejeitada e recuperada com
+subdivisão limitada, sem fallback para outro motor.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
+import math
+import threading
+import time
 from collections.abc import Callable
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -26,16 +30,17 @@ from legendar.domain.errors.catalog import (
 from legendar.domain.value_objects.language import Language
 from legendar.infrastructure.translation.llama_runtime import (
     DEFAULT_MODEL_ALIAS,
+    DEFAULT_CONTEXT_SIZE,
     LlamaCppRuntimeManager,
 )
 
 _REQUEST_TIMEOUT_SECONDS = 600.0
-_MAX_OUTPUT_TOKENS = 512
+_MAX_OUTPUT_TOKENS = 1024
 _MIN_OUTPUT_TOKENS = 128
 _CONTEXT_MARGIN_TOKENS = 64
-_DEFAULT_CONTEXT_SIZE = 2048
 _MAX_BATCH_UNITS = 32
 _MAX_BATCH_CHARS = 8_000
+_MAX_RECOVERY_SPLIT_DEPTH = 3
 _LANGUAGE_CODES = {
     Language.ENGLISH: "en",
     Language.PORTUGUESE: "pt-BR",
@@ -46,7 +51,11 @@ TokenCounter = Callable[[str, dict[str, object], float], int]
 
 
 class _RecoverableBatchError(Exception):
-    """Resposta em lote não preservou uma estrutura verificável."""
+    """Resposta estruturada incompleta ou inválida, recuperável por subdivisão."""
+
+    def __init__(self, category: str, message: str) -> None:
+        self.category = category
+        super().__init__(message)
 
 
 class _ProgressSlice:
@@ -68,7 +77,7 @@ def _post_json(
     payload: dict[str, object],
     timeout: float,
 ) -> dict[str, object]:
-    """Executa uma chamada local sem registrar o conteúdo da legenda."""
+    """Executa uma chamada local sem registrar conteúdo das legendas."""
     request = Request(
         f"{base_url.rstrip('/')}{endpoint}",
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
@@ -110,7 +119,7 @@ def _count_prompt_tokens(
     payload: dict[str, object],
     timeout: float,
 ) -> int:
-    """Conta o prompt já renderizado pelo template oficial do llama.cpp."""
+    """Conta o prompt renderizado pelo chat template real do llama.cpp."""
     result = _post_json(
         base_url,
         "/v1/chat/completions/input_tokens",
@@ -125,128 +134,143 @@ def _count_prompt_tokens(
     return count
 
 
-def _marker_prefix(units: tuple[TranslationUnit, ...]) -> str:
-    seed = "\0".join(f"{unit.index}:{unit.text}" for unit in units)
-    before = units[0].context.before[-2:]
-    after = units[-1].context.after[:2]
-    seed += "\0" + "\0".join((*before, *after))
-    counter = 0
-    all_source = [unit.text for unit in units] + list(before) + list(after)
-    while True:
-        digest = hashlib.sha256(f"{seed}:{counter}".encode()).hexdigest()[:10]
-        prefix = f"[[LG{digest}_"
-        if not any(prefix in text for text in all_source):
-            return prefix
-        counter += 1
+def _typed_text_content(
+    text: str,
+    source_code: str,
+    target_code: str,
+) -> list[dict[str, str]]:
+    """Formato de conteúdo tipado exigido pelo chat template TranslateGemma."""
+    return [
+        {
+            "type": "text",
+            "source_lang_code": source_code,
+            "target_lang_code": target_code,
+            "text": text,
+        }
+    ]
 
 
-def _build_batch_content(
-    units: tuple[TranslationUnit, ...],
-) -> tuple[str, tuple[tuple[str, int | None], ...], str]:
-    """Serializa contexto e cues com IDs protegidos por marcadores únicos."""
-    prefix = _marker_prefix(units)
-    entries: list[tuple[str, str, int | None]] = []
-    first_context = units[0].context.before[-2:]
-    last_context = units[-1].context.after[:2]
+def _batch_keys(size: int) -> tuple[str, ...]:
+    return tuple(str(position) for position in range(1, size + 1))
 
-    for position, text in enumerate(first_context, start=1):
-        if text.strip():
-            entries.append((f"{prefix}CTX_PRE_{position:02d}]]", text.strip(), None))
 
-    for unit in units:
-        marker = f"{prefix}UNIT_{unit.index:010d}]]"
-        entries.append((marker, unit.text.strip(), unit.index))
+def _response_schema(keys: tuple[str, ...]) -> dict[str, object]:
+    """Impõe um objeto com exatamente uma propriedade para cada unidade."""
+    return {
+        "type": "object",
+        "properties": {key: {"type": "string"} for key in keys},
+        "required": list(keys),
+        "additionalProperties": False,
+    }
 
-    for position, text in enumerate(last_context, start=1):
-        if text.strip():
-            entries.append((f"{prefix}CTX_POST_{position:02d}]]", text.strip(), None))
 
-    content = "\n\n".join(f"{marker}\n{text}" for marker, text, _ in entries)
-    specs = tuple((marker, index) for marker, _text, index in entries)
-    return content, specs, prefix
+def _build_batch_payload(
+    batch: tuple[TranslationUnit, ...],
+    *,
+    model: str,
+    source_code: str,
+    target_code: str,
+) -> tuple[dict[str, object], tuple[str, ...]]:
+    """Cria entrada compacta e schema de saída com IDs locais determinísticos."""
+    keys = _batch_keys(len(batch))
+    cues = {
+        key: unit.text.strip()
+        for key, unit in zip(keys, batch, strict=True)
+    }
+    source_document = {
+        "context_before": list(batch[0].context.before[-2:]),
+        "cues": cues,
+        "context_after": list(batch[-1].context.after[:2]),
+    }
+    content = json.dumps(
+        source_document,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    payload: dict[str, object] = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": _typed_text_content(content, source_code, target_code),
+            }
+        ],
+        "response_format": {
+            "type": "json_schema",
+            "schema": _response_schema(keys),
+        },
+        "temperature": 0.0,
+        "stream": False,
+    }
+    return payload, keys
 
 
 def _parse_batch_output(
     raw_text: str,
-    marker_specs: tuple[tuple[str, int | None], ...],
-    prefix: str,
-) -> dict[int, str]:
-    """Aceita apenas marcadores únicos, ordenados e com conteúdo não vazio."""
-    output = raw_text.strip()
-    positions: list[int] = []
-    expected_markers = {marker for marker, _ in marker_specs}
-    if len(expected_markers) != len(marker_specs):
-        raise _RecoverableBatchError("Marcadores duplicados no lote de entrada.")
-
-    for marker, _index in marker_specs:
-        if output.count(marker) != 1:
+    keys: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Valida cardinalidade, chaves, tipos e conteúdo sem confiar na ordem JSON."""
+    try:
+        decoded = json.loads(raw_text)
+    except json.JSONDecodeError:
+        raise _RecoverableBatchError(
+            "invalid_json",
+            "TranslateGemma não devolveu JSON válido.",
+        ) from None
+    if not isinstance(decoded, dict):
+        raise _RecoverableBatchError(
+            "invalid_shape",
+            "TranslateGemma não devolveu um objeto JSON.",
+        )
+    if set(decoded) != set(keys):
+        raise _RecoverableBatchError(
+            "invalid_ids",
+            "TranslateGemma não preservou todos os IDs do lote.",
+        )
+    values: list[str] = []
+    for key in keys:
+        value = decoded.get(key)
+        if not isinstance(value, str) or not value.strip():
             raise _RecoverableBatchError(
-                "TranslateGemma removeu ou duplicou um marcador do lote."
+                "empty_value",
+                "TranslateGemma devolveu uma tradução vazia.",
             )
-        positions.append(output.find(marker))
-
-    if positions != sorted(positions) or not positions:
-        raise _RecoverableBatchError(
-            "TranslateGemma alterou a ordem dos marcadores do lote."
-        )
-    if output[: positions[0]].strip():
-        raise _RecoverableBatchError(
-            "TranslateGemma acrescentou conteúdo antes do primeiro marcador."
-        )
-
-    observed_family = output.count(prefix)
-    if observed_family != len(marker_specs):
-        raise _RecoverableBatchError(
-            "TranslateGemma acrescentou ou alterou marcadores do lote."
-        )
-
-    translated: dict[int, str] = {}
-    for position, (marker, index) in enumerate(marker_specs):
-        start = positions[position] + len(marker)
-        end = positions[position + 1] if position + 1 < len(positions) else len(output)
-        value = " ".join(output[start:end].split())
-        if not value:
-            raise _RecoverableBatchError(
-                "TranslateGemma devolveu um item vazio dentro do lote."
-            )
-        if index is not None:
-            translated[index] = value
-
-    expected_indexes = {index for _marker, index in marker_specs if index is not None}
-    if set(translated) != expected_indexes:
-        raise _RecoverableBatchError(
-            "TranslateGemma não preservou todos os IDs do lote."
-        )
-    return translated
+        values.append(" ".join(value.split()))
+    return tuple(values)
 
 
-def _response_content(
-    response: dict[str, object],
-    *,
-    indexes: tuple[int, ...],
-) -> str:
+def _response_content(response: dict[str, object]) -> str:
     choices = response.get("choices")
     if not isinstance(choices, list) or len(choices) != 1:
-        raise _RecoverableBatchError("Resposta TranslateGemma sem escolha única.")
+        raise _RecoverableBatchError(
+            "invalid_choice",
+            "Resposta TranslateGemma sem escolha única.",
+        )
     choice = choices[0]
     if not isinstance(choice, dict):
-        raise _RecoverableBatchError("Escolha TranslateGemma em formato inválido.")
+        raise _RecoverableBatchError(
+            "invalid_choice",
+            "Escolha TranslateGemma em formato inválido.",
+        )
     finish_reason = choice.get("finish_reason")
     if finish_reason not in {None, "stop"}:
+        category = "truncated" if finish_reason == "length" else "finish_reason"
         raise _RecoverableBatchError(
-            f"TranslateGemma encerrou a geração ({finish_reason})."
+            category,
+            f"TranslateGemma encerrou a geração ({finish_reason}).",
         )
     message = choice.get("message")
     text = message.get("content") if isinstance(message, dict) else None
     if not isinstance(text, str) or not text.strip():
         raise _RecoverableBatchError(
-            f"TranslateGemma retornou texto vazio para as unidades {indexes}."
+            "empty_response",
+            "TranslateGemma retornou uma resposta vazia.",
         )
     return text.strip()
 
 
 class TranslateGemmaTranslator:
-    """Implementa a porta Translator com runtime local gerenciado e batching."""
+    """Porta Translator com batching JSON, orçamento exato e recuperação limitada."""
 
     def __init__(
         self,
@@ -266,25 +290,114 @@ class TranslateGemmaTranslator:
         self.timeout_seconds = timeout_seconds
         self._requester = requester
         self._token_counter = token_counter
+        self._metrics_lock = threading.Lock()
+        self._metrics: dict[str, int | float] = {
+            "prompt_count_calls": 0,
+            "prompt_count_seconds": 0.0,
+            "prompt_tokens": 0,
+            "generation_calls": 0,
+            "generation_seconds": 0.0,
+            "generation_prompt_tokens": 0,
+            "generated_tokens": 0,
+            "accepted_batches": 0,
+            "translated_units": 0,
+            "largest_batch_units": 0,
+            "max_output_tokens": 0,
+            "response_failures": 0,
+            "split_batches": 0,
+            "context_budget_splits": 0,
+            "response_failure_invalid_json": 0,
+            "response_failure_invalid_shape": 0,
+            "response_failure_invalid_ids": 0,
+            "response_failure_empty_value": 0,
+            "response_failure_invalid_choice": 0,
+            "response_failure_truncated": 0,
+            "response_failure_finish_reason": 0,
+            "response_failure_empty_response": 0,
+        }
+
+    @property
+    def batch_size(self) -> int:
+        return _MAX_BATCH_UNITS
+
+    def performance_snapshot(self) -> dict[str, Any]:
+        """Métricas de tradução sem texto, prompt, resposta ou credenciais."""
+        with self._metrics_lock:
+            counters = dict(self._metrics)
+        context_size = int(
+            getattr(self.runtime, "context_size", DEFAULT_CONTEXT_SIZE)
+        )
+        return {
+            "configuration": {
+                "adapter": "translategemma-llama.cpp",
+                "model": self.model,
+                "batch_size": _MAX_BATCH_UNITS,
+                "batch_char_limit": _MAX_BATCH_CHARS,
+                "context_size": context_size,
+                "max_output_tokens": _MAX_OUTPUT_TOKENS,
+                "context_margin_tokens": _CONTEXT_MARGIN_TOKENS,
+                "recovery_split_depth": _MAX_RECOVERY_SPLIT_DEPTH,
+                "structured_output": "json_schema",
+                "content_format": "translategemma_typed_text",
+                "timeout_seconds": self.timeout_seconds,
+                "threads": getattr(self.runtime, "threads", None),
+            },
+            "counters": counters,
+        }
+
+    def _record(self, name: str, value: int | float) -> None:
+        with self._metrics_lock:
+            self._metrics[name] = self._metrics.get(name, 0) + value
+
+    def _record_max(self, name: str, value: int) -> None:
+        with self._metrics_lock:
+            self._metrics[name] = max(int(self._metrics.get(name, 0)), value)
 
     @staticmethod
-    def _groups(units: tuple[TranslationUnit, ...]):
-        """Agrupa em ordem, limitando tamanho mesmo antes da contagem exata."""
-        batch: list[TranslationUnit] = []
-        char_count = 0
-        for unit in units:
-            item_chars = len(unit.text) + 32
-            if batch and (
-                len(batch) >= _MAX_BATCH_UNITS
-                or char_count + item_chars > _MAX_BATCH_CHARS
-            ):
-                yield tuple(batch)
-                batch = []
-                char_count = 0
-            batch.append(unit)
-            char_count += item_chars
-        if batch:
-            yield tuple(batch)
+    def _estimate_output_tokens(batch: tuple[TranslationUnit, ...]) -> int:
+        """Reserva saída para texto traduzido e estrutura JSON compacta.
+
+        A contagem de entrada é exata no llama.cpp. A reserva de saída usa uma
+        estimativa conservadora baseada no texto-fonte e no número de chaves,
+        com teto explícito; se não couber no contexto, o lote é dividido antes
+        de consumir tempo de geração.
+        """
+        source_chars = sum(len(unit.text) for unit in batch)
+        estimate = math.ceil(source_chars / 2.5) + 8 * len(batch) + 48
+        return min(
+            _MAX_OUTPUT_TOKENS,
+            max(_MIN_OUTPUT_TOKENS, estimate),
+        )
+
+    def _count_tokens(
+        self,
+        base_url: str,
+        payload: dict[str, object],
+    ) -> int:
+        started = time.perf_counter()
+        self._record("prompt_count_calls", 1)
+        try:
+            count = self._token_counter(
+                base_url,
+                payload,
+                min(self.timeout_seconds, 30.0),
+            )
+        finally:
+            self._record(
+                "prompt_count_seconds",
+                time.perf_counter() - started,
+            )
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise TranslationError(
+                "Contagem de tokens do TranslateGemma retornou valor inválido."
+            )
+        self._record("prompt_tokens", count)
+        return count
+
+    @staticmethod
+    def _check_cancelled(token: CancellationToken | None) -> None:
+        if token is not None:
+            token.raise_if_cancelled()
 
     def translate(
         self,
@@ -328,7 +441,9 @@ class TranslateGemmaTranslator:
             progress=_ProgressSlice(progress, 0.75, 0.9),
         )
 
-        context_size = int(getattr(self.runtime, "context_size", _DEFAULT_CONTEXT_SIZE))
+        context_size = int(
+            getattr(self.runtime, "context_size", DEFAULT_CONTEXT_SIZE)
+        )
         if context_size < _MIN_OUTPUT_TOKENS + _CONTEXT_MARGIN_TOKENS + 1:
             raise TranslationError(
                 "O contexto configurado para TranslateGemma é insuficiente."
@@ -336,142 +451,109 @@ class TranslateGemmaTranslator:
 
         translated_by_index: dict[int, str] = {}
         completed_units = 0
-        generation_requests = 0
+        generation_calls = 0
+        accepted_batches = 0
+        split_batches = 0
         total = len(units)
 
-        def check_cancelled() -> None:
-            if token is not None:
-                token.raise_if_cancelled()
+        def recover(batch: tuple[TranslationUnit, ...]) -> None:
+            nonlocal completed_units, generation_calls, accepted_batches
+            nonlocal split_batches
+            self._check_cancelled(token)
 
-        def recover(batch: tuple[TranslationUnit, ...]) -> dict[int, str]:
-            if len(batch) <= 1:
-                raise TranslationError(
-                    "TranslateGemma não conseguiu devolver uma tradução íntegra "
-                    f"para a unidade {batch[0].index}."
-                )
-            middle = len(batch) // 2
-            left = recover_batch(batch[:middle])
-            right = recover_batch(batch[middle:])
-            left.update(right)
-            return left
-
-        def recover_batch(
-            batch: tuple[TranslationUnit, ...],
-        ) -> dict[int, str]:
-            nonlocal completed_units, generation_requests
-            check_cancelled()
-            batch_indexes = tuple(unit.index for unit in batch)
-
-            if len(batch) == 1:
-                content = batch[0].text.strip()
-                payload: dict[str, object] = {
-                    "model": self.model,
-                    "messages": [{"role": "user", "content": content}],
-                    "chat_template_kwargs": {
-                        "source_lang_code": source_code,
-                        "target_lang_code": target_code,
-                    },
-                }
-                marker_specs: tuple[tuple[str, int | None], ...] = ()
-                prefix = ""
-            else:
-                content, marker_specs, prefix = _build_batch_content(batch)
-                payload = {
-                    "model": self.model,
-                    "messages": [{"role": "user", "content": content}],
-                    "chat_template_kwargs": {
-                        "source_lang_code": source_code,
-                        "target_lang_code": target_code,
-                    },
-                }
-
-            prompt_tokens = self._token_counter(
-                base_url,
-                payload,
-                min(self.timeout_seconds, 30.0),
+            payload, keys = _build_batch_payload(
+                batch,
+                model=self.model,
+                source_code=source_code,
+                target_code=target_code,
             )
-            if isinstance(prompt_tokens, bool) or not isinstance(prompt_tokens, int):
-                raise TranslationError(
-                    "Contagem de tokens do TranslateGemma retornou valor inválido."
-                )
-            if prompt_tokens < 0:
-                raise TranslationError(
-                    "Contagem de tokens do TranslateGemma retornou valor negativo."
-                )
-            max_output_tokens = min(
-                _MAX_OUTPUT_TOKENS,
-                max(_MIN_OUTPUT_TOKENS, prompt_tokens),
-            )
-            if (
-                prompt_tokens + max_output_tokens + _CONTEXT_MARGIN_TOKENS
-                > context_size
-            ):
-                if len(batch) > 1:
-                    return recover(batch)
-                raise TranslationError(
-                    "A unidade de tradução "
-                    f"{batch[0].index} excede o contexto de 2K do TranslateGemma."
-                )
+            prompt_tokens = self._count_tokens(base_url, payload)
+            output_tokens = self._estimate_output_tokens(batch)
+            if prompt_tokens + output_tokens + _CONTEXT_MARGIN_TOKENS > context_size:
+                if len(batch) == 1:
+                    raise TranslationError(
+                        "A unidade de tradução "
+                        f"{batch[0].index} excede o contexto de {context_size} "
+                        "tokens do TranslateGemma; nenhuma entrada foi truncada."
+                    )
+                self._record("context_budget_splits", 1)
+                split_batches += 1
+                middle = len(batch) // 2
+                recover(batch[:middle])
+                recover(batch[middle:])
+                return
 
-            payload.update(
-                {
-                    "temperature": 0.0,
-                    "max_tokens": max_output_tokens,
-                    "stream": False,
-                }
+            payload["max_tokens"] = output_tokens
+            self._record_max("largest_batch_units", len(batch))
+            self._record_max("max_output_tokens", output_tokens)
+            generation_calls += 1
+            self._record("generation_calls", 1)
+            progress.report(
+                0.9 + 0.1 * completed_units / total,
+                "TranslateGemma · gerando lote de "
+                f"{len(batch)} unidades · {generation_calls} chamadas",
             )
-            check_cancelled()
-            generation_requests += 1
+            generation_started = time.perf_counter()
             try:
                 response = self._requester(
                     base_url,
                     payload,
                     self.timeout_seconds,
                 )
-                raw_text = _response_content(response, indexes=batch_indexes)
-                if len(batch) == 1:
-                    values = {batch[0].index: " ".join(raw_text.split())}
-                else:
-                    values = _parse_batch_output(
-                        raw_text,
-                        marker_specs,
-                        prefix,
-                    )
-            except _RecoverableBatchError:
-                if len(batch) > 1:
-                    return recover(batch)
+            finally:
+                generation_seconds = time.perf_counter() - generation_started
+                self._record("generation_seconds", generation_seconds)
+
+            timings = response.get("timings")
+            if isinstance(timings, dict):
+                prompt_n = timings.get("prompt_n")
+                predicted_n = timings.get("predicted_n")
+                if isinstance(prompt_n, int) and not isinstance(prompt_n, bool):
+                    self._record("generation_prompt_tokens", prompt_n)
+                if isinstance(predicted_n, int) and not isinstance(predicted_n, bool):
+                    self._record("generated_tokens", predicted_n)
+
+            try:
+                raw_text = _response_content(response)
+                values = _parse_batch_output(raw_text, keys)
+            except _RecoverableBatchError as exc:
+                self._record("response_failures", 1)
+                self._record(f"response_failure_{exc.category}", 1)
+                if len(batch) > 1 and split_batches < _MAX_RECOVERY_SPLIT_DEPTH:
+                    self._record("split_batches", 1)
+                    split_batches += 1
+                    middle = len(batch) // 2
+                    recover(batch[:middle])
+                    recover(batch[middle:])
+                    return
                 raise TranslationError(
-                    "TranslateGemma retornou uma resposta inválida para a unidade "
-                    f"{batch[0].index}."
+                    "TranslateGemma não conseguiu validar um lote de "
+                    f"{len(batch)} unidades ({exc.category}). "
+                    "A tradução foi interrompida sem publicar resultado parcial."
                 ) from None
 
-            if set(values) != set(batch_indexes):
-                if len(batch) > 1:
-                    return recover(batch)
+            if len(values) != len(batch):
                 raise TranslationError(
-                    f"TranslateGemma não devolveu a unidade {batch[0].index}."
+                    "TranslateGemma não preservou a cardinalidade do lote."
                 )
-            for unit in batch:
-                value = values.get(unit.index, "").strip()
-                if not value:
-                    if len(batch) > 1:
-                        return recover(batch)
-                    raise TranslationError(
-                        f"TranslateGemma retornou texto vazio na unidade {unit.index}."
-                    )
+            for unit, value in zip(batch, values, strict=True):
                 translated_by_index[unit.index] = value
 
             completed_units += len(batch)
+            accepted_batches += 1
+            self._record("accepted_batches", 1)
+            self._record("translated_units", len(batch))
             progress.report(
                 0.9 + 0.1 * completed_units / total,
                 "TranslateGemma · "
                 f"{completed_units}/{total} unidades · "
-                f"{generation_requests} chamadas de geração",
+                f"{accepted_batches} lotes aceitos · "
+                f"{generation_calls} gerações · "
+                f"{split_batches} subdivisões",
             )
-            return values
 
         for group in self._groups(units):
-            recover_batch(group)
+            recover(group)
 
         if set(translated_by_index) != set(indexes):
             raise TranslationError(
@@ -483,3 +565,22 @@ class TranslateGemmaTranslator:
             texts=tuple(translated_by_index[index] for index in indexes),
             unit_indexes=indexes,
         )
+
+    @staticmethod
+    def _groups(units: tuple[TranslationUnit, ...]):
+        """Agrupa em ordem, respeitando teto inicial de itens e caracteres."""
+        batch: list[TranslationUnit] = []
+        char_count = 0
+        for unit in units:
+            item_chars = len(unit.text) + 16
+            if batch and (
+                len(batch) >= _MAX_BATCH_UNITS
+                or char_count + item_chars > _MAX_BATCH_CHARS
+            ):
+                yield tuple(batch)
+                batch = []
+                char_count = 0
+            batch.append(unit)
+            char_count += item_chars
+        if batch:
+            yield tuple(batch)
