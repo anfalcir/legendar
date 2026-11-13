@@ -348,7 +348,9 @@ def build_ui_dependencies(
         return (
             NllbTranslator(settings.models_dir),
             False,
-            ("LEGENDAR_TRANSLATION_BACKEND inválido; use translategemma, nllb ou gemini.",),
+            (
+                "LEGENDAR_TRANSLATION_BACKEND inválido; use translategemma, nllb ou gemini.",
+            ),
         )
 
     local_gemini_key = load_gemini_api_key()
