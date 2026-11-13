@@ -338,9 +338,7 @@ class LlamaCppRuntimeManager:
                     archive_path.unlink(missing_ok=True)
                     offset = 0
                 headers = {"Range": f"bytes={offset}-"} if offset else {}
-                request = Request(
-                    LLAMA_CPP_DOWNLOAD_URL, headers=headers, method="GET"
-                )
+                request = Request(LLAMA_CPP_DOWNLOAD_URL, headers=headers, method="GET")
                 try:
                     with self._runtime_opener(request, timeout=60.0) as response:
                         status = self._response_status(response)
@@ -541,8 +539,7 @@ class LlamaCppRuntimeManager:
             for _member, name, _link_target in records:
                 parts = PurePosixPath(name).parts
                 ancestors = (
-                    posixpath.join(*parts[:index])
-                    for index in range(1, len(parts))
+                    posixpath.join(*parts[:index]) for index in range(1, len(parts))
                 )
                 for parent in ancestors:
                     parent_kind = kinds.get(parent)
