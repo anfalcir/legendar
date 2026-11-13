@@ -40,6 +40,7 @@ from legendar.application.ports.protocols import (
     MediaDownloader,
     MediaInspector,
     PerformanceReporter,
+    SrtSourceReader,
     SubtitlePublisher,
     Transcriber,
     Translator,
@@ -59,7 +60,6 @@ from legendar.domain.errors.catalog import (
 )
 from legendar.domain.state.machine import JobState
 from legendar.domain.value_objects.language import Language
-from legendar.infrastructure.filesystem.srt import read_srt_file
 from legendar.infrastructure.resources.profile import (
     ResourcePolicy,
     resolve_resource_policy,
@@ -152,6 +152,7 @@ class PipelinePorts:
     publisher: SubtitlePublisher
     translator: Translator | None = None
     downloader: MediaDownloader | None = None
+    srt_source_reader: SrtSourceReader | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -503,9 +504,14 @@ class SerialPipeline:
             raise InvalidInputError("O arquivo de origem precisa ter extensão .srt.")
 
         token = context.token
+        reader = self._ports.srt_source_reader
+        if reader is None:
+            raise InvalidInputError(
+                "Leitor de arquivo SRT não foi configurado no bootstrap."
+            )
         stage = enter(JobState.LOADING_SUBTITLES)
         with performance.measure("srt_source_loading"):
-            source_track, source_encoding = read_srt_file(
+            source_track, source_encoding = reader.read(
                 source_path,
                 language=source_language,
             )
