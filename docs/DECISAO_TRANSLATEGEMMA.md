@@ -2,14 +2,14 @@
 
 - **Data:** 12/11/2026
 - **Projeto:** Legendar
-- **Status:** decisão aprovada; adaptador e composição inicial no bootstrap/Preferências implementados na PR #36, ainda em validação CI e sem homologação com pesos reais.
+- **Status:** decisão aprovada; runtime autônomo, adaptador com batching/contexto e composição no bootstrap/Preferências estão na PR #36. A CI do incremento de batching está em execução; o smoke com pesos reais e a homologação no hardware de referência continuam pendentes.
 - **Decisão:** substituir integralmente NLLB-200 pelo Google TranslateGemma 4B como único motor de tradução local. Gemini Developer API continua como backend remoto independente e explicitamente selecionável.
 - **Modelo inicial:** TranslateGemma 4B Instruct, quantização GGUF Q4_K_M.
 - **Runtime candidato adotado para a integração:** servidor local do projeto llama.cpp, com API HTTP restrita a loopback e parâmetros de idioma por requisição (chat_template_kwargs). O runtime deverá ser iniciado e encerrado pelo adaptador do Legendar, sem exigir daemon externo persistente.
 - **Modelo GGUF candidato:** bullerwins/translategemma-4b-it-GGUF:Q4_K_M, derivado dos pesos oficiais google/translategemma-4b-it. O repositório declara licença Gemma; a quantização é derivada comunitária, não publicação oficial do Google.
 - **Contrato de idioma:** origem e destino serão enviados como códigos explícitos. PT-BR será pt-BR; inglês seguirá a origem detectada/configurada (en inicialmente). Não confiar apenas no texto do prompt para definir o par.
-- **Contrato de unidades:** preservar a porta Translator, índices, cardinalidade 1:1, ordem, cancelamento e timestamps externos ao adaptador. O adaptador inicial envia uma cue por requisição como texto puro, conforme a prova de protocolo, e ainda não injeta contexto vizinho nem instruções editoriais; essa lacuna deverá ser resolvida sem quebrar o chat template oficial. O resultado só é aceito quando cada unidade esperada estiver presente exatamente uma vez e com texto não vazio.
-- **Limite de contexto:** o cartão oficial informa contexto total de 2K tokens. O empacotamento de unidades deverá respeitar orçamento conservador, reservar espaço de saída e dividir/reprocessar lotes incompletos sem publicar saída parcial.
+- **Contrato de unidades:** preservar a porta Translator, índices, cardinalidade 1:1, ordem, cancelamento e timestamps externos ao adaptador. O adaptador envia um lote como uma única mensagem de usuário em texto, com marcadores exclusivos por cue e códigos de idioma em `chat_template_kwargs`; acrescenta até duas cues anteriores ao início do lote e até duas posteriores ao fim como contexto, descartando suas traduções. O lote inicial limita-se a 32 cues e 8.000 caracteres antes da contagem exata. O resultado só é aceito quando todos os marcadores aparecem exatamente uma vez, em ordem e com conteúdo não vazio. Respostas inválidas, truncadas ou com marcadores alterados provocam divisão recursiva do lote; a unidade isolada é reenviada como texto puro. Não existe fallback automático para NLLB.
+- **Limite de contexto:** o cartão oficial informa contexto total de 2K tokens. O adaptador consulta `/v1/chat/completions/input_tokens` do llama.cpp com o payload completo para contar o prompt já renderizado pelo template; reserva até 512 tokens para saída e 64 tokens de margem. Lotes que excedem 2.048 tokens são divididos antes da geração. Lotes com saída incompleta ou estrutura inválida também são subdivididos, sem publicar resultado parcial.
 - **Privacidade:** tradução local não envia conteúdo à nuvem. O servidor deve escutar exclusivamente em 127.0.0.1; não expor porta à rede.
 - **Download e integridade:** baixar sob demanda para cache do Legendar, validar tamanho/hash publicado quando disponível e falhar com mensagem explícita. Não commitar pesos nem conteúdo de mídia.
 - **Licença:** Gemma Terms of Use e política de uso proibido aplicam-se aos pesos e derivados. O aplicativo deverá informar origem, licença e obrigações; não descrever o modelo como Apache/MIT nem como domínio público.
@@ -69,6 +69,14 @@ uv run --locked --no-sync python scripts/phase8_1_translategemma_smoke.py \
 
 O smoke usa apenas a API local, envia os códigos de idioma por requisição em chat_template_kwargs e imprime somente o texto retornado. Ele não inicia o servidor nem baixa pesos. O adaptador de produção deverá gerenciar essas duas responsabilidades; este script é exclusivamente uma prova de protocolo. Ainda é necessário executar o smoke com o modelo real antes de declarar compatibilidade.
 
+Para validar o contrato de lote do adaptador (três cues com marcadores e contagem real de tokens), execute:
+
+```bash
+uv run --locked --no-sync python scripts/phase8_1_translategemma_smoke.py --batch-check
+```
+
+O smoke de lote é aprovado apenas se o llama.cpp contar o prompt dentro do contexto de 2K e o modelo devolver os três marcadores, uma única vez e na ordem correta. Se falhar, não aumentar o lote nem remover a recuperação recursiva; registrar a resposta como incompatibilidade do template/quantização.
+
 
 ## Operação autônoma e idempotente do runtime
 
@@ -126,4 +134,4 @@ A PR #36 adiciona `infrastructure/translation/llama_runtime.py` e `infrastructur
 - locks de thread e de arquivo entre processos para downloads/servidores duplicados, reutilização apenas do processo filho próprio e encerramento gracioso/forçado desse filho;
 - preservação do modelo/cache e testes unitários determinísticos com processo/HTTP simulados.
 
-**Limites desta fatia:** ainda não instala o binário llama.cpp. O download do GGUF é integrado à interface, mas só começa no worker após consentimento explícito; o backend fica indisponível até que o executável esteja instalado ou os pesos estejam autorizados para preparação. O adaptador inicia/reutiliza o servidor automaticamente quando chamado pelo pipeline, envia `chat_template_kwargs` e valida texto não vazio/IDs. A primeira implementação é uma requisição por cue e ainda não aplica contexto vizinho; a estratégia de batching/contexto continua em aberto. A composição no bootstrap e a seleção em Preferências estão conectadas. Quando o executável existe e os pesos faltam, Preferências solicita consentimento; a primeira tradução baixa os pesos no worker, com progresso, retomada e SHA-256. A UX de instalação do executável ainda falta. O código não está homologado com pesos reais; não remover NLLB nem declarar autonomia operacional completa.
+**Limites desta fatia:** a instalação assistida do runtime CPU Linux x86_64 está implementada em cache privado, sem sudo, com release fixado, SHA-256, retomada e extração segura. O GGUF é baixado no worker após consentimento explícito, com retomada e checksum. O adaptador prepara runtime → modelo → servidor automaticamente, conta o prompt renderizado pelo endpoint de tokens, agrupa cues e usa marcadores para reconstruir a relação 1:1; falhas de estrutura causam divisão recursiva até unidades individuais. O smoke dedicado de lote foi acrescentado, mas ainda precisa ser executado contra pesos reais. A implementação continua limitada a Linux x86_64 para instalação assistida; suporte/runtime das demais plataformas não foi homologado. O modelo real, o comportamento do template com marcadores, o desempenho e a qualidade PT-BR ainda não foram validados no hardware de referência. NLLB permanece temporariamente no código/`main` como baseline durante a migração, sem fallback silencioso.
