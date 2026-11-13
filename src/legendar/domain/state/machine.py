@@ -20,6 +20,7 @@ class JobState(str, Enum):
     IDLE = "idle"
     VALIDATING_INPUT = "validating_input"
     INSPECTING_MEDIA = "inspecting_media"
+    LOADING_SUBTITLES = "loading_subtitles"
     PREPARING_AUDIO = "preparing_audio"
     TRANSCRIBING = "transcribing"
     ALIGNING = "aligning"
@@ -42,6 +43,7 @@ class JobState(str, Enum):
         return self in {
             JobState.VALIDATING_INPUT,
             JobState.INSPECTING_MEDIA,
+            JobState.LOADING_SUBTITLES,
             JobState.PREPARING_AUDIO,
             JobState.TRANSCRIBING,
             JobState.ALIGNING,
@@ -69,6 +71,7 @@ _LABELS_PT: dict[JobState, str] = {
     JobState.IDLE: "Aguardando",
     JobState.VALIDATING_INPUT: "Validando entrada",
     JobState.INSPECTING_MEDIA: "Inspecionando mídia",
+    JobState.LOADING_SUBTITLES: "Lendo SRT de origem",
     JobState.PREPARING_AUDIO: "Preparando áudio",
     JobState.TRANSCRIBING: "Transcrevendo",
     JobState.ALIGNING: "Alinhando",
@@ -104,7 +107,12 @@ _STARTABLE = {JobState.VALIDATING_INPUT}
 #: (tradução opcional) e ``SEGMENTING`` aceita ``VALIDATING_SRT`` direto.
 _SUCCESSORS: dict[JobState, frozenset[JobState]] = {
     JobState.IDLE: frozenset(_STARTABLE),
-    JobState.VALIDATING_INPUT: frozenset({JobState.INSPECTING_MEDIA}),
+    JobState.VALIDATING_INPUT: frozenset(
+        {JobState.INSPECTING_MEDIA, JobState.LOADING_SUBTITLES}
+    ),
+    JobState.LOADING_SUBTITLES: frozenset(
+        {JobState.TRANSLATING, JobState.VALIDATING_SRT}
+    ),
     JobState.INSPECTING_MEDIA: frozenset({JobState.PREPARING_AUDIO}),
     JobState.PREPARING_AUDIO: frozenset({JobState.TRANSCRIBING}),
     JobState.TRANSCRIBING: frozenset({JobState.ALIGNING}),
