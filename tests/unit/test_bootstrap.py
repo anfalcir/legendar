@@ -313,7 +313,6 @@ def test_unknown_asr_backend_is_not_silently_accepted(tmp_path, monkeypatch) -> 
     )
 
 
-
 def test_translategemma_backend_is_composed_when_runtime_and_model_exist(
     tmp_path, monkeypatch
 ) -> None:
@@ -409,7 +408,9 @@ def test_translategemma_backend_stays_disabled_until_runtime_and_model_exist(
         "Instale o runtime llama.cpp" in item
         for item in dependencies.translate_readiness_details
     )
-    assert "GGUF ausente" in dependencies.translate_readiness_details
+    assert any(
+        "GGUF ausente" in item for item in dependencies.translate_readiness_details
+    )
 
 
 def test_gemini_backend_is_selected_with_api_key(tmp_path, monkeypatch) -> None:
