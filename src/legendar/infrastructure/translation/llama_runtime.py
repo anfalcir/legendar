@@ -278,7 +278,7 @@ class LlamaCppRuntimeManager:
                 Path(models_dir) / "runtime" / f"llama{suffix}",
                 Path(models_dir) / "runtime" / f"llama-server{suffix}",
                 Path(models_dir) / LLAMA_CPP_RELEASE / f"llama-server{suffix}",
-                Path(models_dir) / LLAMA_CPP_RELEASE / LLAMA_CPP_RELEASE / f"llama-server{suffix}",
+                Path(models_dir) / "runtime" / LLAMA_CPP_RELEASE / LLAMA_CPP_RELEASE / f"llama-server{suffix}",
             )
         )
         for candidate in candidates:
