@@ -5,6 +5,8 @@ from urllib.error import HTTPError, URLError
 
 import pytest
 
+import legendar.infrastructure.translation.translategemma as translategemma_module
+
 from legendar.application.pipeline.translation import (
     TranslationContext,
     TranslationUnit,
