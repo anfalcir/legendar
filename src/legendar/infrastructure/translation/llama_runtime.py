@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import posixpath
 import shutil
 import socket
 import subprocess
@@ -20,7 +21,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -39,6 +40,7 @@ LLAMA_CPP_DOWNLOAD_URL = (
     f"{LLAMA_CPP_RELEASE}/{LLAMA_CPP_ARCHIVE}"
 )
 LLAMA_CPP_SHA256 = "7f0c4e221874ebb131f0da2154cccba4e60ca9f878477290e301ba042dde6603"
+LLAMA_CPP_ARCHIVE_SIZE = 23_310_759
 
 MODEL_DOWNLOAD_URL = (
     "https://huggingface.co/"
@@ -271,6 +273,7 @@ class LlamaCppRuntimeManager:
         if configured:
             candidates.append(Path(configured).expanduser())
         suffix = ".exe" if os.name == "nt" else ""
+        runtime_root = Path(models_dir) / "runtime" / LLAMA_CPP_RELEASE
         candidates.extend(
             (
                 Path(models_dir) / "runtime" / "bin" / f"llama{suffix}",
@@ -285,6 +288,11 @@ class LlamaCppRuntimeManager:
                 / f"llama-server{suffix}",
             )
         )
+        # Upstream tarballs may contain a prefixed root (llama-bNNNN/).
+        # Search only the private, pinned release directory to support both
+        # the flat and prefixed layouts without scanning model/media caches.
+        if runtime_root.is_dir():
+            candidates.extend(runtime_root.rglob(f"llama-server{suffix}"))
         for candidate in candidates:
             if candidate.is_file():
                 return candidate
@@ -323,61 +331,81 @@ class LlamaCppRuntimeManager:
             if executable is not None:
                 return executable
             runtime_parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            offset = archive_path.stat().st_size if archive_path.is_file() else 0
-            headers = {"Range": f"bytes={offset}-"} if offset else {}
-            request = Request(LLAMA_CPP_DOWNLOAD_URL, headers=headers, method="GET")
-            try:
-                with self._runtime_opener(request, timeout=60.0) as response:
-                    status = self._response_status(response)
-                    if offset and status == 200:
-                        offset = 0
-                    elif offset and status != 206:
-                        raise ModelError(
-                            "O servidor não aceitou a retomada do runtime llama.cpp."
+            archive_verified = (
+                archive_path.is_file()
+                and archive_path.stat().st_size == LLAMA_CPP_ARCHIVE_SIZE
+                and self._sha256_file(archive_path, token) == LLAMA_CPP_SHA256
+            )
+            if not archive_verified:
+                offset = archive_path.stat().st_size if archive_path.is_file() else 0
+                # A complete but corrupt cache entry cannot be resumed with HTTP
+                # Range (the server correctly answers 416). Discard it and restart.
+                if offset >= LLAMA_CPP_ARCHIVE_SIZE:
+                    archive_path.unlink(missing_ok=True)
+                    offset = 0
+                headers = {"Range": f"bytes={offset}-"} if offset else {}
+                request = Request(LLAMA_CPP_DOWNLOAD_URL, headers=headers, method="GET")
+                try:
+                    with self._runtime_opener(request, timeout=60.0) as response:
+                        status = self._response_status(response)
+                        if offset and status == 200:
+                            offset = 0
+                        elif offset and status != 206:
+                            raise ModelError(
+                                "O servidor não aceitou a retomada do runtime llama.cpp."
+                            )
+                        elif not offset and status != 200:
+                            raise ModelError(
+                                "O servidor respondeu de forma inesperada ao runtime llama.cpp."
+                            )
+                        content_length = self._response_header(
+                            response, "Content-Length"
                         )
-                    elif not offset and status != 200:
-                        raise ModelError(
-                            "O servidor respondeu de forma inesperada ao runtime llama.cpp."
-                        )
-                    content_length = self._response_header(response, "Content-Length")
-                    try:
-                        remaining = int(content_length or "")
-                    except ValueError:
-                        raise ModelError(
-                            "O runtime llama.cpp não informou o tamanho do download."
-                        ) from None
-                    total = offset + remaining
-                    digest = self._sha256_prefix(archive_path, offset, token)
-                    downloaded = offset
-                    with archive_path.open("ab" if offset else "wb") as output:
-                        while True:
-                            self._raise_if_cancelled(token)
-                            chunk = response.read(8 * 1024 * 1024)
-                            if not chunk:
-                                break
-                            output.write(chunk)
-                            digest.update(chunk)
-                            downloaded += len(chunk)
-                            if progress is not None:
-                                progress.report(
-                                    min(0.95, downloaded / total),
-                                    "Baixando runtime llama.cpp",
-                                )
-                        output.flush()
-                        os.fsync(output.fileno())
-            except ModelError:
-                raise
-            except (OSError, TimeoutError, URLError, HTTPError) as exc:
-                raise ModelError(
-                    "Falha ao baixar o runtime llama.cpp "
-                    f"({type(exc).__name__}); o arquivo parcial foi preservado."
-                ) from None
-            if downloaded != total or digest.hexdigest() != LLAMA_CPP_SHA256:
-                archive_path.unlink(missing_ok=True)
-                raise ModelError(
-                    "O SHA-256 do runtime llama.cpp não corresponde ao artefato fixado; "
-                    "download descartado."
-                )
+                        try:
+                            remaining = int(content_length or "")
+                        except ValueError:
+                            raise ModelError(
+                                "O runtime llama.cpp não informou o tamanho do download."
+                            ) from None
+                        total = offset + remaining
+                        if total != LLAMA_CPP_ARCHIVE_SIZE:
+                            raise ModelError(
+                                "O tamanho do runtime llama.cpp não corresponde "
+                                "ao artefato fixado."
+                            )
+                        digest = self._sha256_prefix(archive_path, offset, token)
+                        downloaded = offset
+                        with archive_path.open("ab" if offset else "wb") as output:
+                            while True:
+                                self._raise_if_cancelled(token)
+                                chunk = response.read(8 * 1024 * 1024)
+                                if not chunk:
+                                    break
+                                output.write(chunk)
+                                digest.update(chunk)
+                                downloaded += len(chunk)
+                                if progress is not None:
+                                    progress.report(
+                                        min(0.95, downloaded / total),
+                                        "Baixando runtime llama.cpp",
+                                    )
+                            output.flush()
+                            os.fsync(output.fileno())
+                except ModelError:
+                    raise
+                except (OSError, TimeoutError, URLError, HTTPError) as exc:
+                    raise ModelError(
+                        "Falha ao baixar o runtime llama.cpp "
+                        f"({type(exc).__name__}); o arquivo parcial foi preservado."
+                    ) from None
+                if downloaded != total or digest.hexdigest() != LLAMA_CPP_SHA256:
+                    archive_path.unlink(missing_ok=True)
+                    raise ModelError(
+                        "O SHA-256 do runtime llama.cpp não corresponde ao artefato fixado; "
+                        "download descartado."
+                    )
+            elif progress is not None:
+                progress.report(0.95, "Reutilizando pacote llama.cpp já validado")
             staging = runtime_parent / f"{LLAMA_CPP_RELEASE}.staging.{time.time_ns()}"
             try:
                 staging.mkdir(mode=0o700)
@@ -413,44 +441,179 @@ class LlamaCppRuntimeManager:
 
     @staticmethod
     def _extract_runtime_archive(archive_path: Path, destination: Path) -> None:
-        """Extrai somente arquivos/diretórios regulares do tarball."""
+        """Extrai entradas regulares e links relativos sem permitir escape do staging.
+
+        Os binários Linux do llama.cpp usam links simbólicos relativos entre as
+        bibliotecas versionadas (por exemplo, libfoo.so -> libfoo.so.0).
+        Links são validados em toda a árvore antes de qualquer escrita e criados
+        somente depois dos arquivos regulares, evitando seguir links durante a
+        extração de conteúdo controlado pelo arquivo.
+        """
+
         destination = destination.resolve()
+
+        def safe_member_path(raw: str) -> str:
+            if not raw or "\x00" in raw:
+                raise ModelError("O pacote llama.cpp contém caminho vazio ou inválido.")
+            path = PurePosixPath(raw)
+            if path.is_absolute() or ".." in path.parts:
+                raise ModelError(
+                    f"O pacote llama.cpp contém caminho inseguro: {raw!r}."
+                )
+            normalized = posixpath.normpath(raw)
+            if normalized in {"", "."}:
+                return ""
+            if (
+                normalized.startswith("../")
+                or normalized == ".."
+                or normalized.startswith("/")
+            ):
+                raise ModelError(
+                    f"O pacote llama.cpp contém caminho inseguro: {raw!r}."
+                )
+            return normalized
+
         with tarfile.open(archive_path, "r:gz") as archive:
-            members = archive.getmembers()
-            for member in members:
-                path = Path(member.name)
-                if path.is_absolute() or ".." in path.parts:
-                    raise ModelError("O pacote llama.cpp contém caminho inseguro.")
-                if (
-                    member.issym()
-                    or member.islnk()
-                    or not (member.isfile() or member.isdir())
-                ):
-                    raise ModelError("O pacote llama.cpp contém entrada não suportada.")
-                target = (destination / path).resolve()
-                if destination != target and destination not in target.parents:
+            records: list[tuple[tarfile.TarInfo, str, str | None]] = []
+            kinds: dict[str, str] = {}
+
+            # Primeira passagem: validar todos os nomes, tipos e destinos de links.
+            for member in archive.getmembers():
+                name = safe_member_path(member.name)
+                if not name:
+                    if member.isdir():
+                        continue
                     raise ModelError(
-                        "O pacote llama.cpp tenta sair do diretório de instalação."
+                        "O pacote llama.cpp contém uma entrada de arquivo na raiz."
                     )
-            for member in members:
-                target = destination / member.name
+
                 if member.isdir():
-                    # Keep extraction directories traversable while files are being
-                    # written. Archive directory modes are applied by tarfile only
-                    # after extraction; applying them immediately can remove the
-                    # execute bit from a parent directory (e.g. mode 0644) and make
-                    # subsequent child writes fail with PermissionError.
+                    kind = "directory"
+                    link_target = None
+                elif member.isfile():
+                    kind = "file"
+                    link_target = None
+                elif member.issym():
+                    kind = "symlink"
+                    raw_target = member.linkname
+                    if not raw_target or "\x00" in raw_target:
+                        raise ModelError(
+                            f"O pacote llama.cpp contém link simbólico inválido: {name!r}."
+                        )
+                    target_path = PurePosixPath(raw_target)
+                    if target_path.is_absolute():
+                        raise ModelError(
+                            f"O pacote llama.cpp contém link absoluto: {name!r}."
+                        )
+                    link_target = posixpath.normpath(
+                        posixpath.join(posixpath.dirname(name), raw_target)
+                    )
+                    if (
+                        link_target in {"", ".", ".."}
+                        or link_target.startswith("../")
+                        or link_target.startswith("/")
+                    ):
+                        raise ModelError(
+                            f"O link simbólico do pacote llama.cpp tenta sair "
+                            f"do staging: {name!r} -> {raw_target!r}."
+                        )
+                    kind = "symlink"
+                elif member.islnk():
+                    kind = "hardlink"
+                    link_target = safe_member_path(member.linkname)
+                    if not link_target:
+                        raise ModelError(
+                            f"O pacote llama.cpp contém hard link inválido: {name!r}."
+                        )
+                else:
+                    raise ModelError(
+                        f"O pacote llama.cpp contém entrada não suportada: "
+                        f"{name!r} (tipo {member.type!r})."
+                    )
+
+                previous = kinds.get(name)
+                if previous is not None:
+                    if previous == kind == "directory":
+                        continue
+                    raise ModelError(
+                        f"O pacote llama.cpp contém caminho duplicado: {name!r}."
+                    )
+                kinds[name] = kind
+                records.append((member, name, link_target))
+
+            # Nenhum arquivo/link pode funcionar como diretório ou ter filhos.
+            for _member, name, _link_target in records:
+                parts = PurePosixPath(name).parts
+                ancestors = (
+                    posixpath.join(*parts[:index]) for index in range(1, len(parts))
+                )
+                for parent in ancestors:
+                    parent_kind = kinds.get(parent)
+                    if parent_kind is not None and parent_kind != "directory":
+                        raise ModelError(
+                            f"O pacote llama.cpp tenta gravar sob uma entrada "
+                            f"que não é diretório: {name!r}."
+                        )
+                if kinds[name] != "directory" and any(
+                    path.startswith(name + "/") for path in kinds
+                ):
+                    raise ModelError(
+                        f"O pacote llama.cpp contém entradas dentro de "
+                        f"um caminho que não é diretório: {name!r}."
+                    )
+
+            regular_files = {name for name, kind in kinds.items() if kind == "file"}
+            for member, name, target in records:
+                if member.islnk() and target not in regular_files:
+                    raise ModelError(
+                        f"O hard link do pacote llama.cpp não aponta para arquivo "
+                        f"regular do próprio pacote: {name!r} -> {target!r}."
+                    )
+
+            # Segunda passagem: diretórios e arquivos comuns, sem seguir links.
+            for member, name, _link_target in records:
+                target = destination.joinpath(*PurePosixPath(name).parts)
+                if member.isdir():
                     target.mkdir(mode=0o700, parents=True, exist_ok=True)
                     continue
-                target.parent.mkdir(parents=True, exist_ok=True)
+                if not member.isfile():
+                    continue
+                target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                if target.exists() or target.is_symlink():
+                    raise ModelError(
+                        f"O pacote llama.cpp tenta substituir caminho já extraído: "
+                        f"{name!r}."
+                    )
                 source = archive.extractfile(member)
                 if source is None:
                     raise ModelError(
-                        "Não foi possível ler uma entrada do pacote llama.cpp."
+                        f"Não foi possível ler a entrada do pacote llama.cpp: {name!r}."
                     )
-                with target.open("wb") as output:
+                with source, target.open("xb") as output:
                     shutil.copyfileobj(source, output)
                 os.chmod(target, member.mode & 0o777)
+
+            # Hard links somente para arquivos regulares já extraídos e validados.
+            for member, name, link_target in records:
+                if not member.islnk() or link_target is None:
+                    continue
+                target = destination.joinpath(*PurePosixPath(name).parts)
+                source = destination.joinpath(*PurePosixPath(link_target).parts)
+                if not source.is_file() or source.is_symlink():
+                    raise ModelError(
+                        f"Não foi possível resolver hard link do pacote llama.cpp: "
+                        f"{name!r} -> {link_target!r}."
+                    )
+                target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                os.link(source, target)
+
+            # Links simbólicos relativos só são criados depois de todos os arquivos.
+            for member, name, _link_target in records:
+                if not member.issym():
+                    continue
+                target = destination.joinpath(*PurePosixPath(name).parts)
+                target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                os.symlink(member.linkname, target)
 
     def inspect(self) -> RuntimeInspection:
         """Verifica arquivos locais de forma leve; não inicia nem baixa nada."""
