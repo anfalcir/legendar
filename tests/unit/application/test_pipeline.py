@@ -978,7 +978,7 @@ def test_srt_file_source_cannot_be_overwritten_by_pipeline_context(
     from dataclasses import replace
 
     source_path = tmp_path / "baseline.srt"
-    original = "1\\n00:00:01,000 --> 00:00:02,000\\nHello.\\n"
+    original = "1\n00:00:01,000 --> 00:00:02,000\nHello.\n"
     source_path.write_text(original, encoding="utf-8")
     pipeline, ports = _pipeline(translator=FakeTranslator())
     context = replace(job_context, output_path=source_path)
