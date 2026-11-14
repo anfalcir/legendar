@@ -16,8 +16,21 @@ on:
       - "docs/DISTRIBUICAO_LINUX.md"
       - ".github/workflows/linux-distribution.yml"
   push:
+    branches:
+      - main
     tags:
       - "v*"
+    paths:
+      - "packaging/linux/**"
+      - "scripts/build_linux_bundle.sh"
+      - "src/legendar/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "docs/INSTALACAO.md"
+      - "docs/OPERACAO.md"
+      - "docs/HOMOLOGACAO.md"
+      - "docs/DISTRIBUICAO_LINUX.md"
+      - ".github/workflows/linux-distribution.yml"
   workflow_dispatch:
 
 permissions:

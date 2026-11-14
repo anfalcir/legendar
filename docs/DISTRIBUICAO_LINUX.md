@@ -62,7 +62,8 @@ O workflow `.github/workflows/linux-distribution.yml`:
 - testa o launcher com `uv` simulado nos caminhos saudável/offline e reparo online consentido;
 - gera o tarball com ordenação e timestamps determinísticos;
 - calcula SHA-256 e verifica os arquivos obrigatórios;
-- disponibiliza o artefato da execução do workflow;
+- disponibiliza o artefato da execução do workflow (retenção de 14 dias);
+- executa em PRs que alteram arquivos de distribuição e também em atualizações da `main` que afetem esses arquivos, permitindo baixar um pacote vinculado ao commit efetivamente integrado;
 - publica uma GitHub Release em modo **pré-release** somente para tags `vX.Y.Z` que correspondam à versão em `src/legendar/__init__.py`. A homologação funcional do TranslateGemma está concluída; a promoção a release estável ainda requer validação do ciclo de instalação, atualização e remoção do bundle no ambiente-alvo.
 
 O workflow não instala o ambiente pesado completo no runner: a validação de resolução é feita com dry-run. Portanto, a CI valida o pacote e seus scripts, mas não substitui a instalação real no Linux Mint.
