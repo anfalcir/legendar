@@ -21,7 +21,10 @@ from legendar.domain.entities.transcript import (
 from legendar.domain.value_objects.language import Language
 from legendar.domain.value_objects.time import TimeRange
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
-from legendar.infrastructure.filesystem.srt import parse_srt
+from legendar.infrastructure.filesystem.srt import (
+    format_timestamp,
+    parse_srt,
+)
 from tests.helpers.fakes import (
     FakeAligner,
     FakeAudioPreparer,
@@ -119,10 +122,25 @@ def test_translation_preserves_every_cue_time(job_context: JobContext) -> None:
 
     result = pipeline.execute(_request(), job_context)
 
-    original = [cue.range for cue in result.segmentation.track.cues]
-    translated = [cue.range for cue in result.track.cues]
-    assert translated == original
-    assert all(cue.language is Language.ENGLISH for cue in result.track.cues)
+    original_cues = result.segmentation.track.cues
+    translated_cues = result.track.cues
+    assert [cue.range for cue in translated_cues] == [
+        cue.range for cue in original_cues
+    ]
+    assert [cue.source_segments for cue in translated_cues] == [
+        cue.source_segments for cue in original_cues
+    ]
+    assert all(cue.language is Language.ENGLISH for cue in translated_cues)
+
+    published = parse_srt(Path(result.output_path).read_text(encoding="utf-8"))
+    assert len(published) == len(original_cues)
+    for output_cue, source_cue in zip(published, original_cues, strict=True):
+        assert format_timestamp(output_cue.start) == format_timestamp(
+            source_cue.range.start
+        )
+        assert format_timestamp(output_cue.end) == format_timestamp(
+            source_cue.range.end
+        )
 
 
 def test_english_job_writes_an_english_srt_without_translation(

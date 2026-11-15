@@ -43,6 +43,7 @@
 | 35 | Aceite histórico da Fase 6 (superado pela decisão 37) | Naquele marco, NLLB e Gemini permaneciam implementados e selecionáveis; o benchmark comparativo foi retirado do gate | registro histórico; a decisão 37 determina a substituição de NLLB por TranslateGemma, sem fallback oculto |
 | 36 | Perfil de recursos da Fase 7 | \\`auto\\` é padrão; <16 GiB usa perfil conservador de memória; hardware maior mantém modelos para favorecer jobs repetidos | não declarar ganho de desempenho sem benchmark pareado; evicção altera apenas residência em memória, nunca o cache em disco |
 | 37 | Motor local de tradução | TranslateGemma 4B Instruct Q4_K_M via llama.cpp gerenciado, loopback e códigos de idioma por requisição. Gemini permanece remoto e independente. | Motor funcionalmente homologado; implementação local anterior removida do código, UI, testes e dependências diretas; aplicar Gemma Terms aos pesos/derivados. Ver [decisão técnica](DECISAO_TRANSLATEGEMMA.md). |
+| 38 | Contrato de âncoras da tradução | Whisper reconhece no idioma de origem; WhisperX produz as âncoras finais por palavra; a segmentação cria cues antes da tradução. Cada unidade de tradução é 1:1 com uma cue e identifica seu índice, intervalo e proveniência. | O tradutor pode alterar somente o texto. Índices, `TimeRange` e `source_segments` são preservados; respostas incompletas, vazias ou fora de ordem bloqueiam a publicação. Nunca derivar timestamps do texto traduzido. |
 
 ## Decisões da Fase 10 (D1–D6)
 

@@ -2,7 +2,7 @@
 
 Aplicação desktop para transcrever áudio e vídeo, gerar legendas SRT e traduzir arquivos SRT existentes entre inglês e português brasileiro, preservando a estrutura temporal.
 
-**Estado em 13/11/2026:** o TranslateGemma 4B Q4_K_M está integrado e funcionalmente homologado como único motor local. A tradução e a composição das frases melhoraram e o resultado foi considerado suficiente para a relevância e a expectativa atuais do projeto. A qualidade ainda não é ótima; há espaço para melhorias futuras. O desenvolvimento está pausado neste ponto, sem tarefas ou prazo de retomada definidos.
+**Estado em 15/11/2026:** o TranslateGemma 4B Q4_K_M está integrado e funcionalmente homologado como único motor local. O fluxo de mídia separa reconhecimento Whisper, alinhamento temporal WhisperX, segmentação e tradução contextual por cue, preservando as âncoras originais até a publicação SRT. Esta data marca uma retomada pontual para reforçar esse contrato com documentação e testes de regressão; a qualidade editorial continua suficiente para o uso atual, mas ainda não é ótima.
 
 ## Recursos
 
