@@ -211,11 +211,13 @@ def test_translation_receives_one_unit_per_cue_and_the_detected_language(
     assert [unit.text for unit in units] == [
         cue.normalized_text for cue in source_cues
     ]
-    assert [
+    unit_mapping = tuple(
         (unit.index, unit.source_cue_ids, unit.source_range) for unit in units
-    ] == [
+    )
+    cue_mapping = tuple(
         (cue.index, (cue.index,), cue.range) for cue in source_cues
-    ]
+    )
+    assert unit_mapping == cue_mapping
     assert source_language is Language.PORTUGUESE
     assert target_language is Language.ENGLISH
 
