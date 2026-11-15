@@ -21,10 +21,7 @@ from legendar.domain.entities.transcript import (
 from legendar.domain.value_objects.language import Language
 from legendar.domain.value_objects.time import TimeRange
 from legendar.infrastructure.filesystem.publisher import SrtPublisher
-from legendar.infrastructure.filesystem.srt import (
-    format_timestamp,
-    parse_srt,
-)
+from legendar.infrastructure.filesystem.srt import format_timestamp, parse_srt
 from tests.helpers.fakes import (
     FakeAligner,
     FakeAudioPreparer,
