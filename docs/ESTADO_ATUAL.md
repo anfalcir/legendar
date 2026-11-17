@@ -1,8 +1,8 @@
 # Estado atual do Legendar
 
-- **Atualização:** 13/11/2026.
-- **Situação do projeto:** desenvolvimento pausado por decisão do usuário após a homologação funcional do TranslateGemma.
-- **Resultado:** o motor local funciona no fluxo real de tradução. A tradução e a composição/concentração das frases melhoraram; o resultado é suficiente para a relevância e a expectativa atuais, embora ainda não seja ótimo. Melhorias futuras continuam possíveis, mas não há trabalho ativo nem prazo de retomada.
+- **Atualização:** 15/11/2026.
+- **Situação do projeto:** retomada pontual para reforçar e tornar explícito o contrato de sincronização entre alinhamento, tradução e publicação; a evolução editorial continua sem prazo definido.
+- **Resultado:** o motor local funciona no fluxo real de tradução. A tradução e a composição/concentração das frases melhoraram; o resultado é suficiente para a relevância e a expectativa atuais, embora ainda não seja ótimo. O trabalho desta rodada é de engenharia e regressão, não uma nova homologação de qualidade editorial.
 - **Branch de referência:** `main`.
 - **Repositório:** [anfalcir/legendar](https://github.com/anfalcir/legendar).
 
@@ -11,6 +11,18 @@
 O Legendar é uma aplicação desktop PySide6 com três origens: mídia local, YouTube e arquivo SRT. Para mídia, executa aquisição/inspeção, preparação de áudio, ASR, alinhamento, segmentação, tradução opcional e publicação. Para uma origem SRT, executa leitura, tradução opcional, validação e publicação diretamente, sem reprocessar áudio.
 
 A origem `Arquivo SRT` foi integrada pela [PR #43](https://github.com/anfalcir/legendar/pull/43), commit `483ec3ff6c9ef544553ea994084493ebe25cef72`. Ela exige idioma de origem explícito, preserva a ordem, o texto e os timestamps das cues e impede sobrescrever o arquivo de entrada. A rota foi coberta por testes de infraestrutura, aplicação, GUI e arquitetura. O bundle Linux `0.1.0` foi construído a partir da mesma árvore de código integrada.
+
+## Transcrição, âncoras temporais e tradução
+
+O fluxo de mídia já segue a separação correta de responsabilidades:
+
+1. Whisper executa reconhecimento no idioma de origem (`task="transcribe"`). Os tempos de segmento são aproximados e servem como janelas de referência, não como âncoras finais.
+2. WhisperX executa forced alignment por palavra contra o áudio. O pipeline exige evidência temporal confiável e bloqueia a publicação quando há palavras não alinhadas ou anomalias não recuperadas.
+3. A segmentação forma as cues finais a partir das palavras alinhadas e mantém `source_segments`.
+4. A tradução recebe uma unidade por cue, com ID, intervalo temporal e contexto. TranslateGemma usa lotes estruturados; IDs locais de cada lote são remontados para os índices originais.
+5. A aplicação substitui exclusivamente o texto traduzido e preserva, sem recálculo, os índices, `TimeRange` e referências de origem. A publicação SRT é reaberta e comparada antes da troca atômica.
+
+A tarefa de tradução nativa do Whisper não participa desse fluxo. Não se usa a duração do texto traduzido para estimar tempos. A decisão está registrada em [DECISOES.md](DECISOES.md), e os testes de regressão cobrem a correspondência entre unidades, trilho traduzido e timestamps efetivamente publicados.
 
 ## Tradução vigente
 

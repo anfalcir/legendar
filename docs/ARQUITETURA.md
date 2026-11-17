@@ -54,11 +54,12 @@ src/legendar/
 
 1. `MainWindow` monta `JobRequest` (uma origem exclusiva: mídia ou SRT, idiomas, tradução, faixa) e `JobContext` (job id, workspace, destino, token).
 2. `JobWorker` roda `JobController.run` em `QThread`; o controlador abre `VALIDATING_INPUT`.
-3. `SerialPipeline` percorre a rota escolhida: mídia segue aquisição/inspeção → áudio → Whisper → WhisperX → segmentação; SRT existente usa `LOADING_SUBTITLES`, lê/valida as cues e salta todas as portas de mídia. Ambas podem executar tradução opcional, validação editorial e publicação.
-4. Cada etapa reporta progresso por `ScaledProgress`, que mapeia a fração local para a faixa global.
-5. O controlador converte transições e mensagens em eventos; o resultado é um único evento terminal.
-6. `JobViewModel` transforma eventos em snapshot; a janela apenas desenha, habilita controles e limpa o workspace.
-7. `PipelinePerformanceSession` acumula tempos monotônicos, CPU e recursos por etapa. Snapshots dos adaptadores separam carga dos modelos, inferência, chamadas de alinhamento e fases internas da tradução; `JsonPerformanceReporter` persiste JSON local privado, fora do fluxo de conteúdo.
+3. `SerialPipeline` percorre a rota escolhida. Para mídia: aquisição/inspeção → áudio → Whisper → WhisperX → segmentação. O Whisper executa somente reconhecimento (`task="transcribe"`): seus tempos de segmento são janelas aproximadas, nunca âncoras finais. O WhisperX faz forced alignment por palavra contra o áudio; somente os intervalos confirmados pelo alinhador são promovidos a âncoras temporais. Palavras sem alinhamento confiável ou anomalias bloqueiam a publicação. A segmentação forma cues e mantém `source_segments` para rastrear a origem.
+4. Quando solicitada, a tradução ocorre **depois** da segmentação. Cada `TranslationUnit` representa exatamente uma cue e carrega índice/ID de origem, `source_range` e contexto textual. TranslateGemma processa lotes estruturados com IDs locais, valida cardinalidade e chaves e remapeia a resposta para os índices originais. O tradutor devolve texto, não timestamps.
+5. `apply_translation` aplica somente os textos às cues originais. Índices, `TimeRange` e `source_segments` são preservados; resultados vazios, incompletos ou fora de ordem são rejeitados. O comprimento da tradução nunca recalcula a duração da cue.
+6. A rota de SRT existente usa `LOADING_SUBTITLES`, lê/valida as cues e salta todas as portas de mídia; ela compartilha as mesmas garantias de tradução, validação e publicação.
+7. Cada etapa reporta progresso por `ScaledProgress`; o controlador converte transições e mensagens em eventos e emite um único evento terminal. `JobViewModel` transforma eventos em snapshot; a janela apenas desenha, habilita controles e limpa o workspace.
+8. `PipelinePerformanceSession` acumula tempos monotônicos, CPU e recursos por etapa. Snapshots dos adaptadores separam carga dos modelos, inferência, chamadas de alinhamento e fases internas da tradução; `JsonPerformanceReporter` persiste JSON local privado, fora do fluxo de conteúdo.
 
 ## 4. Portas do pipeline
 
@@ -96,10 +97,11 @@ src/legendar/
 
 ### 7.1. Segmentação e publicação do fluxo de mídia
 
-1. A segmentação atual usa palavras alinhadas e produz cues de até duas linhas de 42 caracteres; a política atual declara 1–7 s, pausa de 0,6 s e cerca de 17 CPS.
-2. A tradução opcional preserva `TimeRange` e correspondência 1:1 entre cue e texto traduzido.
-3. `validate_track` bloqueia estrutura inválida e sinaliza riscos de legibilidade.
-4. `format_srt` serializa; `validate_roundtrip` reparseia e compara; `atomic_write_text` troca o arquivo por rename.
+1. A segmentação usa palavras alinhadas pelo WhisperX e produz cues de até duas linhas de 42 caracteres; a política atual declara 1–7 s, pausa de 0,6 s e cerca de 17 CPS. Cada cue mantém a referência aos segmentos que lhe deram origem.
+2. A tradução é deliberadamente posterior à segmentação: uma unidade por cue, com ID e intervalo temporal de origem. Lotes podem ser subdivididos para respeitar o orçamento do modelo, mas os IDs originais são remontados antes da aplicação.
+3. A aplicação da tradução altera apenas o texto. Os tempos vêm exclusivamente do trilho alinhado original e são copiados sem recalcular duração, início, fim ou sobreposição.
+4. `validate_track` bloqueia estrutura inválida e sinaliza riscos de legibilidade.
+5. `format_srt` serializa; `validate_roundtrip` reparseia e compara índices, tempos e texto; `atomic_write_text` troca o arquivo por rename.
 
 **Limitações conhecidas:** a política editorial e a consolidação cronológica de cues foram implementadas nas Fases 3 e 4. O gate estrutural da Fase 8 mede limites e riscos do SRT, mas não substitui revisão audiovisual, avaliação de naturalidade PT-BR ou conferência de sincronização em player.
 
